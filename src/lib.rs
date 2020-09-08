@@ -4,6 +4,7 @@ pub mod bindings;
 pub mod ecc;
 pub mod io;
 pub mod seph;
+pub mod random;
 
 use bindings::*;
 
