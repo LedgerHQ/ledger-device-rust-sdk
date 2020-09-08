@@ -1,0 +1,19 @@
+[package]
+name = "nanos_sdk"
+version = "0.1.0"
+authors = ["yhql"]
+edition = "2018"
+
+[build-dependencies]
+cc = "1.0"
+
+[dependencies]
+cty = "0.2.0"
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+opt-level = 's' 
+lto = true
