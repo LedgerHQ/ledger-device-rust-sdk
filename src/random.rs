@@ -1,3 +1,5 @@
+//! Random number generation functions
+
 use crate::bindings::*;
 
 /// Generates and returns a random byte value
@@ -10,7 +12,7 @@ pub fn rand_u32() -> u32 {
     unsafe { cx_rng_u32() }
 }
 
-/// Generates and returns a random number in the given range.
+/// Generates and returns a random number in the given range
 ///
 /// # Arguments
 ///
