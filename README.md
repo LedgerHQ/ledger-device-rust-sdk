@@ -11,7 +11,9 @@ Will be published on [crates.io](crates.io) when ready.
 ## Usage
 
 BUilding requires adding a toolchain to your Rust installation, and both Clang and arm-none-eabi-gcc.
-The minimum required rustc version is 1.40.0.
+
+Using rustc nightly builds is recommanded as some unstable features are
+required.
 
 - `rustup target add thumbv6m-none-eabi`
 - install [Clang](http://releases.llvm.org/download.html).
