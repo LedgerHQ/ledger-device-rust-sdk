@@ -49,12 +49,12 @@ impl Comm {
 
     /// Returns APDU parameter P1
     pub fn get_p1(&self) -> u8 {
-        self.apdu_buffer[2];
+        self.apdu_buffer[2]
     }
 
     /// Returns APDU parameter P2
     pub fn get_p2(&self) -> u8 {
-        self.apdu_buffer[3];
+        self.apdu_buffer[3]
     }
 
     pub fn get_data(&self) -> Result<&[u8], StatusWords> {
