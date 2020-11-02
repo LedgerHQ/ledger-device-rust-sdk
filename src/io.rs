@@ -42,8 +42,19 @@ impl Comm {
         self.tx += 2;
     }
 
+    /// Return APDU Class and Instruction bytes as a tuple
     pub fn get_cla_ins(&self) -> (u8, u8) {
         (self.apdu_buffer[0], self.apdu_buffer[1])
+    }
+
+    /// Returns APDU parameter P1
+    pub fn get_p1(&self) -> u8 {
+        self.apdu_buffer[2];
+    }
+
+    /// Returns APDU parameter P2
+    pub fn get_p2(&self) -> u8 {
+        self.apdu_buffer[3];
     }
 
     pub fn get_data(&self) -> Result<&[u8], StatusWords> {
