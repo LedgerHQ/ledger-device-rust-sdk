@@ -1,10 +1,13 @@
 #![no_std]
+#![feature(min_const_generics)]
+#![feature(const_fn)]
 
 pub mod bindings;
 pub mod ecc;
 pub mod io;
 pub mod seph;
 pub mod random;
+pub mod nvm;
 
 use bindings::*;
 
