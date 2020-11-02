@@ -97,9 +97,9 @@ pub const fn make_bip32_path(bytes: &[u8]) -> [u32;5] {
     // encounter them to create a number and resetting our counter everytime
     // we get to a separator (i.e. a byte that does not represent an ASCII
     // number).
-    while (j < path.len()) {
+    while j < path.len() {
         // Check if this byte represents a number in ASCII.
-        while (i < bytes.len() && bytes[i].is_ascii_digit()) {
+        while i < bytes.len() && bytes[i].is_ascii_digit() {
             // It does: add it to the accumulator (taking care to substract
             // the ASCII value of 0).
             acc = acc * 10 + bytes[i] as u32 - b'0' as u32;
@@ -112,7 +112,7 @@ pub const fn make_bip32_path(bytes: &[u8]) -> [u32;5] {
         // Keep going until we either:
         // 1. Find a new number.
         // 2. Reach the end of the bytes.
-        while (i < bytes.len() && !bytes[i].is_ascii_digit()) {
+        while i < bytes.len() && !bytes[i].is_ascii_digit() {
             i += 1;
         }
         // Repeat that for the next element in `path`.
