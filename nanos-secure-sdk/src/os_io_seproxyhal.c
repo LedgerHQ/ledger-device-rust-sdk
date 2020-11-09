@@ -63,7 +63,7 @@ void io_seproxyhal_handle_ble_event(void);
 
 unsigned int os_io_seph_recv_and_process(unsigned int dont_process_ux_events, apdu_buffer_t*);
 
-io_seph_app_t G_io_app;
+// io_seph_app_t G_io_app;
 
   // usb endpoint buffer
 unsigned char G_io_usb_ep_buffer[MAX(USB_SEGMENT_SIZE, BLE_SEGMENT_SIZE)];

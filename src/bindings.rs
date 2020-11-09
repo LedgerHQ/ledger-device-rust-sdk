@@ -88,7 +88,6 @@ where
 }
 pub const IO_HID_EP_LENGTH: u32 = 64;
 pub const USB_SEGMENT_SIZE: u32 = 64;
-pub const IO_USB_MAX_ENDPOINTS: u32 = 6;
 pub const IO_SEPROXYHAL_BUFFER_SIZE_B: u32 = 128;
 pub const TARGET_ID: u32 = 823132164;
 pub const __SC000_REV: u32 = 1;
@@ -412,273 +411,6 @@ pub const BOLOS_SECURITY_ONBOARD_DELAY_S: u32 = 5;
 pub const BOLOS_SECURITY_ATTESTATION_DELAY_S: u32 = 15;
 pub const OS_PARSE_BERTLV_OFFSET_COMPARE_WITH_BUFFER: u32 = 2147483648;
 pub const OS_PARSE_BERTLV_OFFSET_GET_LENGTH: u32 = 1073741824;
-pub const SYSCALL_check_api_level_ID_IN: u32 = 1610613047;
-pub const SYSCALL_check_api_level_ID_OUT: u32 = 2415919558;
-pub const SYSCALL_halt_ID_IN: u32 = 1610613308;
-pub const SYSCALL_halt_ID_OUT: u32 = 2415919629;
-pub const SYSCALL_nvm_write_ID_IN: u32 = 1610613631;
-pub const SYSCALL_nvm_write_ID_OUT: u32 = 2415920060;
-pub const SYSCALL_cx_rng_u8_ID_IN: u32 = 1610613952;
-pub const SYSCALL_cx_rng_u8_ID_OUT: u32 = 2415920165;
-pub const SYSCALL_cx_rng_ID_IN: u32 = 1610614060;
-pub const SYSCALL_cx_rng_ID_OUT: u32 = 2415920487;
-pub const SYSCALL_cx_hash_ID_IN: u32 = 1610614587;
-pub const SYSCALL_cx_hash_ID_OUT: u32 = 2415921069;
-pub const SYSCALL_cx_ripemd160_init_ID_IN: u32 = 1610614911;
-pub const SYSCALL_cx_ripemd160_init_ID_OUT: u32 = 2415921400;
-pub const SYSCALL_cx_sha224_init_ID_IN: u32 = 1610615131;
-pub const SYSCALL_cx_sha224_init_ID_OUT: u32 = 2415921437;
-pub const SYSCALL_cx_sha256_init_ID_IN: u32 = 1610615515;
-pub const SYSCALL_cx_sha256_init_ID_OUT: u32 = 2415921764;
-pub const SYSCALL_cx_hash_sha256_ID_IN: u32 = 1610615596;
-pub const SYSCALL_cx_hash_sha256_ID_OUT: u32 = 2415922080;
-pub const SYSCALL_cx_sha384_init_ID_IN: u32 = 1610615851;
-pub const SYSCALL_cx_sha384_init_ID_OUT: u32 = 2415922351;
-pub const SYSCALL_cx_sha512_init_ID_IN: u32 = 1610616257;
-pub const SYSCALL_cx_sha512_init_ID_OUT: u32 = 2415922670;
-pub const SYSCALL_cx_hash_sha512_ID_IN: u32 = 1610616392;
-pub const SYSCALL_cx_hash_sha512_ID_OUT: u32 = 2415922773;
-pub const SYSCALL_cx_sha3_init_ID_IN: u32 = 1610616785;
-pub const SYSCALL_cx_sha3_init_ID_OUT: u32 = 2415923062;
-pub const SYSCALL_cx_keccak_init_ID_IN: u32 = 1610617039;
-pub const SYSCALL_cx_keccak_init_ID_OUT: u32 = 2415923416;
-pub const SYSCALL_cx_shake128_init_ID_IN: u32 = 1610650377;
-pub const SYSCALL_cx_shake128_init_ID_OUT: u32 = 2415956881;
-pub const SYSCALL_cx_shake256_init_ID_IN: u32 = 1610650854;
-pub const SYSCALL_cx_shake256_init_ID_OUT: u32 = 2415957159;
-pub const SYSCALL_cx_sha3_xof_init_ID_IN: u32 = 1610617152;
-pub const SYSCALL_cx_sha3_xof_init_ID_OUT: u32 = 2415923680;
-pub const SYSCALL_cx_blake2b_init_ID_IN: u32 = 1610617608;
-pub const SYSCALL_cx_blake2b_init_ID_OUT: u32 = 2415924121;
-pub const SYSCALL_cx_blake2b_init2_ID_IN: u32 = 1610617958;
-pub const SYSCALL_cx_blake2b_init2_ID_OUT: u32 = 2415924369;
-pub const SYSCALL_cx_groestl_init_ID_IN: u32 = 1610617376;
-pub const SYSCALL_cx_groestl_init_ID_OUT: u32 = 2415923779;
-pub const SYSCALL_cx_hmac_ripemd160_init_ID_IN: u32 = 1610618319;
-pub const SYSCALL_cx_hmac_ripemd160_init_ID_OUT: u32 = 2415924598;
-pub const SYSCALL_cx_hmac_sha256_init_ID_IN: u32 = 1610618577;
-pub const SYSCALL_cx_hmac_sha256_init_ID_OUT: u32 = 2415924743;
-pub const SYSCALL_cx_hmac_sha512_init_ID_IN: u32 = 1610618803;
-pub const SYSCALL_cx_hmac_sha512_init_ID_OUT: u32 = 2415925017;
-pub const SYSCALL_cx_hmac_ID_IN: u32 = 1610619089;
-pub const SYSCALL_cx_hmac_ID_OUT: u32 = 2415925462;
-pub const SYSCALL_cx_hmac_sha512_ID_IN: u32 = 1610619343;
-pub const SYSCALL_cx_hmac_sha512_ID_OUT: u32 = 2415925630;
-pub const SYSCALL_cx_hmac_sha256_ID_IN: u32 = 1610619435;
-pub const SYSCALL_cx_hmac_sha256_ID_OUT: u32 = 2415925940;
-pub const SYSCALL_cx_pbkdf2_ID_IN: u32 = 1610654252;
-pub const SYSCALL_cx_pbkdf2_ID_OUT: u32 = 2415960661;
-pub const SYSCALL_cx_des_init_key_ID_IN: u32 = 1610620035;
-pub const SYSCALL_cx_des_init_key_ID_OUT: u32 = 2415926349;
-pub const SYSCALL_cx_des_iv_ID_IN: u32 = 1610654498;
-pub const SYSCALL_cx_des_iv_ID_OUT: u32 = 2415960903;
-pub const SYSCALL_cx_des_ID_IN: u32 = 1610620494;
-pub const SYSCALL_cx_des_ID_OUT: u32 = 2415927038;
-pub const SYSCALL_cx_aes_init_key_ID_IN: u32 = 1610620715;
-pub const SYSCALL_cx_aes_init_key_ID_OUT: u32 = 2415927089;
-pub const SYSCALL_cx_aes_iv_ID_IN: u32 = 1610654885;
-pub const SYSCALL_cx_aes_iv_ID_OUT: u32 = 2415961314;
-pub const SYSCALL_cx_aes_ID_IN: u32 = 1610621410;
-pub const SYSCALL_cx_aes_ID_OUT: u32 = 2415927612;
-pub const SYSCALL_cx_rsa_init_public_key_ID_IN: u32 = 1610621669;
-pub const SYSCALL_cx_rsa_init_public_key_ID_OUT: u32 = 2415927947;
-pub const SYSCALL_cx_rsa_init_private_key_ID_IN: u32 = 1610621751;
-pub const SYSCALL_cx_rsa_init_private_key_ID_OUT: u32 = 2415928259;
-pub const SYSCALL_cx_rsa_generate_pair_ID_IN: u32 = 1610622113;
-pub const SYSCALL_cx_rsa_generate_pair_ID_OUT: u32 = 2415928573;
-pub const SYSCALL_cx_rsa_sign_ID_IN: u32 = 1610622406;
-pub const SYSCALL_cx_rsa_sign_ID_OUT: u32 = 2415928819;
-pub const SYSCALL_cx_rsa_verify_ID_IN: u32 = 1610622635;
-pub const SYSCALL_cx_rsa_verify_ID_OUT: u32 = 2415929011;
-pub const SYSCALL_cx_rsa_encrypt_ID_IN: u32 = 1610622938;
-pub const SYSCALL_cx_rsa_encrypt_ID_OUT: u32 = 2415929289;
-pub const SYSCALL_cx_rsa_decrypt_ID_IN: u32 = 1610623108;
-pub const SYSCALL_cx_rsa_decrypt_ID_OUT: u32 = 2415929511;
-pub const SYSCALL_cx_ecfp_is_valid_point_ID_IN: u32 = 1610623339;
-pub const SYSCALL_cx_ecfp_is_valid_point_ID_OUT: u32 = 2415929601;
-pub const SYSCALL_cx_ecfp_is_cryptographic_point_ID_IN: u32 = 1610623715;
-pub const SYSCALL_cx_ecfp_is_cryptographic_point_ID_OUT: u32 = 2415930096;
-pub const SYSCALL_cx_ecfp_add_point_ID_IN: u32 = 1610623767;
-pub const SYSCALL_cx_ecfp_add_point_ID_OUT: u32 = 2415930311;
-pub const SYSCALL_cx_ecfp_scalar_mult_ID_IN: u32 = 1610624243;
-pub const SYSCALL_cx_ecfp_scalar_mult_ID_OUT: u32 = 2415930595;
-pub const SYSCALL_cx_ecfp_init_public_key_ID_IN: u32 = 1610624493;
-pub const SYSCALL_cx_ecfp_init_public_key_ID_OUT: u32 = 2415930697;
-pub const SYSCALL_cx_ecfp_init_private_key_ID_IN: u32 = 1610624746;
-pub const SYSCALL_cx_ecfp_init_private_key_ID_OUT: u32 = 2415930979;
-pub const SYSCALL_cx_ecfp_generate_pair_ID_IN: u32 = 1610624814;
-pub const SYSCALL_cx_ecfp_generate_pair_ID_OUT: u32 = 2415931252;
-pub const SYSCALL_cx_ecfp_generate_pair2_ID_IN: u32 = 1610625055;
-pub const SYSCALL_cx_ecfp_generate_pair2_ID_OUT: u32 = 2415931622;
-pub const SYSCALL_cx_ecdsa_sign_ID_IN: u32 = 1610627315;
-pub const SYSCALL_cx_ecdsa_sign_ID_OUT: u32 = 2415933558;
-pub const SYSCALL_cx_ecdsa_verify_ID_IN: u32 = 1610627569;
-pub const SYSCALL_cx_ecdsa_verify_ID_OUT: u32 = 2415933927;
-pub const SYSCALL_cx_edward_compress_point_ID_IN: u32 = 1610625881;
-pub const SYSCALL_cx_edward_compress_point_ID_OUT: u32 = 2415932203;
-pub const SYSCALL_cx_edward_decompress_point_ID_IN: u32 = 1610626097;
-pub const SYSCALL_cx_edward_decompress_point_ID_OUT: u32 = 2415932618;
-pub const SYSCALL_cx_eddsa_get_public_key_ID_IN: u32 = 1610626332;
-pub const SYSCALL_cx_eddsa_get_public_key_ID_OUT: u32 = 2415932863;
-pub const SYSCALL_cx_eddsa_sign_ID_IN: u32 = 1610626619;
-pub const SYSCALL_cx_eddsa_sign_ID_OUT: u32 = 2415933174;
-pub const SYSCALL_cx_eddsa_verify_ID_IN: u32 = 1610627018;
-pub const SYSCALL_cx_eddsa_verify_ID_OUT: u32 = 2415933217;
-pub const SYSCALL_cx_ecschnorr_sign_ID_IN: u32 = 1610625345;
-pub const SYSCALL_cx_ecschnorr_sign_ID_OUT: u32 = 2415931722;
-pub const SYSCALL_cx_ecschnorr_verify_ID_IN: u32 = 1610625541;
-pub const SYSCALL_cx_ecschnorr_verify_ID_OUT: u32 = 2415932151;
-pub const SYSCALL_cx_ecdh_ID_IN: u32 = 1610627741;
-pub const SYSCALL_cx_ecdh_ID_OUT: u32 = 2415934100;
-pub const SYSCALL_cx_crc16_ID_IN: u32 = 1610650104;
-pub const SYSCALL_cx_crc16_ID_OUT: u32 = 2415956268;
-pub const SYSCALL_cx_crc16_update_ID_IN: u32 = 1610650222;
-pub const SYSCALL_cx_crc16_update_ID_OUT: u32 = 2415956715;
-pub const SYSCALL_cx_math_cmp_ID_IN: u32 = 1610628443;
-pub const SYSCALL_cx_math_cmp_ID_OUT: u32 = 2415934908;
-pub const SYSCALL_cx_math_is_zero_ID_IN: u32 = 1610628663;
-pub const SYSCALL_cx_math_is_zero_ID_OUT: u32 = 2415935056;
-pub const SYSCALL_cx_math_add_ID_IN: u32 = 1610629115;
-pub const SYSCALL_cx_math_add_ID_OUT: u32 = 2415935448;
-pub const SYSCALL_cx_math_sub_ID_IN: u32 = 1610629279;
-pub const SYSCALL_cx_math_sub_ID_OUT: u32 = 2415935517;
-pub const SYSCALL_cx_math_mult_ID_IN: u32 = 1610629438;
-pub const SYSCALL_cx_math_mult_ID_OUT: u32 = 2415935938;
-pub const SYSCALL_cx_math_addm_ID_IN: u32 = 1610629798;
-pub const SYSCALL_cx_math_addm_ID_OUT: u32 = 2415936072;
-pub const SYSCALL_cx_math_subm_ID_IN: u32 = 1610630013;
-pub const SYSCALL_cx_math_subm_ID_OUT: u32 = 2415936480;
-pub const SYSCALL_cx_math_multm_ID_IN: u32 = 1610630213;
-pub const SYSCALL_cx_math_multm_ID_OUT: u32 = 2415936755;
-pub const SYSCALL_cx_math_powm_ID_IN: u32 = 1610630477;
-pub const SYSCALL_cx_math_powm_ID_OUT: u32 = 2415936830;
-pub const SYSCALL_cx_math_modm_ID_IN: u32 = 1610630725;
-pub const SYSCALL_cx_math_modm_ID_OUT: u32 = 2415937164;
-pub const SYSCALL_cx_math_invprimem_ID_IN: u32 = 1610631145;
-pub const SYSCALL_cx_math_invprimem_ID_OUT: u32 = 2415937305;
-pub const SYSCALL_cx_math_invintm_ID_IN: u32 = 1610631212;
-pub const SYSCALL_cx_math_invintm_ID_OUT: u32 = 2415937681;
-pub const SYSCALL_cx_math_is_prime_ID_IN: u32 = 1610631496;
-pub const SYSCALL_cx_math_is_prime_ID_OUT: u32 = 2415938042;
-pub const SYSCALL_cx_math_next_prime_ID_IN: u32 = 1610631844;
-pub const SYSCALL_cx_math_next_prime_ID_OUT: u32 = 2415938251;
-pub const SYSCALL_os_perso_erase_all_ID_IN: u32 = 1610632181;
-pub const SYSCALL_os_perso_erase_all_ID_OUT: u32 = 2415938548;
-pub const SYSCALL_os_perso_set_pin_ID_IN: u32 = 1610632415;
-pub const SYSCALL_os_perso_set_pin_ID_OUT: u32 = 2415938709;
-pub const SYSCALL_os_perso_set_current_identity_pin_ID_IN: u32 = 1610632702;
-pub const SYSCALL_os_perso_set_current_identity_pin_ID_OUT: u32 = 2415938826;
-pub const SYSCALL_os_perso_set_seed_ID_IN: u32 = 1610632892;
-pub const SYSCALL_os_perso_set_seed_ID_OUT: u32 = 2415939306;
-pub const SYSCALL_os_perso_derive_and_set_seed_ID_IN: u32 = 1610633149;
-pub const SYSCALL_os_perso_derive_and_set_seed_ID_OUT: u32 = 2415939535;
-pub const SYSCALL_os_perso_set_words_ID_IN: u32 = 1610633240;
-pub const SYSCALL_os_perso_set_words_ID_OUT: u32 = 2415939818;
-pub const SYSCALL_os_perso_finalize_ID_IN: u32 = 1610633600;
-pub const SYSCALL_os_perso_finalize_ID_OUT: u32 = 2415939924;
-pub const SYSCALL_os_perso_isonboarded_ID_IN: u32 = 1610653519;
-pub const SYSCALL_os_perso_isonboarded_ID_OUT: u32 = 2415959826;
-pub const SYSCALL_os_perso_derive_node_bip32_ID_IN: u32 = 1610634170;
-pub const SYSCALL_os_perso_derive_node_bip32_ID_OUT: u32 = 2415940382;
-pub const SYSCALL_os_perso_derive_node_with_seed_key_ID_IN: u32 = 1610655448;
-pub const SYSCALL_os_perso_derive_node_with_seed_key_ID_OUT: u32 = 2415961604;
-pub const SYSCALL_os_perso_seed_cookie_ID_IN: u32 = 1610655996;
-pub const SYSCALL_os_perso_seed_cookie_ID_OUT: u32 = 2415962231;
-pub const SYSCALL_os_endorsement_get_code_hash_ID_IN: u32 = 1610634511;
-pub const SYSCALL_os_endorsement_get_code_hash_ID_OUT: u32 = 2415941025;
-pub const SYSCALL_os_endorsement_get_public_key_ID_IN: u32 = 1610634995;
-pub const SYSCALL_os_endorsement_get_public_key_ID_OUT: u32 = 2415941273;
-pub const SYSCALL_os_endorsement_get_public_key_certificate_ID_IN: u32 = 1610635084;
-pub const SYSCALL_os_endorsement_get_public_key_certificate_ID_OUT: u32 = 2415941503;
-pub const SYSCALL_os_endorsement_key1_get_app_secret_ID_IN: u32 = 1610635356;
-pub const SYSCALL_os_endorsement_key1_get_app_secret_ID_OUT: u32 = 2415941728;
-pub const SYSCALL_os_endorsement_key1_sign_data_ID_IN: u32 = 1610635736;
-pub const SYSCALL_os_endorsement_key1_sign_data_ID_OUT: u32 = 2415941931;
-pub const SYSCALL_os_endorsement_key2_derive_sign_data_ID_IN: u32 = 1610635850;
-pub const SYSCALL_os_endorsement_key2_derive_sign_data_ID_OUT: u32 = 2415942206;
-pub const SYSCALL_os_global_pin_is_validated_ID_IN: u32 = 1610653756;
-pub const SYSCALL_os_global_pin_is_validated_ID_OUT: u32 = 2415960184;
-pub const SYSCALL_os_global_pin_check_ID_IN: u32 = 1610653954;
-pub const SYSCALL_os_global_pin_check_ID_OUT: u32 = 2415960531;
-pub const SYSCALL_os_global_pin_invalidate_ID_IN: u32 = 1610636752;
-pub const SYSCALL_os_global_pin_invalidate_ID_OUT: u32 = 2415943163;
-pub const SYSCALL_os_global_pin_retries_ID_IN: u32 = 1610636889;
-pub const SYSCALL_os_global_pin_retries_ID_OUT: u32 = 2415943192;
-pub const SYSCALL_os_registry_count_ID_IN: u32 = 1610637120;
-pub const SYSCALL_os_registry_count_ID_OUT: u32 = 2415943430;
-pub const SYSCALL_os_registry_get_ID_IN: u32 = 1610637413;
-pub const SYSCALL_os_registry_get_ID_OUT: u32 = 2415943858;
-pub const SYSCALL_os_ux_ID_IN: u32 = 1610638424;
-pub const SYSCALL_os_ux_ID_OUT: u32 = 2415944735;
-pub const SYSCALL_os_ux_result_ID_IN: u32 = 1610638592;
-pub const SYSCALL_os_ux_result_ID_OUT: u32 = 2415945136;
-pub const SYSCALL_os_ux_read_parameters_ID_IN: u32 = 1610639015;
-pub const SYSCALL_os_ux_read_parameters_ID_OUT: u32 = 2415945387;
-pub const SYSCALL_os_lib_call_ID_IN: u32 = 1610639117;
-pub const SYSCALL_os_lib_call_ID_OUT: u32 = 2415945564;
-pub const SYSCALL_os_lib_end_ID_IN: u32 = 1610639501;
-pub const SYSCALL_os_lib_end_ID_OUT: u32 = 2415945736;
-pub const SYSCALL_os_lib_throw_ID_IN: u32 = 1610639685;
-pub const SYSCALL_os_lib_throw_ID_OUT: u32 = 2415946119;
-pub const SYSCALL_os_flags_ID_IN: u32 = 1610639982;
-pub const SYSCALL_os_flags_ID_OUT: u32 = 2415946367;
-pub const SYSCALL_os_version_ID_IN: u32 = 1610640312;
-pub const SYSCALL_os_version_ID_OUT: u32 = 2415946692;
-pub const SYSCALL_os_serial_ID_IN: u32 = 1610640563;
-pub const SYSCALL_os_serial_ID_OUT: u32 = 2415946966;
-pub const SYSCALL_os_seph_features_ID_IN: u32 = 1610641110;
-pub const SYSCALL_os_seph_features_ID_OUT: u32 = 2415947332;
-pub const SYSCALL_os_seph_version_ID_IN: u32 = 1610641324;
-pub const SYSCALL_os_seph_version_ID_OUT: u32 = 2415947613;
-pub const SYSCALL_os_setting_get_ID_IN: u32 = 1610641605;
-pub const SYSCALL_os_setting_get_ID_OUT: u32 = 2415947951;
-pub const SYSCALL_os_setting_set_ID_IN: u32 = 1610641814;
-pub const SYSCALL_os_setting_set_ID_OUT: u32 = 2415948197;
-pub const SYSCALL_os_get_memory_info_ID_IN: u32 = 1610642019;
-pub const SYSCALL_os_get_memory_info_ID_OUT: u32 = 2415948491;
-pub const SYSCALL_os_registry_get_tag_ID_IN: u32 = 1610642257;
-pub const SYSCALL_os_registry_get_tag_ID_OUT: u32 = 2415948681;
-pub const SYSCALL_os_registry_get_current_app_tag_ID_IN: u32 = 1610642644;
-pub const SYSCALL_os_registry_get_current_app_tag_ID_OUT: u32 = 2415948935;
-pub const SYSCALL_os_customca_verify_ID_IN: u32 = 1610649697;
-pub const SYSCALL_os_customca_verify_ID_OUT: u32 = 2415956098;
-pub const SYSCALL_os_sched_exec_ID_IN: u32 = 1610652025;
-pub const SYSCALL_os_sched_exec_ID_OUT: u32 = 2415958344;
-pub const SYSCALL_os_sched_exit_ID_IN: u32 = 1610652350;
-pub const SYSCALL_os_sched_exit_ID_OUT: u32 = 2415958750;
-pub const SYSCALL_os_sched_is_running_ID_IN: u32 = 1610652634;
-pub const SYSCALL_os_sched_is_running_ID_OUT: u32 = 2415958909;
-pub const SYSCALL_os_sched_create_ID_IN: u32 = 1610643399;
-pub const SYSCALL_os_sched_create_ID_OUT: u32 = 2415949734;
-pub const SYSCALL_os_sched_kill_ID_IN: u32 = 1610643672;
-pub const SYSCALL_os_sched_kill_ID_OUT: u32 = 2415949885;
-pub const SYSCALL_io_seph_send_ID_IN: u32 = 1610646401;
-pub const SYSCALL_io_seph_send_ID_OUT: u32 = 2415952877;
-pub const SYSCALL_io_seph_is_status_sent_ID_IN: u32 = 1610646715;
-pub const SYSCALL_io_seph_is_status_sent_ID_OUT: u32 = 2415952901;
-pub const SYSCALL_io_seph_recv_ID_IN: u32 = 1610647012;
-pub const SYSCALL_io_seph_recv_ID_OUT: u32 = 2415953399;
-pub const SYSCALL_nvm_write_page_ID_IN: u32 = 1610647294;
-pub const SYSCALL_nvm_write_page_ID_OUT: u32 = 2415953660;
-pub const SYSCALL_try_context_get_ID_IN: u32 = 1610647473;
-pub const SYSCALL_try_context_get_ID_OUT: u32 = 2415953698;
-pub const SYSCALL_try_context_set_ID_IN: u32 = 1610647669;
-pub const SYSCALL_try_context_set_ID_OUT: u32 = 2415953980;
-pub const SYSCALL_cx_rng_u32_ID_IN: u32 = 1610648044;
-pub const SYSCALL_cx_rng_u32_ID_OUT: u32 = 2415954388;
-pub const SYSCALL_os_sched_last_status_ID_IN: u32 = 1610652811;
-pub const SYSCALL_os_sched_last_status_ID_OUT: u32 = 2415959149;
-pub const SYSCALL_os_sched_yield_ID_IN: u32 = 1610653118;
-pub const SYSCALL_os_sched_yield_ID_OUT: u32 = 2415959341;
-pub const SYSCALL_os_sched_switch_ID_IN: u32 = 1610653213;
-pub const SYSCALL_os_sched_switch_ID_OUT: u32 = 2415959600;
-pub const SYSCALL_os_sched_current_task_ID_IN: u32 = 1610648401;
-pub const SYSCALL_os_sched_current_task_ID_OUT: u32 = 2415954928;
-pub const SYSCALL_os_mpu_protect_ram_ID_IN: u32 = 1610648898;
-pub const SYSCALL_os_mpu_protect_ram_ID_OUT: u32 = 2415955328;
-pub const SYSCALL_os_mpu_protect_flash_ID_IN: u32 = 1610649335;
-pub const SYSCALL_os_mpu_protect_flash_ID_OUT: u32 = 2415955666;
-pub const SYSCALL_PARAMETER_ARRAY_MAX_LEN: u32 = 12;
 pub const BLE_CMD_APDU: u32 = 5;
 pub const BLE_CHUNK_LENGTH: u32 = 20;
 pub const M24SR_CHUNK_LENGTH: u32 = 246;
@@ -2310,16 +2042,7 @@ impl Default for cx_hash_header_s {
     }
 }
 pub type cx_hash_t = cx_hash_header_s;
-extern "C" {
-    pub fn cx_hash(
-        hash: *mut cx_hash_t,
-        mode: cty::c_int,
-        in_: *const cty::c_uchar,
-        len: cty::c_uint,
-        out: *mut cty::c_uchar,
-        out_len: cty::c_uint,
-    ) -> cty::c_int;
-}
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_ripemd160_s {
@@ -2387,9 +2110,7 @@ impl Default for cx_ripemd160_s {
     }
 }
 pub type cx_ripemd160_t = cx_ripemd160_s;
-extern "C" {
-    pub fn cx_ripemd160_init(hash: *mut cx_ripemd160_t) -> cty::c_int;
-}
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_sha256_s {
@@ -2457,20 +2178,7 @@ impl Default for cx_sha256_s {
     }
 }
 pub type cx_sha256_t = cx_sha256_s;
-extern "C" {
-    pub fn cx_sha224_init(hash: *mut cx_sha256_t) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_sha256_init(hash: *mut cx_sha256_t) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_hash_sha256(
-        in_: *const cty::c_uchar,
-        len: cty::c_uint,
-        out: *mut cty::c_uchar,
-        out_len: cty::c_uint,
-    ) -> cty::c_int;
-}
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_sha3_s {
@@ -2560,25 +2268,6 @@ impl Default for cx_sha3_s {
     }
 }
 pub type cx_sha3_t = cx_sha3_s;
-extern "C" {
-    pub fn cx_sha3_init(hash: *mut cx_sha3_t, size: cty::c_uint) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_keccak_init(hash: *mut cx_sha3_t, size: cty::c_uint) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_shake128_init(hash: *mut cx_sha3_t, out_size: cty::c_uint) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_shake256_init(hash: *mut cx_sha3_t, out_size: cty::c_uint) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_sha3_xof_init(
-        hash: *mut cx_sha3_t,
-        size: cty::c_uint,
-        out_length: cty::c_uint,
-    ) -> cty::c_int;
-}
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_sha512_s {
@@ -2646,20 +2335,6 @@ impl Default for cx_sha512_s {
     }
 }
 pub type cx_sha512_t = cx_sha512_s;
-extern "C" {
-    pub fn cx_sha384_init(hash: *mut cx_sha512_t) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_sha512_init(hash: *mut cx_sha512_t) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_hash_sha512(
-        in_: *const cty::c_uchar,
-        len: cty::c_uint,
-        out: *mut cty::c_uchar,
-        out_len: cty::c_uint,
-    ) -> cty::c_int;
-}
 pub const BLAKE2B_BLOCKBYTES: blake2b_constant = 128;
 pub const BLAKE2B_OUTBYTES: blake2b_constant = 64;
 pub const BLAKE2B_KEYBYTES: blake2b_constant = 64;
@@ -2822,19 +2497,7 @@ impl Default for cx_blake2b_s {
     }
 }
 pub type cx_blake2b_t = cx_blake2b_s;
-extern "C" {
-    pub fn cx_blake2b_init(hash: *mut cx_blake2b_t, out_len: cty::c_uint) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_blake2b_init2(
-        hash: *mut cx_blake2b_t,
-        out_len: cty::c_uint,
-        salt: *mut cty::c_uchar,
-        salt_len: cty::c_uint,
-        perso: *mut cty::c_uchar,
-        perso_len: cty::c_uint,
-    ) -> cty::c_int;
-}
+
 pub type BitSequence = cty::c_uchar;
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -3003,9 +2666,7 @@ impl Default for cx_groestl_s {
     }
 }
 pub type cx_groestl_t = cx_groestl_s;
-extern "C" {
-    pub fn cx_groestl_init(hash: *mut cx_groestl_t, size: cty::c_uint) -> cty::c_int;
-}
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union cx_hash_for_hmac_ctx {
@@ -3121,69 +2782,7 @@ pub type cx_hmac_t = cx_hmac_ctx;
 pub type cx_hmac_ripemd160_t = cx_hmac_ctx;
 pub type cx_hmac_sha256_t = cx_hmac_ctx;
 pub type cx_hmac_sha512_t = cx_hmac_ctx;
-extern "C" {
-    pub fn cx_hmac_ripemd160_init(
-        hmac: *mut cx_hmac_ripemd160_t,
-        key: *const cty::c_uchar,
-        key_len: cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_hmac_sha256_init(
-        hmac: *mut cx_hmac_sha256_t,
-        key: *const cty::c_uchar,
-        key_len: cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_hmac_sha512_init(
-        hmac: *mut cx_hmac_sha512_t,
-        key: *const cty::c_uchar,
-        key_len: cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_hmac(
-        hmac: *mut cx_hmac_t,
-        mode: cty::c_int,
-        in_: *const cty::c_uchar,
-        len: cty::c_uint,
-        mac: *mut cty::c_uchar,
-        mac_len: cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_hmac_sha512(
-        key: *const cty::c_uchar,
-        key_len: cty::c_uint,
-        in_: *const cty::c_uchar,
-        len: cty::c_uint,
-        mac: *mut cty::c_uchar,
-        mac_len: cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_hmac_sha256(
-        key: *const cty::c_uchar,
-        key_len: cty::c_uint,
-        in_: *const cty::c_uchar,
-        len: cty::c_uint,
-        mac: *mut cty::c_uchar,
-        mac_len: cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_pbkdf2(
-        md_type: cx_md_t,
-        password: *const cty::c_uchar,
-        passwordlen: cty::c_ushort,
-        salt: *mut cty::c_uchar,
-        saltlen: cty::c_ushort,
-        iterations: cty::c_uint,
-        out: *mut cty::c_uchar,
-        outLength: cty::c_uint,
-    );
-}
+
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct cx_des_key_s {
@@ -3224,35 +2823,7 @@ fn bindgen_test_layout_cx_des_key_s() {
     );
 }
 pub type cx_des_key_t = cx_des_key_s;
-extern "C" {
-    pub fn cx_des_init_key(
-        rawkey: *const cty::c_uchar,
-        key_len: cty::c_uint,
-        key: *mut cx_des_key_t,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_des_iv(
-        key: *const cx_des_key_t,
-        mode: cty::c_int,
-        iv: *mut cty::c_uchar,
-        iv_len: cty::c_uint,
-        in_: *const cty::c_uchar,
-        in_len: cty::c_uint,
-        out: *mut cty::c_uchar,
-        out_len: cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_des(
-        key: *const cx_des_key_t,
-        mode: cty::c_int,
-        in_: *const cty::c_uchar,
-        in_len: cty::c_uint,
-        out: *mut cty::c_uchar,
-        out_len: cty::c_uint,
-    ) -> cty::c_int;
-}
+
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct cx_aes_key_s {
@@ -3293,35 +2864,7 @@ fn bindgen_test_layout_cx_aes_key_s() {
     );
 }
 pub type cx_aes_key_t = cx_aes_key_s;
-extern "C" {
-    pub fn cx_aes_init_key(
-        rawkey: *const cty::c_uchar,
-        key_len: cty::c_uint,
-        key: *mut cx_aes_key_t,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_aes_iv(
-        key: *const cx_aes_key_t,
-        mode: cty::c_int,
-        iv: *mut cty::c_uchar,
-        iv_len: cty::c_uint,
-        in_: *const cty::c_uchar,
-        in_len: cty::c_uint,
-        out: *mut cty::c_uchar,
-        out_len: cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_aes(
-        key: *const cx_aes_key_t,
-        mode: cty::c_int,
-        in_: *const cty::c_uchar,
-        in_len: cty::c_uint,
-        out: *mut cty::c_uchar,
-        out_len: cty::c_uint,
-    ) -> cty::c_int;
-}
+
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct cx_rsa_public_key_s {
@@ -3872,78 +3415,7 @@ impl Default for cx_rsa_4096_private_key_s {
 }
 pub type cx_rsa_4096_public_key_t = cx_rsa_4096_public_key_s;
 pub type cx_rsa_4096_private_key_t = cx_rsa_4096_private_key_s;
-extern "C" {
-    pub fn cx_rsa_init_public_key(
-        exponent: *const cty::c_uchar,
-        exponent_len: cty::c_uint,
-        modulus: *const cty::c_uchar,
-        modulus_len: cty::c_uint,
-        key: *mut cx_rsa_public_key_t,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_rsa_init_private_key(
-        exponent: *const cty::c_uchar,
-        exponent_len: cty::c_uint,
-        modulus: *const cty::c_uchar,
-        modulus_len: cty::c_uint,
-        key: *mut cx_rsa_private_key_t,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_rsa_generate_pair(
-        modulus_len: cty::c_uint,
-        public_key: *mut cx_rsa_public_key_t,
-        private_key: *mut cx_rsa_private_key_t,
-        pub_exponent: *const cty::c_uchar,
-        exponent_len: cty::c_uint,
-        externalPQ: *const cty::c_uchar,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_rsa_sign(
-        key: *const cx_rsa_private_key_t,
-        mode: cty::c_int,
-        hashID: cx_md_t,
-        hash: *const cty::c_uchar,
-        hash_len: cty::c_uint,
-        sig: *mut cty::c_uchar,
-        sig_len: cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_rsa_verify(
-        key: *const cx_rsa_public_key_t,
-        mode: cty::c_int,
-        hashID: cx_md_t,
-        hash: *const cty::c_uchar,
-        hash_len: cty::c_uint,
-        sig: *const cty::c_uchar,
-        sig_len: cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_rsa_encrypt(
-        key: *const cx_rsa_public_key_t,
-        mode: cty::c_int,
-        hashID: cx_md_t,
-        mesg: *const cty::c_uchar,
-        mesg_len: cty::c_uint,
-        enc: *mut cty::c_uchar,
-        enc_len: cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_rsa_decrypt(
-        key: *const cx_rsa_private_key_t,
-        mode: cty::c_int,
-        hashID: cx_md_t,
-        mesg: *const cty::c_uchar,
-        mesg_len: cty::c_uint,
-        dec: *mut cty::c_uchar,
-        dec_len: cty::c_uint,
-    ) -> cty::c_int;
-}
+
 pub const CX_CURVE_NONE: cx_curve_e = 0;
 pub const CX_CURVE_WEIERSTRASS_START: cx_curve_e = 32;
 pub const CX_CURVE_SECP256K1: cx_curve_e = 33;
@@ -4734,8 +4206,8 @@ impl Default for cx_ecfp_private_key_s {
         unsafe { ::core::mem::zeroed() }
     }
 }
-pub type __cx_ecfp_private_key_t = cx_ecfp_private_key_s;
-pub type __cx_ecfp_public_key_t = cx_ecfp_public_key_s;
+// pub type __cx_ecfp_private_key_t = cx_ecfp_private_key_s;
+// pub type __cx_ecfp_public_key_t = cx_ecfp_public_key_s;
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_ecfp_256_public_key_s {
@@ -5336,285 +4808,6 @@ impl Default for cx_ecfp_640_private_key_s {
 }
 pub type cx_ecfp_640_public_key_t = cx_ecfp_640_public_key_s;
 pub type cx_ecfp_640_private_key_t = cx_ecfp_640_private_key_s;
-extern "C" {
-    pub fn cx_ecfp_is_valid_point(
-        curve: cx_curve_t,
-        P: *const cty::c_uchar,
-        P_len: cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_ecfp_is_cryptographic_point(
-        curve: cx_curve_t,
-        P: *const cty::c_uchar,
-        P_len: cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_ecfp_add_point(
-        curve: cx_curve_t,
-        R: *mut cty::c_uchar,
-        P: *const cty::c_uchar,
-        Q: *const cty::c_uchar,
-        X_len: cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_ecfp_scalar_mult(
-        curve: cx_curve_t,
-        P: *mut cty::c_uchar,
-        P_len: cty::c_uint,
-        k: *const cty::c_uchar,
-        k_len: cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_ecfp_init_public_key(
-        curve: cx_curve_t,
-        rawkey: *const cty::c_uchar,
-        key_len: cty::c_uint,
-        key: *mut cx_ecfp_public_key_t,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_ecfp_init_private_key(
-        curve: cx_curve_t,
-        rawkey: *const cty::c_uchar,
-        key_len: cty::c_uint,
-        pvkey: *mut cx_ecfp_private_key_t,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_ecfp_generate_pair(
-        curve: cx_curve_t,
-        pubkey: *mut cx_ecfp_public_key_t,
-        privkey: *mut cx_ecfp_private_key_t,
-        keepprivate: cty::c_int,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_ecfp_generate_pair2(
-        curve: cx_curve_t,
-        pubkey: *mut cx_ecfp_public_key_t,
-        privkey: *mut cx_ecfp_private_key_t,
-        keepprivate: cty::c_int,
-        hashID: cx_md_t,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_ecdsa_sign(
-        pvkey: *const cx_ecfp_private_key_t,
-        mode: cty::c_int,
-        hashID: cx_md_t,
-        hash: *const cty::c_uchar,
-        hash_len: cty::c_uint,
-        sig: *mut cty::c_uchar,
-        sig_len: cty::c_uint,
-        info: *mut cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_ecdsa_verify(
-        pukey: *const cx_ecfp_public_key_t,
-        mode: cty::c_int,
-        hashID: cx_md_t,
-        hash: *const cty::c_uchar,
-        hash_len: cty::c_uint,
-        sig: *const cty::c_uchar,
-        sig_len: cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_ecschnorr_sign(
-        pvkey: *const cx_ecfp_private_key_t,
-        mode: cty::c_int,
-        hashID: cx_md_t,
-        msg: *const cty::c_uchar,
-        msg_len: cty::c_uint,
-        sig: *mut cty::c_uchar,
-        sig_len: cty::c_uint,
-        info: *mut cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_ecschnorr_verify(
-        pukey: *const cx_ecfp_public_key_t,
-        mode: cty::c_int,
-        hashID: cx_md_t,
-        msg: *const cty::c_uchar,
-        msg_len: cty::c_uint,
-        sig: *const cty::c_uchar,
-        sig_len: cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_edward_compress_point(curve: cx_curve_t, P: *mut cty::c_uchar, P_len: cty::c_uint);
-}
-extern "C" {
-    pub fn cx_edward_decompress_point(curve: cx_curve_t, P: *mut cty::c_uchar, P_len: cty::c_uint);
-}
-extern "C" {
-    pub fn cx_eddsa_get_public_key(
-        pvkey: *const cx_ecfp_private_key_t,
-        hashID: cx_md_t,
-        pukey: *mut cx_ecfp_public_key_t,
-        a: *mut cty::c_uchar,
-        a_len: cty::c_uint,
-        h: *mut cty::c_uchar,
-        h_len: cty::c_uint,
-    );
-}
-extern "C" {
-    pub fn cx_eddsa_sign(
-        pvkey: *const cx_ecfp_private_key_t,
-        mode: cty::c_int,
-        hashID: cx_md_t,
-        hash: *const cty::c_uchar,
-        hash_len: cty::c_uint,
-        ctx: *const cty::c_uchar,
-        ctx_len: cty::c_uint,
-        sig: *mut cty::c_uchar,
-        sig_len: cty::c_uint,
-        info: *mut cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_eddsa_verify(
-        pukey: *const cx_ecfp_public_key_t,
-        mode: cty::c_int,
-        hashID: cx_md_t,
-        hash: *const cty::c_uchar,
-        hash_len: cty::c_uint,
-        ctx: *const cty::c_uchar,
-        ctx_len: cty::c_uint,
-        sig: *const cty::c_uchar,
-        sig_len: cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_ecdh(
-        pvkey: *const cx_ecfp_private_key_t,
-        mode: cty::c_int,
-        P: *const cty::c_uchar,
-        P_len: cty::c_uint,
-        secret: *mut cty::c_uchar,
-        secret_len: cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_crc16(buffer: *const cty::c_void, len: size_t) -> cty::c_ushort;
-}
-extern "C" {
-    pub fn cx_crc16_update(
-        crc: cty::c_ushort,
-        buffer: *const cty::c_void,
-        len: size_t,
-    ) -> cty::c_ushort;
-}
-extern "C" {
-    pub fn cx_math_cmp(
-        a: *const cty::c_uchar,
-        b: *const cty::c_uchar,
-        len: cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_math_is_zero(a: *const cty::c_uchar, len: cty::c_uint) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_math_add(
-        r: *mut cty::c_uchar,
-        a: *const cty::c_uchar,
-        b: *const cty::c_uchar,
-        len: cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_math_sub(
-        r: *mut cty::c_uchar,
-        a: *const cty::c_uchar,
-        b: *const cty::c_uchar,
-        len: cty::c_uint,
-    ) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_math_mult(
-        r: *mut cty::c_uchar,
-        a: *const cty::c_uchar,
-        b: *const cty::c_uchar,
-        len: cty::c_uint,
-    );
-}
-extern "C" {
-    pub fn cx_math_addm(
-        r: *mut cty::c_uchar,
-        a: *const cty::c_uchar,
-        b: *const cty::c_uchar,
-        m: *const cty::c_uchar,
-        len: cty::c_uint,
-    );
-}
-extern "C" {
-    pub fn cx_math_subm(
-        r: *mut cty::c_uchar,
-        a: *const cty::c_uchar,
-        b: *const cty::c_uchar,
-        m: *const cty::c_uchar,
-        len: cty::c_uint,
-    );
-}
-extern "C" {
-    pub fn cx_math_multm(
-        r: *mut cty::c_uchar,
-        a: *const cty::c_uchar,
-        b: *const cty::c_uchar,
-        m: *const cty::c_uchar,
-        len: cty::c_uint,
-    );
-}
-extern "C" {
-    pub fn cx_math_powm(
-        r: *mut cty::c_uchar,
-        a: *const cty::c_uchar,
-        e: *const cty::c_uchar,
-        len_e: cty::c_uint,
-        m: *const cty::c_uchar,
-        len: cty::c_uint,
-    );
-}
-extern "C" {
-    pub fn cx_math_modm(
-        v: *mut cty::c_uchar,
-        len_v: cty::c_uint,
-        m: *const cty::c_uchar,
-        len_m: cty::c_uint,
-    );
-}
-extern "C" {
-    pub fn cx_math_invprimem(
-        r: *mut cty::c_uchar,
-        a: *const cty::c_uchar,
-        m: *const cty::c_uchar,
-        len: cty::c_uint,
-    );
-}
-extern "C" {
-    pub fn cx_math_invintm(
-        r: *mut cty::c_uchar,
-        a: cty::c_ulong,
-        m: *const cty::c_uchar,
-        len: cty::c_uint,
-    );
-}
-extern "C" {
-    pub fn cx_math_is_prime(p: *const cty::c_uchar, len: cty::c_uint) -> cty::c_int;
-}
-extern "C" {
-    pub fn cx_math_next_prime(n: *mut cty::c_uchar, len: cty::c_uint);
-}
-extern "C" {
-    pub fn cx_selftest() -> cty::c_int;
-}
 pub const BOLOS_UX_INITIALIZE: bolos_ux_e = 0;
 pub const BOLOS_UX_EVENT: bolos_ux_e = 1;
 pub const BOLOS_UX_KEYBOARD: bolos_ux_e = 2;
@@ -7110,162 +6303,6 @@ impl Default for bolos_ux_params_s {
     }
 }
 pub type bolos_ux_params_t = bolos_ux_params_s;
-extern "C" {
-    pub fn os_perso_erase_all();
-}
-extern "C" {
-    pub fn os_perso_set_pin(identity: cty::c_uint, pin: *mut cty::c_uchar, length: cty::c_uint);
-}
-extern "C" {
-    pub fn os_perso_set_current_identity_pin(pin: *mut cty::c_uchar, length: cty::c_uint);
-}
-extern "C" {
-    pub fn os_perso_set_seed(
-        identity: cty::c_uint,
-        algorithm: cty::c_uint,
-        seed: *mut cty::c_uchar,
-        length: cty::c_uint,
-    );
-}
-extern "C" {
-    pub fn os_perso_derive_and_set_seed(
-        identity: cty::c_uchar,
-        prefix: *const cty::c_char,
-        prefix_length: cty::c_uint,
-        passphrase: *const cty::c_char,
-        passphrase_length: cty::c_uint,
-        words: *const cty::c_char,
-        words_length: cty::c_uint,
-    );
-}
-extern "C" {
-    pub fn os_perso_set_words(words: *const cty::c_uchar, length: cty::c_uint);
-}
-extern "C" {
-    pub fn os_perso_finalize();
-}
-extern "C" {
-    pub fn os_perso_isonboarded() -> bolos_bool_t;
-}
-extern "C" {
-    pub fn os_perso_derive_node_bip32(
-        curve: cx_curve_t,
-        path: *const cty::c_uint,
-        pathLength: cty::c_uint,
-        privateKey: *mut cty::c_uchar,
-        chain: *mut cty::c_uchar,
-    );
-}
-extern "C" {
-    pub fn os_perso_derive_node_with_seed_key(
-        mode: cty::c_uint,
-        curve: cx_curve_t,
-        path: *const cty::c_uint,
-        pathLength: cty::c_uint,
-        privateKey: *mut cty::c_uchar,
-        chain: *mut cty::c_uchar,
-        seed_key: *mut cty::c_uchar,
-        seed_key_length: cty::c_uint,
-    );
-}
-extern "C" {
-    pub fn os_perso_seed_cookie(
-        seed_cookie: *mut cty::c_uchar,
-        seed_cookie_length: cty::c_uint,
-    ) -> cty::c_uint;
-}
-extern "C" {
-    pub fn os_endorsement_get_code_hash(buffer: *mut cty::c_uchar) -> cty::c_uint;
-}
-extern "C" {
-    pub fn os_endorsement_get_public_key(
-        index: cty::c_uchar,
-        buffer: *mut cty::c_uchar,
-    ) -> cty::c_uint;
-}
-extern "C" {
-    pub fn os_endorsement_get_public_key_certificate(
-        index: cty::c_uchar,
-        buffer: *mut cty::c_uchar,
-    ) -> cty::c_uint;
-}
-extern "C" {
-    pub fn os_endorsement_key1_get_app_secret(buffer: *mut cty::c_uchar) -> cty::c_uint;
-}
-extern "C" {
-    pub fn os_endorsement_key1_sign_data(
-        src: *mut cty::c_uchar,
-        srcLength: cty::c_uint,
-        signature: *mut cty::c_uchar,
-    ) -> cty::c_uint;
-}
-extern "C" {
-    pub fn os_endorsement_key2_derive_sign_data(
-        src: *mut cty::c_uchar,
-        srcLength: cty::c_uint,
-        signature: *mut cty::c_uchar,
-    ) -> cty::c_uint;
-}
-extern "C" {
-    pub fn os_global_pin_is_validated() -> bolos_bool_t;
-}
-extern "C" {
-    pub fn os_global_pin_check(
-        pin_buffer: *mut cty::c_uchar,
-        pin_length: cty::c_uchar,
-    ) -> bolos_bool_t;
-}
-extern "C" {
-    pub fn os_global_pin_invalidate();
-}
-extern "C" {
-    pub fn os_global_pin_retries() -> cty::c_uint;
-}
-extern "C" {
-    pub fn os_registry_count() -> cty::c_uint;
-}
-extern "C" {
-    pub fn os_registry_get(index: cty::c_uint, out_application_entry: *mut application_t);
-}
-extern "C" {
-    pub fn os_ux(params: *mut bolos_ux_params_t) -> cty::c_uint;
-}
-extern "C" {
-    pub fn os_ux_result(params: *mut bolos_ux_params_t);
-}
-extern "C" {
-    pub fn os_ux_read_parameters(params: *mut bolos_ux_params_t);
-}
-extern "C" {
-    pub fn os_ux_blocking(params: *mut bolos_ux_params_t, arg1: *mut apdu_buffer_t) -> cty::c_uint;
-}
-extern "C" {
-    pub fn os_lib_call(call_parameters: *mut cty::c_uint);
-}
-extern "C" {
-    pub fn os_lib_end();
-}
-extern "C" {
-    pub fn os_lib_throw(exception: cty::c_uint);
-}
-extern "C" {
-    pub fn os_flags() -> cty::c_uint;
-}
-extern "C" {
-    pub fn os_version(version: *mut cty::c_uchar, maxlength: cty::c_uint) -> cty::c_uint;
-}
-extern "C" {
-    pub fn os_serial(serial: *mut cty::c_uchar, maxlength: cty::c_uint) -> cty::c_uint;
-}
-extern "C" {
-    pub fn os_seph_features() -> cty::c_uint;
-}
-extern "C" {
-    pub fn os_seph_version(version: *mut cty::c_uchar, maxlength: cty::c_uint) -> cty::c_uint;
-}
-extern "C" {
-    pub fn os_get_sn(buffer: *mut cty::c_uchar) -> cty::c_uint;
-}
 pub const OS_SETTING_BRIGHTNESS: os_setting_e = 0;
 pub const OS_SETTING_INVERT: os_setting_e = 1;
 pub const OS_SETTING_ROTATION: os_setting_e = 2;
@@ -7396,16 +6433,7 @@ extern "C" {
 extern "C" {
     pub fn safe_desynch();
 }
-pub const OS_WATCHDOG_NOACTION: os_watchdog_behavior_t = 0;
-pub const OS_WATCHDOG_RESET: os_watchdog_behavior_t = 1;
-pub const OS_WATCHDOG_WIPE: os_watchdog_behavior_t = 2;
-pub type os_watchdog_behavior_t = u8;
-extern "C" {
-    pub fn os_watchdog_arm(useconds: cty::c_uint, behavior: os_watchdog_behavior_t);
-}
-extern "C" {
-    pub fn os_watchdog_value() -> cty::c_int;
-}
+
 pub const TASK_BOLOS: task_unsecure_id_e = 0;
 pub const TASK_SYSCALL: task_unsecure_id_e = 1;
 pub const TASK_USERTASKS_START: task_unsecure_id_e = 2;
@@ -7415,67 +6443,6 @@ pub const TASK_SUBTASK_0: task_unsecure_id_e = 3;
 pub const TASK_BOLOS_UX: task_unsecure_id_e = 4;
 pub const TASK_MAXCOUNT: task_unsecure_id_e = 5;
 pub type task_unsecure_id_e = u8;
-extern "C" {
-    pub fn os_sched_exec(application_index: cty::c_uint);
-}
-extern "C" {
-    pub fn os_sched_exit(exit_code: bolos_task_status_t);
-}
-extern "C" {
-    pub fn os_sched_is_running(task_idx: cty::c_uint) -> bolos_bool_t;
-}
-extern "C" {
-    pub fn os_sched_last_status(task_idx: cty::c_uint) -> bolos_task_status_t;
-}
-extern "C" {
-    pub fn svc_os_sched_last_status(task_idx: cty::c_uint) -> bolos_task_status_t;
-}
-extern "C" {
-    pub fn os_sched_yield(status: bolos_task_status_t);
-}
-extern "C" {
-    pub fn svc_os_sched_yield(status: bolos_task_status_t);
-}
-extern "C" {
-    pub fn os_sched_switch(task_idx: cty::c_uint, status: bolos_task_status_t);
-}
-extern "C" {
-    pub fn svc_os_sched_switch(task_idx: cty::c_uint, status: bolos_task_status_t);
-}
-extern "C" {
-    pub fn os_sched_current_task() -> cty::c_uint;
-}
-extern "C" {
-    pub fn svc_os_sched_current_task() -> cty::c_uint;
-}
-extern "C" {
-    pub fn os_sched_create(
-        permissions: cty::c_uint,
-        main: *mut cty::c_void,
-        nvram: *mut cty::c_void,
-        nvram_length: cty::c_uint,
-        ram0: *mut cty::c_void,
-        ram0_length: cty::c_uint,
-        ram1: *mut cty::c_void,
-        ram1_length: cty::c_uint,
-        stack: *mut cty::c_void,
-        stack_length: cty::c_uint,
-    ) -> cty::c_uint;
-}
-extern "C" {
-    pub fn os_sched_kill(taskidx: cty::c_uint);
-}
-extern "C" {
-    pub fn os_parse_bertlv(
-        mem: *mut cty::c_uchar,
-        mem_len: cty::c_uint,
-        tlv_instance_offset: *mut cty::c_uint,
-        tag: cty::c_uint,
-        offset: cty::c_uint,
-        buffer: *mut *mut cty::c_void,
-        maxlength: cty::c_uint,
-    ) -> cty::c_uint;
-}
 pub const BAGL_NONE: bagl_components_type_e_ = 0;
 pub const BAGL_BUTTON: bagl_components_type_e_ = 1;
 pub const BAGL_LABEL: bagl_components_type_e_ = 2;
@@ -9593,7 +8560,7 @@ extern "C" {
 //     pub static mut G_io_seproxyhal_spi_buffer: [cty::c_uchar; 128usize];
 // }
 extern "C" {
-    pub fn io_seph_send(buffer: *const cty::c_uchar, length: cty::c_ushort);
+    pub fn io_seph_send(buffer: *const cty::c_uchar, length: cty::c_ushort) -> i32;
 }
 extern "C" {
     pub fn io_seph_is_status_sent() -> cty::c_uint;
@@ -9811,9 +8778,9 @@ impl Default for io_seph_s {
     }
 }
 pub type io_seph_app_t = io_seph_s;
-extern "C" {
-    pub static mut G_io_app: io_seph_app_t;
-}
+// extern "C" {
+//     pub static mut G_io_app: io_seph_app_t;
+// }
 extern "C" {
     pub fn io_seproxyhal_disable_ble();
 }

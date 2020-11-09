@@ -1,12 +1,16 @@
 #![no_std]
 
 pub mod bindings;
+pub mod buttons;
+pub mod syscalls_bindings;
 pub mod ecc;
 pub mod io;
 pub mod seph;
 pub mod random;
+pub mod usbbindings;
+pub mod usbcorebindings;
 
-use bindings::*;
+use syscalls_bindings::*;
 
 use core::panic::PanicInfo;
 
