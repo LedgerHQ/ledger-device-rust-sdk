@@ -64,7 +64,20 @@ extern "C" {
     fn pic(link_address: u32) -> u32; 
 }
 
+/// Performs code address translation for reading data located in the program
+/// and relocated during application installation.
 pub fn pic_rs<T>(x: &T) -> &T {
     let ptr = unsafe { pic(x as *const T as u32) as *const T };
     unsafe{ & *ptr }
+}
+
+/// Performs code address translation for reading mutable data located in the
+/// program and relocated during application installation.
+///
+/// Warning: this is for corner cases as it is not directly possible to write
+/// data stored in the code as it resides in Flash memory. This is needed in
+/// particular when using the `nvm` module.
+pub fn pic_rs_mut<T>(x: &mut T) -> &mut T {
+    let ptr = unsafe { pic(x as *mut T as u32) as *mut T };
+    unsafe{ &mut *ptr }
 }
