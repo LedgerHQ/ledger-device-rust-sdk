@@ -1,4 +1,6 @@
 #![no_std]
+#![feature(min_const_generics)]
+#![feature(const_fn)]
 
 pub mod bindings;
 pub mod buttons;
@@ -9,6 +11,7 @@ pub mod seph;
 pub mod random;
 pub mod usbbindings;
 pub mod usbcorebindings;
+pub mod nvm;
 
 use syscalls_bindings::*;
 
