@@ -2,6 +2,7 @@ use crate::bindings::*;
 use crate::seph;
 use crate::buttons::{ButtonEvent, ButtonsState, get_button_event};
 use core::ops::{Index, IndexMut};
+use crate::bindings::G_io_app;
 
 #[derive(Copy, Clone)]
 pub enum StatusWords {
@@ -14,6 +15,13 @@ pub enum StatusWords {
     Panic = 0xe000,
 }
 
+
+extern "C" {
+    pub fn io_usb_hid_send(
+        sndfct: unsafe extern "C" fn(*mut u8, u16), 
+        sndlength: u16, 
+        apdu_buffer: *const u8);
+}
 
 /// App-visible events:
 /// - APDU received (=command)
@@ -43,12 +51,28 @@ impl Comm {
         if !seph::is_status_sent() {
             seph::send_general_status()
         }
-        let len = (self.tx as u16).to_be_bytes();
-        seph::seph_send(&[seph::SephTags::RawAPDU as u8, len[0], len[1]]);
-        seph::seph_send(&self.apdu_buffer[..self.tx]);
+        let mut spi_buffer = [0u8; 128];
+        while seph::is_status_sent() {
+            seph::seph_recv(&mut spi_buffer, 0);
+            seph::handle_event(&mut self.apdu_buffer, &spi_buffer);
+        }
+
+        match unsafe { G_io_app.apdu_state } {
+            APDU_USB_HID => {
+                unsafe {
+                    io_usb_hid_send(io_usb_send_apdu_data, self.tx as u16, self.apdu_buffer.as_ptr());
+                }
+            },
+            APDU_RAW => { 
+                let len = (self.tx as u16).to_be_bytes();
+                seph::seph_send(&[seph::SephTags::RawAPDU as u8, len[0], len[1]]);
+                seph::seph_send(&self.apdu_buffer[..self.tx]);
+            }
+            _ => ()
+        }
         self.tx = 0;
         self.rx = 0;
-        unsafe { seph::G_io_app.apdu_state = APDU_IDLE;}
+        unsafe {G_io_app.apdu_state = APDU_IDLE;}
     }
 
     /// Wait for either a button press or an APDU.
@@ -57,9 +81,9 @@ impl Comm {
         let mut spi_buffer = [0u8; 128];
 
         unsafe { 
-            seph::G_io_app.apdu_state = APDU_IDLE;
-            seph::G_io_app.apdu_media = IO_APDU_MEDIA_NONE;
-            seph::G_io_app.apdu_length = 0; 
+           G_io_app.apdu_state = APDU_IDLE;
+           G_io_app.apdu_media = IO_APDU_MEDIA_NONE;
+           G_io_app.apdu_length = 0; 
         }
 
         loop {
@@ -80,8 +104,8 @@ impl Comm {
             // XXX: check whether this is necessary
             // if rx < 3 && rx != len+3 {
             //     unsafe {
-            //         seph::G_io_app.apdu_state = APDU_IDLE;
-            //         seph::G_io_app.apdu_length = 0;
+            //        G_io_app.apdu_state = APDU_IDLE;
+            //        G_io_app.apdu_length = 0;
             //     }
             //     return None
             // }
@@ -114,8 +138,8 @@ impl Comm {
                 _ => ()
             }
 
-            if unsafe{ seph::G_io_app.apdu_state } != APDU_IDLE && unsafe { seph::G_io_app.apdu_length } > 0 {
-                self.rx = unsafe { seph::G_io_app.apdu_length as usize };
+            if unsafe{G_io_app.apdu_state } != APDU_IDLE && unsafe {G_io_app.apdu_length } > 0 {
+                self.rx = unsafe {G_io_app.apdu_length as usize };
                 return GlobalEvent::CommandReceived
             }
         }
@@ -126,9 +150,9 @@ impl Comm {
         // crate::debug_write("apdu_recv\n");
         let mut spi_buffer = [0u8; 128];
         unsafe { 
-            seph::G_io_app.apdu_state = APDU_IDLE;
-            seph::G_io_app.apdu_media = IO_APDU_MEDIA_NONE;
-            seph::G_io_app.apdu_length = 0; 
+           G_io_app.apdu_state = APDU_IDLE;
+           G_io_app.apdu_media = IO_APDU_MEDIA_NONE;
+           G_io_app.apdu_length = 0; 
         }
         self.rx = 0;
         loop 
@@ -141,14 +165,14 @@ impl Comm {
             let len = u16::from_be_bytes([spi_buffer[1], spi_buffer[2]]);
             if rx < 3 && rx != len {
                 unsafe {
-                    seph::G_io_app.apdu_state = APDU_IDLE;
-                    seph::G_io_app.apdu_length = 0;
+                   G_io_app.apdu_state = APDU_IDLE;
+                   G_io_app.apdu_length = 0;
                 }
                 return None
             }
             seph::handle_event(&mut self.apdu_buffer, &mut spi_buffer);
-            if unsafe{ seph::G_io_app.apdu_state } != APDU_IDLE && unsafe { seph::G_io_app.apdu_length } > 0 {
-                self.rx = unsafe { seph::G_io_app.apdu_length as usize };
+            if unsafe{G_io_app.apdu_state } != APDU_IDLE && unsafe {G_io_app.apdu_length } > 0 {
+                self.rx = unsafe {G_io_app.apdu_length as usize };
                 return Some(self.rx)
             }
         }

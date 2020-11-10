@@ -8778,9 +8778,9 @@ impl Default for io_seph_s {
     }
 }
 pub type io_seph_app_t = io_seph_s;
-// extern "C" {
-//     pub static mut G_io_app: io_seph_app_t;
-// }
+extern "C" {
+    pub static mut G_io_app: io_seph_app_t;
+}
 extern "C" {
     pub fn io_seproxyhal_disable_ble();
 }

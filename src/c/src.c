@@ -1,13 +1,15 @@
 #include "os.h"
+#include "os_io_seproxyhal.h"
 
 extern void sample_main();
 
 unsigned char G_io_seproxyhal_spi_buffer[128] = {0};
+io_seph_app_t G_io_app;
 
 int c_main(void) {
   __asm volatile("cpsie i");
   unsigned int r9_reg = pic_internal(0xc0d00000);
-  __asm volatile("mov r9, %0":"=r"(r9_reg));
+  __asm volatile("mov r9, %0":"=r"(r9_reg)::"r9");
 
   os_boot();
   for(;;) {
