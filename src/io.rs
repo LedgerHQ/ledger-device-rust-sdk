@@ -27,7 +27,7 @@ extern "C" {
 /// - APDU received (=command)
 /// - Button press event
 pub enum GlobalEvent {
-    CommandReceived,
+    Command(u8),
     ButtonEvent(ButtonEvent)
 }
 
@@ -140,7 +140,7 @@ impl Comm {
 
             if unsafe{G_io_app.apdu_state } != APDU_IDLE && unsafe {G_io_app.apdu_length } > 0 {
                 self.rx = unsafe {G_io_app.apdu_length as usize };
-                return GlobalEvent::CommandReceived
+                return GlobalEvent::Command(self.apdu_buffer[1])
             }
         }
     }
