@@ -80,3 +80,26 @@ pub fn pic_rs_mut<T>(x: &mut T) -> &mut T {
     let ptr = unsafe { pic(x as *mut T as u32) as *mut T };
     unsafe{ &mut *ptr }
 }
+
+/// Data wrapper to force access through address translation with pic_rs or
+/// pic_rs_mut. This can help preventing mistakes when accessing data which has
+/// been relocated.
+pub struct PIC<T> {
+    data: T
+}
+
+impl<T> PIC<T> {
+    pub const fn new(data: T) -> PIC<T> {
+        return PIC { data: data }
+    }
+
+    /// Returns translated reference to the wrapped data.
+    pub fn get_ref(&self) -> &T {
+        return pic_rs(&self.data);
+    }
+
+    /// Returns translated mutable reference to the wrapped data.
+    pub fn get_mut(&mut self) -> &mut T {
+        return pic_rs_mut(&mut self.data);
+    }
+}
