@@ -23,12 +23,12 @@ extern "C" {
         apdu_buffer: *const u8);
 }
 
-/// App-visible events:
-/// - APDU received (=command)
-/// - Button press event
-pub enum GlobalEvent {
+/// Possible events returned by [Comm::next_event](Comm::next_event)
+pub enum Event {
+    /// APDU event
     Command(u8),
-    ButtonEvent(ButtonEvent)
+    /// Button press or release event
+    Button(ButtonEvent)
 }
 
 pub struct Comm {
@@ -75,9 +75,20 @@ impl Comm {
         unsafe {G_io_app.apdu_state = APDU_IDLE;}
     }
 
-    /// Wait for either a button press or an APDU.
-    /// Useful for implementing a main menu/welcome screen.
-    pub fn wait_for_event(&mut self, mut buttons: &mut ButtonsState) -> GlobalEvent {
+    /// Wait and return next button press event or APDU command.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// loop {
+    ///     match comm.next_event() {
+    ///         Event::Button(button) => { ... }
+    ///         Event::Command(0xa0) => { ... }
+    ///         Event::Command(0xa4) => { ... }
+    ///         _ => { ... }
+    ///     }
+    /// }
+    pub fn next_event(&mut self, mut buttons: &mut ButtonsState) -> Event {
         let mut spi_buffer = [0u8; 128];
 
         unsafe { 
@@ -118,7 +129,7 @@ impl Comm {
                 seph::Events::ButtonPush => {
                     let button_info = spi_buffer[3]>>1;
                     if let Some(btn_evt) = get_button_event(&mut buttons, button_info) {
-                        return GlobalEvent::ButtonEvent(btn_evt)
+                        return Event::Button(btn_evt)
                     }
                 },
                 seph::Events::USBEvent => {
@@ -140,7 +151,7 @@ impl Comm {
 
             if unsafe{G_io_app.apdu_state } != APDU_IDLE && unsafe {G_io_app.apdu_length } > 0 {
                 self.rx = unsafe {G_io_app.apdu_length as usize };
-                return GlobalEvent::Command(self.apdu_buffer[1])
+                return Event::Command(self.apdu_buffer[1])
             }
         }
     }
