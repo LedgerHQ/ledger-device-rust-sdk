@@ -81,9 +81,19 @@ pub fn pic_rs_mut<T>(x: &mut T) -> &mut T {
     unsafe{ &mut *ptr }
 }
 
-/// Data wrapper to force access through address translation with pic_rs or
-/// pic_rs_mut. This can help preventing mistakes when accessing data which has
-/// been relocated.
+/// Data wrapper to force access through address translation with [`pic_rs`] or
+/// [`pic_rs_mut`]. This can help preventing mistakes when accessing data which
+/// has been relocated.
+///
+/// # Examples
+///
+/// ```
+/// // This constant data is stored in Code space, which is relocated.
+/// static DATA: PIC<u32> = PIC::new(42);
+/// ...
+/// // Access with address translation is enforced thanks to PIC wrapper
+/// let x: u32 = *DATA.get_ref();
+/// ```
 pub struct PIC<T> {
     data: T
 }

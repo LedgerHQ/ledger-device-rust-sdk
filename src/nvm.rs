@@ -13,9 +13,13 @@
 //! update:
 //!
 //! ```
+//! use nanos_sdk::PIC;
+//! use nanos_sdk::nvm::AtomicStorage;
+//!
 //! // This is necessary to store the object in NVM and not in RAM
 //! #[link_section=".nvm"]
-//! static mut COUNTER: nvm::AtomicStorage<i32> = nvm::AtomicStorage::new(&3);
+//! static mut COUNTER: PIC<AtomicStorage<i32>> =
+//!     PIC::new(AtomicStorage::new(&3));
 //! ```
 //!
 //! In the program, `COUNTER` must not be used directly. It is a static variable
@@ -25,8 +29,12 @@
 //! atomicity implementation, and the borrow checker should prevent any use of
 //! old references to a value which has been updated and moved elsewhere.
 //!
+//! Furthermore, since the data is stored in Code space, it is relocated during
+//! application installation. Therefore the address to this data must be
+//! translated: this is enforced by the [`PIC`](crate::PIC) wrapper.
+//!
 //! ```
-//! let mut counter = unsafe { &mut COUNTER };
+//! let mut counter = unsafe { COUNTER.get_mut() };
 //! println!("counter value is {}", *counter.get_ref());
 //! counter.update(&(*counter.get_ref() - 1));
 //! println!("counter value is {}", *counter.get_ref());
@@ -166,7 +174,7 @@ pub struct AtomicStorage<T> {
     // can happen with tearing. This is not a problem, and we consider the first
     // one is the "correct" one.
 }
-    
+
 impl<T> AtomicStorage<T> where T: Copy {
     /// Create an AtomicStorage<T> initialized with a given value.
     pub const fn new(value: &T) -> AtomicStorage<T> {
@@ -200,7 +208,7 @@ impl<T> SingleStorage<T> for AtomicStorage<T> where T: Copy {
             self.storage_b.get_ref()
         }
     }
-    
+
     /// Update the value by writting to the NVM memory.
     /// Warning: this can be vulnerable to tearing - leading to partial write.
     fn update(&mut self, value: &T){
@@ -225,7 +233,7 @@ pub struct Collection<T, const N: usize> {
 
 impl<T, const N: usize> Collection<T, N> where T: Copy {
     pub const fn new(value: T) -> Collection<T, N> {
-        Collection { 
+        Collection {
             flags: AtomicStorage::new(&[0;N]),
             slots: [AlignedStorage::new(value);N]
         }
