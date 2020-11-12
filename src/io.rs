@@ -35,6 +35,7 @@ pub struct Comm {
     pub apdu_buffer: [u8; 260],
     pub rx: usize,
     pub tx: usize,
+    buttons: ButtonsState
 }
 
 impl Comm {
@@ -43,6 +44,7 @@ impl Comm {
             apdu_buffer: [0u8; 260],
             rx: 0,
             tx: 0,
+            buttons: ButtonsState::new()
         }
     }
 
@@ -88,7 +90,7 @@ impl Comm {
     ///         _ => { ... }
     ///     }
     /// }
-    pub fn next_event(&mut self, mut buttons: &mut ButtonsState) -> Event {
+    pub fn next_event(&mut self) -> Event {
         let mut spi_buffer = [0u8; 128];
 
         unsafe { 
@@ -128,7 +130,7 @@ impl Comm {
             match seph::Events::from(tag) {
                 seph::Events::ButtonPush => {
                     let button_info = spi_buffer[3]>>1;
-                    if let Some(btn_evt) = get_button_event(&mut buttons, button_info) {
+                    if let Some(btn_evt) = get_button_event(&mut self.buttons, button_info) {
                         return Event::Button(btn_evt)
                     }
                 },
