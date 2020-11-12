@@ -85,11 +85,12 @@ impl Comm {
     /// loop {
     ///     match comm.next_event() {
     ///         Event::Button(button) => { ... }
-    ///         Event::Command(0xa0) => { ... }
     ///         Event::Command(0xa4) => { ... }
+    ///         Event::Command(0xb0) => { ... }
     ///         _ => { ... }
     ///     }
     /// }
+    /// ```
     pub fn next_event(&mut self) -> Event {
         let mut spi_buffer = [0u8; 128];
 
@@ -158,35 +159,24 @@ impl Comm {
         }
     }
 
-    /// Wait for an APDU without treating button presses
-    pub fn apdu_receive(&mut self) -> Option<usize> {
-        // crate::debug_write("apdu_recv\n");
-        let mut spi_buffer = [0u8; 128];
-        unsafe { 
-           G_io_app.apdu_state = APDU_IDLE;
-           G_io_app.apdu_media = IO_APDU_MEDIA_NONE;
-           G_io_app.apdu_length = 0; 
-        }
-        self.rx = 0;
-        loop 
-        {
-            if !seph::is_status_sent() {
-                seph::send_general_status();
-            }
-            
-            let rx = seph::seph_recv(&mut spi_buffer, 0);
-            let len = u16::from_be_bytes([spi_buffer[1], spi_buffer[2]]);
-            if rx < 3 && rx != len {
-                unsafe {
-                   G_io_app.apdu_state = APDU_IDLE;
-                   G_io_app.apdu_length = 0;
-                }
-                return None
-            }
-            seph::handle_event(&mut self.apdu_buffer, &mut spi_buffer);
-            if unsafe{G_io_app.apdu_state } != APDU_IDLE && unsafe {G_io_app.apdu_length } > 0 {
-                self.rx = unsafe {G_io_app.apdu_length as usize };
-                return Some(self.rx)
+    /// Wait for the next Command event. Returns the APDU Instruction byte value
+    /// for easy instruction matching. Discards received button events.
+    ///
+    /// # Examples
+    /// ```
+    /// loop {
+    ///     match comm.next_apdu() {
+    ///         0xa4 => { ... }
+    ///         0xb0 => { ... }
+    ///         _ => { ... }
+    ///     }
+    /// }
+    /// ```
+    pub fn next_apdu(&mut self) -> u8 {
+        loop {
+            match self.next_event() {
+                Event::Command(ins) => return ins,
+                _ => {}
             }
         }
     }
