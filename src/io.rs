@@ -49,7 +49,9 @@ impl Comm {
     }
 
     /// Send the currently held APDU
-    pub fn apdu_send(&mut self) {
+    // This is private. Users should call reply to set the satus word and
+    // transmit the response.
+    fn apdu_send(&mut self) {
         if !seph::is_status_sent() {
             seph::send_general_status()
         }
@@ -165,14 +167,14 @@ impl Comm {
     /// # Examples
     /// ```
     /// loop {
-    ///     match comm.next_apdu() {
+    ///     match comm.next_command() {
     ///         0xa4 => { ... }
     ///         0xb0 => { ... }
     ///         _ => { ... }
     ///     }
     /// }
     /// ```
-    pub fn next_apdu(&mut self) -> u8 {
+    pub fn next_command(&mut self) -> u8 {
         loop {
             match self.next_event() {
                 Event::Command(ins) => return ins,
@@ -181,10 +183,25 @@ impl Comm {
         }
     }
 
-    pub fn set_status_word(&mut self, sw: StatusWords) {
+    /// Set the Status Word of the response to the previous Command event, and
+    /// transmit the response.
+    ///
+    /// # Arguments
+    ///
+    /// * `sw` - Status Word to be transmitted after the Data.
+    pub fn reply(&mut self, sw: StatusWords) {
+        // Append status word
         self.apdu_buffer[self.tx] = ((sw as u16) >> 8) as u8;
         self.apdu_buffer[self.tx + 1] = sw as u8;
         self.tx += 2;
+        // Transmit the response
+        self.apdu_send();
+    }
+
+    /// Set the Status Word of the response to `StatusWords::OK` (which is equal
+    /// to `0x9000`, and transmit the response.
+    pub fn reply_ok(&mut self) {
+        self.reply(StatusWords::OK);
     }
 
     /// Return APDU Class and Instruction bytes as a tuple
