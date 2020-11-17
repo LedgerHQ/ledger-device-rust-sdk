@@ -3,6 +3,9 @@
 #ifndef SYSCALL_DEFS_H
 #define SYSCALL_DEFS_H
 
+#include "os.h"
+#include "lcx_hash.h"
+
 #define SYSCALL_check_api_level_ID_IN 0x60000137UL
 #define SYSCALL_check_api_level_ID_OUT 0x900001c6UL
 __attribute__((always_inline)) inline void
@@ -1913,6 +1916,21 @@ os_seph_version_inline(unsigned char *version, unsigned int maxlength) {
                  "mov r1, %0\n"
                  "svc #1" ::"r"(parameters),
                  "r"(SYSCALL_os_seph_version_ID_IN)
+                 : "r0", "r1");
+  return (unsigned int)(((volatile unsigned int *)parameters)[1]);
+}
+
+#define SYSCALL_os_bootloader_version_ID_IN 0x6000a917UL
+#define SYSCALL_os_bootloader_version_ID_OUT 0x9000a97aUL
+__attribute__((always_inline)) inline unsigned int
+os_bootloader_version_inline(unsigned char *version, unsigned int maxlength) {
+  volatile unsigned int parameters[2 + 2];
+  parameters[0] = (unsigned int)version;
+  parameters[1] = (unsigned int)maxlength;
+  __asm volatile("mov r0, %1\n"
+                 "mov r1, %0\n"
+                 "svc #1" ::"r"(parameters),
+                 "r"(SYSCALL_os_bootloader_version_ID_IN)
                  : "r0", "r1");
   return (unsigned int)(((volatile unsigned int *)parameters)[1]);
 }

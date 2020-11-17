@@ -122,7 +122,7 @@ CXCALL int cx_eddsa_sign(const cx_ecfp_private_key_t WIDE *pvkey PLENGTH(
                          const unsigned char WIDE *ctx PLENGTH(ctx_len),
                          unsigned int ctx_len,
                          unsigned char *sig PLENGTH(sig_len),
-                         unsigned int sig_len, unsigned int *info);
+                         unsigned int * sig_len, unsigned int *info);
 
 /**
  * Verify a hash message signature according to EDDSA specification RFC8032.

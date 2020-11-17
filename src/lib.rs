@@ -3,13 +3,17 @@
 #![feature(const_fn)]
 
 pub mod bindings;
+pub mod buttons;
+pub mod syscalls_bindings;
 pub mod ecc;
 pub mod io;
 pub mod seph;
 pub mod random;
+pub mod usbbindings;
+pub mod usbcorebindings;
 pub mod nvm;
 
-use bindings::*;
+use syscalls_bindings::*;
 
 use core::panic::PanicInfo;
 
@@ -17,8 +21,7 @@ use core::panic::PanicInfo;
 #[inline]
 pub fn exiting_panic(_info: &PanicInfo) -> ! {
     let mut comm = io::Comm::new();
-    comm.set_status_word(io::StatusWords::Panic);
-    comm.io_exch(0);
+    comm.reply(io::StatusWords::Panic);
     exit_app(0);
 }
 
@@ -60,7 +63,53 @@ extern "C" {
     fn pic(link_address: u32) -> u32; 
 }
 
+/// Performs code address translation for reading data located in the program
+/// and relocated during application installation.
 pub fn pic_rs<T>(x: &T) -> &T {
     let ptr = unsafe { pic(x as *const T as u32) as *const T };
     unsafe{ & *ptr }
+}
+
+/// Performs code address translation for reading mutable data located in the
+/// program and relocated during application installation.
+///
+/// Warning: this is for corner cases as it is not directly possible to write
+/// data stored in the code as it resides in Flash memory. This is needed in
+/// particular when using the `nvm` module.
+pub fn pic_rs_mut<T>(x: &mut T) -> &mut T {
+    let ptr = unsafe { pic(x as *mut T as u32) as *mut T };
+    unsafe{ &mut *ptr }
+}
+
+/// Data wrapper to force access through address translation with [`pic_rs`] or
+/// [`pic_rs_mut`]. This can help preventing mistakes when accessing data which
+/// has been relocated.
+///
+/// # Examples
+///
+/// ```
+/// // This constant data is stored in Code space, which is relocated.
+/// static DATA: PIC<u32> = PIC::new(42);
+/// ...
+/// // Access with address translation is enforced thanks to PIC wrapper
+/// let x: u32 = *DATA.get_ref();
+/// ```
+pub struct PIC<T> {
+    data: T
+}
+
+impl<T> PIC<T> {
+    pub const fn new(data: T) -> PIC<T> {
+        return PIC { data: data }
+    }
+
+    /// Returns translated reference to the wrapped data.
+    pub fn get_ref(&self) -> &T {
+        return pic_rs(&self.data);
+    }
+
+    /// Returns translated mutable reference to the wrapped data.
+    pub fn get_mut(&mut self) -> &mut T {
+        return pic_rs_mut(&mut self.data);
+    }
 }

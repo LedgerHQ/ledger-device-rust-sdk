@@ -4,18 +4,44 @@
 #include "os.h"
 #include "syscalls.h"
 
-// avoid a separate asm file, but avoid any intrusion from the compiler
-__attribute__((naked)) void SVC_Call(unsigned int syscall_id, volatile unsigned int * parameters);
-__attribute__((naked)) void SVC_Call(__attribute__((unused)) unsigned int syscall_id, __attribute__((unused)) volatile unsigned int * parameters) {
-  // delegate svc, ensure no optimization by gcc with naked and r0, r1 marked as clobbered
-  asm volatile("svc #1":::"r0","r1");
-  asm volatile("bx  lr");
+void SVC_Call_no_error(unsigned int syscall_id, volatile unsigned int *parameters) {
+  asm volatile (
+    "mov r0, %0\n"
+    "mov r1, %1\n"
+    "svc #1\n"
+    :: "r"(syscall_id), "r"(parameters) : "r0", "r1"
+  );
 }
-void check_api_level ( unsigned int apiLevel ) 
+
+int SVC_Call(unsigned int syscall_id, volatile unsigned int *parameters) {
+  int error = 0;
+
+  BEGIN_TRY {
+    TRY {
+      asm volatile (
+        "mov r0, %0\n"
+        "mov r1, %1\n"
+        "svc #1\n"
+        :: "r"(syscall_id), "r"(parameters) : "r0", "r1"
+      );
+      error = 0;
+    }
+    CATCH_OTHER(e) {
+      error = e;
+    }
+    FINALLY {
+    }
+  }
+  END_TRY;
+
+  return error;
+}
+
+int check_api_level ( unsigned int apiLevel )
 {
   volatile unsigned int parameters [2+1];
   parameters[0] = (unsigned int)apiLevel;
-  SVC_Call(SYSCALL_check_api_level_ID_IN, parameters);
+  return SVC_Call(SYSCALL_check_api_level_ID_IN, parameters);
 }
 
 void halt ( void ) 
@@ -30,7 +56,10 @@ void nvm_write ( void * dst_adr, void * src_adr, unsigned int src_len )
   parameters[0] = (unsigned int)dst_adr;
   parameters[1] = (unsigned int)src_adr;
   parameters[2] = (unsigned int)src_len;
-  SVC_Call(SYSCALL_nvm_write_ID_IN, parameters);
+  if (SVC_Call(SYSCALL_nvm_write_ID_IN, parameters)) {
+    /* fatal error */
+    halt();
+  }
 }
 
 unsigned char cx_rng_u8 ( void ) 
@@ -48,7 +77,10 @@ unsigned char * cx_rng ( unsigned char * buffer, unsigned int len )
   volatile unsigned int parameters [2+2];
   parameters[0] = (unsigned int)buffer;
   parameters[1] = (unsigned int)len;
-  SVC_Call(SYSCALL_cx_rng_ID_IN, parameters);
+  if (SVC_Call(SYSCALL_cx_rng_ID_IN, parameters) != 0) {
+    /* fatal error */
+    halt();
+  }
   return (unsigned char *)(((volatile unsigned int*)parameters)[1]);
 }
 
@@ -533,8 +565,8 @@ int cx_ecfp_init_private_key ( cx_curve_t curve, const unsigned char * rawkey, u
   parameters[1] = (unsigned int)rawkey;
   parameters[2] = (unsigned int)key_len;
   parameters[3] = (unsigned int)pvkey;
-  SVC_Call(SYSCALL_cx_ecfp_init_private_key_ID_IN, parameters);
-  return (int)(((volatile unsigned int*)parameters)[1]);
+
+  return SVC_Call(SYSCALL_cx_ecfp_init_private_key_ID_IN, parameters);
 }
 
 int cx_ecfp_generate_pair ( cx_curve_t curve, cx_ecfp_public_key_t * pubkey, cx_ecfp_private_key_t * privkey, int keepprivate ) 
@@ -544,8 +576,7 @@ int cx_ecfp_generate_pair ( cx_curve_t curve, cx_ecfp_public_key_t * pubkey, cx_
   parameters[1] = (unsigned int)pubkey;
   parameters[2] = (unsigned int)privkey;
   parameters[3] = (unsigned int)keepprivate;
-  SVC_Call(SYSCALL_cx_ecfp_generate_pair_ID_IN, parameters);
-  return (int)(((volatile unsigned int*)parameters)[1]);
+  return SVC_Call(SYSCALL_cx_ecfp_generate_pair_ID_IN, parameters);
 }
 
 int cx_ecfp_generate_pair2 ( cx_curve_t curve, cx_ecfp_public_key_t * pubkey, cx_ecfp_private_key_t * privkey, int keepprivate, cx_md_t hashID ) 
@@ -620,7 +651,7 @@ void cx_eddsa_get_public_key ( const cx_ecfp_private_key_t * pvkey, cx_md_t hash
   SVC_Call(SYSCALL_cx_eddsa_get_public_key_ID_IN, parameters);
 }
 
-int cx_eddsa_sign ( const cx_ecfp_private_key_t * pvkey, int mode, cx_md_t hashID, const unsigned char * hash, unsigned int hash_len, const unsigned char * ctx, unsigned int ctx_len, unsigned char * sig, unsigned int sig_len, unsigned int * info ) 
+int cx_eddsa_sign ( const cx_ecfp_private_key_t * pvkey, int mode, cx_md_t hashID, const unsigned char * hash, unsigned int hash_len, const unsigned char * ctx, unsigned int ctx_len, unsigned char * sig, unsigned int *sig_len, unsigned int * info )
 {
   volatile unsigned int parameters [2+10];
   parameters[0] = (unsigned int)pvkey;
@@ -631,10 +662,11 @@ int cx_eddsa_sign ( const cx_ecfp_private_key_t * pvkey, int mode, cx_md_t hashI
   parameters[5] = (unsigned int)ctx;
   parameters[6] = (unsigned int)ctx_len;
   parameters[7] = (unsigned int)sig;
-  parameters[8] = (unsigned int)sig_len;
+  parameters[8] = *sig_len;
   parameters[9] = (unsigned int)info;
-  SVC_Call(SYSCALL_cx_eddsa_sign_ID_IN, parameters);
-  return (int)(((volatile unsigned int*)parameters)[1]);
+  int error = SVC_Call(SYSCALL_cx_eddsa_sign_ID_IN, parameters);
+  *sig_len = ((volatile unsigned int*)parameters)[1];
+  return error;
 }
 
 int cx_eddsa_verify ( const cx_ecfp_public_key_t * pukey, int mode, cx_md_t hashID, const unsigned char * hash, unsigned int hash_len, const unsigned char * ctx, unsigned int ctx_len, const unsigned char * sig, unsigned int sig_len ) 
@@ -710,7 +742,9 @@ unsigned short cx_crc16_update ( unsigned short crc, const void * buffer, size_t
   parameters[0] = (unsigned int)crc;
   parameters[1] = (unsigned int)buffer;
   parameters[2] = (unsigned int)len;
-  SVC_Call(SYSCALL_cx_crc16_update_ID_IN, parameters);
+  if (SVC_Call(SYSCALL_cx_crc16_update_ID_IN, parameters) != 0) {
+    halt();
+  }
   return (unsigned short)(((volatile unsigned int*)parameters)[1]);
 }
 
@@ -923,7 +957,9 @@ bolos_bool_t os_perso_isonboarded ( void )
 #ifdef __clang_analyzer__
   parameters[1] = 0;
 #endif
-  SVC_Call(SYSCALL_os_perso_isonboarded_ID_IN, parameters);
+  if (SVC_Call(SYSCALL_os_perso_isonboarded_ID_IN, parameters) != 0) {
+    halt();
+  }
   return (bolos_bool_t)(((volatile unsigned int*)parameters)[1]);
 }
 
@@ -938,7 +974,7 @@ void os_perso_derive_node_bip32 ( cx_curve_t curve, const unsigned int * path, u
   SVC_Call(SYSCALL_os_perso_derive_node_bip32_ID_IN, parameters);
 }
 
-void os_perso_derive_node_with_seed_key ( unsigned int mode, cx_curve_t curve, const unsigned int * path, unsigned int pathLength, unsigned char * privateKey, unsigned char * chain, unsigned char * seed_key, unsigned int seed_key_length ) 
+int os_perso_derive_node_with_seed_key ( unsigned int mode, cx_curve_t curve, const unsigned int * path, unsigned int pathLength, unsigned char * privateKey, unsigned char * chain, unsigned char * seed_key, unsigned int seed_key_length )
 {
   volatile unsigned int parameters [2+8];
   parameters[0] = (unsigned int)mode;
@@ -949,7 +985,7 @@ void os_perso_derive_node_with_seed_key ( unsigned int mode, cx_curve_t curve, c
   parameters[5] = (unsigned int)chain;
   parameters[6] = (unsigned int)seed_key;
   parameters[7] = (unsigned int)seed_key_length;
-  SVC_Call(SYSCALL_os_perso_derive_node_with_seed_key_ID_IN, parameters);
+  return SVC_Call(SYSCALL_os_perso_derive_node_with_seed_key_ID_IN, parameters);
 }
 
 unsigned int os_perso_seed_cookie ( unsigned char * seed_cookie, unsigned int seed_cookie_length ) 
@@ -957,7 +993,9 @@ unsigned int os_perso_seed_cookie ( unsigned char * seed_cookie, unsigned int se
   volatile unsigned int parameters [2+2];
   parameters[0] = (unsigned int)seed_cookie;
   parameters[1] = (unsigned int)seed_cookie_length;
-  SVC_Call(SYSCALL_os_perso_seed_cookie_ID_IN, parameters);
+  if (SVC_Call(SYSCALL_os_perso_seed_cookie_ID_IN, parameters) != 0) {
+    halt();
+  }
   return (unsigned int)(((volatile unsigned int*)parameters)[1]);
 }
 
@@ -1027,7 +1065,9 @@ bolos_bool_t os_global_pin_is_validated ( void )
 #ifdef __clang_analyzer__
   parameters[1] = 0;
 #endif
-  SVC_Call(SYSCALL_os_global_pin_is_validated_ID_IN, parameters);
+  if (SVC_Call(SYSCALL_os_global_pin_is_validated_ID_IN, parameters) != 0) {
+    halt();
+  }
   return (bolos_bool_t)(((volatile unsigned int*)parameters)[1]);
 }
 
@@ -1081,7 +1121,9 @@ unsigned int os_ux ( bolos_ux_params_t * params )
   parameters[1] = 0;
 #endif
   parameters[0] = (unsigned int)params;
-  SVC_Call(SYSCALL_os_ux_ID_IN, parameters);
+  if (SVC_Call(SYSCALL_os_ux_ID_IN, parameters) != 0) {
+    halt();
+  }
   return (unsigned int)(((volatile unsigned int*)parameters)[1]);
 }
 
@@ -1125,7 +1167,9 @@ unsigned int os_flags ( void )
 #ifdef __clang_analyzer__
   parameters[1] = 0;
 #endif
-  SVC_Call(SYSCALL_os_flags_ID_IN, parameters);
+  if (SVC_Call(SYSCALL_os_flags_ID_IN, parameters) != 0) {
+    halt();
+  }
   return (unsigned int)(((volatile unsigned int*)parameters)[1]);
 }
 
@@ -1163,6 +1207,15 @@ unsigned int os_seph_version ( unsigned char * version, unsigned int maxlength )
   parameters[0] = (unsigned int)version;
   parameters[1] = (unsigned int)maxlength;
   SVC_Call(SYSCALL_os_seph_version_ID_IN, parameters);
+  return (unsigned int)(((volatile unsigned int*)parameters)[1]);
+}
+
+unsigned int os_bootloader_version ( unsigned char * version, unsigned int maxlength ) 
+{
+  volatile unsigned int parameters [2+2];
+  parameters[0] = (unsigned int)version;
+  parameters[1] = (unsigned int)maxlength;
+  SVC_Call(SYSCALL_os_bootloader_version_ID_IN, parameters);
   return (unsigned int)(((volatile unsigned int*)parameters)[1]);
 }
 
@@ -1205,14 +1258,15 @@ unsigned int os_registry_get_tag ( unsigned int appidx, unsigned int * tlvoffset
   return (unsigned int)(((volatile unsigned int*)parameters)[1]);
 }
 
-unsigned int os_registry_get_current_app_tag ( unsigned int tag, unsigned char * buffer, unsigned int maxlen ) 
+unsigned int os_registry_get_current_app_tag ( unsigned int tag, unsigned char * buffer, unsigned int *maxlen ) 
 {
   volatile unsigned int parameters [2+3];
   parameters[0] = (unsigned int)tag;
   parameters[1] = (unsigned int)buffer;
-  parameters[2] = (unsigned int)maxlen;
-  SVC_Call(SYSCALL_os_registry_get_current_app_tag_ID_IN, parameters);
-  return (unsigned int)(((volatile unsigned int*)parameters)[1]);
+  parameters[2] = *maxlen;
+  int error = SVC_Call(SYSCALL_os_registry_get_current_app_tag_ID_IN, parameters);
+  *maxlen = ((volatile unsigned int*)parameters)[1];
+  return error;
 }
 
 unsigned int os_customca_verify ( unsigned char * hash, unsigned char * sign, unsigned int sign_length ) 
@@ -1236,7 +1290,9 @@ void os_sched_exit ( bolos_task_status_t exit_code )
 {
   volatile unsigned int parameters [2+1];
   parameters[0] = (unsigned int)exit_code;
-  SVC_Call(SYSCALL_os_sched_exit_ID_IN, parameters);
+  if (SVC_Call(SYSCALL_os_sched_exit_ID_IN, parameters) != 0) {
+    halt();
+  }
 }
 
 bolos_bool_t os_sched_is_running ( unsigned int task_idx ) 
@@ -1274,12 +1330,12 @@ void os_sched_kill ( unsigned int taskidx )
   SVC_Call(SYSCALL_os_sched_kill_ID_IN, parameters);
 }
 
-void io_seph_send ( const unsigned char * buffer, unsigned short length ) 
+int io_seph_send ( const unsigned char * buffer, unsigned short length ) 
 {
   volatile unsigned int parameters [2+2];
   parameters[0] = (unsigned int)buffer;
   parameters[1] = (unsigned int)length;
-  SVC_Call(SYSCALL_io_seph_send_ID_IN, parameters);
+  return SVC_Call(SYSCALL_io_seph_send_ID_IN, parameters);
 }
 
 unsigned int io_seph_is_status_sent ( void ) 
@@ -1288,7 +1344,9 @@ unsigned int io_seph_is_status_sent ( void )
 #ifdef __clang_analyzer__
   parameters[1] = 0;
 #endif
-  SVC_Call(SYSCALL_io_seph_is_status_sent_ID_IN, parameters);
+  if (SVC_Call(SYSCALL_io_seph_is_status_sent_ID_IN, parameters) != 0) {
+    halt();
+  }
   return (unsigned int)(((volatile unsigned int*)parameters)[1]);
 }
 
@@ -1298,7 +1356,10 @@ unsigned short io_seph_recv ( unsigned char * buffer, unsigned short maxlength, 
   parameters[0] = (unsigned int)buffer;
   parameters[1] = (unsigned int)maxlength;
   parameters[2] = (unsigned int)flags;
-  SVC_Call(SYSCALL_io_seph_recv_ID_IN, parameters);
+  int error = SVC_Call(SYSCALL_io_seph_recv_ID_IN, parameters);
+  if (error) {
+    THROW(error);
+  }
   return (unsigned short)(((volatile unsigned int*)parameters)[1]);
 }
 
@@ -1315,7 +1376,7 @@ try_context_t * try_context_get ( void )
 #ifdef __clang_analyzer__
   parameters[1] = 0;
 #endif
-  SVC_Call(SYSCALL_try_context_get_ID_IN, parameters);
+  SVC_Call_no_error(SYSCALL_try_context_get_ID_IN, parameters);
   return (try_context_t *)(((volatile unsigned int*)parameters)[1]);
 }
 
@@ -1326,7 +1387,7 @@ try_context_t * try_context_set ( try_context_t * context )
   parameters[1] = 0;
 #endif
   parameters[0] = (unsigned int)context;
-  SVC_Call(SYSCALL_try_context_set_ID_IN, parameters);
+  SVC_Call_no_error(SYSCALL_try_context_set_ID_IN, parameters);
   return (try_context_t *)(((volatile unsigned int*)parameters)[1]);
 }
 
@@ -1347,7 +1408,9 @@ bolos_task_status_t os_sched_last_status ( unsigned int task_idx )
   parameters[1] = 0;
 #endif
   parameters[0] = (unsigned int)task_idx;
-  SVC_Call(SYSCALL_os_sched_last_status_ID_IN, parameters);
+  if (SVC_Call(SYSCALL_os_sched_last_status_ID_IN, parameters) != 0) {
+    halt();
+  }
   return (bolos_task_status_t)(((volatile unsigned int*)parameters)[1]);
 }
 
@@ -1397,4 +1460,3 @@ unsigned int os_mpu_protect_flash ( unsigned int state )
   SVC_Call(SYSCALL_os_mpu_protect_flash_ID_IN, parameters);
   return (unsigned int)(((volatile unsigned int*)parameters)[1]);
 }
-

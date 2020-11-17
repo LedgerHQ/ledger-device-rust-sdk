@@ -424,7 +424,7 @@ char os_secure_memcmp(void WIDE *src1, void WIDE *src2, unsigned int length);
 REENTRANT(void patch(void));
 
 // check API level
-SYSCALL void check_api_level(unsigned int apiLevel);
+SYSCALL int check_api_level(unsigned int apiLevel);
 
 // halt the chip, waiting for a physical user interaction
 SYSCALL REENTRANT(void halt(void));
@@ -1186,7 +1186,7 @@ SYSCALL void os_perso_derive_node_bip32(
 // derive the seed for the requested BIP32 path, with the custom provided
 // seed_key for the sha512 hmac ("Bitcoin Seed", "Nist256p1 Seed", "ed25519
 // seed", ...)
-SYSCALL void os_perso_derive_node_with_seed_key(
+SYSCALL int os_perso_derive_node_with_seed_key(
     unsigned int mode, cx_curve_t curve,
     const unsigned int *path PLENGTH(4 * (pathLength & 0x0FFFFFFFu)),
     unsigned int pathLength, unsigned char *privateKey PLENGTH(64),
@@ -1440,7 +1440,7 @@ SYSCALL PERMISSION(APPLICATION_FLAG_BOLOS_UX) unsigned int os_registry_get_tag(
 SYSCALL unsigned int
 os_registry_get_current_app_tag(unsigned int tag,
                                 unsigned char *buffer PLENGTH(maxlen),
-                                unsigned int maxlen);
+                                unsigned int *maxlen);
 
 #ifndef HAVE_BOLOS_NO_CUSTOMCA
 /* ----------------------------------------------------------------------- */

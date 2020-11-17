@@ -63,11 +63,12 @@ USBD_StatusTypeDef  USBD_LL_DeInit (USBD_HandleTypeDef *pdev)
 {
   UNUSED(pdev);
   // usb off
-  G_io_seproxyhal_spi_buffer[0] = SEPROXYHAL_TAG_USB_CONFIG;
-  G_io_seproxyhal_spi_buffer[1] = 0;
-  G_io_seproxyhal_spi_buffer[2] = 1;
-  G_io_seproxyhal_spi_buffer[3] = SEPROXYHAL_TAG_USB_CONFIG_DISCONNECT;
-  io_seproxyhal_spi_send(G_io_seproxyhal_spi_buffer, 4);
+  uint8_t buf[4];
+  buf[0] = SEPROXYHAL_TAG_USB_CONFIG;
+  buf[1] = 0;
+  buf[2] = 1;
+  buf[3] = SEPROXYHAL_TAG_USB_CONFIG_DISCONNECT;
+  io_seproxyhal_spi_send(buf, 4);
 
   return USBD_OK; 
 }
