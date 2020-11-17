@@ -2,12 +2,14 @@
 /// 1 -> left button, 2 -> right button
 pub struct ButtonsState {
     pub button_mask: u8,
+    pub cmd_buffer: [u8;4],
 }
 
 impl Default for ButtonsState {
     fn default() -> Self {
         ButtonsState {
             button_mask: 0,
+            cmd_buffer: [0u8;4],
         }
     }
 }
