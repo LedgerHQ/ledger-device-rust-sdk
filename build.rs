@@ -1,10 +1,9 @@
 extern crate cc;
-use std::fs::File;
-use std::io::Write;
-use std::path::Path;
 use std::process::Command;
+use std::path::Path;
+use std::{env, error::Error, fs::File, io::Write, path::PathBuf};
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     let bolos_sdk = "./nanos-secure-sdk/".to_string();
 
     let output = Command::new("arm-none-eabi-gcc")
@@ -66,7 +65,6 @@ fn main() {
         .file("./src/c/src.c")
         .file("./src/c/sjlj.s")
         .file(format!("{}/src/os.c", bolos_sdk))
-        // .file(format!("{}/src/os_printf.c", bolos_sdk))
         .file(format!("{}/src/os_io_seproxyhal.c", bolos_sdk))
         .file(format!("{}/src/os_io_usb.c", bolos_sdk))
         .file(format!("{}/src/pic_internal.c", bolos_sdk))
@@ -97,14 +95,10 @@ fn main() {
         .define("ST31", None)
         .define("IO_HID_EP_LENGTH", Some("64"))
         .define("USB_SEGMENT_SIZE", Some("64"))
-        .define("TARGET_NAME", Some("TARGET_NANOS"))
-        .define("UI_NANO_S", None)
         .define("OS_IO_SEPROXYHAL", None)
-        .define("HAVE_BAGL", None)
         .define("HAVE_IO_USB", None)
         .define("HAVE_L4_USBLIB", None)
         .define("HAVE_USB_APDU", None)
-        .define("HAVE_UX_FLOW", None)
         .define("IO_USB_MAX_ENDPOINTS", Some("6"))
         .define("IO_SEPROXYHAL_BUFFER_SIZE_B", Some("128"))
         .include(gcc_toolchain)
@@ -128,7 +122,6 @@ fn main() {
         .flag("-fropi")
         .flag("--target=thumbv6m-none-eabi")
         .flag("-fomit-frame-pointer")
-        // .flag("-momit-leaf-frame-pointer")
 
         .flag("-mcpu=cortex-m0")
         .flag("-fno-common")
@@ -155,4 +148,16 @@ fn main() {
         .flag("-Wno-#warnings")
         .flag("-Wno-int-conversion")
         .compile("rust-app");
+
+    // Copy this crate's linker script into the working directory of
+    // the application so that it can be used there for the layout.
+    // Trick taken from https://docs.rust-embedded.org/embedonomicon/main.html
+    let out_dir = PathBuf::from(env::var_os("OUT_DIR").unwrap());
+
+    // extend the library search path
+    println!("cargo:rustc-link-search={}", out_dir.display());
+    // copy
+    File::create(out_dir.join("script.ld"))?.write_all(include_bytes!("script.ld"))?;
+
+    Ok(())
 }
