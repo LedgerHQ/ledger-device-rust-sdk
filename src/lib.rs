@@ -100,16 +100,16 @@ pub struct PIC<T> {
 
 impl<T> PIC<T> {
     pub const fn new(data: T) -> PIC<T> {
-        return PIC { data: data }
+        PIC { data }
     }
 
     /// Returns translated reference to the wrapped data.
     pub fn get_ref(&self) -> &T {
-        return pic_rs(&self.data);
+        pic_rs(&self.data)
     }
 
     /// Returns translated mutable reference to the wrapped data.
     pub fn get_mut(&mut self) -> &mut T {
-        return pic_rs_mut(&mut self.data);
+        pic_rs_mut(&mut self.data)
     }
 }

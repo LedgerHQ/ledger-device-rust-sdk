@@ -95,10 +95,9 @@ pub fn seph_send(buffer: &[u8]) {
 /// Wrapper for 'io_seph_recv'
 /// Receive the next APDU into 'buffer'
 pub fn seph_recv(buffer: &mut [u8], flags: u32) -> u16 {
-    let rx = unsafe { 
+    unsafe { 
         io_seph_recv(buffer.as_mut_ptr(), buffer.len() as u16, flags) 
-    };
-    rx
+    }
 }
 
 /// Wrapper for 'io_seph_is_status_sent'

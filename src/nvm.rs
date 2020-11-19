@@ -46,7 +46,10 @@ use crate::bindings::*;
 // rust does not allow using a constant in repr(align(...))
 // This code will work correctly only for the currently set page size of 64.
 
-/// What storage of single element should implement.
+/// Returned when trying to insert data when no more space is available
+pub struct StorageFullError;
+
+/// What storage of single element should implement
 ///
 /// The address of the stored object, returned with get_ref, MUST remain the
 /// same until update is called.
@@ -84,7 +87,7 @@ impl<T> AlignedStorage<T> {
     /// This is to set the initial value of static Storage<T>, as the value
     /// member is private.
     pub const fn new(value: T) -> AlignedStorage<T> {
-        AlignedStorage { value: value }
+        AlignedStorage { value }
     }
 }
 
@@ -239,30 +242,30 @@ impl<T, const N: usize> Collection<T, N> where T: Copy {
         }
     }
 
-    /// Finds and returns a reference to a free slot, or returns an error if
+    /// Finds and returns a reference to a free slot, or returns None if
     /// all slots are allocated.
-    fn find_free_slot(&self) -> Result<usize, ()> {
+    fn find_free_slot(&self) -> Option<usize> {
         for (i, e) in self.flags.get_ref().iter().enumerate() {
             if *e != STORAGE_VALID {
-                return Ok(i);
+                return Some(i);
             }
         }
-        Err(())
+        None
     }
 
     /// Adds an item in the collection. Returns an error if there is not free
     /// slots.
     /// This operation is atomic.
-    pub fn add(&mut self, value: &T) -> Result<(), ()> {
+    pub fn add(&mut self, value: &T) -> Result<(), StorageFullError> {
         match self.find_free_slot() {
-            Ok(i) => {
+            Some(i) => {
                 self.slots[i].update(value);
                 let mut new_flags = *self.flags.get_ref();
                 new_flags[i] = STORAGE_VALID;
                 self.flags.update(&new_flags);
                 Ok(())
             },
-            Err(e) => Err(e)
+            None => Err(StorageFullError)
         }
     }
 
@@ -283,6 +286,16 @@ impl<T, const N: usize> Collection<T, N> where T: Copy {
         result
     }
 
+    /// Returns true if collection is empty
+    pub fn is_empty(&self) -> bool {
+        for v in self.flags.get_ref() {
+            if *v == STORAGE_VALID {
+                return false;
+            }
+        }
+        true
+    }
+
     /// Returns the maximum number of items the collection can store.
     pub const fn capacity(&self) -> usize {
         N
@@ -300,16 +313,16 @@ impl<T, const N: usize> Collection<T, N> where T: Copy {
     /// # Arguments
     ///
     /// * `index` - Index in the collection
-    fn index_to_key(&self, index: usize) -> Result<usize, ()> {
+    fn index_to_key(&self, index: usize) -> Option<usize> {
         let mut next = 0;
         let mut count = 0;
         loop {
             if next == N {
-                return Err(())
+                return None
             }
             if self.is_allocated(next) {
                 if count == index {
-                    return Ok(next);
+                    return Some(next);
                 }
                 count += 1
             }
@@ -317,15 +330,15 @@ impl<T, const N: usize> Collection<T, N> where T: Copy {
         }
     }
 
-    /// Returns reference to an item
+    /// Returns reference to an item, or None if the index is out of bounds
     ///
     /// # Arguments
     ///
     /// * `index` - Item index
-    pub fn get_ref(&self, index: usize) -> Result<&T, ()> {
+    pub fn get(&self, index: usize) -> Option<&T> {
         match self.index_to_key(index) {
-            Ok(key) => Ok(self.slots[key].get_ref()),
-            Err(()) => Err(())
+            Some(key) => Some(self.slots[key].get_ref()),
+            None => None
         }
     }
 

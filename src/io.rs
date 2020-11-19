@@ -176,10 +176,7 @@ impl Comm {
     /// ```
     pub fn next_command(&mut self) -> u8 {
         loop {
-            match self.next_event() {
-                Event::Command(ins) => return ins,
-                _ => {}
-            }
+            if let Event::Command(ins) = self.next_event() { return ins }
         }
     }
 
