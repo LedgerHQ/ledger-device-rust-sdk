@@ -23,7 +23,7 @@ extern "C" {
         apdu_buffer: *const u8);
 }
 
-/// Possible events returned by [Comm::next_event](Comm::next_event)
+/// Possible events returned by [`Comm::next_event`]
 pub enum Event {
     /// APDU event
     Command(u8),

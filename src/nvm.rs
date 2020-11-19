@@ -17,7 +17,7 @@
 //! use nanos_sdk::nvm::AtomicStorage;
 //!
 //! // This is necessary to store the object in NVM and not in RAM
-//! #[link_section=".nvm"]
+//! #[link_section=".nvm_data"]
 //! static mut COUNTER: PIC<AtomicStorage<i32>> =
 //!     PIC::new(AtomicStorage::new(&3));
 //! ```
