@@ -1,5 +1,4 @@
 use crate::bindings::*;
-use crate::syscalls_bindings::*;
 
 #[repr(u8)]
 pub enum CurvesId {
@@ -46,7 +45,7 @@ pub fn ecdsa_sign(pvkey: &cx_ecfp_private_key_t, mode: i32, hash_id: u8, hash: &
     let len = unsafe {
         cx_ecdsa_sign(  pvkey, 
                         mode,
-                        hash_id as u32,
+                        hash_id,
                         hash.as_ptr(),
                         hash.len() as u32,
                         sig.as_mut_ptr(), 
@@ -67,7 +66,7 @@ hash_id: u8, hash: &[u8]) -> bool {
         cx_ecdsa_verify(
            pubkey as *const cx_ecfp_public_key_t,
            mode,
-           hash_id as u32,
+           hash_id,
            hash.as_ptr(),
            hash.len() as u32,
            sig.as_ptr(),

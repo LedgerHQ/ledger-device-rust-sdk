@@ -87,7 +87,7 @@ where
     }
 }
 pub const IO_HID_EP_LENGTH: u32 = 64;
-pub const USB_SEGMENT_SIZE: u32 = 64;
+pub const IO_USB_MAX_ENDPOINTS: u32 = 6;
 pub const IO_SEPROXYHAL_BUFFER_SIZE_B: u32 = 128;
 pub const TARGET_ID: u32 = 823132164;
 pub const __SC000_REV: u32 = 1;
@@ -95,96 +95,6 @@ pub const __SC300_REV: u32 = 1;
 pub const __NVIC_PRIO_BITS: u32 = 2;
 pub const __Vendor_SysTickConfig: u32 = 0;
 pub const NVM_ERASED_WORD_VALUE: u32 = 4294967295;
-pub const _STDINT_H: u32 = 1;
-pub const _FEATURES_H: u32 = 1;
-pub const _DEFAULT_SOURCE: u32 = 1;
-pub const __GLIBC_USE_ISOC2X: u32 = 0;
-pub const __USE_ISOC11: u32 = 1;
-pub const __USE_ISOC99: u32 = 1;
-pub const __USE_ISOC95: u32 = 1;
-pub const __USE_POSIX_IMPLICITLY: u32 = 1;
-pub const _POSIX_SOURCE: u32 = 1;
-pub const _POSIX_C_SOURCE: u32 = 200809;
-pub const __USE_POSIX: u32 = 1;
-pub const __USE_POSIX2: u32 = 1;
-pub const __USE_POSIX199309: u32 = 1;
-pub const __USE_POSIX199506: u32 = 1;
-pub const __USE_XOPEN2K: u32 = 1;
-pub const __USE_XOPEN2K8: u32 = 1;
-pub const _ATFILE_SOURCE: u32 = 1;
-pub const __USE_MISC: u32 = 1;
-pub const __USE_ATFILE: u32 = 1;
-pub const __USE_FORTIFY_LEVEL: u32 = 0;
-pub const __GLIBC_USE_DEPRECATED_GETS: u32 = 0;
-pub const __GLIBC_USE_DEPRECATED_SCANF: u32 = 0;
-pub const _STDC_PREDEF_H: u32 = 1;
-pub const __STDC_IEC_559__: u32 = 1;
-pub const __STDC_IEC_559_COMPLEX__: u32 = 1;
-pub const __STDC_ISO_10646__: u32 = 201706;
-pub const __GNU_LIBRARY__: u32 = 6;
-pub const __GLIBC__: u32 = 2;
-pub const __GLIBC_MINOR__: u32 = 31;
-pub const _SYS_CDEFS_H: u32 = 1;
-pub const __glibc_c99_flexarr_available: u32 = 1;
-pub const __WORDSIZE: u32 = 32;
-pub const __WORDSIZE32_SIZE_ULONG: u32 = 0;
-pub const __WORDSIZE32_PTRDIFF_LONG: u32 = 0;
-pub const __WORDSIZE_TIME64_COMPAT32: u32 = 0;
-pub const __LONG_DOUBLE_USES_FLOAT128: u32 = 0;
-pub const __HAVE_GENERIC_SELECTION: u32 = 1;
-pub const __GLIBC_USE_LIB_EXT2: u32 = 0;
-pub const __GLIBC_USE_IEC_60559_BFP_EXT: u32 = 0;
-pub const __GLIBC_USE_IEC_60559_BFP_EXT_C2X: u32 = 0;
-pub const __GLIBC_USE_IEC_60559_FUNCS_EXT: u32 = 0;
-pub const __GLIBC_USE_IEC_60559_FUNCS_EXT_C2X: u32 = 0;
-pub const __GLIBC_USE_IEC_60559_TYPES_EXT: u32 = 0;
-pub const _BITS_TYPES_H: u32 = 1;
-pub const __TIMESIZE: u32 = 32;
-pub const _BITS_TYPESIZES_H: u32 = 1;
-pub const __RLIM_T_MATCHES_RLIM64_T: u32 = 0;
-pub const __STATFS_MATCHES_STATFS64: u32 = 0;
-pub const __FD_SETSIZE: u32 = 1024;
-pub const _BITS_TIME64_H: u32 = 1;
-pub const _BITS_WCHAR_H: u32 = 1;
-pub const _BITS_STDINT_INTN_H: u32 = 1;
-pub const _BITS_STDINT_UINTN_H: u32 = 1;
-pub const INT8_MIN: i32 = -128;
-pub const INT16_MIN: i32 = -32768;
-pub const INT32_MIN: i32 = -2147483648;
-pub const INT8_MAX: u32 = 127;
-pub const INT16_MAX: u32 = 32767;
-pub const INT32_MAX: u32 = 2147483647;
-pub const UINT8_MAX: u32 = 255;
-pub const UINT16_MAX: u32 = 65535;
-pub const UINT32_MAX: u32 = 4294967295;
-pub const INT_LEAST8_MIN: i32 = -128;
-pub const INT_LEAST16_MIN: i32 = -32768;
-pub const INT_LEAST32_MIN: i32 = -2147483648;
-pub const INT_LEAST8_MAX: u32 = 127;
-pub const INT_LEAST16_MAX: u32 = 32767;
-pub const INT_LEAST32_MAX: u32 = 2147483647;
-pub const UINT_LEAST8_MAX: u32 = 255;
-pub const UINT_LEAST16_MAX: u32 = 65535;
-pub const UINT_LEAST32_MAX: u32 = 4294967295;
-pub const INT_FAST8_MIN: i32 = -128;
-pub const INT_FAST16_MIN: i32 = -2147483648;
-pub const INT_FAST32_MIN: i32 = -2147483648;
-pub const INT_FAST8_MAX: u32 = 127;
-pub const INT_FAST16_MAX: u32 = 2147483647;
-pub const INT_FAST32_MAX: u32 = 2147483647;
-pub const UINT_FAST8_MAX: u32 = 255;
-pub const UINT_FAST16_MAX: u32 = 4294967295;
-pub const UINT_FAST32_MAX: u32 = 4294967295;
-pub const INTPTR_MIN: i32 = -2147483648;
-pub const INTPTR_MAX: u32 = 2147483647;
-pub const UINTPTR_MAX: u32 = 4294967295;
-pub const PTRDIFF_MIN: i32 = -2147483648;
-pub const PTRDIFF_MAX: u32 = 2147483647;
-pub const SIG_ATOMIC_MIN: i32 = -2147483648;
-pub const SIG_ATOMIC_MAX: u32 = 2147483647;
-pub const SIZE_MAX: u32 = 4294967295;
-pub const WINT_MIN: u32 = 0;
-pub const WINT_MAX: u32 = 4294967295;
 pub const __SC000_CMSIS_VERSION_MAIN: u32 = 3;
 pub const __SC000_CMSIS_VERSION_SUB: u32 = 1;
 pub const __SC000_CMSIS_VERSION: u32 = 196609;
@@ -305,6 +215,7 @@ pub const IO_RETURN_AFTER_TX: u32 = 32;
 pub const IO_ASYNCH_REPLY: u32 = 16;
 pub const IO_FINISHED: u32 = 8;
 pub const IO_FLAGS: u32 = 248;
+pub const USB_SEGMENT_SIZE: u32 = 64;
 pub const BLE_SEGMENT_SIZE: u32 = 64;
 pub const EXCEPTION: u32 = 1;
 pub const INVALID_PARAMETER: u32 = 2;
@@ -411,6 +322,275 @@ pub const BOLOS_SECURITY_ONBOARD_DELAY_S: u32 = 5;
 pub const BOLOS_SECURITY_ATTESTATION_DELAY_S: u32 = 15;
 pub const OS_PARSE_BERTLV_OFFSET_COMPARE_WITH_BUFFER: u32 = 2147483648;
 pub const OS_PARSE_BERTLV_OFFSET_GET_LENGTH: u32 = 1073741824;
+pub const SYSCALL_check_api_level_ID_IN: u32 = 1610613047;
+pub const SYSCALL_check_api_level_ID_OUT: u32 = 2415919558;
+pub const SYSCALL_halt_ID_IN: u32 = 1610613308;
+pub const SYSCALL_halt_ID_OUT: u32 = 2415919629;
+pub const SYSCALL_nvm_write_ID_IN: u32 = 1610613631;
+pub const SYSCALL_nvm_write_ID_OUT: u32 = 2415920060;
+pub const SYSCALL_cx_rng_u8_ID_IN: u32 = 1610613952;
+pub const SYSCALL_cx_rng_u8_ID_OUT: u32 = 2415920165;
+pub const SYSCALL_cx_rng_ID_IN: u32 = 1610614060;
+pub const SYSCALL_cx_rng_ID_OUT: u32 = 2415920487;
+pub const SYSCALL_cx_hash_ID_IN: u32 = 1610614587;
+pub const SYSCALL_cx_hash_ID_OUT: u32 = 2415921069;
+pub const SYSCALL_cx_ripemd160_init_ID_IN: u32 = 1610614911;
+pub const SYSCALL_cx_ripemd160_init_ID_OUT: u32 = 2415921400;
+pub const SYSCALL_cx_sha224_init_ID_IN: u32 = 1610615131;
+pub const SYSCALL_cx_sha224_init_ID_OUT: u32 = 2415921437;
+pub const SYSCALL_cx_sha256_init_ID_IN: u32 = 1610615515;
+pub const SYSCALL_cx_sha256_init_ID_OUT: u32 = 2415921764;
+pub const SYSCALL_cx_hash_sha256_ID_IN: u32 = 1610615596;
+pub const SYSCALL_cx_hash_sha256_ID_OUT: u32 = 2415922080;
+pub const SYSCALL_cx_sha384_init_ID_IN: u32 = 1610615851;
+pub const SYSCALL_cx_sha384_init_ID_OUT: u32 = 2415922351;
+pub const SYSCALL_cx_sha512_init_ID_IN: u32 = 1610616257;
+pub const SYSCALL_cx_sha512_init_ID_OUT: u32 = 2415922670;
+pub const SYSCALL_cx_hash_sha512_ID_IN: u32 = 1610616392;
+pub const SYSCALL_cx_hash_sha512_ID_OUT: u32 = 2415922773;
+pub const SYSCALL_cx_sha3_init_ID_IN: u32 = 1610616785;
+pub const SYSCALL_cx_sha3_init_ID_OUT: u32 = 2415923062;
+pub const SYSCALL_cx_keccak_init_ID_IN: u32 = 1610617039;
+pub const SYSCALL_cx_keccak_init_ID_OUT: u32 = 2415923416;
+pub const SYSCALL_cx_shake128_init_ID_IN: u32 = 1610650377;
+pub const SYSCALL_cx_shake128_init_ID_OUT: u32 = 2415956881;
+pub const SYSCALL_cx_shake256_init_ID_IN: u32 = 1610650854;
+pub const SYSCALL_cx_shake256_init_ID_OUT: u32 = 2415957159;
+pub const SYSCALL_cx_sha3_xof_init_ID_IN: u32 = 1610617152;
+pub const SYSCALL_cx_sha3_xof_init_ID_OUT: u32 = 2415923680;
+pub const SYSCALL_cx_blake2b_init_ID_IN: u32 = 1610617608;
+pub const SYSCALL_cx_blake2b_init_ID_OUT: u32 = 2415924121;
+pub const SYSCALL_cx_blake2b_init2_ID_IN: u32 = 1610617958;
+pub const SYSCALL_cx_blake2b_init2_ID_OUT: u32 = 2415924369;
+pub const SYSCALL_cx_groestl_init_ID_IN: u32 = 1610617376;
+pub const SYSCALL_cx_groestl_init_ID_OUT: u32 = 2415923779;
+pub const SYSCALL_cx_hmac_ripemd160_init_ID_IN: u32 = 1610618319;
+pub const SYSCALL_cx_hmac_ripemd160_init_ID_OUT: u32 = 2415924598;
+pub const SYSCALL_cx_hmac_sha256_init_ID_IN: u32 = 1610618577;
+pub const SYSCALL_cx_hmac_sha256_init_ID_OUT: u32 = 2415924743;
+pub const SYSCALL_cx_hmac_sha512_init_ID_IN: u32 = 1610618803;
+pub const SYSCALL_cx_hmac_sha512_init_ID_OUT: u32 = 2415925017;
+pub const SYSCALL_cx_hmac_ID_IN: u32 = 1610619089;
+pub const SYSCALL_cx_hmac_ID_OUT: u32 = 2415925462;
+pub const SYSCALL_cx_hmac_sha512_ID_IN: u32 = 1610619343;
+pub const SYSCALL_cx_hmac_sha512_ID_OUT: u32 = 2415925630;
+pub const SYSCALL_cx_hmac_sha256_ID_IN: u32 = 1610619435;
+pub const SYSCALL_cx_hmac_sha256_ID_OUT: u32 = 2415925940;
+pub const SYSCALL_cx_pbkdf2_ID_IN: u32 = 1610654252;
+pub const SYSCALL_cx_pbkdf2_ID_OUT: u32 = 2415960661;
+pub const SYSCALL_cx_des_init_key_ID_IN: u32 = 1610620035;
+pub const SYSCALL_cx_des_init_key_ID_OUT: u32 = 2415926349;
+pub const SYSCALL_cx_des_iv_ID_IN: u32 = 1610654498;
+pub const SYSCALL_cx_des_iv_ID_OUT: u32 = 2415960903;
+pub const SYSCALL_cx_des_ID_IN: u32 = 1610620494;
+pub const SYSCALL_cx_des_ID_OUT: u32 = 2415927038;
+pub const SYSCALL_cx_aes_init_key_ID_IN: u32 = 1610620715;
+pub const SYSCALL_cx_aes_init_key_ID_OUT: u32 = 2415927089;
+pub const SYSCALL_cx_aes_iv_ID_IN: u32 = 1610654885;
+pub const SYSCALL_cx_aes_iv_ID_OUT: u32 = 2415961314;
+pub const SYSCALL_cx_aes_ID_IN: u32 = 1610621410;
+pub const SYSCALL_cx_aes_ID_OUT: u32 = 2415927612;
+pub const SYSCALL_cx_rsa_init_public_key_ID_IN: u32 = 1610621669;
+pub const SYSCALL_cx_rsa_init_public_key_ID_OUT: u32 = 2415927947;
+pub const SYSCALL_cx_rsa_init_private_key_ID_IN: u32 = 1610621751;
+pub const SYSCALL_cx_rsa_init_private_key_ID_OUT: u32 = 2415928259;
+pub const SYSCALL_cx_rsa_generate_pair_ID_IN: u32 = 1610622113;
+pub const SYSCALL_cx_rsa_generate_pair_ID_OUT: u32 = 2415928573;
+pub const SYSCALL_cx_rsa_sign_ID_IN: u32 = 1610622406;
+pub const SYSCALL_cx_rsa_sign_ID_OUT: u32 = 2415928819;
+pub const SYSCALL_cx_rsa_verify_ID_IN: u32 = 1610622635;
+pub const SYSCALL_cx_rsa_verify_ID_OUT: u32 = 2415929011;
+pub const SYSCALL_cx_rsa_encrypt_ID_IN: u32 = 1610622938;
+pub const SYSCALL_cx_rsa_encrypt_ID_OUT: u32 = 2415929289;
+pub const SYSCALL_cx_rsa_decrypt_ID_IN: u32 = 1610623108;
+pub const SYSCALL_cx_rsa_decrypt_ID_OUT: u32 = 2415929511;
+pub const SYSCALL_cx_ecfp_is_valid_point_ID_IN: u32 = 1610623339;
+pub const SYSCALL_cx_ecfp_is_valid_point_ID_OUT: u32 = 2415929601;
+pub const SYSCALL_cx_ecfp_is_cryptographic_point_ID_IN: u32 = 1610623715;
+pub const SYSCALL_cx_ecfp_is_cryptographic_point_ID_OUT: u32 = 2415930096;
+pub const SYSCALL_cx_ecfp_add_point_ID_IN: u32 = 1610623767;
+pub const SYSCALL_cx_ecfp_add_point_ID_OUT: u32 = 2415930311;
+pub const SYSCALL_cx_ecfp_scalar_mult_ID_IN: u32 = 1610624243;
+pub const SYSCALL_cx_ecfp_scalar_mult_ID_OUT: u32 = 2415930595;
+pub const SYSCALL_cx_ecfp_init_public_key_ID_IN: u32 = 1610624493;
+pub const SYSCALL_cx_ecfp_init_public_key_ID_OUT: u32 = 2415930697;
+pub const SYSCALL_cx_ecfp_init_private_key_ID_IN: u32 = 1610624746;
+pub const SYSCALL_cx_ecfp_init_private_key_ID_OUT: u32 = 2415930979;
+pub const SYSCALL_cx_ecfp_generate_pair_ID_IN: u32 = 1610624814;
+pub const SYSCALL_cx_ecfp_generate_pair_ID_OUT: u32 = 2415931252;
+pub const SYSCALL_cx_ecfp_generate_pair2_ID_IN: u32 = 1610625055;
+pub const SYSCALL_cx_ecfp_generate_pair2_ID_OUT: u32 = 2415931622;
+pub const SYSCALL_cx_ecdsa_sign_ID_IN: u32 = 1610627315;
+pub const SYSCALL_cx_ecdsa_sign_ID_OUT: u32 = 2415933558;
+pub const SYSCALL_cx_ecdsa_verify_ID_IN: u32 = 1610627569;
+pub const SYSCALL_cx_ecdsa_verify_ID_OUT: u32 = 2415933927;
+pub const SYSCALL_cx_edward_compress_point_ID_IN: u32 = 1610625881;
+pub const SYSCALL_cx_edward_compress_point_ID_OUT: u32 = 2415932203;
+pub const SYSCALL_cx_edward_decompress_point_ID_IN: u32 = 1610626097;
+pub const SYSCALL_cx_edward_decompress_point_ID_OUT: u32 = 2415932618;
+pub const SYSCALL_cx_eddsa_get_public_key_ID_IN: u32 = 1610626332;
+pub const SYSCALL_cx_eddsa_get_public_key_ID_OUT: u32 = 2415932863;
+pub const SYSCALL_cx_eddsa_sign_ID_IN: u32 = 1610626619;
+pub const SYSCALL_cx_eddsa_sign_ID_OUT: u32 = 2415933174;
+pub const SYSCALL_cx_eddsa_verify_ID_IN: u32 = 1610627018;
+pub const SYSCALL_cx_eddsa_verify_ID_OUT: u32 = 2415933217;
+pub const SYSCALL_cx_ecschnorr_sign_ID_IN: u32 = 1610625345;
+pub const SYSCALL_cx_ecschnorr_sign_ID_OUT: u32 = 2415931722;
+pub const SYSCALL_cx_ecschnorr_verify_ID_IN: u32 = 1610625541;
+pub const SYSCALL_cx_ecschnorr_verify_ID_OUT: u32 = 2415932151;
+pub const SYSCALL_cx_ecdh_ID_IN: u32 = 1610627741;
+pub const SYSCALL_cx_ecdh_ID_OUT: u32 = 2415934100;
+pub const SYSCALL_cx_crc16_ID_IN: u32 = 1610650104;
+pub const SYSCALL_cx_crc16_ID_OUT: u32 = 2415956268;
+pub const SYSCALL_cx_crc16_update_ID_IN: u32 = 1610650222;
+pub const SYSCALL_cx_crc16_update_ID_OUT: u32 = 2415956715;
+pub const SYSCALL_cx_math_cmp_ID_IN: u32 = 1610628443;
+pub const SYSCALL_cx_math_cmp_ID_OUT: u32 = 2415934908;
+pub const SYSCALL_cx_math_is_zero_ID_IN: u32 = 1610628663;
+pub const SYSCALL_cx_math_is_zero_ID_OUT: u32 = 2415935056;
+pub const SYSCALL_cx_math_add_ID_IN: u32 = 1610629115;
+pub const SYSCALL_cx_math_add_ID_OUT: u32 = 2415935448;
+pub const SYSCALL_cx_math_sub_ID_IN: u32 = 1610629279;
+pub const SYSCALL_cx_math_sub_ID_OUT: u32 = 2415935517;
+pub const SYSCALL_cx_math_mult_ID_IN: u32 = 1610629438;
+pub const SYSCALL_cx_math_mult_ID_OUT: u32 = 2415935938;
+pub const SYSCALL_cx_math_addm_ID_IN: u32 = 1610629798;
+pub const SYSCALL_cx_math_addm_ID_OUT: u32 = 2415936072;
+pub const SYSCALL_cx_math_subm_ID_IN: u32 = 1610630013;
+pub const SYSCALL_cx_math_subm_ID_OUT: u32 = 2415936480;
+pub const SYSCALL_cx_math_multm_ID_IN: u32 = 1610630213;
+pub const SYSCALL_cx_math_multm_ID_OUT: u32 = 2415936755;
+pub const SYSCALL_cx_math_powm_ID_IN: u32 = 1610630477;
+pub const SYSCALL_cx_math_powm_ID_OUT: u32 = 2415936830;
+pub const SYSCALL_cx_math_modm_ID_IN: u32 = 1610630725;
+pub const SYSCALL_cx_math_modm_ID_OUT: u32 = 2415937164;
+pub const SYSCALL_cx_math_invprimem_ID_IN: u32 = 1610631145;
+pub const SYSCALL_cx_math_invprimem_ID_OUT: u32 = 2415937305;
+pub const SYSCALL_cx_math_invintm_ID_IN: u32 = 1610631212;
+pub const SYSCALL_cx_math_invintm_ID_OUT: u32 = 2415937681;
+pub const SYSCALL_cx_math_is_prime_ID_IN: u32 = 1610631496;
+pub const SYSCALL_cx_math_is_prime_ID_OUT: u32 = 2415938042;
+pub const SYSCALL_cx_math_next_prime_ID_IN: u32 = 1610631844;
+pub const SYSCALL_cx_math_next_prime_ID_OUT: u32 = 2415938251;
+pub const SYSCALL_os_perso_erase_all_ID_IN: u32 = 1610632181;
+pub const SYSCALL_os_perso_erase_all_ID_OUT: u32 = 2415938548;
+pub const SYSCALL_os_perso_set_pin_ID_IN: u32 = 1610632415;
+pub const SYSCALL_os_perso_set_pin_ID_OUT: u32 = 2415938709;
+pub const SYSCALL_os_perso_set_current_identity_pin_ID_IN: u32 = 1610632702;
+pub const SYSCALL_os_perso_set_current_identity_pin_ID_OUT: u32 = 2415938826;
+pub const SYSCALL_os_perso_set_seed_ID_IN: u32 = 1610632892;
+pub const SYSCALL_os_perso_set_seed_ID_OUT: u32 = 2415939306;
+pub const SYSCALL_os_perso_derive_and_set_seed_ID_IN: u32 = 1610633149;
+pub const SYSCALL_os_perso_derive_and_set_seed_ID_OUT: u32 = 2415939535;
+pub const SYSCALL_os_perso_set_words_ID_IN: u32 = 1610633240;
+pub const SYSCALL_os_perso_set_words_ID_OUT: u32 = 2415939818;
+pub const SYSCALL_os_perso_finalize_ID_IN: u32 = 1610633600;
+pub const SYSCALL_os_perso_finalize_ID_OUT: u32 = 2415939924;
+pub const SYSCALL_os_perso_isonboarded_ID_IN: u32 = 1610653519;
+pub const SYSCALL_os_perso_isonboarded_ID_OUT: u32 = 2415959826;
+pub const SYSCALL_os_perso_derive_node_bip32_ID_IN: u32 = 1610634170;
+pub const SYSCALL_os_perso_derive_node_bip32_ID_OUT: u32 = 2415940382;
+pub const SYSCALL_os_perso_derive_node_with_seed_key_ID_IN: u32 = 1610655448;
+pub const SYSCALL_os_perso_derive_node_with_seed_key_ID_OUT: u32 = 2415961604;
+pub const SYSCALL_os_perso_seed_cookie_ID_IN: u32 = 1610655996;
+pub const SYSCALL_os_perso_seed_cookie_ID_OUT: u32 = 2415962231;
+pub const SYSCALL_os_endorsement_get_code_hash_ID_IN: u32 = 1610634511;
+pub const SYSCALL_os_endorsement_get_code_hash_ID_OUT: u32 = 2415941025;
+pub const SYSCALL_os_endorsement_get_public_key_ID_IN: u32 = 1610634995;
+pub const SYSCALL_os_endorsement_get_public_key_ID_OUT: u32 = 2415941273;
+pub const SYSCALL_os_endorsement_get_public_key_certificate_ID_IN: u32 = 1610635084;
+pub const SYSCALL_os_endorsement_get_public_key_certificate_ID_OUT: u32 = 2415941503;
+pub const SYSCALL_os_endorsement_key1_get_app_secret_ID_IN: u32 = 1610635356;
+pub const SYSCALL_os_endorsement_key1_get_app_secret_ID_OUT: u32 = 2415941728;
+pub const SYSCALL_os_endorsement_key1_sign_data_ID_IN: u32 = 1610635736;
+pub const SYSCALL_os_endorsement_key1_sign_data_ID_OUT: u32 = 2415941931;
+pub const SYSCALL_os_endorsement_key2_derive_sign_data_ID_IN: u32 = 1610635850;
+pub const SYSCALL_os_endorsement_key2_derive_sign_data_ID_OUT: u32 = 2415942206;
+pub const SYSCALL_os_global_pin_is_validated_ID_IN: u32 = 1610653756;
+pub const SYSCALL_os_global_pin_is_validated_ID_OUT: u32 = 2415960184;
+pub const SYSCALL_os_global_pin_check_ID_IN: u32 = 1610653954;
+pub const SYSCALL_os_global_pin_check_ID_OUT: u32 = 2415960531;
+pub const SYSCALL_os_global_pin_invalidate_ID_IN: u32 = 1610636752;
+pub const SYSCALL_os_global_pin_invalidate_ID_OUT: u32 = 2415943163;
+pub const SYSCALL_os_global_pin_retries_ID_IN: u32 = 1610636889;
+pub const SYSCALL_os_global_pin_retries_ID_OUT: u32 = 2415943192;
+pub const SYSCALL_os_registry_count_ID_IN: u32 = 1610637120;
+pub const SYSCALL_os_registry_count_ID_OUT: u32 = 2415943430;
+pub const SYSCALL_os_registry_get_ID_IN: u32 = 1610637413;
+pub const SYSCALL_os_registry_get_ID_OUT: u32 = 2415943858;
+pub const SYSCALL_os_ux_ID_IN: u32 = 1610638424;
+pub const SYSCALL_os_ux_ID_OUT: u32 = 2415944735;
+pub const SYSCALL_os_ux_result_ID_IN: u32 = 1610638592;
+pub const SYSCALL_os_ux_result_ID_OUT: u32 = 2415945136;
+pub const SYSCALL_os_ux_read_parameters_ID_IN: u32 = 1610639015;
+pub const SYSCALL_os_ux_read_parameters_ID_OUT: u32 = 2415945387;
+pub const SYSCALL_os_lib_call_ID_IN: u32 = 1610639117;
+pub const SYSCALL_os_lib_call_ID_OUT: u32 = 2415945564;
+pub const SYSCALL_os_lib_end_ID_IN: u32 = 1610639501;
+pub const SYSCALL_os_lib_end_ID_OUT: u32 = 2415945736;
+pub const SYSCALL_os_lib_throw_ID_IN: u32 = 1610639685;
+pub const SYSCALL_os_lib_throw_ID_OUT: u32 = 2415946119;
+pub const SYSCALL_os_flags_ID_IN: u32 = 1610639982;
+pub const SYSCALL_os_flags_ID_OUT: u32 = 2415946367;
+pub const SYSCALL_os_version_ID_IN: u32 = 1610640312;
+pub const SYSCALL_os_version_ID_OUT: u32 = 2415946692;
+pub const SYSCALL_os_serial_ID_IN: u32 = 1610640563;
+pub const SYSCALL_os_serial_ID_OUT: u32 = 2415946966;
+pub const SYSCALL_os_seph_features_ID_IN: u32 = 1610641110;
+pub const SYSCALL_os_seph_features_ID_OUT: u32 = 2415947332;
+pub const SYSCALL_os_seph_version_ID_IN: u32 = 1610641324;
+pub const SYSCALL_os_seph_version_ID_OUT: u32 = 2415947613;
+pub const SYSCALL_os_bootloader_version_ID_IN: u32 = 1610656023;
+pub const SYSCALL_os_bootloader_version_ID_OUT: u32 = 2415962490;
+pub const SYSCALL_os_setting_get_ID_IN: u32 = 1610641605;
+pub const SYSCALL_os_setting_get_ID_OUT: u32 = 2415947951;
+pub const SYSCALL_os_setting_set_ID_IN: u32 = 1610641814;
+pub const SYSCALL_os_setting_set_ID_OUT: u32 = 2415948197;
+pub const SYSCALL_os_get_memory_info_ID_IN: u32 = 1610642019;
+pub const SYSCALL_os_get_memory_info_ID_OUT: u32 = 2415948491;
+pub const SYSCALL_os_registry_get_tag_ID_IN: u32 = 1610642257;
+pub const SYSCALL_os_registry_get_tag_ID_OUT: u32 = 2415948681;
+pub const SYSCALL_os_registry_get_current_app_tag_ID_IN: u32 = 1610642644;
+pub const SYSCALL_os_registry_get_current_app_tag_ID_OUT: u32 = 2415948935;
+pub const SYSCALL_os_customca_verify_ID_IN: u32 = 1610649697;
+pub const SYSCALL_os_customca_verify_ID_OUT: u32 = 2415956098;
+pub const SYSCALL_os_sched_exec_ID_IN: u32 = 1610652025;
+pub const SYSCALL_os_sched_exec_ID_OUT: u32 = 2415958344;
+pub const SYSCALL_os_sched_exit_ID_IN: u32 = 1610652350;
+pub const SYSCALL_os_sched_exit_ID_OUT: u32 = 2415958750;
+pub const SYSCALL_os_sched_is_running_ID_IN: u32 = 1610652634;
+pub const SYSCALL_os_sched_is_running_ID_OUT: u32 = 2415958909;
+pub const SYSCALL_os_sched_create_ID_IN: u32 = 1610643399;
+pub const SYSCALL_os_sched_create_ID_OUT: u32 = 2415949734;
+pub const SYSCALL_os_sched_kill_ID_IN: u32 = 1610643672;
+pub const SYSCALL_os_sched_kill_ID_OUT: u32 = 2415949885;
+pub const SYSCALL_io_seph_send_ID_IN: u32 = 1610646401;
+pub const SYSCALL_io_seph_send_ID_OUT: u32 = 2415952877;
+pub const SYSCALL_io_seph_is_status_sent_ID_IN: u32 = 1610646715;
+pub const SYSCALL_io_seph_is_status_sent_ID_OUT: u32 = 2415952901;
+pub const SYSCALL_io_seph_recv_ID_IN: u32 = 1610647012;
+pub const SYSCALL_io_seph_recv_ID_OUT: u32 = 2415953399;
+pub const SYSCALL_nvm_write_page_ID_IN: u32 = 1610647294;
+pub const SYSCALL_nvm_write_page_ID_OUT: u32 = 2415953660;
+pub const SYSCALL_try_context_get_ID_IN: u32 = 1610647473;
+pub const SYSCALL_try_context_get_ID_OUT: u32 = 2415953698;
+pub const SYSCALL_try_context_set_ID_IN: u32 = 1610647669;
+pub const SYSCALL_try_context_set_ID_OUT: u32 = 2415953980;
+pub const SYSCALL_cx_rng_u32_ID_IN: u32 = 1610648044;
+pub const SYSCALL_cx_rng_u32_ID_OUT: u32 = 2415954388;
+pub const SYSCALL_os_sched_last_status_ID_IN: u32 = 1610652811;
+pub const SYSCALL_os_sched_last_status_ID_OUT: u32 = 2415959149;
+pub const SYSCALL_os_sched_yield_ID_IN: u32 = 1610653118;
+pub const SYSCALL_os_sched_yield_ID_OUT: u32 = 2415959341;
+pub const SYSCALL_os_sched_switch_ID_IN: u32 = 1610653213;
+pub const SYSCALL_os_sched_switch_ID_OUT: u32 = 2415959600;
+pub const SYSCALL_os_sched_current_task_ID_IN: u32 = 1610648401;
+pub const SYSCALL_os_sched_current_task_ID_OUT: u32 = 2415954928;
+pub const SYSCALL_os_mpu_protect_ram_ID_IN: u32 = 1610648898;
+pub const SYSCALL_os_mpu_protect_ram_ID_OUT: u32 = 2415955328;
+pub const SYSCALL_os_mpu_protect_flash_ID_IN: u32 = 1610649335;
+pub const SYSCALL_os_mpu_protect_flash_ID_OUT: u32 = 2415955666;
+pub const SYSCALL_PARAMETER_ARRAY_MAX_LEN: u32 = 12;
 pub const BLE_CMD_APDU: u32 = 5;
 pub const BLE_CHUNK_LENGTH: u32 = 20;
 pub const M24SR_CHUNK_LENGTH: u32 = 246;
@@ -576,6 +756,8 @@ pub const BUTTON_EVT_FAST: u32 = 1073741824;
 pub const BUTTON_EVT_RELEASED: u32 = 2147483648;
 pub const UX_STACK_SLOT_COUNT: u32 = 1;
 pub const UX_STACK_SLOT_ARRAY_COUNT: u32 = 1;
+pub const UX_MENU_UNCHANGED_ENTRY: i32 = -1;
+pub const UX_TURNER_UNCHANGED_ENTRY: i32 = -1;
 pub const GLYPH_icon_down_WIDTH: u32 = 7;
 pub const GLYPH_icon_down_HEIGHT: u32 = 4;
 pub const GLYPH_icon_down_BPP: u32 = 1;
@@ -610,49 +792,6 @@ pub struct try_context_s {
     pub previous: *mut try_context_t,
     pub ex: exception_t,
 }
-#[test]
-fn bindgen_test_layout_try_context_s() {
-    assert_eq!(
-        ::core::mem::size_of::<try_context_s>(),
-        48usize,
-        concat!("Size of: ", stringify!(try_context_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<try_context_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(try_context_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<try_context_s>())).jmp_buf as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(try_context_s),
-            "::",
-            stringify!(jmp_buf)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<try_context_s>())).previous as *const _ as usize },
-        40usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(try_context_s),
-            "::",
-            stringify!(previous)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<try_context_s>())).ex as *const _ as usize },
-        44usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(try_context_s),
-            "::",
-            stringify!(ex)
-        )
-    );
-}
 impl Default for try_context_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -672,151 +811,24 @@ pub struct max_align_t {
     pub __clang_max_align_nonce1: cty::c_longlong,
     pub __clang_max_align_nonce2: f64,
 }
-#[test]
-fn bindgen_test_layout_max_align_t() {
-    assert_eq!(
-        ::core::mem::size_of::<max_align_t>(),
-        16usize,
-        concat!("Size of: ", stringify!(max_align_t))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<max_align_t>(),
-        8usize,
-        concat!("Alignment of ", stringify!(max_align_t))
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<max_align_t>())).__clang_max_align_nonce1 as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(max_align_t),
-            "::",
-            stringify!(__clang_max_align_nonce1)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<max_align_t>())).__clang_max_align_nonce2 as *const _ as usize
-        },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(max_align_t),
-            "::",
-            stringify!(__clang_max_align_nonce2)
-        )
-    );
-}
-pub type __u_char = cty::c_uchar;
-pub type __u_short = cty::c_ushort;
-pub type __u_int = cty::c_uint;
-pub type __u_long = cty::c_ulong;
-pub type __int8_t = cty::c_schar;
-pub type __uint8_t = cty::c_uchar;
-pub type __int16_t = cty::c_short;
-pub type __uint16_t = cty::c_ushort;
-pub type __int32_t = cty::c_int;
-pub type __uint32_t = cty::c_uint;
-pub type __int64_t = cty::c_longlong;
-pub type __uint64_t = cty::c_ulonglong;
-pub type __int_least8_t = __int8_t;
-pub type __uint_least8_t = __uint8_t;
-pub type __int_least16_t = __int16_t;
-pub type __uint_least16_t = __uint16_t;
-pub type __int_least32_t = __int32_t;
-pub type __uint_least32_t = __uint32_t;
-pub type __int_least64_t = __int64_t;
-pub type __uint_least64_t = __uint64_t;
-pub type __quad_t = cty::c_longlong;
-pub type __u_quad_t = cty::c_ulonglong;
-pub type __intmax_t = cty::c_longlong;
-pub type __uintmax_t = cty::c_ulonglong;
-pub type __dev_t = __uint64_t;
-pub type __uid_t = cty::c_uint;
-pub type __gid_t = cty::c_uint;
-pub type __ino_t = cty::c_ulong;
-pub type __ino64_t = __uint64_t;
-pub type __mode_t = cty::c_uint;
-pub type __nlink_t = cty::c_uint;
-pub type __off_t = cty::c_long;
-pub type __off64_t = __int64_t;
-pub type __pid_t = cty::c_int;
-#[repr(C)]
-#[derive(Default, Copy, Clone)]
-pub struct __fsid_t {
-    pub __val: [cty::c_int; 2usize],
-}
-#[test]
-fn bindgen_test_layout___fsid_t() {
-    assert_eq!(
-        ::core::mem::size_of::<__fsid_t>(),
-        8usize,
-        concat!("Size of: ", stringify!(__fsid_t))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<__fsid_t>(),
-        4usize,
-        concat!("Alignment of ", stringify!(__fsid_t))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<__fsid_t>())).__val as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(__fsid_t),
-            "::",
-            stringify!(__val)
-        )
-    );
-}
-pub type __clock_t = cty::c_long;
-pub type __rlim_t = cty::c_ulong;
-pub type __rlim64_t = __uint64_t;
-pub type __id_t = cty::c_uint;
-pub type __time_t = cty::c_long;
-pub type __useconds_t = cty::c_uint;
-pub type __suseconds_t = cty::c_long;
-pub type __daddr_t = cty::c_int;
-pub type __key_t = cty::c_int;
-pub type __clockid_t = cty::c_int;
-pub type __timer_t = *mut cty::c_void;
-pub type __blksize_t = cty::c_long;
-pub type __blkcnt_t = cty::c_long;
-pub type __blkcnt64_t = __int64_t;
-pub type __fsblkcnt_t = cty::c_ulong;
-pub type __fsblkcnt64_t = __uint64_t;
-pub type __fsfilcnt_t = cty::c_ulong;
-pub type __fsfilcnt64_t = __uint64_t;
-pub type __fsword_t = cty::c_int;
-pub type __ssize_t = cty::c_int;
-pub type __syscall_slong_t = cty::c_long;
-pub type __syscall_ulong_t = cty::c_ulong;
-pub type __loff_t = __off64_t;
-pub type __caddr_t = *mut cty::c_char;
-pub type __intptr_t = cty::c_int;
-pub type __socklen_t = cty::c_uint;
-pub type __sig_atomic_t = cty::c_int;
-pub type __time64_t = __int64_t;
-pub type int_least8_t = __int_least8_t;
-pub type int_least16_t = __int_least16_t;
-pub type int_least32_t = __int_least32_t;
-pub type int_least64_t = __int_least64_t;
-pub type uint_least8_t = __uint_least8_t;
-pub type uint_least16_t = __uint_least16_t;
-pub type uint_least32_t = __uint_least32_t;
-pub type uint_least64_t = __uint_least64_t;
-pub type int_fast8_t = cty::c_schar;
-pub type int_fast16_t = cty::c_int;
-pub type int_fast32_t = cty::c_int;
-pub type int_fast64_t = cty::c_longlong;
-pub type uint_fast8_t = cty::c_uchar;
-pub type uint_fast16_t = cty::c_uint;
-pub type uint_fast32_t = cty::c_uint;
-pub type uint_fast64_t = cty::c_ulonglong;
-pub type intmax_t = __intmax_t;
-pub type uintmax_t = __uintmax_t;
+pub type int_least64_t = i64;
+pub type uint_least64_t = u64;
+pub type int_fast64_t = i64;
+pub type uint_fast64_t = u64;
+pub type int_least32_t = i32;
+pub type uint_least32_t = u32;
+pub type int_fast32_t = i32;
+pub type uint_fast32_t = u32;
+pub type int_least16_t = i16;
+pub type uint_least16_t = u16;
+pub type int_fast16_t = i16;
+pub type uint_fast16_t = u16;
+pub type int_least8_t = i8;
+pub type uint_least8_t = u8;
+pub type int_fast8_t = i8;
+pub type uint_fast8_t = u8;
+pub type intmax_t = cty::c_longlong;
+pub type uintmax_t = cty::c_ulonglong;
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union APSR_Type {
@@ -829,19 +841,6 @@ pub union APSR_Type {
 #[derive(Default, Copy, Clone)]
 pub struct APSR_Type__bindgen_ty_1 {
     pub _bitfield_1: __BindgenBitfieldUnit<[u8; 4usize], u32>,
-}
-#[test]
-fn bindgen_test_layout_APSR_Type__bindgen_ty_1() {
-    assert_eq!(
-        ::core::mem::size_of::<APSR_Type__bindgen_ty_1>(),
-        4usize,
-        concat!("Size of: ", stringify!(APSR_Type__bindgen_ty_1))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<APSR_Type__bindgen_ty_1>(),
-        4usize,
-        concat!("Alignment of ", stringify!(APSR_Type__bindgen_ty_1))
-    );
 }
 impl APSR_Type__bindgen_ty_1 {
     #[inline]
@@ -948,39 +947,6 @@ impl APSR_Type__bindgen_ty_1 {
         __bindgen_bitfield_unit
     }
 }
-#[test]
-fn bindgen_test_layout_APSR_Type() {
-    assert_eq!(
-        ::core::mem::size_of::<APSR_Type>(),
-        4usize,
-        concat!("Size of: ", stringify!(APSR_Type))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<APSR_Type>(),
-        4usize,
-        concat!("Alignment of ", stringify!(APSR_Type))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<APSR_Type>())).b as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(APSR_Type),
-            "::",
-            stringify!(b)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<APSR_Type>())).w as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(APSR_Type),
-            "::",
-            stringify!(w)
-        )
-    );
-}
 impl Default for APSR_Type {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -998,19 +964,6 @@ pub union IPSR_Type {
 #[derive(Default, Copy, Clone)]
 pub struct IPSR_Type__bindgen_ty_1 {
     pub _bitfield_1: __BindgenBitfieldUnit<[u8; 4usize], u32>,
-}
-#[test]
-fn bindgen_test_layout_IPSR_Type__bindgen_ty_1() {
-    assert_eq!(
-        ::core::mem::size_of::<IPSR_Type__bindgen_ty_1>(),
-        4usize,
-        concat!("Size of: ", stringify!(IPSR_Type__bindgen_ty_1))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<IPSR_Type__bindgen_ty_1>(),
-        4usize,
-        concat!("Alignment of ", stringify!(IPSR_Type__bindgen_ty_1))
-    );
 }
 impl IPSR_Type__bindgen_ty_1 {
     #[inline]
@@ -1050,39 +1003,6 @@ impl IPSR_Type__bindgen_ty_1 {
         __bindgen_bitfield_unit
     }
 }
-#[test]
-fn bindgen_test_layout_IPSR_Type() {
-    assert_eq!(
-        ::core::mem::size_of::<IPSR_Type>(),
-        4usize,
-        concat!("Size of: ", stringify!(IPSR_Type))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<IPSR_Type>(),
-        4usize,
-        concat!("Alignment of ", stringify!(IPSR_Type))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<IPSR_Type>())).b as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(IPSR_Type),
-            "::",
-            stringify!(b)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<IPSR_Type>())).w as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(IPSR_Type),
-            "::",
-            stringify!(w)
-        )
-    );
-}
 impl Default for IPSR_Type {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -1100,19 +1020,6 @@ pub union xPSR_Type {
 #[derive(Default, Copy, Clone)]
 pub struct xPSR_Type__bindgen_ty_1 {
     pub _bitfield_1: __BindgenBitfieldUnit<[u8; 4usize], u16>,
-}
-#[test]
-fn bindgen_test_layout_xPSR_Type__bindgen_ty_1() {
-    assert_eq!(
-        ::core::mem::size_of::<xPSR_Type__bindgen_ty_1>(),
-        4usize,
-        concat!("Size of: ", stringify!(xPSR_Type__bindgen_ty_1))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<xPSR_Type__bindgen_ty_1>(),
-        4usize,
-        concat!("Alignment of ", stringify!(xPSR_Type__bindgen_ty_1))
-    );
 }
 impl xPSR_Type__bindgen_ty_1 {
     #[inline]
@@ -1267,39 +1174,6 @@ impl xPSR_Type__bindgen_ty_1 {
         __bindgen_bitfield_unit
     }
 }
-#[test]
-fn bindgen_test_layout_xPSR_Type() {
-    assert_eq!(
-        ::core::mem::size_of::<xPSR_Type>(),
-        4usize,
-        concat!("Size of: ", stringify!(xPSR_Type))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<xPSR_Type>(),
-        4usize,
-        concat!("Alignment of ", stringify!(xPSR_Type))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<xPSR_Type>())).b as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(xPSR_Type),
-            "::",
-            stringify!(b)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<xPSR_Type>())).w as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(xPSR_Type),
-            "::",
-            stringify!(w)
-        )
-    );
-}
 impl Default for xPSR_Type {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -1317,19 +1191,6 @@ pub union CONTROL_Type {
 #[derive(Default, Copy, Clone)]
 pub struct CONTROL_Type__bindgen_ty_1 {
     pub _bitfield_1: __BindgenBitfieldUnit<[u8; 4usize], u32>,
-}
-#[test]
-fn bindgen_test_layout_CONTROL_Type__bindgen_ty_1() {
-    assert_eq!(
-        ::core::mem::size_of::<CONTROL_Type__bindgen_ty_1>(),
-        4usize,
-        concat!("Size of: ", stringify!(CONTROL_Type__bindgen_ty_1))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<CONTROL_Type__bindgen_ty_1>(),
-        4usize,
-        concat!("Alignment of ", stringify!(CONTROL_Type__bindgen_ty_1))
-    );
 }
 impl CONTROL_Type__bindgen_ty_1 {
     #[inline]
@@ -1404,39 +1265,6 @@ impl CONTROL_Type__bindgen_ty_1 {
         __bindgen_bitfield_unit
     }
 }
-#[test]
-fn bindgen_test_layout_CONTROL_Type() {
-    assert_eq!(
-        ::core::mem::size_of::<CONTROL_Type>(),
-        4usize,
-        concat!("Size of: ", stringify!(CONTROL_Type))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<CONTROL_Type>(),
-        4usize,
-        concat!("Alignment of ", stringify!(CONTROL_Type))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<CONTROL_Type>())).b as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(CONTROL_Type),
-            "::",
-            stringify!(b)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<CONTROL_Type>())).w as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(CONTROL_Type),
-            "::",
-            stringify!(w)
-        )
-    );
-}
 impl Default for CONTROL_Type {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -1455,119 +1283,6 @@ pub struct NVIC_Type {
     pub RESERVED3: [u32; 31usize],
     pub RESERVED4: [u32; 64usize],
     pub IP: [u32; 8usize],
-}
-#[test]
-fn bindgen_test_layout_NVIC_Type() {
-    assert_eq!(
-        ::core::mem::size_of::<NVIC_Type>(),
-        800usize,
-        concat!("Size of: ", stringify!(NVIC_Type))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<NVIC_Type>(),
-        4usize,
-        concat!("Alignment of ", stringify!(NVIC_Type))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<NVIC_Type>())).ISER as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(NVIC_Type),
-            "::",
-            stringify!(ISER)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<NVIC_Type>())).RESERVED0 as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(NVIC_Type),
-            "::",
-            stringify!(RESERVED0)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<NVIC_Type>())).ICER as *const _ as usize },
-        128usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(NVIC_Type),
-            "::",
-            stringify!(ICER)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<NVIC_Type>())).RSERVED1 as *const _ as usize },
-        132usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(NVIC_Type),
-            "::",
-            stringify!(RSERVED1)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<NVIC_Type>())).ISPR as *const _ as usize },
-        256usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(NVIC_Type),
-            "::",
-            stringify!(ISPR)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<NVIC_Type>())).RESERVED2 as *const _ as usize },
-        260usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(NVIC_Type),
-            "::",
-            stringify!(RESERVED2)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<NVIC_Type>())).ICPR as *const _ as usize },
-        384usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(NVIC_Type),
-            "::",
-            stringify!(ICPR)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<NVIC_Type>())).RESERVED3 as *const _ as usize },
-        388usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(NVIC_Type),
-            "::",
-            stringify!(RESERVED3)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<NVIC_Type>())).RESERVED4 as *const _ as usize },
-        512usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(NVIC_Type),
-            "::",
-            stringify!(RESERVED4)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<NVIC_Type>())).IP as *const _ as usize },
-        768usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(NVIC_Type),
-            "::",
-            stringify!(IP)
-        )
-    );
 }
 impl Default for NVIC_Type {
     fn default() -> Self {
@@ -1589,129 +1304,6 @@ pub struct SCB_Type {
     pub RESERVED1: [u32; 154usize],
     pub SFCR: u32,
 }
-#[test]
-fn bindgen_test_layout_SCB_Type() {
-    assert_eq!(
-        ::core::mem::size_of::<SCB_Type>(),
-        660usize,
-        concat!("Size of: ", stringify!(SCB_Type))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<SCB_Type>(),
-        4usize,
-        concat!("Alignment of ", stringify!(SCB_Type))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<SCB_Type>())).CPUID as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(SCB_Type),
-            "::",
-            stringify!(CPUID)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<SCB_Type>())).ICSR as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(SCB_Type),
-            "::",
-            stringify!(ICSR)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<SCB_Type>())).VTOR as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(SCB_Type),
-            "::",
-            stringify!(VTOR)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<SCB_Type>())).AIRCR as *const _ as usize },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(SCB_Type),
-            "::",
-            stringify!(AIRCR)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<SCB_Type>())).SCR as *const _ as usize },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(SCB_Type),
-            "::",
-            stringify!(SCR)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<SCB_Type>())).CCR as *const _ as usize },
-        20usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(SCB_Type),
-            "::",
-            stringify!(CCR)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<SCB_Type>())).RESERVED0 as *const _ as usize },
-        24usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(SCB_Type),
-            "::",
-            stringify!(RESERVED0)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<SCB_Type>())).SHP as *const _ as usize },
-        28usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(SCB_Type),
-            "::",
-            stringify!(SHP)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<SCB_Type>())).SHCSR as *const _ as usize },
-        36usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(SCB_Type),
-            "::",
-            stringify!(SHCSR)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<SCB_Type>())).RESERVED1 as *const _ as usize },
-        40usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(SCB_Type),
-            "::",
-            stringify!(RESERVED1)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<SCB_Type>())).SFCR as *const _ as usize },
-        656usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(SCB_Type),
-            "::",
-            stringify!(SFCR)
-        )
-    );
-}
 impl Default for SCB_Type {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -1723,39 +1315,6 @@ pub struct SCnSCB_Type {
     pub RESERVED0: [u32; 2usize],
     pub ACTLR: u32,
 }
-#[test]
-fn bindgen_test_layout_SCnSCB_Type() {
-    assert_eq!(
-        ::core::mem::size_of::<SCnSCB_Type>(),
-        12usize,
-        concat!("Size of: ", stringify!(SCnSCB_Type))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<SCnSCB_Type>(),
-        4usize,
-        concat!("Alignment of ", stringify!(SCnSCB_Type))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<SCnSCB_Type>())).RESERVED0 as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(SCnSCB_Type),
-            "::",
-            stringify!(RESERVED0)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<SCnSCB_Type>())).ACTLR as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(SCnSCB_Type),
-            "::",
-            stringify!(ACTLR)
-        )
-    );
-}
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct SysTick_Type {
@@ -1763,59 +1322,6 @@ pub struct SysTick_Type {
     pub LOAD: u32,
     pub VAL: u32,
     pub CALIB: u32,
-}
-#[test]
-fn bindgen_test_layout_SysTick_Type() {
-    assert_eq!(
-        ::core::mem::size_of::<SysTick_Type>(),
-        16usize,
-        concat!("Size of: ", stringify!(SysTick_Type))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<SysTick_Type>(),
-        4usize,
-        concat!("Alignment of ", stringify!(SysTick_Type))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<SysTick_Type>())).CTRL as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(SysTick_Type),
-            "::",
-            stringify!(CTRL)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<SysTick_Type>())).LOAD as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(SysTick_Type),
-            "::",
-            stringify!(LOAD)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<SysTick_Type>())).VAL as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(SysTick_Type),
-            "::",
-            stringify!(VAL)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<SysTick_Type>())).CALIB as *const _ as usize },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(SysTick_Type),
-            "::",
-            stringify!(CALIB)
-        )
-    );
 }
 extern "C" {
     pub fn pic(linked_address: cty::c_uint) -> cty::c_uint;
@@ -1825,39 +1331,6 @@ extern "C" {
 pub struct apdu_buffer_s {
     pub buf: *mut u8,
     pub len: u16,
-}
-#[test]
-fn bindgen_test_layout_apdu_buffer_s() {
-    assert_eq!(
-        ::core::mem::size_of::<apdu_buffer_s>(),
-        8usize,
-        concat!("Size of: ", stringify!(apdu_buffer_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<apdu_buffer_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(apdu_buffer_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<apdu_buffer_s>())).buf as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(apdu_buffer_s),
-            "::",
-            stringify!(buf)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<apdu_buffer_s>())).len as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(apdu_buffer_s),
-            "::",
-            stringify!(len)
-        )
-    );
 }
 impl Default for apdu_buffer_s {
     fn default() -> Self {
@@ -1906,7 +1379,7 @@ extern "C" {
     pub fn patch();
 }
 extern "C" {
-    pub fn check_api_level(apiLevel: cty::c_uint);
+    pub fn check_api_level(apiLevel: cty::c_uint) -> cty::c_int;
 }
 extern "C" {
     pub fn halt();
@@ -2003,46 +1476,22 @@ pub struct cx_hash_header_s {
     pub algo: cx_md_t,
     pub counter: cty::c_uint,
 }
-#[test]
-fn bindgen_test_layout_cx_hash_header_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_hash_header_s>(),
-        8usize,
-        concat!("Size of: ", stringify!(cx_hash_header_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_hash_header_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_hash_header_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_hash_header_s>())).algo as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_hash_header_s),
-            "::",
-            stringify!(algo)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_hash_header_s>())).counter as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_hash_header_s),
-            "::",
-            stringify!(counter)
-        )
-    );
-}
 impl Default for cx_hash_header_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
     }
 }
 pub type cx_hash_t = cx_hash_header_s;
-
+extern "C" {
+    pub fn cx_hash(
+        hash: *mut cx_hash_t,
+        mode: cty::c_int,
+        in_: *const cty::c_uchar,
+        len: cty::c_uint,
+        out: *mut cty::c_uchar,
+        out_len: cty::c_uint,
+    ) -> cty::c_int;
+}
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_ripemd160_s {
@@ -2051,66 +1500,15 @@ pub struct cx_ripemd160_s {
     pub block: [cty::c_uchar; 64usize],
     pub acc: [cty::c_uchar; 20usize],
 }
-#[test]
-fn bindgen_test_layout_cx_ripemd160_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_ripemd160_s>(),
-        96usize,
-        concat!("Size of: ", stringify!(cx_ripemd160_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_ripemd160_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_ripemd160_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ripemd160_s>())).header as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ripemd160_s),
-            "::",
-            stringify!(header)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ripemd160_s>())).blen as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ripemd160_s),
-            "::",
-            stringify!(blen)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ripemd160_s>())).block as *const _ as usize },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ripemd160_s),
-            "::",
-            stringify!(block)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ripemd160_s>())).acc as *const _ as usize },
-        76usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ripemd160_s),
-            "::",
-            stringify!(acc)
-        )
-    );
-}
 impl Default for cx_ripemd160_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
     }
 }
 pub type cx_ripemd160_t = cx_ripemd160_s;
-
+extern "C" {
+    pub fn cx_ripemd160_init(hash: *mut cx_ripemd160_t) -> cty::c_int;
+}
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_sha256_s {
@@ -2119,66 +1517,26 @@ pub struct cx_sha256_s {
     pub block: [cty::c_uchar; 64usize],
     pub acc: [cty::c_uchar; 32usize],
 }
-#[test]
-fn bindgen_test_layout_cx_sha256_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_sha256_s>(),
-        108usize,
-        concat!("Size of: ", stringify!(cx_sha256_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_sha256_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_sha256_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_sha256_s>())).header as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_sha256_s),
-            "::",
-            stringify!(header)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_sha256_s>())).blen as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_sha256_s),
-            "::",
-            stringify!(blen)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_sha256_s>())).block as *const _ as usize },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_sha256_s),
-            "::",
-            stringify!(block)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_sha256_s>())).acc as *const _ as usize },
-        76usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_sha256_s),
-            "::",
-            stringify!(acc)
-        )
-    );
-}
 impl Default for cx_sha256_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
     }
 }
 pub type cx_sha256_t = cx_sha256_s;
-
+extern "C" {
+    pub fn cx_sha224_init(hash: *mut cx_sha256_t) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_sha256_init(hash: *mut cx_sha256_t) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_hash_sha256(
+        in_: *const cty::c_uchar,
+        len: cty::c_uint,
+        out: *mut cty::c_uchar,
+        out_len: cty::c_uint,
+    ) -> cty::c_int;
+}
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_sha3_s {
@@ -2189,85 +1547,31 @@ pub struct cx_sha3_s {
     pub block: [cty::c_uchar; 200usize],
     pub acc: [uint64bits_t; 25usize],
 }
-#[test]
-fn bindgen_test_layout_cx_sha3_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_sha3_s>(),
-        424usize,
-        concat!("Size of: ", stringify!(cx_sha3_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_sha3_s>(),
-        8usize,
-        concat!("Alignment of ", stringify!(cx_sha3_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_sha3_s>())).header as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_sha3_s),
-            "::",
-            stringify!(header)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_sha3_s>())).output_size as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_sha3_s),
-            "::",
-            stringify!(output_size)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_sha3_s>())).block_size as *const _ as usize },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_sha3_s),
-            "::",
-            stringify!(block_size)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_sha3_s>())).blen as *const _ as usize },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_sha3_s),
-            "::",
-            stringify!(blen)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_sha3_s>())).block as *const _ as usize },
-        20usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_sha3_s),
-            "::",
-            stringify!(block)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_sha3_s>())).acc as *const _ as usize },
-        224usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_sha3_s),
-            "::",
-            stringify!(acc)
-        )
-    );
-}
 impl Default for cx_sha3_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
     }
 }
 pub type cx_sha3_t = cx_sha3_s;
+extern "C" {
+    pub fn cx_sha3_init(hash: *mut cx_sha3_t, size: cty::c_uint) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_keccak_init(hash: *mut cx_sha3_t, size: cty::c_uint) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_shake128_init(hash: *mut cx_sha3_t, out_size: cty::c_uint) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_shake256_init(hash: *mut cx_sha3_t, out_size: cty::c_uint) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_sha3_xof_init(
+        hash: *mut cx_sha3_t,
+        size: cty::c_uint,
+        out_length: cty::c_uint,
+    ) -> cty::c_int;
+}
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_sha512_s {
@@ -2276,65 +1580,26 @@ pub struct cx_sha512_s {
     pub block: [cty::c_uchar; 128usize],
     pub acc: [cty::c_uchar; 64usize],
 }
-#[test]
-fn bindgen_test_layout_cx_sha512_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_sha512_s>(),
-        204usize,
-        concat!("Size of: ", stringify!(cx_sha512_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_sha512_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_sha512_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_sha512_s>())).header as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_sha512_s),
-            "::",
-            stringify!(header)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_sha512_s>())).blen as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_sha512_s),
-            "::",
-            stringify!(blen)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_sha512_s>())).block as *const _ as usize },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_sha512_s),
-            "::",
-            stringify!(block)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_sha512_s>())).acc as *const _ as usize },
-        140usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_sha512_s),
-            "::",
-            stringify!(acc)
-        )
-    );
-}
 impl Default for cx_sha512_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
     }
 }
 pub type cx_sha512_t = cx_sha512_s;
+extern "C" {
+    pub fn cx_sha384_init(hash: *mut cx_sha512_t) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_sha512_init(hash: *mut cx_sha512_t) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_hash_sha512(
+        in_: *const cty::c_uchar,
+        len: cty::c_uint,
+        out: *mut cty::c_uchar,
+        out_len: cty::c_uint,
+    ) -> cty::c_int;
+}
 pub const BLAKE2B_BLOCKBYTES: blake2b_constant = 128;
 pub const BLAKE2B_OUTBYTES: blake2b_constant = 64;
 pub const BLAKE2B_KEYBYTES: blake2b_constant = 64;
@@ -2352,89 +1617,6 @@ pub struct blake2b_state__ {
     pub outlen: size_t,
     pub last_node: u8,
 }
-#[test]
-fn bindgen_test_layout_blake2b_state__() {
-    assert_eq!(
-        ::core::mem::size_of::<blake2b_state__>(),
-        240usize,
-        concat!("Size of: ", stringify!(blake2b_state__))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<blake2b_state__>(),
-        8usize,
-        concat!("Alignment of ", stringify!(blake2b_state__))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<blake2b_state__>())).h as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(blake2b_state__),
-            "::",
-            stringify!(h)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<blake2b_state__>())).t as *const _ as usize },
-        64usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(blake2b_state__),
-            "::",
-            stringify!(t)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<blake2b_state__>())).f as *const _ as usize },
-        80usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(blake2b_state__),
-            "::",
-            stringify!(f)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<blake2b_state__>())).buf as *const _ as usize },
-        96usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(blake2b_state__),
-            "::",
-            stringify!(buf)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<blake2b_state__>())).buflen as *const _ as usize },
-        224usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(blake2b_state__),
-            "::",
-            stringify!(buflen)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<blake2b_state__>())).outlen as *const _ as usize },
-        228usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(blake2b_state__),
-            "::",
-            stringify!(outlen)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<blake2b_state__>())).last_node as *const _ as usize },
-        232usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(blake2b_state__),
-            "::",
-            stringify!(last_node)
-        )
-    );
-}
 impl Default for blake2b_state__ {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -2448,56 +1630,25 @@ pub struct cx_blake2b_s {
     pub output_size: cty::c_uint,
     pub ctx: blake2b_state__,
 }
-#[test]
-fn bindgen_test_layout_cx_blake2b_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_blake2b_s>(),
-        256usize,
-        concat!("Size of: ", stringify!(cx_blake2b_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_blake2b_s>(),
-        8usize,
-        concat!("Alignment of ", stringify!(cx_blake2b_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_blake2b_s>())).header as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_blake2b_s),
-            "::",
-            stringify!(header)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_blake2b_s>())).output_size as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_blake2b_s),
-            "::",
-            stringify!(output_size)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_blake2b_s>())).ctx as *const _ as usize },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_blake2b_s),
-            "::",
-            stringify!(ctx)
-        )
-    );
-}
 impl Default for cx_blake2b_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
     }
 }
 pub type cx_blake2b_t = cx_blake2b_s;
-
+extern "C" {
+    pub fn cx_blake2b_init(hash: *mut cx_blake2b_t, out_len: cty::c_uint) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_blake2b_init2(
+        hash: *mut cx_blake2b_t,
+        out_len: cty::c_uint,
+        salt: *mut cty::c_uchar,
+        salt_len: cty::c_uint,
+        perso: *mut cty::c_uchar,
+        perso_len: cty::c_uint,
+    ) -> cty::c_int;
+}
 pub type BitSequence = cty::c_uchar;
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -2510,99 +1661,6 @@ pub struct hashState_s {
     pub columns: cty::c_uint,
     pub rounds: cty::c_uint,
     pub statesize: cty::c_uint,
-}
-#[test]
-fn bindgen_test_layout_hashState_s() {
-    assert_eq!(
-        ::core::mem::size_of::<hashState_s>(),
-        288usize,
-        concat!("Size of: ", stringify!(hashState_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<hashState_s>(),
-        8usize,
-        concat!("Alignment of ", stringify!(hashState_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<hashState_s>())).chaining as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(hashState_s),
-            "::",
-            stringify!(chaining)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<hashState_s>())).block_counter as *const _ as usize },
-        128usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(hashState_s),
-            "::",
-            stringify!(block_counter)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<hashState_s>())).hashlen as *const _ as usize },
-        136usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(hashState_s),
-            "::",
-            stringify!(hashlen)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<hashState_s>())).buffer as *const _ as usize },
-        140usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(hashState_s),
-            "::",
-            stringify!(buffer)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<hashState_s>())).buf_ptr as *const _ as usize },
-        268usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(hashState_s),
-            "::",
-            stringify!(buf_ptr)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<hashState_s>())).columns as *const _ as usize },
-        272usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(hashState_s),
-            "::",
-            stringify!(columns)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<hashState_s>())).rounds as *const _ as usize },
-        276usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(hashState_s),
-            "::",
-            stringify!(rounds)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<hashState_s>())).statesize as *const _ as usize },
-        280usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(hashState_s),
-            "::",
-            stringify!(statesize)
-        )
-    );
 }
 impl Default for hashState_s {
     fn default() -> Self {
@@ -2617,56 +1675,15 @@ pub struct cx_groestl_s {
     pub output_size: cty::c_uint,
     pub ctx: hashState_s,
 }
-#[test]
-fn bindgen_test_layout_cx_groestl_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_groestl_s>(),
-        304usize,
-        concat!("Size of: ", stringify!(cx_groestl_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_groestl_s>(),
-        8usize,
-        concat!("Alignment of ", stringify!(cx_groestl_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_groestl_s>())).header as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_groestl_s),
-            "::",
-            stringify!(header)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_groestl_s>())).output_size as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_groestl_s),
-            "::",
-            stringify!(output_size)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_groestl_s>())).ctx as *const _ as usize },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_groestl_s),
-            "::",
-            stringify!(ctx)
-        )
-    );
-}
 impl Default for cx_groestl_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
     }
 }
 pub type cx_groestl_t = cx_groestl_s;
-
+extern "C" {
+    pub fn cx_groestl_init(hash: *mut cx_groestl_t, size: cty::c_uint) -> cty::c_int;
+}
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union cx_hash_for_hmac_ctx {
@@ -2675,59 +1692,6 @@ pub union cx_hash_for_hmac_ctx {
     pub sha512: cx_sha512_t,
     pub ripemd160: cx_ripemd160_t,
     _bindgen_union_align: [u32; 51usize],
-}
-#[test]
-fn bindgen_test_layout_cx_hash_for_hmac_ctx() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_hash_for_hmac_ctx>(),
-        204usize,
-        concat!("Size of: ", stringify!(cx_hash_for_hmac_ctx))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_hash_for_hmac_ctx>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_hash_for_hmac_ctx))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_hash_for_hmac_ctx>())).header as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_hash_for_hmac_ctx),
-            "::",
-            stringify!(header)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_hash_for_hmac_ctx>())).sha256 as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_hash_for_hmac_ctx),
-            "::",
-            stringify!(sha256)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_hash_for_hmac_ctx>())).sha512 as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_hash_for_hmac_ctx),
-            "::",
-            stringify!(sha512)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_hash_for_hmac_ctx>())).ripemd160 as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_hash_for_hmac_ctx),
-            "::",
-            stringify!(ripemd160)
-        )
-    );
 }
 impl Default for cx_hash_for_hmac_ctx {
     fn default() -> Self {
@@ -2740,39 +1704,6 @@ pub struct cx_hmac_ctx {
     pub hash_ctx: cx_hash_for_hmac_ctx,
     pub key: [u8; 128usize],
 }
-#[test]
-fn bindgen_test_layout_cx_hmac_ctx() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_hmac_ctx>(),
-        332usize,
-        concat!("Size of: ", stringify!(cx_hmac_ctx))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_hmac_ctx>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_hmac_ctx))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_hmac_ctx>())).hash_ctx as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_hmac_ctx),
-            "::",
-            stringify!(hash_ctx)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_hmac_ctx>())).key as *const _ as usize },
-        204usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_hmac_ctx),
-            "::",
-            stringify!(key)
-        )
-    );
-}
 impl Default for cx_hmac_ctx {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -2782,89 +1713,141 @@ pub type cx_hmac_t = cx_hmac_ctx;
 pub type cx_hmac_ripemd160_t = cx_hmac_ctx;
 pub type cx_hmac_sha256_t = cx_hmac_ctx;
 pub type cx_hmac_sha512_t = cx_hmac_ctx;
-
+extern "C" {
+    pub fn cx_hmac_ripemd160_init(
+        hmac: *mut cx_hmac_ripemd160_t,
+        key: *const cty::c_uchar,
+        key_len: cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_hmac_sha256_init(
+        hmac: *mut cx_hmac_sha256_t,
+        key: *const cty::c_uchar,
+        key_len: cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_hmac_sha512_init(
+        hmac: *mut cx_hmac_sha512_t,
+        key: *const cty::c_uchar,
+        key_len: cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_hmac(
+        hmac: *mut cx_hmac_t,
+        mode: cty::c_int,
+        in_: *const cty::c_uchar,
+        len: cty::c_uint,
+        mac: *mut cty::c_uchar,
+        mac_len: cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_hmac_sha512(
+        key: *const cty::c_uchar,
+        key_len: cty::c_uint,
+        in_: *const cty::c_uchar,
+        len: cty::c_uint,
+        mac: *mut cty::c_uchar,
+        mac_len: cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_hmac_sha256(
+        key: *const cty::c_uchar,
+        key_len: cty::c_uint,
+        in_: *const cty::c_uchar,
+        len: cty::c_uint,
+        mac: *mut cty::c_uchar,
+        mac_len: cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_pbkdf2(
+        md_type: cx_md_t,
+        password: *const cty::c_uchar,
+        passwordlen: cty::c_ushort,
+        salt: *mut cty::c_uchar,
+        saltlen: cty::c_ushort,
+        iterations: cty::c_uint,
+        out: *mut cty::c_uchar,
+        outLength: cty::c_uint,
+    );
+}
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct cx_des_key_s {
     pub size: cty::c_uchar,
     pub keys: [cty::c_uchar; 16usize],
 }
-#[test]
-fn bindgen_test_layout_cx_des_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_des_key_s>(),
-        17usize,
-        concat!("Size of: ", stringify!(cx_des_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_des_key_s>(),
-        1usize,
-        concat!("Alignment of ", stringify!(cx_des_key_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_des_key_s>())).size as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_des_key_s),
-            "::",
-            stringify!(size)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_des_key_s>())).keys as *const _ as usize },
-        1usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_des_key_s),
-            "::",
-            stringify!(keys)
-        )
-    );
-}
 pub type cx_des_key_t = cx_des_key_s;
-
+extern "C" {
+    pub fn cx_des_init_key(
+        rawkey: *const cty::c_uchar,
+        key_len: cty::c_uint,
+        key: *mut cx_des_key_t,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_des_iv(
+        key: *const cx_des_key_t,
+        mode: cty::c_int,
+        iv: *mut cty::c_uchar,
+        iv_len: cty::c_uint,
+        in_: *const cty::c_uchar,
+        in_len: cty::c_uint,
+        out: *mut cty::c_uchar,
+        out_len: cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_des(
+        key: *const cx_des_key_t,
+        mode: cty::c_int,
+        in_: *const cty::c_uchar,
+        in_len: cty::c_uint,
+        out: *mut cty::c_uchar,
+        out_len: cty::c_uint,
+    ) -> cty::c_int;
+}
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct cx_aes_key_s {
     pub size: cty::c_uint,
     pub keys: [cty::c_uchar; 32usize],
 }
-#[test]
-fn bindgen_test_layout_cx_aes_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_aes_key_s>(),
-        36usize,
-        concat!("Size of: ", stringify!(cx_aes_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_aes_key_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_aes_key_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_aes_key_s>())).size as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_aes_key_s),
-            "::",
-            stringify!(size)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_aes_key_s>())).keys as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_aes_key_s),
-            "::",
-            stringify!(keys)
-        )
-    );
-}
 pub type cx_aes_key_t = cx_aes_key_s;
-
+extern "C" {
+    pub fn cx_aes_init_key(
+        rawkey: *const cty::c_uchar,
+        key_len: cty::c_uint,
+        key: *mut cx_aes_key_t,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_aes_iv(
+        key: *const cx_aes_key_t,
+        mode: cty::c_int,
+        iv: *mut cty::c_uchar,
+        iv_len: cty::c_uint,
+        in_: *const cty::c_uchar,
+        in_len: cty::c_uint,
+        out: *mut cty::c_uchar,
+        out_len: cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_aes(
+        key: *const cx_aes_key_t,
+        mode: cty::c_int,
+        in_: *const cty::c_uchar,
+        in_len: cty::c_uint,
+        out: *mut cty::c_uchar,
+        out_len: cty::c_uint,
+    ) -> cty::c_int;
+}
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct cx_rsa_public_key_s {
@@ -2872,98 +1855,12 @@ pub struct cx_rsa_public_key_s {
     pub e: [cty::c_uchar; 4usize],
     pub n: [cty::c_uchar; 1usize],
 }
-#[test]
-fn bindgen_test_layout_cx_rsa_public_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_rsa_public_key_s>(),
-        12usize,
-        concat!("Size of: ", stringify!(cx_rsa_public_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_rsa_public_key_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_rsa_public_key_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_public_key_s>())).size as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_public_key_s),
-            "::",
-            stringify!(size)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_public_key_s>())).e as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_public_key_s),
-            "::",
-            stringify!(e)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_public_key_s>())).n as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_public_key_s),
-            "::",
-            stringify!(n)
-        )
-    );
-}
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct cx_rsa_private_key_s {
     pub size: cty::c_uint,
     pub d: [cty::c_uchar; 1usize],
     pub n: [cty::c_uchar; 1usize],
-}
-#[test]
-fn bindgen_test_layout_cx_rsa_private_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_rsa_private_key_s>(),
-        8usize,
-        concat!("Size of: ", stringify!(cx_rsa_private_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_rsa_private_key_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_rsa_private_key_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_private_key_s>())).size as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_private_key_s),
-            "::",
-            stringify!(size)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_private_key_s>())).d as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_private_key_s),
-            "::",
-            stringify!(d)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_private_key_s>())).n as *const _ as usize },
-        5usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_private_key_s),
-            "::",
-            stringify!(n)
-        )
-    );
 }
 pub type cx_rsa_public_key_t = cx_rsa_public_key_s;
 pub type cx_rsa_private_key_t = cx_rsa_private_key_s;
@@ -2973,49 +1870,6 @@ pub struct cx_rsa_1024_public_key_s {
     pub size: cty::c_uint,
     pub e: [cty::c_uchar; 4usize],
     pub n: [cty::c_uchar; 128usize],
-}
-#[test]
-fn bindgen_test_layout_cx_rsa_1024_public_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_rsa_1024_public_key_s>(),
-        136usize,
-        concat!("Size of: ", stringify!(cx_rsa_1024_public_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_rsa_1024_public_key_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_rsa_1024_public_key_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_1024_public_key_s>())).size as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_1024_public_key_s),
-            "::",
-            stringify!(size)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_1024_public_key_s>())).e as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_1024_public_key_s),
-            "::",
-            stringify!(e)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_1024_public_key_s>())).n as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_1024_public_key_s),
-            "::",
-            stringify!(n)
-        )
-    );
 }
 impl Default for cx_rsa_1024_public_key_s {
     fn default() -> Self {
@@ -3028,49 +1882,6 @@ pub struct cx_rsa_1024_private_key_s {
     pub size: cty::c_uint,
     pub d: [cty::c_uchar; 128usize],
     pub n: [cty::c_uchar; 128usize],
-}
-#[test]
-fn bindgen_test_layout_cx_rsa_1024_private_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_rsa_1024_private_key_s>(),
-        260usize,
-        concat!("Size of: ", stringify!(cx_rsa_1024_private_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_rsa_1024_private_key_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_rsa_1024_private_key_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_1024_private_key_s>())).size as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_1024_private_key_s),
-            "::",
-            stringify!(size)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_1024_private_key_s>())).d as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_1024_private_key_s),
-            "::",
-            stringify!(d)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_1024_private_key_s>())).n as *const _ as usize },
-        132usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_1024_private_key_s),
-            "::",
-            stringify!(n)
-        )
-    );
 }
 impl Default for cx_rsa_1024_private_key_s {
     fn default() -> Self {
@@ -3086,49 +1897,6 @@ pub struct cx_rsa_2048_public_key_s {
     pub e: [cty::c_uchar; 4usize],
     pub n: [cty::c_uchar; 256usize],
 }
-#[test]
-fn bindgen_test_layout_cx_rsa_2048_public_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_rsa_2048_public_key_s>(),
-        264usize,
-        concat!("Size of: ", stringify!(cx_rsa_2048_public_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_rsa_2048_public_key_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_rsa_2048_public_key_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_2048_public_key_s>())).size as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_2048_public_key_s),
-            "::",
-            stringify!(size)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_2048_public_key_s>())).e as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_2048_public_key_s),
-            "::",
-            stringify!(e)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_2048_public_key_s>())).n as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_2048_public_key_s),
-            "::",
-            stringify!(n)
-        )
-    );
-}
 impl Default for cx_rsa_2048_public_key_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -3140,49 +1908,6 @@ pub struct cx_rsa_2048_private_key_s {
     pub size: cty::c_uint,
     pub d: [cty::c_uchar; 256usize],
     pub n: [cty::c_uchar; 256usize],
-}
-#[test]
-fn bindgen_test_layout_cx_rsa_2048_private_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_rsa_2048_private_key_s>(),
-        516usize,
-        concat!("Size of: ", stringify!(cx_rsa_2048_private_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_rsa_2048_private_key_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_rsa_2048_private_key_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_2048_private_key_s>())).size as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_2048_private_key_s),
-            "::",
-            stringify!(size)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_2048_private_key_s>())).d as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_2048_private_key_s),
-            "::",
-            stringify!(d)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_2048_private_key_s>())).n as *const _ as usize },
-        260usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_2048_private_key_s),
-            "::",
-            stringify!(n)
-        )
-    );
 }
 impl Default for cx_rsa_2048_private_key_s {
     fn default() -> Self {
@@ -3198,49 +1923,6 @@ pub struct cx_rsa_3072_public_key_s {
     pub e: [cty::c_uchar; 4usize],
     pub n: [cty::c_uchar; 384usize],
 }
-#[test]
-fn bindgen_test_layout_cx_rsa_3072_public_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_rsa_3072_public_key_s>(),
-        392usize,
-        concat!("Size of: ", stringify!(cx_rsa_3072_public_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_rsa_3072_public_key_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_rsa_3072_public_key_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_3072_public_key_s>())).size as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_3072_public_key_s),
-            "::",
-            stringify!(size)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_3072_public_key_s>())).e as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_3072_public_key_s),
-            "::",
-            stringify!(e)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_3072_public_key_s>())).n as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_3072_public_key_s),
-            "::",
-            stringify!(n)
-        )
-    );
-}
 impl Default for cx_rsa_3072_public_key_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -3252,49 +1934,6 @@ pub struct cx_rsa_3072_private_key_s {
     pub size: cty::c_uint,
     pub d: [cty::c_uchar; 384usize],
     pub n: [cty::c_uchar; 384usize],
-}
-#[test]
-fn bindgen_test_layout_cx_rsa_3072_private_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_rsa_3072_private_key_s>(),
-        772usize,
-        concat!("Size of: ", stringify!(cx_rsa_3072_private_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_rsa_3072_private_key_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_rsa_3072_private_key_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_3072_private_key_s>())).size as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_3072_private_key_s),
-            "::",
-            stringify!(size)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_3072_private_key_s>())).d as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_3072_private_key_s),
-            "::",
-            stringify!(d)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_3072_private_key_s>())).n as *const _ as usize },
-        388usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_3072_private_key_s),
-            "::",
-            stringify!(n)
-        )
-    );
 }
 impl Default for cx_rsa_3072_private_key_s {
     fn default() -> Self {
@@ -3310,49 +1949,6 @@ pub struct cx_rsa_4096_public_key_s {
     pub e: [cty::c_uchar; 4usize],
     pub n: [cty::c_uchar; 512usize],
 }
-#[test]
-fn bindgen_test_layout_cx_rsa_4096_public_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_rsa_4096_public_key_s>(),
-        520usize,
-        concat!("Size of: ", stringify!(cx_rsa_4096_public_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_rsa_4096_public_key_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_rsa_4096_public_key_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_4096_public_key_s>())).size as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_4096_public_key_s),
-            "::",
-            stringify!(size)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_4096_public_key_s>())).e as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_4096_public_key_s),
-            "::",
-            stringify!(e)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_4096_public_key_s>())).n as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_4096_public_key_s),
-            "::",
-            stringify!(n)
-        )
-    );
-}
 impl Default for cx_rsa_4096_public_key_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -3365,49 +1961,6 @@ pub struct cx_rsa_4096_private_key_s {
     pub d: [cty::c_uchar; 512usize],
     pub n: [cty::c_uchar; 512usize],
 }
-#[test]
-fn bindgen_test_layout_cx_rsa_4096_private_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_rsa_4096_private_key_s>(),
-        1028usize,
-        concat!("Size of: ", stringify!(cx_rsa_4096_private_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_rsa_4096_private_key_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_rsa_4096_private_key_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_4096_private_key_s>())).size as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_4096_private_key_s),
-            "::",
-            stringify!(size)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_4096_private_key_s>())).d as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_4096_private_key_s),
-            "::",
-            stringify!(d)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_rsa_4096_private_key_s>())).n as *const _ as usize },
-        516usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_rsa_4096_private_key_s),
-            "::",
-            stringify!(n)
-        )
-    );
-}
 impl Default for cx_rsa_4096_private_key_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -3415,7 +1968,78 @@ impl Default for cx_rsa_4096_private_key_s {
 }
 pub type cx_rsa_4096_public_key_t = cx_rsa_4096_public_key_s;
 pub type cx_rsa_4096_private_key_t = cx_rsa_4096_private_key_s;
-
+extern "C" {
+    pub fn cx_rsa_init_public_key(
+        exponent: *const cty::c_uchar,
+        exponent_len: cty::c_uint,
+        modulus: *const cty::c_uchar,
+        modulus_len: cty::c_uint,
+        key: *mut cx_rsa_public_key_t,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_rsa_init_private_key(
+        exponent: *const cty::c_uchar,
+        exponent_len: cty::c_uint,
+        modulus: *const cty::c_uchar,
+        modulus_len: cty::c_uint,
+        key: *mut cx_rsa_private_key_t,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_rsa_generate_pair(
+        modulus_len: cty::c_uint,
+        public_key: *mut cx_rsa_public_key_t,
+        private_key: *mut cx_rsa_private_key_t,
+        pub_exponent: *const cty::c_uchar,
+        exponent_len: cty::c_uint,
+        externalPQ: *const cty::c_uchar,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_rsa_sign(
+        key: *const cx_rsa_private_key_t,
+        mode: cty::c_int,
+        hashID: cx_md_t,
+        hash: *const cty::c_uchar,
+        hash_len: cty::c_uint,
+        sig: *mut cty::c_uchar,
+        sig_len: cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_rsa_verify(
+        key: *const cx_rsa_public_key_t,
+        mode: cty::c_int,
+        hashID: cx_md_t,
+        hash: *const cty::c_uchar,
+        hash_len: cty::c_uint,
+        sig: *const cty::c_uchar,
+        sig_len: cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_rsa_encrypt(
+        key: *const cx_rsa_public_key_t,
+        mode: cty::c_int,
+        hashID: cx_md_t,
+        mesg: *const cty::c_uchar,
+        mesg_len: cty::c_uint,
+        enc: *mut cty::c_uchar,
+        enc_len: cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_rsa_decrypt(
+        key: *const cx_rsa_private_key_t,
+        mode: cty::c_int,
+        hashID: cx_md_t,
+        mesg: *const cty::c_uchar,
+        mesg_len: cty::c_uint,
+        dec: *mut cty::c_uchar,
+        dec_len: cty::c_uint,
+    ) -> cty::c_int;
+}
 pub const CX_CURVE_NONE: cx_curve_e = 0;
 pub const CX_CURVE_WEIERSTRASS_START: cx_curve_e = 32;
 pub const CX_CURVE_SECP256K1: cx_curve_e = 33;
@@ -3459,141 +2083,6 @@ pub struct cx_curve_weierstrass_s {
     pub a: *mut cty::c_uchar,
     pub b: *mut cty::c_uchar,
 }
-#[test]
-fn bindgen_test_layout_cx_curve_weierstrass_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_curve_weierstrass_s>(),
-        48usize,
-        concat!("Size of: ", stringify!(cx_curve_weierstrass_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_curve_weierstrass_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_curve_weierstrass_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_weierstrass_s>())).curve as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_weierstrass_s),
-            "::",
-            stringify!(curve)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<cx_curve_weierstrass_s>())).bit_size as *const _ as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_weierstrass_s),
-            "::",
-            stringify!(bit_size)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_weierstrass_s>())).length as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_weierstrass_s),
-            "::",
-            stringify!(length)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_weierstrass_s>())).p as *const _ as usize },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_weierstrass_s),
-            "::",
-            stringify!(p)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_weierstrass_s>())).Hp as *const _ as usize },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_weierstrass_s),
-            "::",
-            stringify!(Hp)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_weierstrass_s>())).Gx as *const _ as usize },
-        20usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_weierstrass_s),
-            "::",
-            stringify!(Gx)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_weierstrass_s>())).Gy as *const _ as usize },
-        24usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_weierstrass_s),
-            "::",
-            stringify!(Gy)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_weierstrass_s>())).n as *const _ as usize },
-        28usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_weierstrass_s),
-            "::",
-            stringify!(n)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_weierstrass_s>())).Hn as *const _ as usize },
-        32usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_weierstrass_s),
-            "::",
-            stringify!(Hn)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_weierstrass_s>())).h as *const _ as usize },
-        36usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_weierstrass_s),
-            "::",
-            stringify!(h)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_weierstrass_s>())).a as *const _ as usize },
-        40usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_weierstrass_s),
-            "::",
-            stringify!(a)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_weierstrass_s>())).b as *const _ as usize },
-        44usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_weierstrass_s),
-            "::",
-            stringify!(b)
-        )
-    );
-}
 impl Default for cx_curve_weierstrass_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -3617,165 +2106,6 @@ pub struct cx_curve_twisted_edward_s {
     pub d: *mut cty::c_uchar,
     pub I: *mut cty::c_uchar,
     pub Qq: *mut cty::c_uchar,
-}
-#[test]
-fn bindgen_test_layout_cx_curve_twisted_edward_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_curve_twisted_edward_s>(),
-        56usize,
-        concat!("Size of: ", stringify!(cx_curve_twisted_edward_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_curve_twisted_edward_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_curve_twisted_edward_s))
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<cx_curve_twisted_edward_s>())).curve as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_twisted_edward_s),
-            "::",
-            stringify!(curve)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<cx_curve_twisted_edward_s>())).bit_size as *const _ as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_twisted_edward_s),
-            "::",
-            stringify!(bit_size)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<cx_curve_twisted_edward_s>())).length as *const _ as usize
-        },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_twisted_edward_s),
-            "::",
-            stringify!(length)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_twisted_edward_s>())).p as *const _ as usize },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_twisted_edward_s),
-            "::",
-            stringify!(p)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_twisted_edward_s>())).Hp as *const _ as usize },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_twisted_edward_s),
-            "::",
-            stringify!(Hp)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_twisted_edward_s>())).Gx as *const _ as usize },
-        20usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_twisted_edward_s),
-            "::",
-            stringify!(Gx)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_twisted_edward_s>())).Gy as *const _ as usize },
-        24usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_twisted_edward_s),
-            "::",
-            stringify!(Gy)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_twisted_edward_s>())).n as *const _ as usize },
-        28usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_twisted_edward_s),
-            "::",
-            stringify!(n)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_twisted_edward_s>())).Hn as *const _ as usize },
-        32usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_twisted_edward_s),
-            "::",
-            stringify!(Hn)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_twisted_edward_s>())).h as *const _ as usize },
-        36usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_twisted_edward_s),
-            "::",
-            stringify!(h)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_twisted_edward_s>())).a as *const _ as usize },
-        40usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_twisted_edward_s),
-            "::",
-            stringify!(a)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_twisted_edward_s>())).d as *const _ as usize },
-        44usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_twisted_edward_s),
-            "::",
-            stringify!(d)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_twisted_edward_s>())).I as *const _ as usize },
-        48usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_twisted_edward_s),
-            "::",
-            stringify!(I)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_twisted_edward_s>())).Qq as *const _ as usize },
-        52usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_twisted_edward_s),
-            "::",
-            stringify!(Qq)
-        )
-    );
 }
 impl Default for cx_curve_twisted_edward_s {
     fn default() -> Self {
@@ -3801,159 +2131,6 @@ pub struct cx_curve_montgomery_s {
     pub A24: *mut cty::c_uchar,
     pub P1: *mut cty::c_uchar,
 }
-#[test]
-fn bindgen_test_layout_cx_curve_montgomery_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_curve_montgomery_s>(),
-        56usize,
-        concat!("Size of: ", stringify!(cx_curve_montgomery_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_curve_montgomery_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_curve_montgomery_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_montgomery_s>())).curve as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_montgomery_s),
-            "::",
-            stringify!(curve)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_montgomery_s>())).bit_size as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_montgomery_s),
-            "::",
-            stringify!(bit_size)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_montgomery_s>())).length as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_montgomery_s),
-            "::",
-            stringify!(length)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_montgomery_s>())).p as *const _ as usize },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_montgomery_s),
-            "::",
-            stringify!(p)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_montgomery_s>())).Hp as *const _ as usize },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_montgomery_s),
-            "::",
-            stringify!(Hp)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_montgomery_s>())).Gx as *const _ as usize },
-        20usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_montgomery_s),
-            "::",
-            stringify!(Gx)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_montgomery_s>())).Gy as *const _ as usize },
-        24usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_montgomery_s),
-            "::",
-            stringify!(Gy)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_montgomery_s>())).n as *const _ as usize },
-        28usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_montgomery_s),
-            "::",
-            stringify!(n)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_montgomery_s>())).Hn as *const _ as usize },
-        32usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_montgomery_s),
-            "::",
-            stringify!(Hn)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_montgomery_s>())).h as *const _ as usize },
-        36usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_montgomery_s),
-            "::",
-            stringify!(h)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_montgomery_s>())).a as *const _ as usize },
-        40usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_montgomery_s),
-            "::",
-            stringify!(a)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_montgomery_s>())).b as *const _ as usize },
-        44usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_montgomery_s),
-            "::",
-            stringify!(b)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_montgomery_s>())).A24 as *const _ as usize },
-        48usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_montgomery_s),
-            "::",
-            stringify!(A24)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_montgomery_s>())).P1 as *const _ as usize },
-        52usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_montgomery_s),
-            "::",
-            stringify!(P1)
-        )
-    );
-}
 impl Default for cx_curve_montgomery_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -3974,119 +2151,6 @@ pub struct cx_curve_domain_s {
     pub Hn: *mut cty::c_uchar,
     pub h: cty::c_int,
 }
-#[test]
-fn bindgen_test_layout_cx_curve_domain_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_curve_domain_s>(),
-        40usize,
-        concat!("Size of: ", stringify!(cx_curve_domain_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_curve_domain_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_curve_domain_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_domain_s>())).curve as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_domain_s),
-            "::",
-            stringify!(curve)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_domain_s>())).bit_size as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_domain_s),
-            "::",
-            stringify!(bit_size)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_domain_s>())).length as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_domain_s),
-            "::",
-            stringify!(length)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_domain_s>())).p as *const _ as usize },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_domain_s),
-            "::",
-            stringify!(p)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_domain_s>())).Hp as *const _ as usize },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_domain_s),
-            "::",
-            stringify!(Hp)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_domain_s>())).Gx as *const _ as usize },
-        20usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_domain_s),
-            "::",
-            stringify!(Gx)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_domain_s>())).Gy as *const _ as usize },
-        24usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_domain_s),
-            "::",
-            stringify!(Gy)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_domain_s>())).n as *const _ as usize },
-        28usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_domain_s),
-            "::",
-            stringify!(n)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_domain_s>())).Hn as *const _ as usize },
-        32usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_domain_s),
-            "::",
-            stringify!(Hn)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_curve_domain_s>())).h as *const _ as usize },
-        36usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_curve_domain_s),
-            "::",
-            stringify!(h)
-        )
-    );
-}
 impl Default for cx_curve_domain_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -4103,49 +2167,6 @@ pub struct cx_ecfp_public_key_s {
     pub W_len: cty::c_uint,
     pub W: [cty::c_uchar; 1usize],
 }
-#[test]
-fn bindgen_test_layout_cx_ecfp_public_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_ecfp_public_key_s>(),
-        12usize,
-        concat!("Size of: ", stringify!(cx_ecfp_public_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_ecfp_public_key_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_ecfp_public_key_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ecfp_public_key_s>())).curve as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_public_key_s),
-            "::",
-            stringify!(curve)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ecfp_public_key_s>())).W_len as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_public_key_s),
-            "::",
-            stringify!(W_len)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ecfp_public_key_s>())).W as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_public_key_s),
-            "::",
-            stringify!(W)
-        )
-    );
-}
 impl Default for cx_ecfp_public_key_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -4158,105 +2179,19 @@ pub struct cx_ecfp_private_key_s {
     pub d_len: cty::c_uint,
     pub d: [cty::c_uchar; 1usize],
 }
-#[test]
-fn bindgen_test_layout_cx_ecfp_private_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_ecfp_private_key_s>(),
-        12usize,
-        concat!("Size of: ", stringify!(cx_ecfp_private_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_ecfp_private_key_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_ecfp_private_key_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ecfp_private_key_s>())).curve as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_private_key_s),
-            "::",
-            stringify!(curve)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ecfp_private_key_s>())).d_len as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_private_key_s),
-            "::",
-            stringify!(d_len)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ecfp_private_key_s>())).d as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_private_key_s),
-            "::",
-            stringify!(d)
-        )
-    );
-}
 impl Default for cx_ecfp_private_key_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
     }
 }
-// pub type __cx_ecfp_private_key_t = cx_ecfp_private_key_s;
-// pub type __cx_ecfp_public_key_t = cx_ecfp_public_key_s;
+pub type __cx_ecfp_private_key_t = cx_ecfp_private_key_s;
+pub type __cx_ecfp_public_key_t = cx_ecfp_public_key_s;
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_ecfp_256_public_key_s {
     pub curve: cx_curve_t,
     pub W_len: cty::c_uint,
     pub W: [cty::c_uchar; 65usize],
-}
-#[test]
-fn bindgen_test_layout_cx_ecfp_256_public_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_ecfp_256_public_key_s>(),
-        76usize,
-        concat!("Size of: ", stringify!(cx_ecfp_256_public_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_ecfp_256_public_key_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_ecfp_256_public_key_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ecfp_256_public_key_s>())).curve as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_256_public_key_s),
-            "::",
-            stringify!(curve)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ecfp_256_public_key_s>())).W_len as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_256_public_key_s),
-            "::",
-            stringify!(W_len)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ecfp_256_public_key_s>())).W as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_256_public_key_s),
-            "::",
-            stringify!(W)
-        )
-    );
 }
 impl Default for cx_ecfp_256_public_key_s {
     fn default() -> Self {
@@ -4270,53 +2205,6 @@ pub struct cx_ecfp_256_private_key_s {
     pub d_len: cty::c_uint,
     pub d: [cty::c_uchar; 32usize],
 }
-#[test]
-fn bindgen_test_layout_cx_ecfp_256_private_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_ecfp_256_private_key_s>(),
-        40usize,
-        concat!("Size of: ", stringify!(cx_ecfp_256_private_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_ecfp_256_private_key_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_ecfp_256_private_key_s))
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<cx_ecfp_256_private_key_s>())).curve as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_256_private_key_s),
-            "::",
-            stringify!(curve)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<cx_ecfp_256_private_key_s>())).d_len as *const _ as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_256_private_key_s),
-            "::",
-            stringify!(d_len)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ecfp_256_private_key_s>())).d as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_256_private_key_s),
-            "::",
-            stringify!(d)
-        )
-    );
-}
 impl Default for cx_ecfp_256_private_key_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -4328,60 +2216,6 @@ pub struct cx_ecfp_256_extended_private_key_s {
     pub curve: cx_curve_t,
     pub d_len: cty::c_uint,
     pub d: [cty::c_uchar; 64usize],
-}
-#[test]
-fn bindgen_test_layout_cx_ecfp_256_extended_private_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_ecfp_256_extended_private_key_s>(),
-        72usize,
-        concat!("Size of: ", stringify!(cx_ecfp_256_extended_private_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_ecfp_256_extended_private_key_s>(),
-        4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(cx_ecfp_256_extended_private_key_s)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<cx_ecfp_256_extended_private_key_s>())).curve as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_256_extended_private_key_s),
-            "::",
-            stringify!(curve)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<cx_ecfp_256_extended_private_key_s>())).d_len as *const _
-                as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_256_extended_private_key_s),
-            "::",
-            stringify!(d_len)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<cx_ecfp_256_extended_private_key_s>())).d as *const _ as usize
-        },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_256_extended_private_key_s),
-            "::",
-            stringify!(d)
-        )
-    );
 }
 impl Default for cx_ecfp_256_extended_private_key_s {
     fn default() -> Self {
@@ -4400,49 +2234,6 @@ pub struct cx_ecfp_384_public_key_s {
     pub W_len: cty::c_uint,
     pub W: [cty::c_uchar; 97usize],
 }
-#[test]
-fn bindgen_test_layout_cx_ecfp_384_public_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_ecfp_384_public_key_s>(),
-        108usize,
-        concat!("Size of: ", stringify!(cx_ecfp_384_public_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_ecfp_384_public_key_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_ecfp_384_public_key_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ecfp_384_public_key_s>())).curve as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_384_public_key_s),
-            "::",
-            stringify!(curve)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ecfp_384_public_key_s>())).W_len as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_384_public_key_s),
-            "::",
-            stringify!(W_len)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ecfp_384_public_key_s>())).W as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_384_public_key_s),
-            "::",
-            stringify!(W)
-        )
-    );
-}
 impl Default for cx_ecfp_384_public_key_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -4454,53 +2245,6 @@ pub struct cx_ecfp_384_private_key_s {
     pub curve: cx_curve_t,
     pub d_len: cty::c_uint,
     pub d: [cty::c_uchar; 48usize],
-}
-#[test]
-fn bindgen_test_layout_cx_ecfp_384_private_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_ecfp_384_private_key_s>(),
-        56usize,
-        concat!("Size of: ", stringify!(cx_ecfp_384_private_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_ecfp_384_private_key_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_ecfp_384_private_key_s))
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<cx_ecfp_384_private_key_s>())).curve as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_384_private_key_s),
-            "::",
-            stringify!(curve)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<cx_ecfp_384_private_key_s>())).d_len as *const _ as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_384_private_key_s),
-            "::",
-            stringify!(d_len)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ecfp_384_private_key_s>())).d as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_384_private_key_s),
-            "::",
-            stringify!(d)
-        )
-    );
 }
 impl Default for cx_ecfp_384_private_key_s {
     fn default() -> Self {
@@ -4516,49 +2260,6 @@ pub struct cx_ecfp_512_public_key_s {
     pub W_len: cty::c_uint,
     pub W: [cty::c_uchar; 129usize],
 }
-#[test]
-fn bindgen_test_layout_cx_ecfp_512_public_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_ecfp_512_public_key_s>(),
-        140usize,
-        concat!("Size of: ", stringify!(cx_ecfp_512_public_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_ecfp_512_public_key_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_ecfp_512_public_key_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ecfp_512_public_key_s>())).curve as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_512_public_key_s),
-            "::",
-            stringify!(curve)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ecfp_512_public_key_s>())).W_len as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_512_public_key_s),
-            "::",
-            stringify!(W_len)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ecfp_512_public_key_s>())).W as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_512_public_key_s),
-            "::",
-            stringify!(W)
-        )
-    );
-}
 impl Default for cx_ecfp_512_public_key_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -4571,53 +2272,6 @@ pub struct cx_ecfp_512_private_key_s {
     pub d_len: cty::c_uint,
     pub d: [cty::c_uchar; 64usize],
 }
-#[test]
-fn bindgen_test_layout_cx_ecfp_512_private_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_ecfp_512_private_key_s>(),
-        72usize,
-        concat!("Size of: ", stringify!(cx_ecfp_512_private_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_ecfp_512_private_key_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_ecfp_512_private_key_s))
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<cx_ecfp_512_private_key_s>())).curve as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_512_private_key_s),
-            "::",
-            stringify!(curve)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<cx_ecfp_512_private_key_s>())).d_len as *const _ as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_512_private_key_s),
-            "::",
-            stringify!(d_len)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ecfp_512_private_key_s>())).d as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_512_private_key_s),
-            "::",
-            stringify!(d)
-        )
-    );
-}
 impl Default for cx_ecfp_512_private_key_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -4629,60 +2283,6 @@ pub struct cx_ecfp_512_extented_private_key_s {
     pub curve: cx_curve_t,
     pub d_len: cty::c_uint,
     pub d: [cty::c_uchar; 128usize],
-}
-#[test]
-fn bindgen_test_layout_cx_ecfp_512_extented_private_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_ecfp_512_extented_private_key_s>(),
-        136usize,
-        concat!("Size of: ", stringify!(cx_ecfp_512_extented_private_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_ecfp_512_extented_private_key_s>(),
-        4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(cx_ecfp_512_extented_private_key_s)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<cx_ecfp_512_extented_private_key_s>())).curve as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_512_extented_private_key_s),
-            "::",
-            stringify!(curve)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<cx_ecfp_512_extented_private_key_s>())).d_len as *const _
-                as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_512_extented_private_key_s),
-            "::",
-            stringify!(d_len)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<cx_ecfp_512_extented_private_key_s>())).d as *const _ as usize
-        },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_512_extented_private_key_s),
-            "::",
-            stringify!(d)
-        )
-    );
 }
 impl Default for cx_ecfp_512_extented_private_key_s {
     fn default() -> Self {
@@ -4699,49 +2299,6 @@ pub struct cx_ecfp_640_public_key_s {
     pub W_len: cty::c_uint,
     pub W: [cty::c_uchar; 161usize],
 }
-#[test]
-fn bindgen_test_layout_cx_ecfp_640_public_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_ecfp_640_public_key_s>(),
-        172usize,
-        concat!("Size of: ", stringify!(cx_ecfp_640_public_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_ecfp_640_public_key_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_ecfp_640_public_key_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ecfp_640_public_key_s>())).curve as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_640_public_key_s),
-            "::",
-            stringify!(curve)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ecfp_640_public_key_s>())).W_len as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_640_public_key_s),
-            "::",
-            stringify!(W_len)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ecfp_640_public_key_s>())).W as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_640_public_key_s),
-            "::",
-            stringify!(W)
-        )
-    );
-}
 impl Default for cx_ecfp_640_public_key_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -4754,53 +2311,6 @@ pub struct cx_ecfp_640_private_key_s {
     pub d_len: cty::c_uint,
     pub d: [cty::c_uchar; 80usize],
 }
-#[test]
-fn bindgen_test_layout_cx_ecfp_640_private_key_s() {
-    assert_eq!(
-        ::core::mem::size_of::<cx_ecfp_640_private_key_s>(),
-        88usize,
-        concat!("Size of: ", stringify!(cx_ecfp_640_private_key_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<cx_ecfp_640_private_key_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(cx_ecfp_640_private_key_s))
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<cx_ecfp_640_private_key_s>())).curve as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_640_private_key_s),
-            "::",
-            stringify!(curve)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<cx_ecfp_640_private_key_s>())).d_len as *const _ as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_640_private_key_s),
-            "::",
-            stringify!(d_len)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<cx_ecfp_640_private_key_s>())).d as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(cx_ecfp_640_private_key_s),
-            "::",
-            stringify!(d)
-        )
-    );
-}
 impl Default for cx_ecfp_640_private_key_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -4808,6 +2318,285 @@ impl Default for cx_ecfp_640_private_key_s {
 }
 pub type cx_ecfp_640_public_key_t = cx_ecfp_640_public_key_s;
 pub type cx_ecfp_640_private_key_t = cx_ecfp_640_private_key_s;
+extern "C" {
+    pub fn cx_ecfp_is_valid_point(
+        curve: cx_curve_t,
+        P: *const cty::c_uchar,
+        P_len: cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_ecfp_is_cryptographic_point(
+        curve: cx_curve_t,
+        P: *const cty::c_uchar,
+        P_len: cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_ecfp_add_point(
+        curve: cx_curve_t,
+        R: *mut cty::c_uchar,
+        P: *const cty::c_uchar,
+        Q: *const cty::c_uchar,
+        X_len: cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_ecfp_scalar_mult(
+        curve: cx_curve_t,
+        P: *mut cty::c_uchar,
+        P_len: cty::c_uint,
+        k: *const cty::c_uchar,
+        k_len: cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_ecfp_init_public_key(
+        curve: cx_curve_t,
+        rawkey: *const cty::c_uchar,
+        key_len: cty::c_uint,
+        key: *mut cx_ecfp_public_key_t,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_ecfp_init_private_key(
+        curve: cx_curve_t,
+        rawkey: *const cty::c_uchar,
+        key_len: cty::c_uint,
+        pvkey: *mut cx_ecfp_private_key_t,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_ecfp_generate_pair(
+        curve: cx_curve_t,
+        pubkey: *mut cx_ecfp_public_key_t,
+        privkey: *mut cx_ecfp_private_key_t,
+        keepprivate: cty::c_int,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_ecfp_generate_pair2(
+        curve: cx_curve_t,
+        pubkey: *mut cx_ecfp_public_key_t,
+        privkey: *mut cx_ecfp_private_key_t,
+        keepprivate: cty::c_int,
+        hashID: cx_md_t,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_ecdsa_sign(
+        pvkey: *const cx_ecfp_private_key_t,
+        mode: cty::c_int,
+        hashID: cx_md_t,
+        hash: *const cty::c_uchar,
+        hash_len: cty::c_uint,
+        sig: *mut cty::c_uchar,
+        sig_len: cty::c_uint,
+        info: *mut cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_ecdsa_verify(
+        pukey: *const cx_ecfp_public_key_t,
+        mode: cty::c_int,
+        hashID: cx_md_t,
+        hash: *const cty::c_uchar,
+        hash_len: cty::c_uint,
+        sig: *const cty::c_uchar,
+        sig_len: cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_ecschnorr_sign(
+        pvkey: *const cx_ecfp_private_key_t,
+        mode: cty::c_int,
+        hashID: cx_md_t,
+        msg: *const cty::c_uchar,
+        msg_len: cty::c_uint,
+        sig: *mut cty::c_uchar,
+        sig_len: cty::c_uint,
+        info: *mut cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_ecschnorr_verify(
+        pukey: *const cx_ecfp_public_key_t,
+        mode: cty::c_int,
+        hashID: cx_md_t,
+        msg: *const cty::c_uchar,
+        msg_len: cty::c_uint,
+        sig: *const cty::c_uchar,
+        sig_len: cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_edward_compress_point(curve: cx_curve_t, P: *mut cty::c_uchar, P_len: cty::c_uint);
+}
+extern "C" {
+    pub fn cx_edward_decompress_point(curve: cx_curve_t, P: *mut cty::c_uchar, P_len: cty::c_uint);
+}
+extern "C" {
+    pub fn cx_eddsa_get_public_key(
+        pvkey: *const cx_ecfp_private_key_t,
+        hashID: cx_md_t,
+        pukey: *mut cx_ecfp_public_key_t,
+        a: *mut cty::c_uchar,
+        a_len: cty::c_uint,
+        h: *mut cty::c_uchar,
+        h_len: cty::c_uint,
+    );
+}
+extern "C" {
+    pub fn cx_eddsa_sign(
+        pvkey: *const cx_ecfp_private_key_t,
+        mode: cty::c_int,
+        hashID: cx_md_t,
+        hash: *const cty::c_uchar,
+        hash_len: cty::c_uint,
+        ctx: *const cty::c_uchar,
+        ctx_len: cty::c_uint,
+        sig: *mut cty::c_uchar,
+        sig_len: *mut cty::c_uint,
+        info: *mut cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_eddsa_verify(
+        pukey: *const cx_ecfp_public_key_t,
+        mode: cty::c_int,
+        hashID: cx_md_t,
+        hash: *const cty::c_uchar,
+        hash_len: cty::c_uint,
+        ctx: *const cty::c_uchar,
+        ctx_len: cty::c_uint,
+        sig: *const cty::c_uchar,
+        sig_len: cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_ecdh(
+        pvkey: *const cx_ecfp_private_key_t,
+        mode: cty::c_int,
+        P: *const cty::c_uchar,
+        P_len: cty::c_uint,
+        secret: *mut cty::c_uchar,
+        secret_len: cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_crc16(buffer: *const cty::c_void, len: size_t) -> cty::c_ushort;
+}
+extern "C" {
+    pub fn cx_crc16_update(
+        crc: cty::c_ushort,
+        buffer: *const cty::c_void,
+        len: size_t,
+    ) -> cty::c_ushort;
+}
+extern "C" {
+    pub fn cx_math_cmp(
+        a: *const cty::c_uchar,
+        b: *const cty::c_uchar,
+        len: cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_math_is_zero(a: *const cty::c_uchar, len: cty::c_uint) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_math_add(
+        r: *mut cty::c_uchar,
+        a: *const cty::c_uchar,
+        b: *const cty::c_uchar,
+        len: cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_math_sub(
+        r: *mut cty::c_uchar,
+        a: *const cty::c_uchar,
+        b: *const cty::c_uchar,
+        len: cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_math_mult(
+        r: *mut cty::c_uchar,
+        a: *const cty::c_uchar,
+        b: *const cty::c_uchar,
+        len: cty::c_uint,
+    );
+}
+extern "C" {
+    pub fn cx_math_addm(
+        r: *mut cty::c_uchar,
+        a: *const cty::c_uchar,
+        b: *const cty::c_uchar,
+        m: *const cty::c_uchar,
+        len: cty::c_uint,
+    );
+}
+extern "C" {
+    pub fn cx_math_subm(
+        r: *mut cty::c_uchar,
+        a: *const cty::c_uchar,
+        b: *const cty::c_uchar,
+        m: *const cty::c_uchar,
+        len: cty::c_uint,
+    );
+}
+extern "C" {
+    pub fn cx_math_multm(
+        r: *mut cty::c_uchar,
+        a: *const cty::c_uchar,
+        b: *const cty::c_uchar,
+        m: *const cty::c_uchar,
+        len: cty::c_uint,
+    );
+}
+extern "C" {
+    pub fn cx_math_powm(
+        r: *mut cty::c_uchar,
+        a: *const cty::c_uchar,
+        e: *const cty::c_uchar,
+        len_e: cty::c_uint,
+        m: *const cty::c_uchar,
+        len: cty::c_uint,
+    );
+}
+extern "C" {
+    pub fn cx_math_modm(
+        v: *mut cty::c_uchar,
+        len_v: cty::c_uint,
+        m: *const cty::c_uchar,
+        len_m: cty::c_uint,
+    );
+}
+extern "C" {
+    pub fn cx_math_invprimem(
+        r: *mut cty::c_uchar,
+        a: *const cty::c_uchar,
+        m: *const cty::c_uchar,
+        len: cty::c_uint,
+    );
+}
+extern "C" {
+    pub fn cx_math_invintm(
+        r: *mut cty::c_uchar,
+        a: cty::c_ulong,
+        m: *const cty::c_uchar,
+        len: cty::c_uint,
+    );
+}
+extern "C" {
+    pub fn cx_math_is_prime(p: *const cty::c_uchar, len: cty::c_uint) -> cty::c_int;
+}
+extern "C" {
+    pub fn cx_math_next_prime(n: *mut cty::c_uchar, len: cty::c_uint);
+}
+extern "C" {
+    pub fn cx_selftest() -> cty::c_int;
+}
 pub const BOLOS_UX_INITIALIZE: bolos_ux_e = 0;
 pub const BOLOS_UX_EVENT: bolos_ux_e = 1;
 pub const BOLOS_UX_KEYBOARD: bolos_ux_e = 2;
@@ -4865,109 +2654,6 @@ pub struct application_s {
     pub sha256_code_data: [cty::c_uchar; 32usize],
     pub sha256_full: [cty::c_uchar; 32usize],
 }
-#[test]
-fn bindgen_test_layout_application_s() {
-    assert_eq!(
-        ::core::mem::size_of::<application_s>(),
-        92usize,
-        concat!("Size of: ", stringify!(application_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<application_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(application_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<application_s>())).nvram_begin as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(application_s),
-            "::",
-            stringify!(nvram_begin)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<application_s>())).nvram_end as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(application_s),
-            "::",
-            stringify!(nvram_end)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<application_s>())).main as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(application_s),
-            "::",
-            stringify!(main)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<application_s>())).flags as *const _ as usize },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(application_s),
-            "::",
-            stringify!(flags)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<application_s>())).code_length as *const _ as usize },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(application_s),
-            "::",
-            stringify!(code_length)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<application_s>())).data_length as *const _ as usize },
-        20usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(application_s),
-            "::",
-            stringify!(data_length)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<application_s>())).params_length as *const _ as usize },
-        24usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(application_s),
-            "::",
-            stringify!(params_length)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<application_s>())).sha256_code_data as *const _ as usize },
-        28usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(application_s),
-            "::",
-            stringify!(sha256_code_data)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<application_s>())).sha256_full as *const _ as usize },
-        60usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(application_s),
-            "::",
-            stringify!(sha256_full)
-        )
-    );
-}
 impl Default for application_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -5011,138 +2697,16 @@ pub struct bolos_ux_params_s__bindgen_ty_1__bindgen_ty_1 {
     pub currently_onboarded: cty::c_uint,
     pub hash: [cty::c_uchar; 32usize],
 }
-#[test]
-fn bindgen_test_layout_bolos_ux_params_s__bindgen_ty_1__bindgen_ty_1() {
-    assert_eq!(
-        ::core::mem::size_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_1>(),
-        36usize,
-        concat!(
-            "Size of: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_1)
-        )
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_1>(),
-        4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_1)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_1>()))
-                .currently_onboarded as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_1),
-            "::",
-            stringify!(currently_onboarded)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_1>())).hash
-                as *const _ as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_1),
-            "::",
-            stringify!(hash)
-        )
-    );
-}
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct bolos_ux_params_s__bindgen_ty_1__bindgen_ty_2 {
     pub app_idx: cty::c_uint,
-}
-#[test]
-fn bindgen_test_layout_bolos_ux_params_s__bindgen_ty_1__bindgen_ty_2() {
-    assert_eq!(
-        ::core::mem::size_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_2>(),
-        4usize,
-        concat!(
-            "Size of: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_2)
-        )
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_2>(),
-        4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_2)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_2>())).app_idx
-                as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_2),
-            "::",
-            stringify!(app_idx)
-        )
-    );
 }
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct bolos_ux_params_s__bindgen_ty_1__bindgen_ty_3 {
     pub app_idx: cty::c_uint,
     pub appentry: application_t,
-}
-#[test]
-fn bindgen_test_layout_bolos_ux_params_s__bindgen_ty_1__bindgen_ty_3() {
-    assert_eq!(
-        ::core::mem::size_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_3>(),
-        96usize,
-        concat!(
-            "Size of: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_3)
-        )
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_3>(),
-        4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_3)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_3>())).app_idx
-                as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_3),
-            "::",
-            stringify!(app_idx)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_3>())).appentry
-                as *const _ as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_3),
-            "::",
-            stringify!(appentry)
-        )
-    );
 }
 impl Default for bolos_ux_params_s__bindgen_ty_1__bindgen_ty_3 {
     fn default() -> Self {
@@ -5155,51 +2719,6 @@ pub struct bolos_ux_params_s__bindgen_ty_1__bindgen_ty_4 {
     pub app_idx: cty::c_uint,
     pub appentry: application_t,
 }
-#[test]
-fn bindgen_test_layout_bolos_ux_params_s__bindgen_ty_1__bindgen_ty_4() {
-    assert_eq!(
-        ::core::mem::size_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_4>(),
-        96usize,
-        concat!(
-            "Size of: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_4)
-        )
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_4>(),
-        4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_4)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_4>())).app_idx
-                as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_4),
-            "::",
-            stringify!(app_idx)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_4>())).appentry
-                as *const _ as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_4),
-            "::",
-            stringify!(appentry)
-        )
-    );
-}
 impl Default for bolos_ux_params_s__bindgen_ty_1__bindgen_ty_4 {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -5211,51 +2730,6 @@ pub struct bolos_ux_params_s__bindgen_ty_1__bindgen_ty_5 {
     pub app_idx: cty::c_uint,
     pub upgrade: application_t,
 }
-#[test]
-fn bindgen_test_layout_bolos_ux_params_s__bindgen_ty_1__bindgen_ty_5() {
-    assert_eq!(
-        ::core::mem::size_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_5>(),
-        96usize,
-        concat!(
-            "Size of: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_5)
-        )
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_5>(),
-        4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_5)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_5>())).app_idx
-                as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_5),
-            "::",
-            stringify!(app_idx)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_5>())).upgrade
-                as *const _ as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_5),
-            "::",
-            stringify!(upgrade)
-        )
-    );
-}
 impl Default for bolos_ux_params_s__bindgen_ty_1__bindgen_ty_5 {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -5265,38 +2739,6 @@ impl Default for bolos_ux_params_s__bindgen_ty_1__bindgen_ty_5 {
 #[derive(Copy, Clone)]
 pub struct bolos_ux_params_s__bindgen_ty_1__bindgen_ty_6 {
     pub ux_app: application_t,
-}
-#[test]
-fn bindgen_test_layout_bolos_ux_params_s__bindgen_ty_1__bindgen_ty_6() {
-    assert_eq!(
-        ::core::mem::size_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_6>(),
-        92usize,
-        concat!(
-            "Size of: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_6)
-        )
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_6>(),
-        4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_6)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_6>())).ux_app
-                as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_6),
-            "::",
-            stringify!(ux_app)
-        )
-    );
 }
 impl Default for bolos_ux_params_s__bindgen_ty_1__bindgen_ty_6 {
     fn default() -> Self {
@@ -5309,51 +2751,6 @@ pub struct bolos_ux_params_s__bindgen_ty_1__bindgen_ty_7 {
     pub app_idx: cty::c_uint,
     pub app: application_t,
 }
-#[test]
-fn bindgen_test_layout_bolos_ux_params_s__bindgen_ty_1__bindgen_ty_7() {
-    assert_eq!(
-        ::core::mem::size_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_7>(),
-        96usize,
-        concat!(
-            "Size of: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_7)
-        )
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_7>(),
-        4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_7)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_7>())).app_idx
-                as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_7),
-            "::",
-            stringify!(app_idx)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_7>())).app
-                as *const _ as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_7),
-            "::",
-            stringify!(app)
-        )
-    );
-}
 impl Default for bolos_ux_params_s__bindgen_ty_1__bindgen_ty_7 {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -5365,51 +2762,6 @@ pub struct bolos_ux_params_s__bindgen_ty_1__bindgen_ty_8 {
     pub name: [cty::c_char; 65usize],
     pub public: cx_ecfp_public_key_t,
 }
-#[test]
-fn bindgen_test_layout_bolos_ux_params_s__bindgen_ty_1__bindgen_ty_8() {
-    assert_eq!(
-        ::core::mem::size_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_8>(),
-        144usize,
-        concat!(
-            "Size of: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_8)
-        )
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_8>(),
-        4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_8)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_8>())).name
-                as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_8),
-            "::",
-            stringify!(name)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_8>())).public
-                as *const _ as usize
-        },
-        68usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_8),
-            "::",
-            stringify!(public)
-        )
-    );
-}
 impl Default for bolos_ux_params_s__bindgen_ty_1__bindgen_ty_8 {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -5419,38 +2771,6 @@ impl Default for bolos_ux_params_s__bindgen_ty_1__bindgen_ty_8 {
 #[derive(Copy, Clone)]
 pub struct bolos_ux_params_s__bindgen_ty_1__bindgen_ty_9 {
     pub host_pubkey: cx_ecfp_public_key_t,
-}
-#[test]
-fn bindgen_test_layout_bolos_ux_params_s__bindgen_ty_1__bindgen_ty_9() {
-    assert_eq!(
-        ::core::mem::size_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_9>(),
-        76usize,
-        concat!(
-            "Size of: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_9)
-        )
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_9>(),
-        4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_9)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_9>())).host_pubkey
-                as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_9),
-            "::",
-            stringify!(host_pubkey)
-        )
-    );
 }
 impl Default for bolos_ux_params_s__bindgen_ty_1__bindgen_ty_9 {
     fn default() -> Self {
@@ -5463,51 +2783,6 @@ pub struct bolos_ux_params_s__bindgen_ty_1__bindgen_ty_10 {
     pub name: [cty::c_char; 65usize],
     pub public: cx_ecfp_public_key_t,
 }
-#[test]
-fn bindgen_test_layout_bolos_ux_params_s__bindgen_ty_1__bindgen_ty_10() {
-    assert_eq!(
-        ::core::mem::size_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_10>(),
-        144usize,
-        concat!(
-            "Size of: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_10)
-        )
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_10>(),
-        4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_10)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_10>())).name
-                as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_10),
-            "::",
-            stringify!(name)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_10>())).public
-                as *const _ as usize
-        },
-        68usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_10),
-            "::",
-            stringify!(public)
-        )
-    );
-}
 impl Default for bolos_ux_params_s__bindgen_ty_1__bindgen_ty_10 {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -5518,51 +2793,6 @@ impl Default for bolos_ux_params_s__bindgen_ty_1__bindgen_ty_10 {
 pub struct bolos_ux_params_s__bindgen_ty_1__bindgen_ty_11 {
     pub name: [cty::c_char; 65usize],
     pub public: cx_ecfp_public_key_t,
-}
-#[test]
-fn bindgen_test_layout_bolos_ux_params_s__bindgen_ty_1__bindgen_ty_11() {
-    assert_eq!(
-        ::core::mem::size_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_11>(),
-        144usize,
-        concat!(
-            "Size of: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_11)
-        )
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_11>(),
-        4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_11)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_11>())).name
-                as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_11),
-            "::",
-            stringify!(name)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_11>())).public
-                as *const _ as usize
-        },
-        68usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_11),
-            "::",
-            stringify!(public)
-        )
-    );
 }
 impl Default for bolos_ux_params_s__bindgen_ty_1__bindgen_ty_11 {
     fn default() -> Self {
@@ -5576,64 +2806,6 @@ pub struct bolos_ux_params_s__bindgen_ty_1__bindgen_ty_12 {
     pub mode: cty::c_uint,
     pub entered_text: [cty::c_char; 33usize],
 }
-#[test]
-fn bindgen_test_layout_bolos_ux_params_s__bindgen_ty_1__bindgen_ty_12() {
-    assert_eq!(
-        ::core::mem::size_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_12>(),
-        44usize,
-        concat!(
-            "Size of: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_12)
-        )
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_12>(),
-        4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_12)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_12>())).keycode
-                as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_12),
-            "::",
-            stringify!(keycode)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_12>())).mode
-                as *const _ as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_12),
-            "::",
-            stringify!(mode)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_12>())).entered_text
-                as *const _ as usize
-        },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_12),
-            "::",
-            stringify!(entered_text)
-        )
-    );
-}
 impl Default for bolos_ux_params_s__bindgen_ty_1__bindgen_ty_12 {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -5644,125 +2816,16 @@ impl Default for bolos_ux_params_s__bindgen_ty_1__bindgen_ty_12 {
 pub struct bolos_ux_params_s__bindgen_ty_1__bindgen_ty_13 {
     pub cancellable: cty::c_uint,
 }
-#[test]
-fn bindgen_test_layout_bolos_ux_params_s__bindgen_ty_1__bindgen_ty_13() {
-    assert_eq!(
-        ::core::mem::size_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_13>(),
-        4usize,
-        concat!(
-            "Size of: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_13)
-        )
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_13>(),
-        4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_13)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_13>())).cancellable
-                as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_13),
-            "::",
-            stringify!(cancellable)
-        )
-    );
-}
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct bolos_ux_params_s__bindgen_ty_1__bindgen_ty_14 {
     pub keycode: cty::c_uint,
-}
-#[test]
-fn bindgen_test_layout_bolos_ux_params_s__bindgen_ty_1__bindgen_ty_14() {
-    assert_eq!(
-        ::core::mem::size_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_14>(),
-        4usize,
-        concat!(
-            "Size of: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_14)
-        )
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_14>(),
-        4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_14)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_14>())).keycode
-                as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_14),
-            "::",
-            stringify!(keycode)
-        )
-    );
 }
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct bolos_ux_params_s__bindgen_ty_1__bindgen_ty_15 {
     pub fgcolor: cty::c_uint,
     pub bgcolor: cty::c_uint,
-}
-#[test]
-fn bindgen_test_layout_bolos_ux_params_s__bindgen_ty_1__bindgen_ty_15() {
-    assert_eq!(
-        ::core::mem::size_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_15>(),
-        8usize,
-        concat!(
-            "Size of: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_15)
-        )
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_15>(),
-        4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_15)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_15>())).fgcolor
-                as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_15),
-            "::",
-            stringify!(fgcolor)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_15>())).bgcolor
-                as *const _ as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_15),
-            "::",
-            stringify!(bgcolor)
-        )
-    );
 }
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
@@ -5772,150 +2835,15 @@ pub struct bolos_ux_params_s__bindgen_ty_1__bindgen_ty_16 {
     pub width: cty::c_uint,
     pub height: cty::c_uint,
 }
-#[test]
-fn bindgen_test_layout_bolos_ux_params_s__bindgen_ty_1__bindgen_ty_16() {
-    assert_eq!(
-        ::core::mem::size_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_16>(),
-        16usize,
-        concat!(
-            "Size of: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_16)
-        )
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_16>(),
-        4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_16)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_16>())).x
-                as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_16),
-            "::",
-            stringify!(x)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_16>())).y
-                as *const _ as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_16),
-            "::",
-            stringify!(y)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_16>())).width
-                as *const _ as usize
-        },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_16),
-            "::",
-            stringify!(width)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_16>())).height
-                as *const _ as usize
-        },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_16),
-            "::",
-            stringify!(height)
-        )
-    );
-}
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct bolos_ux_params_s__bindgen_ty_1__bindgen_ty_17 {
     pub id: cty::c_uint,
 }
-#[test]
-fn bindgen_test_layout_bolos_ux_params_s__bindgen_ty_1__bindgen_ty_17() {
-    assert_eq!(
-        ::core::mem::size_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_17>(),
-        4usize,
-        concat!(
-            "Size of: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_17)
-        )
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_17>(),
-        4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_17)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_17>())).id
-                as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_17),
-            "::",
-            stringify!(id)
-        )
-    );
-}
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct bolos_ux_params_s__bindgen_ty_1__bindgen_ty_18 {
     pub percent: cty::c_uint,
-}
-#[test]
-fn bindgen_test_layout_bolos_ux_params_s__bindgen_ty_1__bindgen_ty_18() {
-    assert_eq!(
-        ::core::mem::size_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_18>(),
-        4usize,
-        concat!(
-            "Size of: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_18)
-        )
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_18>(),
-        4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_18)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_18>())).percent
-                as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_18),
-            "::",
-            stringify!(percent)
-        )
-    );
 }
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -5929,373 +2857,15 @@ pub const BOLOS_UX_ASYNCHMODAL_PAIRING_REQUEST_PASSKEY:
 pub const BOLOS_UX_ASYNCHMODAL_PAIRING_REQUEST_NUMCOMP:
     bolos_ux_params_s__bindgen_ty_1__bindgen_ty_19__bindgen_ty_1 = 1;
 pub type bolos_ux_params_s__bindgen_ty_1__bindgen_ty_19__bindgen_ty_1 = u8;
-#[test]
-fn bindgen_test_layout_bolos_ux_params_s__bindgen_ty_1__bindgen_ty_19() {
-    assert_eq!(
-        ::core::mem::size_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_19>(),
-        24usize,
-        concat!(
-            "Size of: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_19)
-        )
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_19>(),
-        4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_19)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_19>())).type_
-                as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_19),
-            "::",
-            stringify!(type_)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_19>()))
-                .pairing_info_len as *const _ as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_19),
-            "::",
-            stringify!(pairing_info_len)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1__bindgen_ty_19>())).pairing_info
-                as *const _ as usize
-        },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1__bindgen_ty_19),
-            "::",
-            stringify!(pairing_info)
-        )
-    );
-}
 impl Default for bolos_ux_params_s__bindgen_ty_1__bindgen_ty_19 {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
     }
 }
-#[test]
-fn bindgen_test_layout_bolos_ux_params_s__bindgen_ty_1() {
-    assert_eq!(
-        ::core::mem::size_of::<bolos_ux_params_s__bindgen_ty_1>(),
-        144usize,
-        concat!("Size of: ", stringify!(bolos_ux_params_s__bindgen_ty_1))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bolos_ux_params_s__bindgen_ty_1>(),
-        4usize,
-        concat!("Alignment of ", stringify!(bolos_ux_params_s__bindgen_ty_1))
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1>())).boot_unsafe as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1),
-            "::",
-            stringify!(boot_unsafe)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1>())).appexitb as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1),
-            "::",
-            stringify!(appexitb)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1>())).appdel as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1),
-            "::",
-            stringify!(appdel)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1>())).appadd as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1),
-            "::",
-            stringify!(appadd)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1>())).upgrade as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1),
-            "::",
-            stringify!(upgrade)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1>())).ux_not_signed as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1),
-            "::",
-            stringify!(ux_not_signed)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1>())).run_app as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1),
-            "::",
-            stringify!(run_app)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1>())).customca_key as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1),
-            "::",
-            stringify!(customca_key)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1>())).foreign_key as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1),
-            "::",
-            stringify!(foreign_key)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1>())).reset_customca as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1),
-            "::",
-            stringify!(reset_customca)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1>())).setup_customca as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1),
-            "::",
-            stringify!(setup_customca)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1>())).keyboard as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1),
-            "::",
-            stringify!(keyboard)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1>())).validate_pin as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1),
-            "::",
-            stringify!(validate_pin)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1>())).pin_keyboard as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1),
-            "::",
-            stringify!(pin_keyboard)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1>())).status_bar as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1),
-            "::",
-            stringify!(status_bar)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1>())).loader as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1),
-            "::",
-            stringify!(loader)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1>())).onboard as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1),
-            "::",
-            stringify!(onboard)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1>())).boot_delay as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1),
-            "::",
-            stringify!(boot_delay)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bolos_ux_params_s__bindgen_ty_1>())).pairing_request as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s__bindgen_ty_1),
-            "::",
-            stringify!(pairing_request)
-        )
-    );
-}
 impl Default for bolos_ux_params_s__bindgen_ty_1 {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
     }
-}
-#[test]
-fn bindgen_test_layout_bolos_ux_params_s() {
-    assert_eq!(
-        ::core::mem::size_of::<bolos_ux_params_s>(),
-        152usize,
-        concat!("Size of: ", stringify!(bolos_ux_params_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bolos_ux_params_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(bolos_ux_params_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bolos_ux_params_s>())).ux_id as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s),
-            "::",
-            stringify!(ux_id)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bolos_ux_params_s>())).len as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s),
-            "::",
-            stringify!(len)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bolos_ux_params_s>())).u as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bolos_ux_params_s),
-            "::",
-            stringify!(u)
-        )
-    );
 }
 impl Default for bolos_ux_params_s {
     fn default() -> Self {
@@ -6303,6 +2873,162 @@ impl Default for bolos_ux_params_s {
     }
 }
 pub type bolos_ux_params_t = bolos_ux_params_s;
+extern "C" {
+    pub fn os_perso_erase_all();
+}
+extern "C" {
+    pub fn os_perso_set_pin(identity: cty::c_uint, pin: *mut cty::c_uchar, length: cty::c_uint);
+}
+extern "C" {
+    pub fn os_perso_set_current_identity_pin(pin: *mut cty::c_uchar, length: cty::c_uint);
+}
+extern "C" {
+    pub fn os_perso_set_seed(
+        identity: cty::c_uint,
+        algorithm: cty::c_uint,
+        seed: *mut cty::c_uchar,
+        length: cty::c_uint,
+    );
+}
+extern "C" {
+    pub fn os_perso_derive_and_set_seed(
+        identity: cty::c_uchar,
+        prefix: *const cty::c_char,
+        prefix_length: cty::c_uint,
+        passphrase: *const cty::c_char,
+        passphrase_length: cty::c_uint,
+        words: *const cty::c_char,
+        words_length: cty::c_uint,
+    );
+}
+extern "C" {
+    pub fn os_perso_set_words(words: *const cty::c_uchar, length: cty::c_uint);
+}
+extern "C" {
+    pub fn os_perso_finalize();
+}
+extern "C" {
+    pub fn os_perso_isonboarded() -> bolos_bool_t;
+}
+extern "C" {
+    pub fn os_perso_derive_node_bip32(
+        curve: cx_curve_t,
+        path: *const cty::c_uint,
+        pathLength: cty::c_uint,
+        privateKey: *mut cty::c_uchar,
+        chain: *mut cty::c_uchar,
+    );
+}
+extern "C" {
+    pub fn os_perso_derive_node_with_seed_key(
+        mode: cty::c_uint,
+        curve: cx_curve_t,
+        path: *const cty::c_uint,
+        pathLength: cty::c_uint,
+        privateKey: *mut cty::c_uchar,
+        chain: *mut cty::c_uchar,
+        seed_key: *mut cty::c_uchar,
+        seed_key_length: cty::c_uint,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn os_perso_seed_cookie(
+        seed_cookie: *mut cty::c_uchar,
+        seed_cookie_length: cty::c_uint,
+    ) -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_endorsement_get_code_hash(buffer: *mut cty::c_uchar) -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_endorsement_get_public_key(
+        index: cty::c_uchar,
+        buffer: *mut cty::c_uchar,
+    ) -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_endorsement_get_public_key_certificate(
+        index: cty::c_uchar,
+        buffer: *mut cty::c_uchar,
+    ) -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_endorsement_key1_get_app_secret(buffer: *mut cty::c_uchar) -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_endorsement_key1_sign_data(
+        src: *mut cty::c_uchar,
+        srcLength: cty::c_uint,
+        signature: *mut cty::c_uchar,
+    ) -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_endorsement_key2_derive_sign_data(
+        src: *mut cty::c_uchar,
+        srcLength: cty::c_uint,
+        signature: *mut cty::c_uchar,
+    ) -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_global_pin_is_validated() -> bolos_bool_t;
+}
+extern "C" {
+    pub fn os_global_pin_check(
+        pin_buffer: *mut cty::c_uchar,
+        pin_length: cty::c_uchar,
+    ) -> bolos_bool_t;
+}
+extern "C" {
+    pub fn os_global_pin_invalidate();
+}
+extern "C" {
+    pub fn os_global_pin_retries() -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_registry_count() -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_registry_get(index: cty::c_uint, out_application_entry: *mut application_t);
+}
+extern "C" {
+    pub fn os_ux(params: *mut bolos_ux_params_t) -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_ux_result(params: *mut bolos_ux_params_t);
+}
+extern "C" {
+    pub fn os_ux_read_parameters(params: *mut bolos_ux_params_t);
+}
+extern "C" {
+    pub fn os_ux_blocking(params: *mut bolos_ux_params_t, arg1: *mut apdu_buffer_t) -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_lib_call(call_parameters: *mut cty::c_uint);
+}
+extern "C" {
+    pub fn os_lib_end();
+}
+extern "C" {
+    pub fn os_lib_throw(exception: cty::c_uint);
+}
+extern "C" {
+    pub fn os_flags() -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_version(version: *mut cty::c_uchar, maxlength: cty::c_uint) -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_serial(serial: *mut cty::c_uchar, maxlength: cty::c_uint) -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_seph_features() -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_seph_version(version: *mut cty::c_uchar, maxlength: cty::c_uint) -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_get_sn(buffer: *mut cty::c_uchar) -> cty::c_uint;
+}
 pub const OS_SETTING_BRIGHTNESS: os_setting_e = 0;
 pub const OS_SETTING_INVERT: os_setting_e = 1;
 pub const OS_SETTING_ROTATION: os_setting_e = 2;
@@ -6349,59 +3075,6 @@ pub struct meminfo_s {
     pub systemSize: cty::c_uint,
     pub slots: cty::c_uint,
 }
-#[test]
-fn bindgen_test_layout_meminfo_s() {
-    assert_eq!(
-        ::core::mem::size_of::<meminfo_s>(),
-        16usize,
-        concat!("Size of: ", stringify!(meminfo_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<meminfo_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(meminfo_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<meminfo_s>())).free_nvram_size as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(meminfo_s),
-            "::",
-            stringify!(free_nvram_size)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<meminfo_s>())).appMemory as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(meminfo_s),
-            "::",
-            stringify!(appMemory)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<meminfo_s>())).systemSize as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(meminfo_s),
-            "::",
-            stringify!(systemSize)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<meminfo_s>())).slots as *const _ as usize },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(meminfo_s),
-            "::",
-            stringify!(slots)
-        )
-    );
-}
 pub type meminfo_t = meminfo_s;
 extern "C" {
     pub fn os_get_memory_info(meminfo: *mut meminfo_t);
@@ -6420,7 +3093,7 @@ extern "C" {
     pub fn os_registry_get_current_app_tag(
         tag: cty::c_uint,
         buffer: *mut cty::c_uchar,
-        maxlen: cty::c_uint,
+        maxlen: *mut cty::c_uint,
     ) -> cty::c_uint;
 }
 extern "C" {
@@ -6433,7 +3106,16 @@ extern "C" {
 extern "C" {
     pub fn safe_desynch();
 }
-
+pub const OS_WATCHDOG_NOACTION: os_watchdog_behavior_t = 0;
+pub const OS_WATCHDOG_RESET: os_watchdog_behavior_t = 1;
+pub const OS_WATCHDOG_WIPE: os_watchdog_behavior_t = 2;
+pub type os_watchdog_behavior_t = u8;
+extern "C" {
+    pub fn os_watchdog_arm(useconds: cty::c_uint, behavior: os_watchdog_behavior_t);
+}
+extern "C" {
+    pub fn os_watchdog_value() -> cty::c_int;
+}
 pub const TASK_BOLOS: task_unsecure_id_e = 0;
 pub const TASK_SYSCALL: task_unsecure_id_e = 1;
 pub const TASK_USERTASKS_START: task_unsecure_id_e = 2;
@@ -6443,6 +3125,67 @@ pub const TASK_SUBTASK_0: task_unsecure_id_e = 3;
 pub const TASK_BOLOS_UX: task_unsecure_id_e = 4;
 pub const TASK_MAXCOUNT: task_unsecure_id_e = 5;
 pub type task_unsecure_id_e = u8;
+extern "C" {
+    pub fn os_sched_exec(application_index: cty::c_uint);
+}
+extern "C" {
+    pub fn os_sched_exit(exit_code: bolos_task_status_t);
+}
+extern "C" {
+    pub fn os_sched_is_running(task_idx: cty::c_uint) -> bolos_bool_t;
+}
+extern "C" {
+    pub fn os_sched_last_status(task_idx: cty::c_uint) -> bolos_task_status_t;
+}
+extern "C" {
+    pub fn svc_os_sched_last_status(task_idx: cty::c_uint) -> bolos_task_status_t;
+}
+extern "C" {
+    pub fn os_sched_yield(status: bolos_task_status_t);
+}
+extern "C" {
+    pub fn svc_os_sched_yield(status: bolos_task_status_t);
+}
+extern "C" {
+    pub fn os_sched_switch(task_idx: cty::c_uint, status: bolos_task_status_t);
+}
+extern "C" {
+    pub fn svc_os_sched_switch(task_idx: cty::c_uint, status: bolos_task_status_t);
+}
+extern "C" {
+    pub fn os_sched_current_task() -> cty::c_uint;
+}
+extern "C" {
+    pub fn svc_os_sched_current_task() -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_sched_create(
+        permissions: cty::c_uint,
+        main: *mut cty::c_void,
+        nvram: *mut cty::c_void,
+        nvram_length: cty::c_uint,
+        ram0: *mut cty::c_void,
+        ram0_length: cty::c_uint,
+        ram1: *mut cty::c_void,
+        ram1_length: cty::c_uint,
+        stack: *mut cty::c_void,
+        stack_length: cty::c_uint,
+    ) -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_sched_kill(taskidx: cty::c_uint);
+}
+extern "C" {
+    pub fn os_parse_bertlv(
+        mem: *mut cty::c_uchar,
+        mem_len: cty::c_uint,
+        tlv_instance_offset: *mut cty::c_uint,
+        tag: cty::c_uint,
+        offset: cty::c_uint,
+        buffer: *mut *mut cty::c_void,
+        maxlength: cty::c_uint,
+    ) -> cty::c_uint;
+}
 pub const BAGL_NONE: bagl_components_type_e_ = 0;
 pub const BAGL_BUTTON: bagl_components_type_e_ = 1;
 pub const BAGL_LABEL: bagl_components_type_e_ = 2;
@@ -6471,149 +3214,6 @@ pub struct bagl_component_t {
     pub font_id: cty::c_ushort,
     pub icon_id: cty::c_uchar,
 }
-#[test]
-fn bindgen_test_layout_bagl_component_t() {
-    assert_eq!(
-        ::core::mem::size_of::<bagl_component_t>(),
-        28usize,
-        concat!("Size of: ", stringify!(bagl_component_t))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bagl_component_t>(),
-        4usize,
-        concat!("Alignment of ", stringify!(bagl_component_t))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_component_t>())).type_ as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_component_t),
-            "::",
-            stringify!(type_)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_component_t>())).userid as *const _ as usize },
-        1usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_component_t),
-            "::",
-            stringify!(userid)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_component_t>())).x as *const _ as usize },
-        2usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_component_t),
-            "::",
-            stringify!(x)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_component_t>())).y as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_component_t),
-            "::",
-            stringify!(y)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_component_t>())).width as *const _ as usize },
-        6usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_component_t),
-            "::",
-            stringify!(width)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_component_t>())).height as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_component_t),
-            "::",
-            stringify!(height)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_component_t>())).stroke as *const _ as usize },
-        10usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_component_t),
-            "::",
-            stringify!(stroke)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_component_t>())).radius as *const _ as usize },
-        11usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_component_t),
-            "::",
-            stringify!(radius)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_component_t>())).fill as *const _ as usize },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_component_t),
-            "::",
-            stringify!(fill)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_component_t>())).fgcolor as *const _ as usize },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_component_t),
-            "::",
-            stringify!(fgcolor)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_component_t>())).bgcolor as *const _ as usize },
-        20usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_component_t),
-            "::",
-            stringify!(bgcolor)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_component_t>())).font_id as *const _ as usize },
-        24usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_component_t),
-            "::",
-            stringify!(font_id)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_component_t>())).icon_id as *const _ as usize },
-        26usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_component_t),
-            "::",
-            stringify!(icon_id)
-        )
-    );
-}
 impl Default for bagl_component_t {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -6628,69 +3228,6 @@ pub struct bagl_icon_details_s {
     pub colors: *const cty::c_uint,
     pub bitmap: *const cty::c_uchar,
 }
-#[test]
-fn bindgen_test_layout_bagl_icon_details_s() {
-    assert_eq!(
-        ::core::mem::size_of::<bagl_icon_details_s>(),
-        20usize,
-        concat!("Size of: ", stringify!(bagl_icon_details_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bagl_icon_details_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(bagl_icon_details_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_icon_details_s>())).width as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_icon_details_s),
-            "::",
-            stringify!(width)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_icon_details_s>())).height as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_icon_details_s),
-            "::",
-            stringify!(height)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_icon_details_s>())).bpp as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_icon_details_s),
-            "::",
-            stringify!(bpp)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_icon_details_s>())).colors as *const _ as usize },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_icon_details_s),
-            "::",
-            stringify!(colors)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_icon_details_s>())).bitmap as *const _ as usize },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_icon_details_s),
-            "::",
-            stringify!(bitmap)
-        )
-    );
-}
 impl Default for bagl_icon_details_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -6704,56 +3241,6 @@ pub struct bagl_font_character_t {
     pub bitmap_byte_count: cty::c_uchar,
     pub bitmap_offset: cty::c_ushort,
 }
-#[test]
-fn bindgen_test_layout_bagl_font_character_t() {
-    assert_eq!(
-        ::core::mem::size_of::<bagl_font_character_t>(),
-        4usize,
-        concat!("Size of: ", stringify!(bagl_font_character_t))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bagl_font_character_t>(),
-        2usize,
-        concat!("Alignment of ", stringify!(bagl_font_character_t))
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bagl_font_character_t>())).char_width as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_font_character_t),
-            "::",
-            stringify!(char_width)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bagl_font_character_t>())).bitmap_byte_count as *const _
-                as usize
-        },
-        1usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_font_character_t),
-            "::",
-            stringify!(bitmap_byte_count)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bagl_font_character_t>())).bitmap_offset as *const _ as usize
-        },
-        2usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_font_character_t),
-            "::",
-            stringify!(bitmap_offset)
-        )
-    );
-}
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct bagl_font_t {
@@ -6766,109 +3253,6 @@ pub struct bagl_font_t {
     pub last_char: cty::c_ushort,
     pub characters: *const bagl_font_character_t,
     pub bitmap: *const cty::c_uchar,
-}
-#[test]
-fn bindgen_test_layout_bagl_font_t() {
-    assert_eq!(
-        ::core::mem::size_of::<bagl_font_t>(),
-        20usize,
-        concat!("Size of: ", stringify!(bagl_font_t))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bagl_font_t>(),
-        4usize,
-        concat!("Alignment of ", stringify!(bagl_font_t))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_font_t>())).font_id as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_font_t),
-            "::",
-            stringify!(font_id)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_font_t>())).bpp as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_font_t),
-            "::",
-            stringify!(bpp)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_font_t>())).char_height as *const _ as usize },
-        5usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_font_t),
-            "::",
-            stringify!(char_height)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_font_t>())).baseline_height as *const _ as usize },
-        6usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_font_t),
-            "::",
-            stringify!(baseline_height)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_font_t>())).char_kerning as *const _ as usize },
-        7usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_font_t),
-            "::",
-            stringify!(char_kerning)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_font_t>())).first_char as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_font_t),
-            "::",
-            stringify!(first_char)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_font_t>())).last_char as *const _ as usize },
-        10usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_font_t),
-            "::",
-            stringify!(last_char)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_font_t>())).characters as *const _ as usize },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_font_t),
-            "::",
-            stringify!(characters)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_font_t>())).bitmap as *const _ as usize },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_font_t),
-            "::",
-            stringify!(bitmap)
-        )
-    );
 }
 impl Default for bagl_font_t {
     fn default() -> Self {
@@ -7006,91 +3390,6 @@ pub struct bagl_animated_s {
     pub current_x: cty::c_uint,
     pub next_ms: cty::c_uint,
 }
-#[test]
-fn bindgen_test_layout_bagl_animated_s() {
-    assert_eq!(
-        ::core::mem::size_of::<bagl_animated_s>(),
-        48usize,
-        concat!("Size of: ", stringify!(bagl_animated_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bagl_animated_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(bagl_animated_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_animated_s>())).c as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_animated_s),
-            "::",
-            stringify!(c)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_animated_s>())).text as *const _ as usize },
-        28usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_animated_s),
-            "::",
-            stringify!(text)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_animated_s>())).text_length as *const _ as usize },
-        32usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_animated_s),
-            "::",
-            stringify!(text_length)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_animated_s>())).text_encoding as *const _ as usize },
-        34usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_animated_s),
-            "::",
-            stringify!(text_encoding)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<bagl_animated_s>())).current_char_idx as *const _ as usize
-        },
-        36usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_animated_s),
-            "::",
-            stringify!(current_char_idx)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_animated_s>())).current_x as *const _ as usize },
-        40usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_animated_s),
-            "::",
-            stringify!(current_x)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_animated_s>())).next_ms as *const _ as usize },
-        44usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_animated_s),
-            "::",
-            stringify!(next_ms)
-        )
-    );
-}
 impl Default for bagl_animated_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -7142,41 +3441,6 @@ pub struct ux_layout_paging_params_s {
     pub title: *const cty::c_char,
     pub text: *const cty::c_char,
 }
-#[test]
-fn bindgen_test_layout_ux_layout_paging_params_s() {
-    assert_eq!(
-        ::core::mem::size_of::<ux_layout_paging_params_s>(),
-        8usize,
-        concat!("Size of: ", stringify!(ux_layout_paging_params_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<ux_layout_paging_params_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(ux_layout_paging_params_s))
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<ux_layout_paging_params_s>())).title as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_paging_params_s),
-            "::",
-            stringify!(title)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_layout_paging_params_s>())).text as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_paging_params_s),
-            "::",
-            stringify!(text)
-        )
-    );
-}
 impl Default for ux_layout_paging_params_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -7198,69 +3462,6 @@ pub struct ux_layout_nnbnn_params_s {
     pub line4: *const cty::c_char,
     pub line5: *const cty::c_char,
 }
-#[test]
-fn bindgen_test_layout_ux_layout_nnbnn_params_s() {
-    assert_eq!(
-        ::core::mem::size_of::<ux_layout_nnbnn_params_s>(),
-        20usize,
-        concat!("Size of: ", stringify!(ux_layout_nnbnn_params_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<ux_layout_nnbnn_params_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(ux_layout_nnbnn_params_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_layout_nnbnn_params_s>())).line1 as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_nnbnn_params_s),
-            "::",
-            stringify!(line1)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_layout_nnbnn_params_s>())).line2 as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_nnbnn_params_s),
-            "::",
-            stringify!(line2)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_layout_nnbnn_params_s>())).line3 as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_nnbnn_params_s),
-            "::",
-            stringify!(line3)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_layout_nnbnn_params_s>())).line4 as *const _ as usize },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_nnbnn_params_s),
-            "::",
-            stringify!(line4)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_layout_nnbnn_params_s>())).line5 as *const _ as usize },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_nnbnn_params_s),
-            "::",
-            stringify!(line5)
-        )
-    );
-}
 impl Default for ux_layout_nnbnn_params_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -7275,39 +3476,6 @@ extern "C" {
 pub struct ux_layout_pb_params_s {
     pub icon: *const bagl_icon_details_t,
     pub line1: *const cty::c_char,
-}
-#[test]
-fn bindgen_test_layout_ux_layout_pb_params_s() {
-    assert_eq!(
-        ::core::mem::size_of::<ux_layout_pb_params_s>(),
-        8usize,
-        concat!("Size of: ", stringify!(ux_layout_pb_params_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<ux_layout_pb_params_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(ux_layout_pb_params_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_layout_pb_params_s>())).icon as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_pb_params_s),
-            "::",
-            stringify!(icon)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_layout_pb_params_s>())).line1 as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_pb_params_s),
-            "::",
-            stringify!(line1)
-        )
-    );
 }
 impl Default for ux_layout_pb_params_s {
     fn default() -> Self {
@@ -7324,39 +3492,6 @@ pub struct ux_layout_bb_params_s {
     pub line1: *const cty::c_char,
     pub line2: *const cty::c_char,
 }
-#[test]
-fn bindgen_test_layout_ux_layout_bb_params_s() {
-    assert_eq!(
-        ::core::mem::size_of::<ux_layout_bb_params_s>(),
-        8usize,
-        concat!("Size of: ", stringify!(ux_layout_bb_params_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<ux_layout_bb_params_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(ux_layout_bb_params_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_layout_bb_params_s>())).line1 as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_bb_params_s),
-            "::",
-            stringify!(line1)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_layout_bb_params_s>())).line2 as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_bb_params_s),
-            "::",
-            stringify!(line2)
-        )
-    );
-}
 impl Default for ux_layout_bb_params_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -7371,39 +3506,6 @@ extern "C" {
 pub struct ux_layout_bn_params_s {
     pub line1: *const cty::c_char,
     pub line2: *const cty::c_char,
-}
-#[test]
-fn bindgen_test_layout_ux_layout_bn_params_s() {
-    assert_eq!(
-        ::core::mem::size_of::<ux_layout_bn_params_s>(),
-        8usize,
-        concat!("Size of: ", stringify!(ux_layout_bn_params_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<ux_layout_bn_params_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(ux_layout_bn_params_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_layout_bn_params_s>())).line1 as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_bn_params_s),
-            "::",
-            stringify!(line1)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_layout_bn_params_s>())).line2 as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_bn_params_s),
-            "::",
-            stringify!(line2)
-        )
-    );
 }
 impl Default for ux_layout_bn_params_s {
     fn default() -> Self {
@@ -7421,49 +3523,6 @@ pub struct ux_layout_pbb_params_s {
     pub line1: *const cty::c_char,
     pub line2: *const cty::c_char,
 }
-#[test]
-fn bindgen_test_layout_ux_layout_pbb_params_s() {
-    assert_eq!(
-        ::core::mem::size_of::<ux_layout_pbb_params_s>(),
-        12usize,
-        concat!("Size of: ", stringify!(ux_layout_pbb_params_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<ux_layout_pbb_params_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(ux_layout_pbb_params_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_layout_pbb_params_s>())).icon as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_pbb_params_s),
-            "::",
-            stringify!(icon)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_layout_pbb_params_s>())).line1 as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_pbb_params_s),
-            "::",
-            stringify!(line1)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_layout_pbb_params_s>())).line2 as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_pbb_params_s),
-            "::",
-            stringify!(line2)
-        )
-    );
-}
 impl Default for ux_layout_pbb_params_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -7480,49 +3539,6 @@ pub struct ux_layout_pnn_params_s {
     pub line1: *const cty::c_char,
     pub line2: *const cty::c_char,
 }
-#[test]
-fn bindgen_test_layout_ux_layout_pnn_params_s() {
-    assert_eq!(
-        ::core::mem::size_of::<ux_layout_pnn_params_s>(),
-        12usize,
-        concat!("Size of: ", stringify!(ux_layout_pnn_params_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<ux_layout_pnn_params_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(ux_layout_pnn_params_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_layout_pnn_params_s>())).icon as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_pnn_params_s),
-            "::",
-            stringify!(icon)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_layout_pnn_params_s>())).line1 as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_pnn_params_s),
-            "::",
-            stringify!(line1)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_layout_pnn_params_s>())).line2 as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_pnn_params_s),
-            "::",
-            stringify!(line2)
-        )
-    );
-}
 impl Default for ux_layout_pnn_params_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -7538,39 +3554,6 @@ pub struct ux_layout_pn_params_s {
     pub icon: *const bagl_icon_details_t,
     pub line1: *const cty::c_char,
 }
-#[test]
-fn bindgen_test_layout_ux_layout_pn_params_s() {
-    assert_eq!(
-        ::core::mem::size_of::<ux_layout_pn_params_s>(),
-        8usize,
-        concat!("Size of: ", stringify!(ux_layout_pn_params_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<ux_layout_pn_params_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(ux_layout_pn_params_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_layout_pn_params_s>())).icon as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_pn_params_s),
-            "::",
-            stringify!(icon)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_layout_pn_params_s>())).line1 as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_pn_params_s),
-            "::",
-            stringify!(line1)
-        )
-    );
-}
 impl Default for ux_layout_pn_params_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -7585,39 +3568,6 @@ extern "C" {
 pub struct ux_layout_nn_params_s {
     pub line1: *const cty::c_char,
     pub line2: *const cty::c_char,
-}
-#[test]
-fn bindgen_test_layout_ux_layout_nn_params_s() {
-    assert_eq!(
-        ::core::mem::size_of::<ux_layout_nn_params_s>(),
-        8usize,
-        concat!("Size of: ", stringify!(ux_layout_nn_params_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<ux_layout_nn_params_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(ux_layout_nn_params_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_layout_nn_params_s>())).line1 as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_nn_params_s),
-            "::",
-            stringify!(line1)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_layout_nn_params_s>())).line2 as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_nn_params_s),
-            "::",
-            stringify!(line2)
-        )
-    );
 }
 impl Default for ux_layout_nn_params_s {
     fn default() -> Self {
@@ -7658,59 +3608,6 @@ pub struct ux_flow_state_t {
     pub prev_index: cty::c_ushort,
     pub length: cty::c_ushort,
 }
-#[test]
-fn bindgen_test_layout_ux_flow_state_t() {
-    assert_eq!(
-        ::core::mem::size_of::<ux_flow_state_t>(),
-        12usize,
-        concat!("Size of: ", stringify!(ux_flow_state_t))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<ux_flow_state_t>(),
-        4usize,
-        concat!("Alignment of ", stringify!(ux_flow_state_t))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_flow_state_t>())).steps as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_flow_state_t),
-            "::",
-            stringify!(steps)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_flow_state_t>())).index as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_flow_state_t),
-            "::",
-            stringify!(index)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_flow_state_t>())).prev_index as *const _ as usize },
-        6usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_flow_state_t),
-            "::",
-            stringify!(prev_index)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_flow_state_t>())).length as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_flow_state_t),
-            "::",
-            stringify!(length)
-        )
-    );
-}
 impl Default for ux_flow_state_t {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -7725,59 +3622,6 @@ pub struct ux_flow_step_s {
     pub params: *const cty::c_void,
     pub validate_flow: *const *const ux_flow_step_t,
     pub error_flow: *const *const ux_flow_step_t,
-}
-#[test]
-fn bindgen_test_layout_ux_flow_step_s() {
-    assert_eq!(
-        ::core::mem::size_of::<ux_flow_step_s>(),
-        16usize,
-        concat!("Size of: ", stringify!(ux_flow_step_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<ux_flow_step_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(ux_flow_step_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_flow_step_s>())).init as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_flow_step_s),
-            "::",
-            stringify!(init)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_flow_step_s>())).params as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_flow_step_s),
-            "::",
-            stringify!(params)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_flow_step_s>())).validate_flow as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_flow_step_s),
-            "::",
-            stringify!(validate_flow)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_flow_step_s>())).error_flow as *const _ as usize },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_flow_step_s),
-            "::",
-            stringify!(error_flow)
-        )
-    );
 }
 impl Default for ux_flow_step_s {
     fn default() -> Self {
@@ -7850,39 +3694,6 @@ pub struct bagl_element_e {
     pub component: bagl_component_t,
     pub text: *const cty::c_char,
 }
-#[test]
-fn bindgen_test_layout_bagl_element_e() {
-    assert_eq!(
-        ::core::mem::size_of::<bagl_element_e>(),
-        32usize,
-        concat!("Size of: ", stringify!(bagl_element_e))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<bagl_element_e>(),
-        4usize,
-        concat!("Alignment of ", stringify!(bagl_element_e))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_element_e>())).component as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_element_e),
-            "::",
-            stringify!(component)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<bagl_element_e>())).text as *const _ as usize },
-        28usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(bagl_element_e),
-            "::",
-            stringify!(text)
-        )
-    );
-}
 impl Default for bagl_element_e {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -7918,31 +3729,6 @@ extern "C" {
 pub struct ux_layout_strings_params_s {
     pub lines: [*const cty::c_char; 5usize],
 }
-#[test]
-fn bindgen_test_layout_ux_layout_strings_params_s() {
-    assert_eq!(
-        ::core::mem::size_of::<ux_layout_strings_params_s>(),
-        20usize,
-        concat!("Size of: ", stringify!(ux_layout_strings_params_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<ux_layout_strings_params_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(ux_layout_strings_params_s))
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<ux_layout_strings_params_s>())).lines as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_strings_params_s),
-            "::",
-            stringify!(lines)
-        )
-    );
-}
 impl Default for ux_layout_strings_params_s {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -7954,43 +3740,6 @@ pub type ux_layout_strings_params_t = ux_layout_strings_params_s;
 pub struct ux_layout_icon_strings_params_s {
     pub icon: *const bagl_icon_details_t,
     pub lines: [*const cty::c_char; 5usize],
-}
-#[test]
-fn bindgen_test_layout_ux_layout_icon_strings_params_s() {
-    assert_eq!(
-        ::core::mem::size_of::<ux_layout_icon_strings_params_s>(),
-        24usize,
-        concat!("Size of: ", stringify!(ux_layout_icon_strings_params_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<ux_layout_icon_strings_params_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(ux_layout_icon_strings_params_s))
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<ux_layout_icon_strings_params_s>())).icon as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_icon_strings_params_s),
-            "::",
-            stringify!(icon)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<ux_layout_icon_strings_params_s>())).lines as *const _ as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_layout_icon_strings_params_s),
-            "::",
-            stringify!(lines)
-        )
-    );
 }
 impl Default for ux_layout_icon_strings_params_s {
     fn default() -> Self {
@@ -8007,9 +3756,6 @@ extern "C" {
         new_button_mask: cty::c_uint,
     );
 }
-// extern "C" {
-//     pub fn io_seproxyhal_display(element: *const bagl_element_t);
-// }
 extern "C" {
     pub fn bagl_label_roundtrip_duration_ms(
         e: *const bagl_element_t,
@@ -8064,6 +3810,82 @@ extern "C" {
         element: *const bagl_element_t,
     ) -> *const bagl_element_t;
 }
+pub type ux_menu_callback_t = ::core::option::Option<unsafe extern "C" fn(userid: cty::c_uint)>;
+pub type ux_menu_entry_t = ux_menu_entry_s;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct ux_menu_entry_s {
+    pub menu: *const ux_menu_entry_t,
+    pub callback: ux_menu_callback_t,
+    pub userid: cty::c_uint,
+    pub icon: *const bagl_icon_details_t,
+    pub line1: *const cty::c_char,
+    pub line2: *const cty::c_char,
+    pub text_x: cty::c_char,
+    pub icon_x: cty::c_char,
+}
+impl Default for ux_menu_entry_s {
+    fn default() -> Self {
+        unsafe { ::core::mem::zeroed() }
+    }
+}
+pub type ux_menu_preprocessor_t = ::core::option::Option<
+    unsafe extern "C" fn(
+        arg1: *const ux_menu_entry_t,
+        element: *mut bagl_element_t,
+    ) -> *const bagl_element_t,
+>;
+pub type ux_menu_iterator_t =
+    ::core::option::Option<unsafe extern "C" fn(entry_idx: cty::c_uint) -> *const ux_menu_entry_t>;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct ux_menu_state_s {
+    pub menu_entries: *const ux_menu_entry_t,
+    pub menu_entries_count: cty::c_uint,
+    pub current_entry: cty::c_uint,
+    pub menu_entry_preprocessor: ux_menu_preprocessor_t,
+    pub menu_iterator: ux_menu_iterator_t,
+}
+impl Default for ux_menu_state_s {
+    fn default() -> Self {
+        unsafe { ::core::mem::zeroed() }
+    }
+}
+pub type ux_menu_state_t = ux_menu_state_s;
+pub type ux_turner_callback_t = ::core::option::Option<unsafe extern "C" fn()>;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct ux_turner_step_s {
+    pub icon: *const bagl_icon_details_t,
+    pub fontid1: cty::c_ushort,
+    pub line1: *const cty::c_char,
+    pub fontid2: cty::c_ushort,
+    pub line2: *const cty::c_char,
+    pub text_x: cty::c_char,
+    pub icon_x: cty::c_char,
+    pub next_step_ms: cty::c_uint,
+}
+impl Default for ux_turner_step_s {
+    fn default() -> Self {
+        unsafe { ::core::mem::zeroed() }
+    }
+}
+pub type ux_turner_step_t = ux_turner_step_s;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct ux_turner_state_s {
+    pub steps: *const ux_turner_step_t,
+    pub steps_count: cty::c_uint,
+    pub current_step: cty::c_uint,
+    pub button_callback: button_push_callback_t,
+    pub elapsed_ms: cty::c_uint,
+}
+impl Default for ux_turner_state_s {
+    fn default() -> Self {
+        unsafe { ::core::mem::zeroed() }
+    }
+}
+pub type ux_turner_state_t = ux_turner_state_s;
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct ux_stack_slot_s {
@@ -8071,7 +3893,6 @@ pub struct ux_stack_slot_s {
     pub element_arrays_count: cty::c_uchar,
     pub element_index: cty::c_ushort,
     pub element_arrays: [ux_stack_slot_s__bindgen_ty_1; 1usize],
-    pub displayed_callback: callback_int_t,
     pub screen_before_element_display_callback: bagl_element_callback_t,
     pub button_push_callback: button_push_callback_t,
     pub ticker_callback: callback_int_t,
@@ -8084,178 +3905,10 @@ pub struct ux_stack_slot_s__bindgen_ty_1 {
     pub element_array: *const bagl_element_t,
     pub element_array_count: cty::c_uchar,
 }
-#[test]
-fn bindgen_test_layout_ux_stack_slot_s__bindgen_ty_1() {
-    assert_eq!(
-        ::core::mem::size_of::<ux_stack_slot_s__bindgen_ty_1>(),
-        8usize,
-        concat!("Size of: ", stringify!(ux_stack_slot_s__bindgen_ty_1))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<ux_stack_slot_s__bindgen_ty_1>(),
-        4usize,
-        concat!("Alignment of ", stringify!(ux_stack_slot_s__bindgen_ty_1))
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<ux_stack_slot_s__bindgen_ty_1>())).element_array as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_stack_slot_s__bindgen_ty_1),
-            "::",
-            stringify!(element_array)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<ux_stack_slot_s__bindgen_ty_1>())).element_array_count
-                as *const _ as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_stack_slot_s__bindgen_ty_1),
-            "::",
-            stringify!(element_array_count)
-        )
-    );
-}
 impl Default for ux_stack_slot_s__bindgen_ty_1 {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
     }
-}
-#[test]
-fn bindgen_test_layout_ux_stack_slot_s() {
-    assert_eq!(
-        ::core::mem::size_of::<ux_stack_slot_s>(),
-        36usize,
-        concat!("Size of: ", stringify!(ux_stack_slot_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<ux_stack_slot_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(ux_stack_slot_s))
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<ux_stack_slot_s>())).exit_code_after_elements_displayed
-                as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_stack_slot_s),
-            "::",
-            stringify!(exit_code_after_elements_displayed)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<ux_stack_slot_s>())).element_arrays_count as *const _ as usize
-        },
-        1usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_stack_slot_s),
-            "::",
-            stringify!(element_arrays_count)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_stack_slot_s>())).element_index as *const _ as usize },
-        2usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_stack_slot_s),
-            "::",
-            stringify!(element_index)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_stack_slot_s>())).element_arrays as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_stack_slot_s),
-            "::",
-            stringify!(element_arrays)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<ux_stack_slot_s>())).displayed_callback as *const _ as usize
-        },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_stack_slot_s),
-            "::",
-            stringify!(displayed_callback)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<ux_stack_slot_s>())).screen_before_element_display_callback
-                as *const _ as usize
-        },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_stack_slot_s),
-            "::",
-            stringify!(screen_before_element_display_callback)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<ux_stack_slot_s>())).button_push_callback as *const _ as usize
-        },
-        20usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_stack_slot_s),
-            "::",
-            stringify!(button_push_callback)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<ux_stack_slot_s>())).ticker_callback as *const _ as usize
-        },
-        24usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_stack_slot_s),
-            "::",
-            stringify!(ticker_callback)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_stack_slot_s>())).ticker_value as *const _ as usize },
-        28usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_stack_slot_s),
-            "::",
-            stringify!(ticker_value)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<ux_stack_slot_s>())).ticker_interval as *const _ as usize
-        },
-        32usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_stack_slot_s),
-            "::",
-            stringify!(ticker_interval)
-        )
-    );
 }
 impl Default for ux_stack_slot_s {
     fn default() -> Self {
@@ -8267,205 +3920,13 @@ impl Default for ux_stack_slot_s {
 pub struct ux_state_s {
     pub stack_count: cty::c_uchar,
     pub exit_code: bolos_task_status_t,
-    pub layout_paging: ux_state_s__bindgen_ty_1,
-    pub flow_stack: [ux_flow_state_t; 1usize],
-    pub string_buffer: [cty::c_char; 128usize],
     pub tmp_element: bagl_element_t,
     pub stack: [ux_stack_slot_t; 1usize],
     pub menulist_current: cty::c_uint,
     pub menulist_params: ux_layout_strings_params_t,
     pub menulist_getter: list_item_value_t,
     pub menulist_selector: list_item_select_t,
-}
-#[repr(C)]
-#[derive(Default, Copy, Clone)]
-pub struct ux_state_s__bindgen_ty_1 {
-    pub current: cty::c_uint,
-    pub count: cty::c_uint,
-    pub offsets: [cty::c_ushort; 1usize],
-    pub lengths: [cty::c_ushort; 1usize],
-}
-#[test]
-fn bindgen_test_layout_ux_state_s__bindgen_ty_1() {
-    assert_eq!(
-        ::core::mem::size_of::<ux_state_s__bindgen_ty_1>(),
-        12usize,
-        concat!("Size of: ", stringify!(ux_state_s__bindgen_ty_1))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<ux_state_s__bindgen_ty_1>(),
-        4usize,
-        concat!("Alignment of ", stringify!(ux_state_s__bindgen_ty_1))
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<ux_state_s__bindgen_ty_1>())).current as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_state_s__bindgen_ty_1),
-            "::",
-            stringify!(current)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_state_s__bindgen_ty_1>())).count as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_state_s__bindgen_ty_1),
-            "::",
-            stringify!(count)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<ux_state_s__bindgen_ty_1>())).offsets as *const _ as usize
-        },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_state_s__bindgen_ty_1),
-            "::",
-            stringify!(offsets)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<ux_state_s__bindgen_ty_1>())).lengths as *const _ as usize
-        },
-        10usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_state_s__bindgen_ty_1),
-            "::",
-            stringify!(lengths)
-        )
-    );
-}
-#[test]
-fn bindgen_test_layout_ux_state_s() {
-    assert_eq!(
-        ::core::mem::size_of::<ux_state_s>(),
-        256usize,
-        concat!("Size of: ", stringify!(ux_state_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<ux_state_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(ux_state_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_state_s>())).stack_count as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_state_s),
-            "::",
-            stringify!(stack_count)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_state_s>())).exit_code as *const _ as usize },
-        1usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_state_s),
-            "::",
-            stringify!(exit_code)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_state_s>())).layout_paging as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_state_s),
-            "::",
-            stringify!(layout_paging)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_state_s>())).flow_stack as *const _ as usize },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_state_s),
-            "::",
-            stringify!(flow_stack)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_state_s>())).string_buffer as *const _ as usize },
-        28usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_state_s),
-            "::",
-            stringify!(string_buffer)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_state_s>())).tmp_element as *const _ as usize },
-        156usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_state_s),
-            "::",
-            stringify!(tmp_element)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_state_s>())).stack as *const _ as usize },
-        188usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_state_s),
-            "::",
-            stringify!(stack)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_state_s>())).menulist_current as *const _ as usize },
-        224usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_state_s),
-            "::",
-            stringify!(menulist_current)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_state_s>())).menulist_params as *const _ as usize },
-        228usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_state_s),
-            "::",
-            stringify!(menulist_params)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_state_s>())).menulist_getter as *const _ as usize },
-        248usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_state_s),
-            "::",
-            stringify!(menulist_getter)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<ux_state_s>())).menulist_selector as *const _ as usize },
-        252usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ux_state_s),
-            "::",
-            stringify!(menulist_selector)
-        )
-    );
+    pub params: bolos_ux_params_t,
 }
 impl Default for ux_state_s {
     fn default() -> Self {
@@ -8473,10 +3934,7 @@ impl Default for ux_state_s {
     }
 }
 extern "C" {
-    pub static mut G_ux: ux_state_t;
-}
-extern "C" {
-    pub static mut G_ux_params: bolos_ux_params_t;
+    pub static mut ux: ux_state_t;
 }
 extern "C" {
     pub fn io_seproxyhal_setup_ticker(interval_ms: cty::c_uint);
@@ -8521,6 +3979,39 @@ extern "C" {
     ) -> cty::c_uint;
 }
 extern "C" {
+    pub fn ux_menu_display(
+        current_entry: cty::c_uint,
+        menu_entries: *const ux_menu_entry_t,
+        menu_entry_preprocessor: ux_menu_preprocessor_t,
+    );
+}
+extern "C" {
+    pub fn ux_menu_element_preprocessor(element: *const bagl_element_t) -> *const bagl_element_t;
+}
+extern "C" {
+    pub fn ux_menu_elements_button(
+        button_mask: cty::c_uint,
+        button_mask_counter: cty::c_uint,
+    ) -> cty::c_uint;
+}
+extern "C" {
+    pub static mut ux_menu: ux_menu_state_t;
+}
+extern "C" {
+    pub fn ux_turner_display(
+        current_step: cty::c_uint,
+        steps: *const ux_turner_step_t,
+        steps_count: cty::c_uint,
+        button_callback: button_push_callback_t,
+    );
+}
+extern "C" {
+    pub fn ux_turner_ticker(elpased_ms: cty::c_uint);
+}
+extern "C" {
+    pub static mut ux_turner: ux_turner_state_t;
+}
+extern "C" {
     pub static mut C_icon_down_colors: [cty::c_uint; 0usize];
 }
 extern "C" {
@@ -8556,11 +4047,11 @@ extern "C" {
 extern "C" {
     pub static C_icon_up: bagl_icon_details_t;
 }
-// extern "C" {
-//     pub static mut G_io_seproxyhal_spi_buffer: [cty::c_uchar; 128usize];
-// }
 extern "C" {
-    pub fn io_seph_send(buffer: *const cty::c_uchar, length: cty::c_ushort) -> i32;
+    pub static mut G_io_seproxyhal_spi_buffer: [cty::c_uchar; 128usize];
+}
+extern "C" {
+    pub fn io_seph_send(buffer: *const cty::c_uchar, length: cty::c_ushort);
 }
 extern "C" {
     pub fn io_seph_is_status_sent() -> cty::c_uint;
@@ -8601,7 +4092,7 @@ extern "C" {
     pub fn io_seproxyhal_handle_usb_event();
 }
 extern "C" {
-    pub fn io_seproxyhal_handle_usb_ep_xfer_event();
+    pub fn io_seproxyhal_handle_usb_ep_xfer_event(arg1: *mut apdu_buffer_t);
 }
 extern "C" {
     pub fn io_seproxyhal_get_ep_rx_size(epnum: u8) -> u16;
@@ -8663,114 +4154,6 @@ pub struct io_seph_s {
 #[derive(Default, Copy, Clone)]
 pub struct io_seph_s__bindgen_ty_1 {
     pub timeout: cty::c_ushort,
-}
-#[test]
-fn bindgen_test_layout_io_seph_s__bindgen_ty_1() {
-    assert_eq!(
-        ::core::mem::size_of::<io_seph_s__bindgen_ty_1>(),
-        2usize,
-        concat!("Size of: ", stringify!(io_seph_s__bindgen_ty_1))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<io_seph_s__bindgen_ty_1>(),
-        2usize,
-        concat!("Alignment of ", stringify!(io_seph_s__bindgen_ty_1))
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<io_seph_s__bindgen_ty_1>())).timeout as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(io_seph_s__bindgen_ty_1),
-            "::",
-            stringify!(timeout)
-        )
-    );
-}
-#[test]
-fn bindgen_test_layout_io_seph_s() {
-    assert_eq!(
-        ::core::mem::size_of::<io_seph_s>(),
-        32usize,
-        concat!("Size of: ", stringify!(io_seph_s))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<io_seph_s>(),
-        4usize,
-        concat!("Alignment of ", stringify!(io_seph_s))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<io_seph_s>())).apdu_state as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(io_seph_s),
-            "::",
-            stringify!(apdu_state)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<io_seph_s>())).apdu_length as *const _ as usize },
-        2usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(io_seph_s),
-            "::",
-            stringify!(apdu_length)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<io_seph_s>())).io_flags as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(io_seph_s),
-            "::",
-            stringify!(io_flags)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<io_seph_s>())).apdu_media as *const _ as usize },
-        6usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(io_seph_s),
-            "::",
-            stringify!(apdu_media)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<io_seph_s>())).ms as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(io_seph_s),
-            "::",
-            stringify!(ms)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<io_seph_s>())).usb_ep_xfer_len as *const _ as usize },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(io_seph_s),
-            "::",
-            stringify!(usb_ep_xfer_len)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<io_seph_s>())).usb_ep_timeouts as *const _ as usize },
-        18usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(io_seph_s),
-            "::",
-            stringify!(usb_ep_timeouts)
-        )
-    );
 }
 impl Default for io_seph_s {
     fn default() -> Self {
