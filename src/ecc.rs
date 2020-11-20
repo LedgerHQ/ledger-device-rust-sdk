@@ -1,5 +1,4 @@
 use crate::bindings::*;
-use crate::syscalls_bindings::*;
 
 #[repr(u8)]
 pub enum CurvesId {
@@ -46,7 +45,7 @@ pub fn ecdsa_sign(pvkey: &cx_ecfp_private_key_t, mode: i32, hash_id: u8, hash: &
     let len = unsafe {
         cx_ecdsa_sign(  pvkey, 
                         mode,
-                        hash_id as u32,
+                        hash_id,
                         hash.as_ptr(),
                         hash.len() as u32,
                         sig.as_mut_ptr(), 
@@ -67,7 +66,7 @@ hash_id: u8, hash: &[u8]) -> bool {
         cx_ecdsa_verify(
            pubkey as *const cx_ecfp_public_key_t,
            mode,
-           hash_id as u32,
+           hash_id,
            hash.as_ptr(),
            hash.len() as u32,
            sig.as_ptr(),
@@ -179,3 +178,54 @@ pub const fn make_bip32_path<const N: usize>(bytes: &[u8]) -> [u32; N] {
     path
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::assert_eq_err as assert_eq;
+    use crate::TestType;
+    use testmacro::test_item as test;
+
+    const PATH: [u32; 5] = make_bip32_path(b"44'/535348'/0'/0/0");
+
+    #[test]
+    fn ecdsa() {
+        // Test signature bindings with an ECDSA + verification
+        let mut raw_key = [0u8; 32];
+        let message = b"test_message1";
+        let rnd_mode = (CX_RND_RFC6979 | CX_LAST) as i32;
+        let hash = CX_SHA256;
+
+        bip32_derive(CurvesId::Secp256k1, &PATH, &mut raw_key);
+
+        let mut k = ec_init_key(CurvesId::Secp256k1, &raw_key);
+        let (sig, sig_len) = ecdsa_sign(&k, rnd_mode, hash, message)?;
+
+        let pubkey = ec_get_pubkey(CurvesId::Secp256k1, &mut k);
+
+        let verif = ecdsa_verify(&pubkey, &sig[..sig_len as usize], rnd_mode, hash, message);
+
+        assert_eq!(verif , true);
+    }
+
+    #[test]
+    fn deterministic_ecdsa() {
+        // Test signature bindings with a deterministic ECDSA + verification
+
+        let mut raw_key = [0u8; 32];
+        let message = b"test_message";
+        let rnd_mode = (CX_RND_RFC6979 | CX_LAST) as i32;
+        let hash = CX_SHA256;
+
+        bip32_derive(CurvesId::Secp256k1, &PATH, &mut raw_key);
+
+        let mut k = ec_init_key(CurvesId::Secp256k1, &raw_key);
+        let (sig, sig_len) = ecdsa_sign(&k, rnd_mode, hash, message)?;
+
+        let pubkey = ec_get_pubkey(CurvesId::Secp256k1, &mut k);
+        let verif = ecdsa_verify(&pubkey, &sig[..sig_len as usize], rnd_mode, hash, message);
+
+        assert_eq!(verif , true);
+    }
+
+}

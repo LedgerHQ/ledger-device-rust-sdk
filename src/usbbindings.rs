@@ -6,7 +6,6 @@
 
 use crate::bindings::apdu_buffer_t;
 
-pub const IO_USB_MAX_ENDPOINTS: u32 = 6;
 pub const _SAL_VERSION: u32 = 20;
 pub const __SAL_H_VERSION: u32 = 180000000;
 pub const _USE_DECLSPECS_FOR_SAL: u32 = 0;
@@ -314,58 +313,6 @@ pub struct __crt_locale_data_public {
     pub _locale_mb_cur_max: cty::c_int,
     pub _locale_lc_codepage: cty::c_uint,
 }
-#[test]
-fn bindgen_test_layout___crt_locale_data_public() {
-    assert_eq!(
-        ::core::mem::size_of::<__crt_locale_data_public>(),
-        16usize,
-        concat!("Size of: ", stringify!(__crt_locale_data_public))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<__crt_locale_data_public>(),
-        8usize,
-        concat!("Alignment of ", stringify!(__crt_locale_data_public))
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<__crt_locale_data_public>()))._locale_pctype as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(__crt_locale_data_public),
-            "::",
-            stringify!(_locale_pctype)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<__crt_locale_data_public>()))._locale_mb_cur_max as *const _
-                as usize
-        },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(__crt_locale_data_public),
-            "::",
-            stringify!(_locale_mb_cur_max)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<__crt_locale_data_public>()))._locale_lc_codepage as *const _
-                as usize
-        },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(__crt_locale_data_public),
-            "::",
-            stringify!(_locale_lc_codepage)
-        )
-    );
-}
 impl Default for __crt_locale_data_public {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
@@ -376,39 +323,6 @@ impl Default for __crt_locale_data_public {
 pub struct __crt_locale_pointers {
     pub locinfo: *mut __crt_locale_data,
     pub mbcinfo: *mut __crt_multibyte_data,
-}
-#[test]
-fn bindgen_test_layout___crt_locale_pointers() {
-    assert_eq!(
-        ::core::mem::size_of::<__crt_locale_pointers>(),
-        16usize,
-        concat!("Size of: ", stringify!(__crt_locale_pointers))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<__crt_locale_pointers>(),
-        8usize,
-        concat!("Alignment of ", stringify!(__crt_locale_pointers))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<__crt_locale_pointers>())).locinfo as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(__crt_locale_pointers),
-            "::",
-            stringify!(locinfo)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<__crt_locale_pointers>())).mbcinfo as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(__crt_locale_pointers),
-            "::",
-            stringify!(mbcinfo)
-        )
-    );
 }
 impl Default for __crt_locale_pointers {
     fn default() -> Self {
@@ -423,49 +337,6 @@ pub struct _Mbstatet {
     pub _Byte: cty::c_ushort,
     pub _State: cty::c_ushort,
 }
-#[test]
-fn bindgen_test_layout__Mbstatet() {
-    assert_eq!(
-        ::core::mem::size_of::<_Mbstatet>(),
-        8usize,
-        concat!("Size of: ", stringify!(_Mbstatet))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<_Mbstatet>(),
-        4usize,
-        concat!("Alignment of ", stringify!(_Mbstatet))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_Mbstatet>()))._Wchar as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_Mbstatet),
-            "::",
-            stringify!(_Wchar)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_Mbstatet>()))._Byte as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_Mbstatet),
-            "::",
-            stringify!(_Byte)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_Mbstatet>()))._State as *const _ as usize },
-        6usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_Mbstatet),
-            "::",
-            stringify!(_State)
-        )
-    );
-}
 pub type mbstate_t = _Mbstatet;
 pub type time_t = __time64_t;
 pub type rsize_t = size_t;
@@ -473,29 +344,6 @@ pub type rsize_t = size_t;
 #[derive(Copy, Clone)]
 pub struct _iobuf {
     pub _Placeholder: *mut cty::c_void,
-}
-#[test]
-fn bindgen_test_layout__iobuf() {
-    assert_eq!(
-        ::core::mem::size_of::<_iobuf>(),
-        8usize,
-        concat!("Size of: ", stringify!(_iobuf))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<_iobuf>(),
-        8usize,
-        concat!("Alignment of ", stringify!(_iobuf))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_iobuf>()))._Placeholder as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_iobuf),
-            "::",
-            stringify!(_Placeholder)
-        )
-    );
 }
 impl Default for _iobuf {
     fn default() -> Self {
@@ -1752,39 +1600,6 @@ pub struct _div_t {
     pub quot: cty::c_int,
     pub rem: cty::c_int,
 }
-#[test]
-fn bindgen_test_layout__div_t() {
-    assert_eq!(
-        ::core::mem::size_of::<_div_t>(),
-        8usize,
-        concat!("Size of: ", stringify!(_div_t))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<_div_t>(),
-        4usize,
-        concat!("Alignment of ", stringify!(_div_t))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_div_t>())).quot as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_div_t),
-            "::",
-            stringify!(quot)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_div_t>())).rem as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_div_t),
-            "::",
-            stringify!(rem)
-        )
-    );
-}
 pub type div_t = _div_t;
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
@@ -1792,78 +1607,12 @@ pub struct _ldiv_t {
     pub quot: cty::c_long,
     pub rem: cty::c_long,
 }
-#[test]
-fn bindgen_test_layout__ldiv_t() {
-    assert_eq!(
-        ::core::mem::size_of::<_ldiv_t>(),
-        8usize,
-        concat!("Size of: ", stringify!(_ldiv_t))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<_ldiv_t>(),
-        4usize,
-        concat!("Alignment of ", stringify!(_ldiv_t))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_ldiv_t>())).quot as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_ldiv_t),
-            "::",
-            stringify!(quot)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_ldiv_t>())).rem as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_ldiv_t),
-            "::",
-            stringify!(rem)
-        )
-    );
-}
 pub type ldiv_t = _ldiv_t;
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct _lldiv_t {
     pub quot: cty::c_longlong,
     pub rem: cty::c_longlong,
-}
-#[test]
-fn bindgen_test_layout__lldiv_t() {
-    assert_eq!(
-        ::core::mem::size_of::<_lldiv_t>(),
-        16usize,
-        concat!("Size of: ", stringify!(_lldiv_t))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<_lldiv_t>(),
-        8usize,
-        concat!("Alignment of ", stringify!(_lldiv_t))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_lldiv_t>())).quot as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_lldiv_t),
-            "::",
-            stringify!(quot)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_lldiv_t>())).rem as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_lldiv_t),
-            "::",
-            stringify!(rem)
-        )
-    );
 }
 pub type lldiv_t = _lldiv_t;
 extern "C" {
@@ -1925,140 +1674,25 @@ extern "C" {
 pub struct _LDOUBLE {
     pub ld: [cty::c_uchar; 10usize],
 }
-#[test]
-fn bindgen_test_layout__LDOUBLE() {
-    assert_eq!(
-        ::core::mem::size_of::<_LDOUBLE>(),
-        10usize,
-        concat!("Size of: ", stringify!(_LDOUBLE))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<_LDOUBLE>(),
-        1usize,
-        concat!("Alignment of ", stringify!(_LDOUBLE))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_LDOUBLE>())).ld as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_LDOUBLE),
-            "::",
-            stringify!(ld)
-        )
-    );
-}
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct _CRT_DOUBLE {
     pub x: f64,
-}
-#[test]
-fn bindgen_test_layout__CRT_DOUBLE() {
-    assert_eq!(
-        ::core::mem::size_of::<_CRT_DOUBLE>(),
-        8usize,
-        concat!("Size of: ", stringify!(_CRT_DOUBLE))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<_CRT_DOUBLE>(),
-        8usize,
-        concat!("Alignment of ", stringify!(_CRT_DOUBLE))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_CRT_DOUBLE>())).x as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_CRT_DOUBLE),
-            "::",
-            stringify!(x)
-        )
-    );
 }
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct _CRT_FLOAT {
     pub f: f32,
 }
-#[test]
-fn bindgen_test_layout__CRT_FLOAT() {
-    assert_eq!(
-        ::core::mem::size_of::<_CRT_FLOAT>(),
-        4usize,
-        concat!("Size of: ", stringify!(_CRT_FLOAT))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<_CRT_FLOAT>(),
-        4usize,
-        concat!("Alignment of ", stringify!(_CRT_FLOAT))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_CRT_FLOAT>())).f as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_CRT_FLOAT),
-            "::",
-            stringify!(f)
-        )
-    );
-}
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct _LONGDOUBLE {
     pub x: f64,
 }
-#[test]
-fn bindgen_test_layout__LONGDOUBLE() {
-    assert_eq!(
-        ::core::mem::size_of::<_LONGDOUBLE>(),
-        8usize,
-        concat!("Size of: ", stringify!(_LONGDOUBLE))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<_LONGDOUBLE>(),
-        8usize,
-        concat!("Alignment of ", stringify!(_LONGDOUBLE))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_LONGDOUBLE>())).x as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_LONGDOUBLE),
-            "::",
-            stringify!(x)
-        )
-    );
-}
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct _LDBL12 {
     pub ld12: [cty::c_uchar; 12usize],
-}
-#[test]
-fn bindgen_test_layout__LDBL12() {
-    assert_eq!(
-        ::core::mem::size_of::<_LDBL12>(),
-        12usize,
-        concat!("Size of: ", stringify!(_LDBL12))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<_LDBL12>(),
-        1usize,
-        concat!("Alignment of ", stringify!(_LDBL12))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_LDBL12>())).ld12 as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_LDBL12),
-            "::",
-            stringify!(ld12)
-        )
-    );
 }
 extern "C" {
     pub fn atof(_String: *const cty::c_char) -> f64;
@@ -3354,69 +2988,6 @@ pub struct usb_setup_req {
     pub wIndex: u16,
     pub wLength: u16,
 }
-#[test]
-fn bindgen_test_layout_usb_setup_req() {
-    assert_eq!(
-        ::core::mem::size_of::<usb_setup_req>(),
-        8usize,
-        concat!("Size of: ", stringify!(usb_setup_req))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<usb_setup_req>(),
-        2usize,
-        concat!("Alignment of ", stringify!(usb_setup_req))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<usb_setup_req>())).bmRequest as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(usb_setup_req),
-            "::",
-            stringify!(bmRequest)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<usb_setup_req>())).bRequest as *const _ as usize },
-        1usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(usb_setup_req),
-            "::",
-            stringify!(bRequest)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<usb_setup_req>())).wValue as *const _ as usize },
-        2usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(usb_setup_req),
-            "::",
-            stringify!(wValue)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<usb_setup_req>())).wIndex as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(usb_setup_req),
-            "::",
-            stringify!(wIndex)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<usb_setup_req>())).wLength as *const _ as usize },
-        6usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(usb_setup_req),
-            "::",
-            stringify!(wLength)
-        )
-    );
-}
 pub type USBD_SetupReqTypedef = usb_setup_req;
 pub type Init_t =
     ::core::option::Option<unsafe extern "C" fn(pdev: *mut _USBD_HandleTypeDef, cfgidx: u8) -> u8>;
@@ -3470,169 +3041,6 @@ pub struct _Device_cb {
     pub GetOtherSpeedConfigDescriptor: GetOtherSpeedConfigDescriptor_t,
     pub GetDeviceQualifierDescriptor: GetDeviceQualifierDescriptor_t,
 }
-#[test]
-fn bindgen_test_layout__Device_cb() {
-    assert_eq!(
-        ::core::mem::size_of::<_Device_cb>(),
-        112usize,
-        concat!("Size of: ", stringify!(_Device_cb))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<_Device_cb>(),
-        8usize,
-        concat!("Alignment of ", stringify!(_Device_cb))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_Device_cb>())).Init as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_Device_cb),
-            "::",
-            stringify!(Init)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_Device_cb>())).DeInit as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_Device_cb),
-            "::",
-            stringify!(DeInit)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_Device_cb>())).Setup as *const _ as usize },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_Device_cb),
-            "::",
-            stringify!(Setup)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_Device_cb>())).EP0_TxSent as *const _ as usize },
-        24usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_Device_cb),
-            "::",
-            stringify!(EP0_TxSent)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_Device_cb>())).EP0_RxReady as *const _ as usize },
-        32usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_Device_cb),
-            "::",
-            stringify!(EP0_RxReady)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_Device_cb>())).DataIn as *const _ as usize },
-        40usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_Device_cb),
-            "::",
-            stringify!(DataIn)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_Device_cb>())).DataOut as *const _ as usize },
-        48usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_Device_cb),
-            "::",
-            stringify!(DataOut)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_Device_cb>())).SOF as *const _ as usize },
-        56usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_Device_cb),
-            "::",
-            stringify!(SOF)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_Device_cb>())).IsoINIncomplete as *const _ as usize },
-        64usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_Device_cb),
-            "::",
-            stringify!(IsoINIncomplete)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_Device_cb>())).IsoOUTIncomplete as *const _ as usize },
-        72usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_Device_cb),
-            "::",
-            stringify!(IsoOUTIncomplete)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<_Device_cb>())).GetHSConfigDescriptor as *const _ as usize
-        },
-        80usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_Device_cb),
-            "::",
-            stringify!(GetHSConfigDescriptor)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<_Device_cb>())).GetFSConfigDescriptor as *const _ as usize
-        },
-        88usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_Device_cb),
-            "::",
-            stringify!(GetFSConfigDescriptor)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<_Device_cb>())).GetOtherSpeedConfigDescriptor as *const _
-                as usize
-        },
-        96usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_Device_cb),
-            "::",
-            stringify!(GetOtherSpeedConfigDescriptor)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<_Device_cb>())).GetDeviceQualifierDescriptor as *const _
-                as usize
-        },
-        104usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_Device_cb),
-            "::",
-            stringify!(GetDeviceQualifierDescriptor)
-        )
-    );
-}
 pub type USBD_ClassTypeDef = _Device_cb;
 pub const USBD_SPEED_HIGH: USBD_SpeedTypeDef = 0;
 pub const USBD_SPEED_FULL: USBD_SpeedTypeDef = 1;
@@ -3678,123 +3086,6 @@ pub struct USBD_DescriptorsTypeDef {
     pub GetInterfaceStrDescriptor: GetInterfaceStrDescriptor_t,
     pub GetBOSDescriptor: GetBOSDescriptor_t,
 }
-#[test]
-fn bindgen_test_layout_USBD_DescriptorsTypeDef() {
-    assert_eq!(
-        ::core::mem::size_of::<USBD_DescriptorsTypeDef>(),
-        64usize,
-        concat!("Size of: ", stringify!(USBD_DescriptorsTypeDef))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<USBD_DescriptorsTypeDef>(),
-        8usize,
-        concat!("Alignment of ", stringify!(USBD_DescriptorsTypeDef))
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<USBD_DescriptorsTypeDef>())).GetDeviceDescriptor as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(USBD_DescriptorsTypeDef),
-            "::",
-            stringify!(GetDeviceDescriptor)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<USBD_DescriptorsTypeDef>())).GetLangIDStrDescriptor as *const _
-                as usize
-        },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(USBD_DescriptorsTypeDef),
-            "::",
-            stringify!(GetLangIDStrDescriptor)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<USBD_DescriptorsTypeDef>())).GetManufacturerStrDescriptor
-                as *const _ as usize
-        },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(USBD_DescriptorsTypeDef),
-            "::",
-            stringify!(GetManufacturerStrDescriptor)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<USBD_DescriptorsTypeDef>())).GetProductStrDescriptor as *const _
-                as usize
-        },
-        24usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(USBD_DescriptorsTypeDef),
-            "::",
-            stringify!(GetProductStrDescriptor)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<USBD_DescriptorsTypeDef>())).GetSerialStrDescriptor as *const _
-                as usize
-        },
-        32usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(USBD_DescriptorsTypeDef),
-            "::",
-            stringify!(GetSerialStrDescriptor)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<USBD_DescriptorsTypeDef>())).GetConfigurationStrDescriptor
-                as *const _ as usize
-        },
-        40usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(USBD_DescriptorsTypeDef),
-            "::",
-            stringify!(GetConfigurationStrDescriptor)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<USBD_DescriptorsTypeDef>())).GetInterfaceStrDescriptor
-                as *const _ as usize
-        },
-        48usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(USBD_DescriptorsTypeDef),
-            "::",
-            stringify!(GetInterfaceStrDescriptor)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<USBD_DescriptorsTypeDef>())).GetBOSDescriptor as *const _
-                as usize
-        },
-        56usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(USBD_DescriptorsTypeDef),
-            "::",
-            stringify!(GetBOSDescriptor)
-        )
-    );
-}
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct USBD_EndpointTypeDef {
@@ -3802,63 +3093,6 @@ pub struct USBD_EndpointTypeDef {
     pub total_length: u32,
     pub rem_length: u32,
     pub maxpacket: u32,
-}
-#[test]
-fn bindgen_test_layout_USBD_EndpointTypeDef() {
-    assert_eq!(
-        ::core::mem::size_of::<USBD_EndpointTypeDef>(),
-        16usize,
-        concat!("Size of: ", stringify!(USBD_EndpointTypeDef))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<USBD_EndpointTypeDef>(),
-        4usize,
-        concat!("Alignment of ", stringify!(USBD_EndpointTypeDef))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<USBD_EndpointTypeDef>())).status as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(USBD_EndpointTypeDef),
-            "::",
-            stringify!(status)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<USBD_EndpointTypeDef>())).total_length as *const _ as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(USBD_EndpointTypeDef),
-            "::",
-            stringify!(total_length)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<USBD_EndpointTypeDef>())).rem_length as *const _ as usize
-        },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(USBD_EndpointTypeDef),
-            "::",
-            stringify!(rem_length)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<USBD_EndpointTypeDef>())).maxpacket as *const _ as usize },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(USBD_EndpointTypeDef),
-            "::",
-            stringify!(maxpacket)
-        )
-    );
 }
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -3890,284 +3124,10 @@ pub struct _USBD_HandleTypeDef__bindgen_ty_1 {
     pub pClass: *mut USBD_ClassTypeDef,
     pub pClassData: *mut cty::c_void,
 }
-#[test]
-fn bindgen_test_layout__USBD_HandleTypeDef__bindgen_ty_1() {
-    assert_eq!(
-        ::core::mem::size_of::<_USBD_HandleTypeDef__bindgen_ty_1>(),
-        16usize,
-        concat!("Size of: ", stringify!(_USBD_HandleTypeDef__bindgen_ty_1))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<_USBD_HandleTypeDef__bindgen_ty_1>(),
-        8usize,
-        concat!(
-            "Alignment of ",
-            stringify!(_USBD_HandleTypeDef__bindgen_ty_1)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<_USBD_HandleTypeDef__bindgen_ty_1>())).pClass as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_USBD_HandleTypeDef__bindgen_ty_1),
-            "::",
-            stringify!(pClass)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<_USBD_HandleTypeDef__bindgen_ty_1>())).pClassData as *const _
-                as usize
-        },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_USBD_HandleTypeDef__bindgen_ty_1),
-            "::",
-            stringify!(pClassData)
-        )
-    );
-}
 impl Default for _USBD_HandleTypeDef__bindgen_ty_1 {
     fn default() -> Self {
         unsafe { ::core::mem::zeroed() }
     }
-}
-#[test]
-fn bindgen_test_layout__USBD_HandleTypeDef() {
-    assert_eq!(
-        ::core::mem::size_of::<_USBD_HandleTypeDef>(),
-        312usize,
-        concat!("Size of: ", stringify!(_USBD_HandleTypeDef))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<_USBD_HandleTypeDef>(),
-        8usize,
-        concat!("Alignment of ", stringify!(_USBD_HandleTypeDef))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_USBD_HandleTypeDef>())).id as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_USBD_HandleTypeDef),
-            "::",
-            stringify!(id)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_USBD_HandleTypeDef>())).dev_config as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_USBD_HandleTypeDef),
-            "::",
-            stringify!(dev_config)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<_USBD_HandleTypeDef>())).dev_default_config as *const _ as usize
-        },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_USBD_HandleTypeDef),
-            "::",
-            stringify!(dev_default_config)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<_USBD_HandleTypeDef>())).dev_config_status as *const _ as usize
-        },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_USBD_HandleTypeDef),
-            "::",
-            stringify!(dev_config_status)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_USBD_HandleTypeDef>())).dev_speed as *const _ as usize },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_USBD_HandleTypeDef),
-            "::",
-            stringify!(dev_speed)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_USBD_HandleTypeDef>())).ep_in as *const _ as usize },
-        20usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_USBD_HandleTypeDef),
-            "::",
-            stringify!(ep_in)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_USBD_HandleTypeDef>())).ep_out as *const _ as usize },
-        116usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_USBD_HandleTypeDef),
-            "::",
-            stringify!(ep_out)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_USBD_HandleTypeDef>())).ep0_state as *const _ as usize },
-        212usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_USBD_HandleTypeDef),
-            "::",
-            stringify!(ep0_state)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<_USBD_HandleTypeDef>())).ep0_data_len as *const _ as usize
-        },
-        216usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_USBD_HandleTypeDef),
-            "::",
-            stringify!(ep0_data_len)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_USBD_HandleTypeDef>())).dev_state as *const _ as usize },
-        220usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_USBD_HandleTypeDef),
-            "::",
-            stringify!(dev_state)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<_USBD_HandleTypeDef>())).dev_old_state as *const _ as usize
-        },
-        221usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_USBD_HandleTypeDef),
-            "::",
-            stringify!(dev_old_state)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<_USBD_HandleTypeDef>())).dev_address as *const _ as usize
-        },
-        222usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_USBD_HandleTypeDef),
-            "::",
-            stringify!(dev_address)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<_USBD_HandleTypeDef>())).dev_connection_status as *const _
-                as usize
-        },
-        223usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_USBD_HandleTypeDef),
-            "::",
-            stringify!(dev_connection_status)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<_USBD_HandleTypeDef>())).dev_test_mode as *const _ as usize
-        },
-        224usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_USBD_HandleTypeDef),
-            "::",
-            stringify!(dev_test_mode)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<_USBD_HandleTypeDef>())).dev_remote_wakeup as *const _ as usize
-        },
-        228usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_USBD_HandleTypeDef),
-            "::",
-            stringify!(dev_remote_wakeup)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_USBD_HandleTypeDef>())).request as *const _ as usize },
-        232usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_USBD_HandleTypeDef),
-            "::",
-            stringify!(request)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_USBD_HandleTypeDef>())).pDesc as *const _ as usize },
-        240usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_USBD_HandleTypeDef),
-            "::",
-            stringify!(pDesc)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<_USBD_HandleTypeDef>())).interfacesClass as *const _ as usize
-        },
-        248usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_USBD_HandleTypeDef),
-            "::",
-            stringify!(interfacesClass)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_USBD_HandleTypeDef>())).pUserData as *const _ as usize },
-        296usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_USBD_HandleTypeDef),
-            "::",
-            stringify!(pUserData)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<_USBD_HandleTypeDef>())).pData as *const _ as usize },
-        304usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_USBD_HandleTypeDef),
-            "::",
-            stringify!(pData)
-        )
-    );
 }
 impl Default for _USBD_HandleTypeDef {
     fn default() -> Self {
