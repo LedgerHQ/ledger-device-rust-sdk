@@ -78,46 +78,103 @@ hash_id: u8, hash: &[u8]) -> bool {
 /// Creates at compile time an array from the ASCII values of a correctly
 /// formatted derivation path.
 ///
-/// Format expected: `b"44'/coin_type'/account'/change/address"`.
+/// Format expected: `b"m/44'/coin_type'/account'/change/address"`.
+///
+/// Warning: when calling this method, be sure the result is stored in a static
+/// or const variable, to be sure evaluation is performed during compilation.
+///
+/// # Examples
+///
+/// ```
+/// const path: [u32; 5] = make_bip32_path(b"m/44'/535348'/0'/0/0");
+/// ```
 ///
 /// # Panics
 ///
 /// Panics if the parameter does not follow the correct format.
-pub const fn make_bip32_path(bytes: &[u8]) -> [u32;5] {
-    // The three first elements must start with `0x800000`.
-    let mut path = [0x80000000, 0x80000000, 0x80000000, 0, 0];
-    let mut i = 0;
-    let mut j = 0;
-    let mut acc = 0u32;
-
-    // We are looking for 5 numbers, separated by `/`.
-    // Those numbers are represented in ASCII bytes (e.g `[49, 48, 51]`
-    // represents the number `103`).
-    // We are going to parse the string once, summing the bytes when we
-    // encounter them to create a number and resetting our counter everytime
-    // we get to a separator (i.e. a byte that does not represent an ASCII
-    // number).
-    while j < path.len() {
-        // Check if this byte represents a number in ASCII.
-        while i < bytes.len() && bytes[i].is_ascii_digit() {
-            // It does: add it to the accumulator (taking care to substract
-            // the ASCII value of 0).
-            acc = acc * 10 + bytes[i] as u32 - b'0' as u32;
-            i += 1;
-        }
-        // We've effectively parsed a number: add it to `path`.
-        path[j] += acc;
-        // Reset the accumulator.
-        acc = 0;
-        // Keep going until we either:
-        // 1. Find a new number.
-        // 2. Reach the end of the bytes.
-        while i < bytes.len() && !bytes[i].is_ascii_digit() {
-            i += 1;
-        }
-        // Repeat that for the next element in `path`.
-        j += 1;
+pub const fn make_bip32_path<const N: usize>(bytes: &[u8]) -> [u32; N] {
+    // Describes current parser state
+    #[derive(Copy, Clone)]
+    enum BIP32ParserState {
+        FirstDigit,
+        Digit,
+        Hardened,
     }
+
+    let mut path = [0u32; N];
+
+    // Verify path starts with "m/"
+    if (bytes[0] != b'm') || (bytes[1] != b'/') {
+        panic!("path must start with \"m/\"")
+    }
+
+    // Iterate over all characters (skipping m/ header)
+    let mut i = 2; // parsed character index
+    let mut j = 0; // constructed path number index
+    let mut acc = 0; // constructed path number
+    let mut state = BIP32ParserState::FirstDigit;
+
+    while i < bytes.len() {
+        let c = bytes[i];
+        match state {
+            // We are expecting a digit, after a /
+            // This prevent having empty numbers, like //
+            BIP32ParserState::FirstDigit => {
+                match c {
+                    b'0'..=b'9' => {
+                        acc = (c - b'0') as u32;
+                        path[j] = acc;
+                        state = BIP32ParserState::Digit
+                    },
+                    _ => panic!("expected digit after '/'")
+                }
+            },
+            // We are parsing digits for the current path token. We may also
+            // find ' for hardening, or /.
+            BIP32ParserState::Digit => {
+                match c {
+                    b'0'..=b'9' => {
+                        acc = acc * 10 + (c - b'0') as u32;
+                        path[j] = acc;
+                    },
+                    // Hardening
+                    b'\'' => {
+                        path[j] = acc + 0x800000;
+                        j += 1;
+                        state = BIP32ParserState::Hardened
+                    },
+                    // Separator for next number
+                    b'/' => {
+                        path[j] = acc;
+                        j += 1;
+                        state = BIP32ParserState::FirstDigit
+                    },
+                    _ => panic!("unexpected character in path")
+                }
+            },
+            // Previous number has hardening. Next character must be a /
+            // separator.
+            BIP32ParserState::Hardened => {
+                match c {
+                    b'/' => state = BIP32ParserState::FirstDigit,
+                    _ => panic!("expected '/' character after hardening")
+                }
+            },
+        }
+        i += 1;
+    }
+
+    // Prevent last character from being /
+    match state {
+        BIP32ParserState::FirstDigit => panic!("missing number in path"),
+        _ => {}
+    }
+
+    // Assert we parsed the exact expected number of tokens in the path
+    if j != N-1 {
+        panic!("path is too short");
+    }
+
     path
 }
 

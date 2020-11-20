@@ -6,6 +6,7 @@
 #![feature(min_const_generics)]
 #![feature(const_fn)]
 #![feature(asm)]
+#![feature(const_panic)]
 
 pub mod bindings;
 pub mod buttons;
