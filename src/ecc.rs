@@ -228,4 +228,23 @@ mod tests {
         assert_eq!(verif , true);
     }
 
+    #[test]
+    fn test_make_bip32_path() {
+        {
+            const P: [u32; 1] = make_bip32_path(b"m/1234");
+            assert_eq!(P, [1234u32]);
+        }
+        {
+            const P: [u32; 2] = make_bip32_path(b"m/1234/5678");
+            assert_eq!(P, [1234u32, 5678u32]);
+        }
+        {
+            const P: [u32; 3] = make_bip32_path(b"m/1234/5678/91011");
+            assert_eq!(P, [1234u32, 5678u32, 91011u32]);
+        }
+        {
+            const P: [u32; 4] = make_bip32_path(b"m/1234/5678'/91011/0");
+            assert_eq!(P, [1234u32, 5678u32+0x800000u32, 91011u32, 0u32]);
+        }
+    }
 }
