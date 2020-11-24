@@ -186,7 +186,7 @@ mod tests {
     use crate::TestType;
     use testmacro::test_item as test;
 
-    const PATH: [u32; 5] = make_bip32_path(b"44'/535348'/0'/0/0");
+    const PATH: [u32; 5] = make_bip32_path(b"m/44'/535348'/0'/0/0");
 
     #[test]
     fn ecdsa() {
