@@ -17,7 +17,7 @@ All issues and PRs are welcome !
 
 ## Usage
 
-BUilding requires adding a toolchain to your Rust installation, and both Clang and arm-none-eabi-gcc.
+Building requires adding a toolchain to your Rust installation, and both Clang and arm-none-eabi-gcc.
 
 Using rustc nightly builds is recommanded as some unstable features are
 required.
