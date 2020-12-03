@@ -2,6 +2,7 @@ use crate::bindings::*;
 use crate::seph;
 use crate::buttons::{ButtonEvent, ButtonsState, get_button_event};
 use core::ops::{Index, IndexMut};
+use core::convert::TryFrom;
 use crate::bindings::G_io_app;
 
 #[derive(Copy, Clone)]
@@ -24,9 +25,9 @@ extern "C" {
 }
 
 /// Possible events returned by [`Comm::next_event`]
-pub enum Event {
+pub enum Event<T> {
     /// APDU event
-    Command(u8),
+    Command(T),
     /// Button press or release event
     Button(ButtonEvent)
 }
@@ -81,7 +82,17 @@ impl Comm {
 
     /// Wait and return next button press event or APDU command.
     ///
+    /// `T` can be an integer (usually automatically infered), which matches the
+    /// Instruction byte of the APDU. In a more complex form, `T` can be any
+    /// type which implements `TryFrom<u8>`. In particular, it is recommended to
+    /// use an enumeration to enforce the compiler checking all possible
+    /// commands are handled. Also, this method will automatically respond with
+    /// an error status word if the Instruction byte is invalid (i.e. `try_from`
+    /// failed).
+    ///
     /// # Examples
+    ///
+    /// Simple use case with `T` infered as an `i32`:
     ///
     /// ```
     /// loop {
@@ -89,11 +100,47 @@ impl Comm {
     ///         Event::Button(button) => { ... }
     ///         Event::Command(0xa4) => { ... }
     ///         Event::Command(0xb0) => { ... }
-    ///         _ => { ... }
+    ///         _ => { comm.reply(StatusWords::BadCLA) }
     ///     }
     /// }
     /// ```
-    pub fn next_event(&mut self) -> Event {
+    ///
+    /// More complex example with an enumeration:
+    ///
+    /// ```
+    /// enum Instruction {
+    ///     Select,
+    ///     ReadBinary
+    /// }
+    ///
+    /// impl TryFrom<u8> for Instruction {
+    ///     type Error = ();
+    ///
+    ///     fn try_from(v: u8) -> Result<Self, Self::Error> {
+    ///         match v {
+    ///             0xa4 => Ok(Self::Select),
+    ///             0xb0 => Ok(Self::ReadBinary)
+    ///             _ => Err(())
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// Which can be used as the following:
+    ///
+    /// ```
+    /// loop {
+    ///     match comm.next_event() {
+    ///         Event::Button(button) => { ... }
+    ///         Event::Command(Instruction::Select) => { ... }
+    ///         Event::Command(Instruction::ReadBinary) => { ... }
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// In this later example, invalid instruction byte error handling is
+    /// automatically performed by the `next_event` method itself.
+    pub fn next_event<T: TryFrom<u8>>(&mut self) -> Event<T> {
         let mut spi_buffer = [0u8; 128];
 
         unsafe { 
@@ -156,7 +203,16 @@ impl Comm {
 
             if unsafe{G_io_app.apdu_state } != APDU_IDLE && unsafe {G_io_app.apdu_length } > 0 {
                 self.rx = unsafe {G_io_app.apdu_length as usize };
-                return Event::Command(self.apdu_buffer[1])
+                let res = T::try_from(self.apdu_buffer[1]);
+                match res {
+                    Ok(ins) => { return Event::Command(ins); }
+                    Err(_) => {
+                        // Invalid Ins code. Send automatically an error, mask
+                        // the bad instruction to the application and just
+                        // discard this event.
+                        self.reply(StatusWords::BadCLA);
+                    }
+                }
             }
         }
     }
@@ -164,7 +220,13 @@ impl Comm {
     /// Wait for the next Command event. Returns the APDU Instruction byte value
     /// for easy instruction matching. Discards received button events.
     ///
+    /// Like `next_event`, `T` can be an integer, an enumeration, or any type
+    /// which implements `TryFrom<u8>`.
+    ///
     /// # Examples
+    ///
+    /// Simple use case with `T` infered as an `i32`:
+    ///
     /// ```
     /// loop {
     ///     match comm.next_command() {
@@ -174,7 +236,21 @@ impl Comm {
     ///     }
     /// }
     /// ```
-    pub fn next_command(&mut self) -> u8 {
+    ///
+    /// Other example with an enumeration:
+    ///
+    /// ```
+    /// loop {
+    ///     match comm.next_command() {
+    ///         Instruction::Select => { ... }
+    ///         Instruction::ReadBinary => { ... }
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// In this later example, invalid instruction byte error handling is
+    /// automatically performed by the `next_command` method itself.
+    pub fn next_command<T: TryFrom<u8>>(&mut self) -> T {
         loop {
             if let Event::Command(ins) = self.next_event() { return ins }
         }
