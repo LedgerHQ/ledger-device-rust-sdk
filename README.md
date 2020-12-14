@@ -18,6 +18,7 @@ All issues and PRs are welcome !
 ## Usage
 
 Building requires adding a toolchain to your Rust installation, and both Clang and arm-none-eabi-gcc.
+On Ubuntu, `gcc-multilib` might also be required.
 
 Using rustc nightly builds is recommanded as some unstable features are
 required.
