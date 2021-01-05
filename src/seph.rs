@@ -3,18 +3,6 @@ use crate::usbbindings::*;
 
 use crate::bindings::G_io_app;
 
-// #[no_mangle]
-// #[link_section = ".bss"]
-// pub static mut G_io_app: io_seph_app_t = io_seph_app_t {
-//     apdu_state: 0, // io_apdu_state_e,
-//     apdu_length: 0, //cty::c_ushort,
-//     io_flags: 0, //cty::c_ushort,
-//     apdu_media: 0, //io_apdu_media_t,
-//     ms: 0, // cty::c_uint,
-//     usb_ep_xfer_len: [0u8; 6], //[cty::c_uchar; 6usize],
-//     usb_ep_timeouts: [io_seph_s__bindgen_ty_1 { timeout: 0}; 6usize],
-// };
-
 #[repr(u8)]
 pub enum SephTags {
   ScreenDisplayStatus = SEPROXYHAL_TAG_SCREEN_DISPLAY_STATUS as u8,
@@ -56,7 +44,6 @@ impl From<u8> for SephTags {
 
 impl From<u8> for Events {
     fn from(v: u8) -> Events {
-        // crate::debug_write(core::str::from_utf8(&crate::to_hex(&v.to_be_bytes()).unwrap()).unwrap());
         match v as u32 {
             SEPROXYHAL_TAG_USB_EP_XFER_EVENT => Events::USBXFEREvent,
             SEPROXYHAL_TAG_USB_EVENT => Events::USBEvent,
@@ -236,3 +223,16 @@ pub fn handle_event(mut apdu_buffer: &mut [u8], spi_buffer: &[u8]) {
         _ => (),
     }
 }
+
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use crate::assert_eq_err as assert_eq;
+//     use crate::TestType;
+//     use testmacro::test_item as test;
+
+//     #[test]
+//     fn seph_exchange() {
+
+//     }
+// }
