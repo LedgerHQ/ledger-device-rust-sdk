@@ -1166,7 +1166,7 @@ SYSCALL PERMISSION(APPLICATION_FLAG_BOLOS_UX) void os_perso_finalize(void);
 SYSCALL bolos_bool_t os_perso_isonboarded(void);
 
 // derive the seed for the requested BIP32 path
-SYSCALL void os_perso_derive_node_bip32(
+SYSCALL int os_perso_derive_node_bip32(
     cx_curve_t curve,
     const unsigned int *path PLENGTH(4 * (pathLength & 0x0FFFFFFFu)),
     unsigned int pathLength, unsigned char *privateKey PLENGTH(64),

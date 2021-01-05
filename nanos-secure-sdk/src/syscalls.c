@@ -963,7 +963,7 @@ bolos_bool_t os_perso_isonboarded ( void )
   return (bolos_bool_t)(((volatile unsigned int*)parameters)[1]);
 }
 
-void os_perso_derive_node_bip32 ( cx_curve_t curve, const unsigned int * path, unsigned int pathLength, unsigned char * privateKey, unsigned char * chain ) 
+int os_perso_derive_node_bip32 ( cx_curve_t curve, const unsigned int * path, unsigned int pathLength, unsigned char * privateKey, unsigned char * chain ) 
 {
   volatile unsigned int parameters [2+5];
   parameters[0] = (unsigned int)curve;
@@ -971,7 +971,7 @@ void os_perso_derive_node_bip32 ( cx_curve_t curve, const unsigned int * path, u
   parameters[2] = (unsigned int)pathLength;
   parameters[3] = (unsigned int)privateKey;
   parameters[4] = (unsigned int)chain;
-  SVC_Call(SYSCALL_os_perso_derive_node_bip32_ID_IN, parameters);
+  return SVC_Call(SYSCALL_os_perso_derive_node_bip32_ID_IN, parameters);
 }
 
 int os_perso_derive_node_with_seed_key ( unsigned int mode, cx_curve_t curve, const unsigned int * path, unsigned int pathLength, unsigned char * privateKey, unsigned char * chain, unsigned char * seed_key, unsigned int seed_key_length )

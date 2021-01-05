@@ -2917,7 +2917,7 @@ extern "C" {
         pathLength: cty::c_uint,
         privateKey: *mut cty::c_uchar,
         chain: *mut cty::c_uchar,
-    );
+    ) -> cty::c_int;
 }
 extern "C" {
     pub fn os_perso_derive_node_with_seed_key(

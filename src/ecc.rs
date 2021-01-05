@@ -7,7 +7,7 @@ pub enum CurvesId {
 
 /// Wrapper for 'os_perso_derive_node_bip32'
 pub fn bip32_derive(curve: CurvesId, path: &[u32], key: &mut [u8]) {
-    unsafe { os_perso_derive_node_bip32( curve as u8,
+    let _err = unsafe { os_perso_derive_node_bip32( curve as u8,
                                      path.as_ptr(), 
                                      path.len() as u32,
                                      key.as_mut_ptr(),
@@ -139,7 +139,7 @@ pub const fn make_bip32_path<const N: usize>(bytes: &[u8]) -> [u32; N] {
                     },
                     // Hardening
                     b'\'' => {
-                        path[j] = acc + 0x800000;
+                        path[j] = acc + 0x80000000;
                         j += 1;
                         state = BIP32ParserState::Hardened
                     },
@@ -244,7 +244,7 @@ mod tests {
         }
         {
             const P: [u32; 4] = make_bip32_path(b"m/1234/5678'/91011/0");
-            assert_eq!(P, [1234u32, 5678u32+0x800000u32, 91011u32, 0u32]);
+            assert_eq!(P, [1234u32, 5678u32+0x80000000u32, 91011u32, 0u32]);
         }
     }
 }
