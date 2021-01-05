@@ -20,3 +20,6 @@ panic = "abort"
 panic = "abort"
 opt-level = 's' 
 lto = true
+
+[features]
+speculos = []

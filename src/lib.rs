@@ -45,7 +45,7 @@ macro_rules! set_panic {
  
 /// Debug 'print' function that uses ARM semihosting
 /// Prints only strings with no formatting
-#[cfg(test)]
+#[cfg(feature = "speculos")]
 pub fn debug_print(s: &str) {
     let p = s.as_bytes().as_ptr();
     for i in 0..s.len() {
@@ -61,7 +61,7 @@ pub fn debug_print(s: &str) {
 }
 
 /// Custom type used to implement tests
-#[cfg(test)]
+#[cfg(feature = "speculos")]
 pub struct TestType {
     pub modname: &'static str,
     pub name: &'static str,
@@ -70,7 +70,7 @@ pub struct TestType {
 
 /// Custom test runner that uses non-formatting print functions
 /// using semihosting. Only reports 'Ok' or 'fail'.
-#[cfg(test)]
+#[cfg(feature = "speculos")]
 pub fn sdk_test_runner(tests: &[&TestType]) {
     debug_print("--- Tests ---\n");
     for test_ in tests {
@@ -106,14 +106,14 @@ pub fn sdk_test_runner(tests: &[&TestType]) {
 /// This variant of `assert_eq!()` returns an error 
 /// `Err(())` instead of panicking, to prevent tests
 /// from exiting on first failure
-#[cfg(test)]
+#[cfg(feature = "speculos")]
 #[macro_export]
 macro_rules! assert_eq_err {
     ($left:expr, $right:expr) => {{
         match (&$left, &$right) {
             (left_val, right_val) => {
                 if !(*left_val == *right_val) {
-                    crate::debug_print("assertion failed: `(left == right)`\n");
+                    $crate::debug_print("assertion failed: `(left == right)`\n");
                     return Err(());
                 }
             }
