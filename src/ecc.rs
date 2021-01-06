@@ -1,4 +1,5 @@
 use crate::bindings::*;
+use crate::io::Exception;
 
 #[repr(u8)]
 pub enum CurvesId {
@@ -6,35 +7,51 @@ pub enum CurvesId {
 }
 
 /// Wrapper for 'os_perso_derive_node_bip32'
-pub fn bip32_derive(curve: CurvesId, path: &[u32], key: &mut [u8]) {
-    let _err = unsafe { os_perso_derive_node_bip32( curve as u8,
+#[must_use]
+pub fn bip32_derive(curve: CurvesId, path: &[u32], key: &mut [u8]) -> Result<(), Exception> {
+    let err = unsafe { os_perso_derive_node_bip32( curve as u8,
                                      path.as_ptr(), 
                                      path.len() as u32,
                                      key.as_mut_ptr(),
                                      core::ptr::null_mut() ) };
+    if err != 0 {
+        Err(err.into())
+    } else {
+        Ok(())
+    }
 }
 
 /// Wrapper for 'cx_ecfp_init_private_key'
-pub fn ec_init_key(curve: CurvesId, raw_key: &[u8]) -> cx_ecfp_private_key_t {
+#[must_use]
+pub fn ec_init_key(curve: CurvesId, raw_key: &[u8]) -> Result<cx_ecfp_private_key_t, Exception> {
     let mut ec_k = cx_ecfp_private_key_t::default();
-    unsafe { cx_ecfp_init_private_key(curve as u8, 
+    let err = unsafe { cx_ecfp_init_private_key(curve as u8, 
         raw_key.as_ptr(), 
         raw_key.len() as u32, 
         &mut ec_k as *mut cx_ecfp_private_key_t) };
-    ec_k
+    if err != 0 {
+        Err(err.into())
+    } else {
+        Ok(ec_k)
+    }
 }
 
 /// Wrapper for 'cx_ecfp_generate_pair'
-pub fn ec_get_pubkey(curve: CurvesId, privkey: &mut cx_ecfp_private_key_t) -> cx_ecfp_public_key_t {
+#[must_use]
+pub fn ec_get_pubkey(curve: CurvesId, privkey: &mut cx_ecfp_private_key_t) -> Result<cx_ecfp_public_key_t, Exception> {
     let mut ec_pubkey = cx_ecfp_public_key_t::default();
-    unsafe { 
+    let err = unsafe { 
         cx_ecfp_generate_pair(
             curve as u8, 
             &mut ec_pubkey as *mut cx_ecfp_public_key_t,
             privkey as *mut cx_ecfp_private_key_t, 
-            1);
+            1)
+    };
+    if err != 0 {
+        Err(err.into())
+    } else {
+        Ok(ec_pubkey)
     }
-    ec_pubkey
 }
 
 pub type DEREncodedECDSASignature = [u8; 73];
@@ -188,6 +205,12 @@ mod tests {
 
     const PATH: [u32; 5] = make_bip32_path(b"m/44'/535348'/0'/0/0");
 
+    impl From<Exception> for () {
+        fn from(_: Exception) -> () {
+            ()
+        }
+    }
+
     #[test]
     fn ecdsa() {
         // Test signature bindings with an ECDSA + verification
@@ -196,12 +219,12 @@ mod tests {
         let rnd_mode = (CX_RND_RFC6979 | CX_LAST) as i32;
         let hash = CX_SHA256;
 
-        bip32_derive(CurvesId::Secp256k1, &PATH, &mut raw_key);
+        bip32_derive(CurvesId::Secp256k1, &PATH, &mut raw_key)?;
 
-        let mut k = ec_init_key(CurvesId::Secp256k1, &raw_key);
+        let mut k = ec_init_key(CurvesId::Secp256k1, &raw_key)?;
         let (sig, sig_len) = ecdsa_sign(&k, rnd_mode, hash, message)?;
 
-        let pubkey = ec_get_pubkey(CurvesId::Secp256k1, &mut k);
+        let pubkey = ec_get_pubkey(CurvesId::Secp256k1, &mut k)?;
 
         let verif = ecdsa_verify(&pubkey, &sig[..sig_len as usize], rnd_mode, hash, message);
 
@@ -217,12 +240,12 @@ mod tests {
         let rnd_mode = (CX_RND_RFC6979 | CX_LAST) as i32;
         let hash = CX_SHA256;
 
-        bip32_derive(CurvesId::Secp256k1, &PATH, &mut raw_key);
+        bip32_derive(CurvesId::Secp256k1, &PATH, &mut raw_key)?;
 
-        let mut k = ec_init_key(CurvesId::Secp256k1, &raw_key);
+        let mut k = ec_init_key(CurvesId::Secp256k1, &raw_key)?;
         let (sig, sig_len) = ecdsa_sign(&k, rnd_mode, hash, message)?;
 
-        let pubkey = ec_get_pubkey(CurvesId::Secp256k1, &mut k);
+        let pubkey = ec_get_pubkey(CurvesId::Secp256k1, &mut k)?;
         let verif = ecdsa_verify(&pubkey, &sig[..sig_len as usize], rnd_mode, hash, message);
 
         assert_eq!(verif , true);
