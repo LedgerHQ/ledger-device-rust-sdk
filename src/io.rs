@@ -17,7 +17,7 @@ pub enum StatusWords {
     Panic = 0xe000,
 }
 #[repr(u8)]
-pub enum Exception {
+pub enum SyscallError {
     InvalidParameter = 2,
     Overflow,
     Security,
@@ -30,25 +30,25 @@ pub enum Exception {
     Unspecified
 }
 
-impl From<i32> for Exception {
-    fn from(e: i32) -> Exception {
+impl From<i32> for SyscallError {
+    fn from(e: i32) -> SyscallError {
         match e {
-            2 => Exception::InvalidParameter,
-            3 => Exception::Overflow,
-            4 => Exception::Security,
-            5 => Exception::InvalidCRC,
-            6 => Exception::InvalidChecksum,
-            7 => Exception::InvalidCounter,
-            8 => Exception::NotSupported,
-            9 => Exception::InvalidState,
-            10 => Exception::Timeout,
-            _ => Exception::Unspecified
+            2 => SyscallError::InvalidParameter,
+            3 => SyscallError::Overflow,
+            4 => SyscallError::Security,
+            5 => SyscallError::InvalidCRC,
+            6 => SyscallError::InvalidChecksum,
+            7 => SyscallError::InvalidCounter,
+            8 => SyscallError::NotSupported,
+            9 => SyscallError::InvalidState,
+            10 => SyscallError::Timeout,
+            _ => SyscallError::Unspecified
         }
     }
 }
 
 /// Provide a type that will be used for replying
-/// an APDU with either a StatusWord or an Exception
+/// an APDU with either a StatusWord or an SyscallError
 #[repr(transparent)]
 pub struct Reply(u16);
 
@@ -58,8 +58,8 @@ impl From<StatusWords> for Reply {
     }
 }
 
-impl From<Exception> for Reply {
-    fn from(exc: Exception) -> Reply {
+impl From<SyscallError> for Reply {
+    fn from(exc: SyscallError) -> Reply {
         Reply(0x6800 + exc as u16)
     }
 }

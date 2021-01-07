@@ -1,5 +1,5 @@
 use crate::bindings::*;
-use crate::io::Exception;
+use crate::io::SyscallError;
 
 #[repr(u8)]
 pub enum CurvesId {
@@ -8,7 +8,7 @@ pub enum CurvesId {
 
 /// Wrapper for 'os_perso_derive_node_bip32'
 #[must_use]
-pub fn bip32_derive(curve: CurvesId, path: &[u32], key: &mut [u8]) -> Result<(), Exception> {
+pub fn bip32_derive(curve: CurvesId, path: &[u32], key: &mut [u8]) -> Result<(), SyscallError> {
     let err = unsafe { os_perso_derive_node_bip32( curve as u8,
                                      path.as_ptr(), 
                                      path.len() as u32,
@@ -23,7 +23,7 @@ pub fn bip32_derive(curve: CurvesId, path: &[u32], key: &mut [u8]) -> Result<(),
 
 /// Wrapper for 'cx_ecfp_init_private_key'
 #[must_use]
-pub fn ec_init_key(curve: CurvesId, raw_key: &[u8]) -> Result<cx_ecfp_private_key_t, Exception> {
+pub fn ec_init_key(curve: CurvesId, raw_key: &[u8]) -> Result<cx_ecfp_private_key_t, SyscallError> {
     let mut ec_k = cx_ecfp_private_key_t::default();
     let err = unsafe { cx_ecfp_init_private_key(curve as u8, 
         raw_key.as_ptr(), 
@@ -38,7 +38,7 @@ pub fn ec_init_key(curve: CurvesId, raw_key: &[u8]) -> Result<cx_ecfp_private_ke
 
 /// Wrapper for 'cx_ecfp_generate_pair'
 #[must_use]
-pub fn ec_get_pubkey(curve: CurvesId, privkey: &mut cx_ecfp_private_key_t) -> Result<cx_ecfp_public_key_t, Exception> {
+pub fn ec_get_pubkey(curve: CurvesId, privkey: &mut cx_ecfp_private_key_t) -> Result<cx_ecfp_public_key_t, SyscallError> {
     let mut ec_pubkey = cx_ecfp_public_key_t::default();
     let err = unsafe { 
         cx_ecfp_generate_pair(
@@ -205,8 +205,8 @@ mod tests {
 
     const PATH: [u32; 5] = make_bip32_path(b"m/44'/535348'/0'/0/0");
 
-    impl From<Exception> for () {
-        fn from(_: Exception) -> () {
+    impl From<SyscallError> for () {
+        fn from(_: SyscallError) -> () {
             ()
         }
     }
