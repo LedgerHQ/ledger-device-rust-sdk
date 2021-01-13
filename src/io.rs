@@ -6,6 +6,7 @@ use core::convert::TryFrom;
 use crate::bindings::G_io_app;
 
 #[derive(Copy, Clone)]
+#[repr(u16)]
 pub enum StatusWords {
     OK = 0x9000,
     NothingReceived = 0x6982,
@@ -15,7 +16,54 @@ pub enum StatusWords {
     Unknown = 0x6d00,
     Panic = 0xe000,
 }
+#[derive(Debug)]
+#[repr(u8)]
+pub enum SyscallError {
+    InvalidParameter = 2,
+    Overflow,
+    Security,
+    InvalidCRC,
+    InvalidChecksum,
+    InvalidCounter,
+    NotSupported,
+    InvalidState,
+    Timeout,
+    Unspecified
+}
 
+impl From<i32> for SyscallError {
+    fn from(e: i32) -> SyscallError {
+        match e {
+            2 => SyscallError::InvalidParameter,
+            3 => SyscallError::Overflow,
+            4 => SyscallError::Security,
+            5 => SyscallError::InvalidCRC,
+            6 => SyscallError::InvalidChecksum,
+            7 => SyscallError::InvalidCounter,
+            8 => SyscallError::NotSupported,
+            9 => SyscallError::InvalidState,
+            10 => SyscallError::Timeout,
+            _ => SyscallError::Unspecified
+        }
+    }
+}
+
+/// Provide a type that will be used for replying
+/// an APDU with either a StatusWord or an SyscallError
+#[repr(transparent)]
+pub struct Reply(u16);
+
+impl From<StatusWords> for Reply {
+    fn from(sw: StatusWords) -> Reply {
+        Reply(sw as u16)
+    }
+}
+
+impl From<SyscallError> for Reply {
+    fn from(exc: SyscallError) -> Reply {
+        Reply(0x6800 + exc as u16)
+    }
+}
 
 extern "C" {
     pub fn io_usb_hid_send(
@@ -210,7 +258,7 @@ impl Comm {
                         // Invalid Ins code. Send automatically an error, mask
                         // the bad instruction to the application and just
                         // discard this event.
-                        self.reply(StatusWords::BadCLA);
+                        self.reply(StatusWords::BadCLA.into());
                     }
                 }
             }
@@ -262,7 +310,8 @@ impl Comm {
     /// # Arguments
     ///
     /// * `sw` - Status Word to be transmitted after the Data.
-    pub fn reply(&mut self, sw: StatusWords) {
+    pub fn reply(&mut self, reply: Reply) {
+       let sw = reply.0;
         // Append status word
         self.apdu_buffer[self.tx] = ((sw as u16) >> 8) as u8;
         self.apdu_buffer[self.tx + 1] = sw as u8;
@@ -274,7 +323,7 @@ impl Comm {
     /// Set the Status Word of the response to `StatusWords::OK` (which is equal
     /// to `0x9000`, and transmit the response.
     pub fn reply_ok(&mut self) {
-        self.reply(StatusWords::OK);
+        self.reply(StatusWords::OK.into());
     }
 
     /// Return APDU Class and Instruction bytes as a tuple
