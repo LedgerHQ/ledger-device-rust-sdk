@@ -16,6 +16,7 @@ pub enum StatusWords {
     Unknown = 0x6d00,
     Panic = 0xe000,
 }
+#[derive(Debug)]
 #[repr(u8)]
 pub enum SyscallError {
     InvalidParameter = 2,
