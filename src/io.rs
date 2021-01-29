@@ -258,7 +258,7 @@ impl Comm {
                         // Invalid Ins code. Send automatically an error, mask
                         // the bad instruction to the application and just
                         // discard this event.
-                        self.reply(StatusWords::BadCLA.into());
+                        self.reply(StatusWords::BadCLA);
                     }
                 }
             }
@@ -309,9 +309,11 @@ impl Comm {
     ///
     /// # Arguments
     ///
-    /// * `sw` - Status Word to be transmitted after the Data.
-    pub fn reply(&mut self, reply: Reply) {
-       let sw = reply.0;
+    /// * `sw` - Status Word to be transmitted after the Data. Can be a
+    ///   StatusWords, a SyscallError, or any type which can be converted to a
+    ///   Reply.
+    pub fn reply<T: Into<Reply>>(&mut self, reply: T) {
+        let sw = reply.into().0;
         // Append status word
         self.apdu_buffer[self.tx] = ((sw as u16) >> 8) as u8;
         self.apdu_buffer[self.tx + 1] = sw as u8;
@@ -323,7 +325,7 @@ impl Comm {
     /// Set the Status Word of the response to `StatusWords::OK` (which is equal
     /// to `0x9000`, and transmit the response.
     pub fn reply_ok(&mut self) {
-        self.reply(StatusWords::OK.into());
+        self.reply(StatusWords::OK);
     }
 
     /// Return APDU Class and Instruction bytes as a tuple

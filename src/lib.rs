@@ -26,7 +26,7 @@ use core::panic::PanicInfo;
 #[cfg_attr(test, panic_handler)]
 pub fn exiting_panic(_info: &PanicInfo) -> ! {
     let mut comm = io::Comm::new();
-    comm.reply(io::StatusWords::Panic.into());
+    comm.reply(io::StatusWords::Panic);
     exit_app(0);
 }
 
