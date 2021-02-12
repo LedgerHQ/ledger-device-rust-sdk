@@ -1,10 +1,16 @@
 extern crate cc;
 use std::path::Path;
 use std::process::Command;
-use std::{env, error::Error, fs::File, io::Write, path::PathBuf};
+use std::{
+    env,
+    error::Error,
+    fs::File,
+    io::{Read, Write},
+    path::PathBuf,
+};
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let bolos_sdk = "./nanos-secure-sdk/".to_string();
+    let bolos_sdk = "./nanos-secure-sdk".to_string();
 
     let output = Command::new("arm-none-eabi-gcc")
         .arg("-print-sysroot")
@@ -59,7 +65,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("{:?}", output.stderr);
     assert!(output.status.success());
 
-    cc::Build::new()
+    let mut command = cc::Build::new()
         .compiler("clang")
         .target("thumbv6m-none-eabi")
         .file("./src/c/src.c")
@@ -107,6 +113,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .include(format!("{}/lib_ux/include", bolos_sdk))
         .include(format!("{}/lib_stusb", bolos_sdk))
         .include(format!("{}/lib_stusb_impl", bolos_sdk))
+        .include(format!("{}/lib_cxng/include", bolos_sdk))
         .include(format!(
             "{}/lib_stusb/STM32_USB_Device_Library/Core/Inc",
             bolos_sdk
@@ -146,7 +153,25 @@ fn main() -> Result<(), Box<dyn Error>> {
         .flag("-Wno-duplicate-decl-specifier")
         .flag("-Wno-#warnings")
         .flag("-Wno-int-conversion")
-        .compile("rust-app");
+        .clone();
+
+    let mut makefile = File::open(format!("{}/Makefile.conf.cx", bolos_sdk)).unwrap();
+    let mut content = String::new();
+    makefile.read_to_string(&mut content).unwrap();
+    // Extract the defines from the Makefile.conf.cx.
+    // They all begin with `HAVE` and are ' ' and '\n' separated.
+    let defines = content
+        .split('\n')
+        .filter(|line| !line.starts_with('#')) // Remove line that are commented
+        .flat_map(|line| line.split(' ').filter(|word| word.starts_with("HAVE")))
+        .collect::<Vec<&str>>();
+
+    // Add the defines found in the Makefile.conf.cx to our build command.
+    for define in defines {
+        command.define(define, Some(""));
+    }
+
+    command.compile("rust-app");
 
     // Copy this crate's linker script into the working directory of
     // the application so that it can be used there for the layout.
