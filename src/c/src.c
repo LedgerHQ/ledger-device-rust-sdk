@@ -4,7 +4,6 @@
 extern void sample_main();
 
 unsigned char G_io_seproxyhal_spi_buffer[128] = {0};
-io_seph_app_t G_io_app;
 
 int c_main(void) {
   __asm volatile("cpsie i");
