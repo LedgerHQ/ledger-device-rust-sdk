@@ -3,7 +3,6 @@
 #![feature(custom_test_frameworks)]
 #![reexport_test_harness_main = "test_main"]
 #![test_runner(sdk_test_runner)]
-#![feature(min_const_generics)]
 #![feature(const_fn)]
 #![feature(asm)]
 #![feature(const_panic)]
@@ -137,7 +136,7 @@ pub extern "C" fn _start() -> ! {
 /// Exit application with status
 pub fn exit_app(status: u8) -> ! {
     unsafe { os_sched_exit( status) };
-    loop {}
+    unreachable!("Did not exit properly");
 }
 
 // The Rust version of PIC()
