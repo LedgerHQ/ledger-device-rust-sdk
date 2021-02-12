@@ -5,31 +5,31 @@ use crate::usbbindings::*;
 
 #[repr(u8)]
 pub enum SephTags {
-  ScreenDisplayStatus = SEPROXYHAL_TAG_SCREEN_DISPLAY_STATUS as u8,
-  GeneralStatus = SEPROXYHAL_TAG_GENERAL_STATUS as u8,
-  RawAPDU = SEPROXYHAL_TAG_RAPDU as u8,
-  Unknown
+    ScreenDisplayStatus = SEPROXYHAL_TAG_SCREEN_DISPLAY_STATUS as u8,
+    GeneralStatus = SEPROXYHAL_TAG_GENERAL_STATUS as u8,
+    RawAPDU = SEPROXYHAL_TAG_RAPDU as u8,
+    Unknown,
 }
 #[repr(u8)]
 pub enum Events {
-  USBXFEREvent = SEPROXYHAL_TAG_USB_EP_XFER_EVENT as u8,
-  USBEvent = SEPROXYHAL_TAG_USB_EVENT as u8,
-  USBEventReset = SEPROXYHAL_TAG_USB_EVENT_RESET as u8,
-  USBEventSOF = SEPROXYHAL_TAG_USB_EVENT_SOF as u8,
-  USBEventSuspend = SEPROXYHAL_TAG_USB_EVENT_SUSPENDED as u8,
-  USBEventResume = SEPROXYHAL_TAG_USB_EVENT_RESUMED as u8,
-  CAPDUEvent = SEPROXYHAL_TAG_CAPDU_EVENT as u8,
-  TickerEvent = SEPROXYHAL_TAG_TICKER_EVENT as u8,
-  ButtonPush = SEPROXYHAL_TAG_BUTTON_PUSH_EVENT as u8,
-  DisplayProcessed = SEPROXYHAL_TAG_DISPLAY_PROCESSED_EVENT as u8,
-  Unknown = 0xff
+    USBXFEREvent = SEPROXYHAL_TAG_USB_EP_XFER_EVENT as u8,
+    USBEvent = SEPROXYHAL_TAG_USB_EVENT as u8,
+    USBEventReset = SEPROXYHAL_TAG_USB_EVENT_RESET as u8,
+    USBEventSOF = SEPROXYHAL_TAG_USB_EVENT_SOF as u8,
+    USBEventSuspend = SEPROXYHAL_TAG_USB_EVENT_SUSPENDED as u8,
+    USBEventResume = SEPROXYHAL_TAG_USB_EVENT_RESUMED as u8,
+    CAPDUEvent = SEPROXYHAL_TAG_CAPDU_EVENT as u8,
+    TickerEvent = SEPROXYHAL_TAG_TICKER_EVENT as u8,
+    ButtonPush = SEPROXYHAL_TAG_BUTTON_PUSH_EVENT as u8,
+    DisplayProcessed = SEPROXYHAL_TAG_DISPLAY_PROCESSED_EVENT as u8,
+    Unknown = 0xff,
 }
 #[repr(u8)]
 pub enum UsbEp {
-  USBEpXFERSetup = SEPROXYHAL_TAG_USB_EP_XFER_SETUP as u8,
-  USBEpXFERIn = SEPROXYHAL_TAG_USB_EP_XFER_IN as u8,
-  USBEpXFEROut = SEPROXYHAL_TAG_USB_EP_XFER_OUT as u8,
-  Unknown
+    USBEpXFERSetup = SEPROXYHAL_TAG_USB_EP_XFER_SETUP as u8,
+    USBEpXFERIn = SEPROXYHAL_TAG_USB_EP_XFER_IN as u8,
+    USBEpXFEROut = SEPROXYHAL_TAG_USB_EP_XFER_OUT as u8,
+    Unknown,
 }
 
 impl From<u8> for SephTags {
@@ -37,7 +37,7 @@ impl From<u8> for SephTags {
         match v as u32 {
             SEPROXYHAL_TAG_SCREEN_DISPLAY_STATUS => SephTags::ScreenDisplayStatus,
             SEPROXYHAL_TAG_GENERAL_STATUS => SephTags::GeneralStatus,
-            _ => SephTags::Unknown 
+            _ => SephTags::Unknown,
         }
     }
 }
@@ -55,7 +55,7 @@ impl From<u8> for Events {
             SEPROXYHAL_TAG_TICKER_EVENT => Events::TickerEvent,
             SEPROXYHAL_TAG_BUTTON_PUSH_EVENT => Events::ButtonPush,
             SEPROXYHAL_TAG_DISPLAY_PROCESSED_EVENT => Events::DisplayProcessed,
-            _ => Events::Unknown 
+            _ => Events::Unknown,
         }
     }
 }
@@ -66,7 +66,7 @@ impl From<u8> for UsbEp {
             SEPROXYHAL_TAG_USB_EP_XFER_SETUP => UsbEp::USBEpXFERSetup,
             SEPROXYHAL_TAG_USB_EP_XFER_IN => UsbEp::USBEpXFERIn,
             SEPROXYHAL_TAG_USB_EP_XFER_OUT => UsbEp::USBEpXFEROut,
-            _ => UsbEp::Unknown 
+            _ => UsbEp::Unknown,
         }
     }
 }
@@ -74,17 +74,13 @@ impl From<u8> for UsbEp {
 /// Wrapper for 'io_seph_send'
 /// Directly send buffer over the SPI channel to the MCU
 pub fn seph_send(buffer: &[u8]) {
-    unsafe { 
-        io_seph_send(buffer.as_ptr(), buffer.len() as u16) 
-    };
+    unsafe { io_seph_send(buffer.as_ptr(), buffer.len() as u16) };
 }
 
 /// Wrapper for 'io_seph_recv'
 /// Receive the next APDU into 'buffer'
 pub fn seph_recv(buffer: &mut [u8], flags: u32) -> u16 {
-    unsafe { 
-        io_seph_recv(buffer.as_mut_ptr(), buffer.len() as u16, flags) 
-    }
+    unsafe { io_seph_recv(buffer.as_mut_ptr(), buffer.len() as u16, flags) }
 }
 
 /// Wrapper for 'io_seph_is_status_sent'
@@ -113,7 +109,10 @@ pub fn send_general_status() {
 /// assuming mutable pointers when they are not
 extern "C" {
     pub static mut USBD_Device: USBD_HandleTypeDef;
-    pub fn USBD_LL_SetupStage(pdev: *mut USBD_HandleTypeDef, psetup: *const u8) -> USBD_StatusTypeDef;
+    pub fn USBD_LL_SetupStage(
+        pdev: *mut USBD_HandleTypeDef,
+        psetup: *const u8,
+    ) -> USBD_StatusTypeDef;
     pub fn USBD_LL_DataOutStage(
         pdev: *mut USBD_HandleTypeDef,
         epnum: u8,
@@ -135,27 +134,32 @@ extern "C" {
     pub fn USBD_LL_SOF(pdev: *mut USBD_HandleTypeDef) -> USBD_StatusTypeDef;
 }
 
-
 /// Below is a straightforward translation of the corresponding functions
 /// in the C SDK, they could be improved
 pub fn handle_usb_event(buffer: &[u8]) {
     match Events::from(buffer[3]) {
         Events::USBEventReset => {
-            unsafe{
-                USBD_LL_SetSpeed(&mut USBD_Device, 1 /*USBD_SPEED_FULL*/);  
+            unsafe {
+                USBD_LL_SetSpeed(&mut USBD_Device, 1 /*USBD_SPEED_FULL*/);
                 USBD_LL_Reset(&mut USBD_Device);
 
                 if G_io_app.apdu_media != IO_APDU_MEDIA_NONE {
-                    return
+                    return;
                 }
 
                 G_io_app.usb_ep_xfer_len = core::mem::zeroed();
                 G_io_app.usb_ep_timeouts = core::mem::zeroed();
             }
         }
-        Events::USBEventSOF => unsafe { USBD_LL_SOF(&mut USBD_Device); }
-        Events::USBEventSuspend => unsafe{ USBD_LL_Suspend(&mut USBD_Device); }
-        Events::USBEventResume => unsafe{ USBD_LL_Resume(&mut USBD_Device); }
+        Events::USBEventSOF => unsafe {
+            USBD_LL_SOF(&mut USBD_Device);
+        },
+        Events::USBEventSuspend => unsafe {
+            USBD_LL_Suspend(&mut USBD_Device);
+        },
+        Events::USBEventResume => unsafe {
+            USBD_LL_Resume(&mut USBD_Device);
+        },
         _ => (),
     }
 }
@@ -163,7 +167,9 @@ pub fn handle_usb_event(buffer: &[u8]) {
 pub fn handle_usb_ep_xfer_event(apdu_buffer: &mut [u8], buffer: &[u8]) {
     let endpoint = buffer[3] & 0x7f;
     match UsbEp::from(buffer[4]) {
-        UsbEp::USBEpXFERSetup => unsafe{ USBD_LL_SetupStage(&mut USBD_Device, &buffer[6]); }
+        UsbEp::USBEpXFERSetup => unsafe {
+            USBD_LL_SetupStage(&mut USBD_Device, &buffer[6]);
+        },
         UsbEp::USBEpXFERIn => {
             if (endpoint as u32) < IO_USB_MAX_ENDPOINTS {
                 unsafe {
@@ -184,14 +190,14 @@ pub fn handle_usb_ep_xfer_event(apdu_buffer: &mut [u8], buffer: &[u8]) {
                 }
             }
         }
-        _ => ()
+        _ => (),
     }
 }
 
 pub fn handle_capdu_event(apdu_buffer: &mut [u8], buffer: &[u8]) {
     let mut io_app = unsafe { G_io_app };
     if io_app.apdu_state == APDU_IDLE {
-        let max = (apdu_buffer.len()-3).min(buffer.len()-3);
+        let max = (apdu_buffer.len() - 3).min(buffer.len() - 3);
         let size = u16::from_be_bytes([buffer[1], buffer[2]]) as usize;
 
         io_app.apdu_media = IO_APDU_MEDIA_RAW;
@@ -201,7 +207,7 @@ pub fn handle_capdu_event(apdu_buffer: &mut [u8], buffer: &[u8]) {
 
         io_app.apdu_length = len as u16;
 
-        apdu_buffer[..len].copy_from_slice(&buffer[3..len+3]);
+        apdu_buffer[..len].copy_from_slice(&buffer[3..len + 3]);
     }
 }
 
@@ -212,14 +218,14 @@ pub fn handle_event(mut apdu_buffer: &mut [u8], spi_buffer: &[u8]) {
             if len == 1 {
                 handle_usb_event(spi_buffer);
             }
-        },
+        }
         Events::USBXFEREvent => {
             if len >= 3 {
                 handle_usb_ep_xfer_event(&mut apdu_buffer, &spi_buffer);
             }
-        },
+        }
         Events::CAPDUEvent => handle_capdu_event(&mut apdu_buffer, &spi_buffer),
-        Events::TickerEvent => { /* unsafe{ G_io_app.ms += 100; } */ },
+        Events::TickerEvent => { /* unsafe{ G_io_app.ms += 100; } */ }
         _ => (),
     }
 }

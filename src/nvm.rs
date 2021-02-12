@@ -79,7 +79,7 @@ pub struct AlignedStorage<T> {
     /// Stored value.
     /// This is intentionally private to prevent direct write access (this is
     /// stored in Flash, so only the update method can change the value).
-    value: T
+    value: T,
 }
 
 impl<T> AlignedStorage<T> {
@@ -100,13 +100,13 @@ impl<T> SingleStorage<T> for AlignedStorage<T> {
 
     /// Update the value by writting to the NVM memory.
     /// Warning: this can be vulnerable to tearing - leading to partial write.
-    fn update(&mut self, value: &T){
+    fn update(&mut self, value: &T) {
         unsafe {
             nvm_write(
-                &self.value as *const T as *const cty::c_void
-                    as *mut cty::c_void,
+                &self.value as *const T as *const cty::c_void as *mut cty::c_void,
                 value as *const T as *const cty::c_void as *mut cty::c_void,
-                core::mem::size_of::<T>() as u32);
+                core::mem::size_of::<T>() as u32,
+            );
             let mut _dummy = &self.value;
         }
     }
@@ -125,14 +125,14 @@ const STORAGE_VALID: u8 = 0xa5;
 /// 3. The flag is restored to STORAGE_VALID
 pub struct SafeStorage<T> {
     flag: AlignedStorage<u8>,
-    value: AlignedStorage<T>
+    value: AlignedStorage<T>,
 }
 
 impl<T> SafeStorage<T> {
     pub const fn new(value: T) -> SafeStorage<T> {
         SafeStorage {
             flag: AlignedStorage::new(STORAGE_VALID),
-            value: AlignedStorage::new(value)
+            value: AlignedStorage::new(value),
         }
     }
 
@@ -172,13 +172,15 @@ pub struct AtomicStorage<T> {
     // storage A, erasing the page of A won't modify the storage for B.
     // This is currently garanteed by the alignment of AlignedStorage.
     storage_a: SafeStorage<T>,
-    storage_b: SafeStorage<T>
-    // We also accept situations where both storages are marked as valid, which
-    // can happen with tearing. This is not a problem, and we consider the first
-    // one is the "correct" one.
+    storage_b: SafeStorage<T>, // We also accept situations where both storages are marked as valid, which
+                               // can happen with tearing. This is not a problem, and we consider the first
+                               // one is the "correct" one.
 }
 
-impl<T> AtomicStorage<T> where T: Copy {
+impl<T> AtomicStorage<T>
+where
+    T: Copy,
+{
     /// Create an AtomicStorage<T> initialized with a given value.
     pub const fn new(value: &T) -> AtomicStorage<T> {
         AtomicStorage {
@@ -202,7 +204,10 @@ impl<T> AtomicStorage<T> where T: Copy {
     }
 }
 
-impl<T> SingleStorage<T> for AtomicStorage<T> where T: Copy {
+impl<T> SingleStorage<T> for AtomicStorage<T>
+where
+    T: Copy,
+{
     /// Return reference to the stored value.
     fn get_ref(&self) -> &T {
         if self.which() == 0 {
@@ -214,7 +219,7 @@ impl<T> SingleStorage<T> for AtomicStorage<T> where T: Copy {
 
     /// Update the value by writting to the NVM memory.
     /// Warning: this can be vulnerable to tearing - leading to partial write.
-    fn update(&mut self, value: &T){
+    fn update(&mut self, value: &T) {
         if self.which() == 0 {
             self.storage_b.update(value);
             self.storage_a.invalidate();
@@ -230,15 +235,18 @@ impl<T> SingleStorage<T> for AtomicStorage<T> where T: Copy {
 /// Items update is not implemented because the atomicity of this operation
 /// cannot be garanteed here.
 pub struct Collection<T, const N: usize> {
-    flags: AtomicStorage<[u8;N]>,
-    slots: [AlignedStorage<T>;N]
+    flags: AtomicStorage<[u8; N]>,
+    slots: [AlignedStorage<T>; N],
 }
 
-impl<T, const N: usize> Collection<T, N> where T: Copy {
+impl<T, const N: usize> Collection<T, N>
+where
+    T: Copy,
+{
     pub const fn new(value: T) -> Collection<T, N> {
         Collection {
-            flags: AtomicStorage::new(&[0;N]),
-            slots: [AlignedStorage::new(value);N]
+            flags: AtomicStorage::new(&[0; N]),
+            slots: [AlignedStorage::new(value); N],
         }
     }
 
@@ -264,8 +272,8 @@ impl<T, const N: usize> Collection<T, N> where T: Copy {
                 new_flags[i] = STORAGE_VALID;
                 self.flags.update(&new_flags);
                 Ok(())
-            },
-            None => Err(StorageFullError)
+            }
+            None => Err(StorageFullError),
         }
     }
 
@@ -318,7 +326,7 @@ impl<T, const N: usize> Collection<T, N> where T: Copy {
         let mut count = 0;
         loop {
             if next == N {
-                return None
+                return None;
             }
             if self.is_allocated(next) {
                 if count == index {
@@ -338,7 +346,7 @@ impl<T, const N: usize> Collection<T, N> where T: Copy {
     pub fn get(&self, index: usize) -> Option<&T> {
         match self.index_to_key(index) {
             Some(key) => Some(self.slots[key].get_ref()),
-            None => None
+            None => None,
         }
     }
 
@@ -357,35 +365,43 @@ impl<T, const N: usize> Collection<T, N> where T: Copy {
     /// Removes all the items from the collection.
     /// This operation is atomic.
     pub fn clear(&mut self) {
-        self.flags.update(&[0;N]);
+        self.flags.update(&[0; N]);
     }
 }
 
 impl<'a, T, const N: usize> IntoIterator for &'a Collection<T, N>
-    where T: Copy
+where
+    T: Copy,
 {
     type Item = &'a T;
     type IntoIter = CollectionIterator<'a, T, N>;
 
     fn into_iter(self) -> CollectionIterator<'a, T, N> {
-        CollectionIterator { container: &self, next: 0 }
+        CollectionIterator {
+            container: &self,
+            next: 0,
+        }
     }
 }
 
-pub struct CollectionIterator<'a, T, const N: usize> where T: Copy {
+pub struct CollectionIterator<'a, T, const N: usize>
+where
+    T: Copy,
+{
     container: &'a Collection<T, N>,
-    next: usize
+    next: usize,
 }
 
 impl<'a, T, const N: usize> Iterator for CollectionIterator<'a, T, N>
-    where T: Copy
+where
+    T: Copy,
 {
     type Item = &'a T;
 
     fn next(&mut self) -> core::option::Option<&'a T> {
         loop {
             if self.next == N {
-                return None
+                return None;
             }
             if self.container.is_allocated(self.next) {
                 let result = Some(self.container.slots[self.next].get_ref());
