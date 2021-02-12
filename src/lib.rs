@@ -139,7 +139,7 @@ pub fn exit_app(status: u8) -> ! {
     unreachable!("Did not exit properly");
 }
 
-// The Rust version of PIC()
+// The Rust version of Pic()
 // hopefully there are ways to avoid that
 extern "C" {
     fn pic(link_address: u32) -> u32; 
@@ -171,18 +171,18 @@ pub fn pic_rs_mut<T>(x: &mut T) -> &mut T {
 ///
 /// ```
 /// // This constant data is stored in Code space, which is relocated.
-/// static DATA: PIC<u32> = PIC::new(42);
+/// static DATA: Pic<u32> = Pic::new(42);
 /// ...
-/// // Access with address translation is enforced thanks to PIC wrapper
+/// // Access with address translation is enforced thanks to Pic wrapper
 /// let x: u32 = *DATA.get_ref();
 /// ```
-pub struct PIC<T> {
+pub struct Pic<T> {
     data: T
 }
 
-impl<T> PIC<T> {
-    pub const fn new(data: T) -> PIC<T> {
-        PIC { data }
+impl<T> Pic<T> {
+    pub const fn new(data: T) -> Pic<T> {
+        Pic { data }
     }
 
     /// Returns translated reference to the wrapped data.

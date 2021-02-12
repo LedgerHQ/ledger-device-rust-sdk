@@ -1,7 +1,7 @@
+#![allow(clippy::upper_case_acronyms)]
+
 use crate::bindings::*;
 use crate::usbbindings::*;
-
-use crate::bindings::G_io_app;
 
 #[repr(u8)]
 pub enum SephTags {

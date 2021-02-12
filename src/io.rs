@@ -8,9 +8,9 @@ use crate::bindings::G_io_app;
 #[derive(Copy, Clone)]
 #[repr(u16)]
 pub enum StatusWords {
-    OK = 0x9000,
+    Ok = 0x9000,
     NothingReceived = 0x6982,
-    BadCLA = 0x6e00,
+    BadCla = 0x6e00,
     BadLen = 0x6e01,
     UserCancelled = 0x6e02,
     Unknown = 0x6d00,
@@ -22,7 +22,7 @@ pub enum SyscallError {
     InvalidParameter = 2,
     Overflow,
     Security,
-    InvalidCRC,
+    InvalidCrc,
     InvalidChecksum,
     InvalidCounter,
     NotSupported,
@@ -37,7 +37,7 @@ impl From<i32> for SyscallError {
             2 => SyscallError::InvalidParameter,
             3 => SyscallError::Overflow,
             4 => SyscallError::Security,
-            5 => SyscallError::InvalidCRC,
+            5 => SyscallError::InvalidCrc,
             6 => SyscallError::InvalidChecksum,
             7 => SyscallError::InvalidCounter,
             8 => SyscallError::NotSupported,
@@ -264,7 +264,7 @@ impl Comm {
                         // Invalid Ins code. Send automatically an error, mask
                         // the bad instruction to the application and just
                         // discard this event.
-                        self.reply(StatusWords::BadCLA);
+                        self.reply(StatusWords::BadCla);
                     }
                 }
             }
@@ -331,7 +331,7 @@ impl Comm {
     /// Set the Status Word of the response to `StatusWords::OK` (which is equal
     /// to `0x9000`, and transmit the response.
     pub fn reply_ok(&mut self) {
-        self.reply(StatusWords::OK);
+        self.reply(StatusWords::Ok);
     }
 
     /// Return APDU Class and Instruction bytes as a tuple
