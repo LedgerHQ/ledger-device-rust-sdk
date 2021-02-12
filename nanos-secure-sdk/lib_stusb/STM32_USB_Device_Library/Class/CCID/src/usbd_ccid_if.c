@@ -411,7 +411,7 @@ static void  CCID_Response_SendData(USBD_HandleTypeDef  *pdev,
     UNUSED(pdev);
     // don't ask the MCU to perform bulk split, we could quickly get into a buffer overflow
     if (len > CCID_BULK_EPIN_SIZE) {
-      THROW(EXCEPTION_IO_OVERFLOW);
+      THROW(SWO_IOL_OFW_04);
     }
 
     G_io_seproxyhal_spi_buffer[0] = SEPROXYHAL_TAG_USB_EP_PREPARE;
@@ -582,7 +582,7 @@ uint8_t SC_XferBlock (uint8_t* ptrBlock, uint32_t blockLen, uint16_t* expectedLe
 void io_usb_ccid_reply(unsigned char* buffer, unsigned short length) {
   // avoid memory overflow
   if (length > IO_CCID_DATA_BUFFER_SIZE) {
-    THROW(EXCEPTION_IO_OVERFLOW);
+    THROW(SWO_IOL_OFW_05);
   }
   // copy the responde apdu
   os_memmove(G_io_ccid_data_buffer, buffer, length);

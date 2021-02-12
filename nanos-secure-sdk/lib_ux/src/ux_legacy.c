@@ -1,7 +1,7 @@
 
 /*******************************************************************************
 *   Ledger Nano S - Secure firmware
-*   (c) 2019 Ledger
+*   (c) 2021 Ledger
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -17,6 +17,11 @@
 ********************************************************************************/
 
 #include "ux.h"
+#include "os_helpers.h"
+#include "os_pic.h"
+#include "os_pin.h"
+#include "os_io_seproxyhal.h"
+#include <string.h>
 
 #ifdef HAVE_UX_LEGACY
 ux_menu_state_t ux_menu;
@@ -56,7 +61,7 @@ const ux_menu_entry_t* ux_menu_get_entry (unsigned int entry_idx) {
 
 const bagl_element_t* ux_menu_element_preprocessor(const bagl_element_t* element) {
   //todo avoid center alignment when text_x or icon_x AND text_x are not 0
-  os_memmove(&G_ux.tmp_element, element, sizeof(bagl_element_t));
+  memmove(&G_ux.tmp_element, element, sizeof(bagl_element_t));
 
   // ask the current entry first, to setup other entries
   const ux_menu_entry_t* current_entry = (const ux_menu_entry_t*)PIC(ux_menu_get_entry(ux_menu.current_entry));
@@ -210,7 +215,7 @@ void ux_menu_display(unsigned int current_entry,
   // count entries
   if (menu_entries) {
     for(;;) {
-      if (os_memcmp(&menu_entries[ux_menu.menu_entries_count], &UX_MENU_END_ENTRY, sizeof(ux_menu_entry_t)) == 0) {
+      if (memcmp(&menu_entries[ux_menu.menu_entries_count], &UX_MENU_END_ENTRY, sizeof(ux_menu_entry_t)) == 0) {
         break;
       }
       ux_menu.menu_entries_count++;
@@ -268,7 +273,7 @@ const bagl_element_t ux_turner_elements[] = {
 
 const bagl_element_t* ux_turner_element_preprocessor(const bagl_element_t* element) {
   //todo avoid center alignment when text_x or icon_x AND text_x are not 0
-  os_memmove(&G_ux.tmp_element, element, sizeof(bagl_element_t));
+  memmove(&G_ux.tmp_element, element, sizeof(bagl_element_t));
 
   switch(element->component.userid) {
 
@@ -385,14 +390,23 @@ void ux_turner_display(unsigned int current_step,
 
 #endif // HAVE_UX_LEGACY
 
-const bagl_element_t clear_element = {{BAGL_RECTANGLE, 0, 0, 0, 128, 32, 0, 0, 0, 0x000000, 0x000000, 0 , 0},NULL};
-const bagl_element_t printf_element = {{BAGL_LABELINE, 0, 0, 9, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000, 
+const bagl_element_t clear_element = {{BAGL_RECTANGLE, 0, 0, 0, 128, 32, 0, 0, 0, 0x000000, 0x000000, 0 , 0},NULL
+#ifdef TARGET_BLUE
+  , 0, 0, 0, NULL, NULL, NULL
+#endif // TARGET_BLUE
+};
+
+const bagl_element_t printf_element = {{BAGL_LABELINE, 0, 0, 9, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
 #ifdef TARGET_NANOS
   BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER |BAGL_FONT_ALIGNMENT_MIDDLE
 #else // TARGET_NANOS
   BAGL_FONT_OPEN_SANS_REGULAR_8_11PX
 #endif // TARGET_NANOS
-  , 0},"Default printf"};
+  , 0},"Default printf"
+#ifdef TARGET_BLUE
+  , 0, 0, 0, NULL, NULL, NULL
+#endif // TARGET_BLUE
+  };
 
 void debug_wait_displayed(void) {
   // wait next event (probably a ticker, if not, too bad... this is debug !!)
@@ -407,7 +421,7 @@ void debug_printf(void* buffer) {
   io_seproxyhal_display_default(&clear_element);
   debug_wait_displayed();
 #endif // TARGET_NANOS
-  os_memmove(&G_ux.tmp_element, &printf_element, sizeof(bagl_element_t));
+  memmove(&G_ux.tmp_element, &printf_element, sizeof(bagl_element_t));
   G_ux.tmp_element.text = buffer;
   io_seproxyhal_display_default(&G_ux.tmp_element);
   debug_wait_displayed();

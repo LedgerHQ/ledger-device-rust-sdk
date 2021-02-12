@@ -1,7 +1,7 @@
 
 /*******************************************************************************
 *   Ledger Nano S - Secure firmware
-*   (c) 2019 Ledger
+*   (c) 2021 Ledger
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@
 #include <string.h>
 #include "os.h"
 #include "os_io_seproxyhal.h"
-#include "cx.h"
 #include "u2f_service.h"
 #include "u2f_transport.h"
 #include "u2f_processing.h"
@@ -31,7 +30,12 @@
 #define INIT_DEVICE_VERSION_MAJOR 0
 #define INIT_DEVICE_VERSION_MINOR 1
 #define INIT_BUILD_VERSION 0
+
+#ifdef HAVE_FIDO2
+#define INIT_CAPABILITIES 0x04
+#else
 #define INIT_CAPABILITIES 0x00
+#endif
 
 #define FIDO_CLA 0x00
 #define FIDO_INS_ENROLL 0x01
@@ -105,8 +109,13 @@ void u2f_apdu_sign(u2f_service_t *service, uint8_t p1, uint8_t p2,
     }
 
     // Unwrap magic
-    keyHandleLength = buffer[U2F_HANDLE_SIGN_HEADER_SIZE-1];
-    
+    keyHandleLength = buffer[U2F_HANDLE_SIGN_HEADER_SIZE - 1];
+    if (U2F_HANDLE_SIGN_HEADER_SIZE + keyHandleLength != length) {
+        u2f_message_reply(service, U2F_CMD_MSG,
+        (uint8_t *)SW_WRONG_LENGTH, sizeof(SW_WRONG_LENGTH));
+        return;
+    }
+
     // reply to the "get magic" question of the host
     if (keyHandleLength == 5) {
         // GET U2F PROXY PARAMETERS
@@ -184,8 +193,9 @@ void u2f_handle_cmd_init(u2f_service_t *service, uint8_t *buffer,
     uint8_t channel[4];
     (void)length;
     if (u2f_is_channel_broadcast(channelInit)) {
-        // cx_rng(channel, 4); // not available within the IO task
-        U4BE_ENCODE(channel, 0, ++service->next_channel);
+        // cx_rng_no_throw(channel, 4); // not available within the IO task, just do without
+	service->next_channel += 1;
+        U4BE_ENCODE(channel, 0, service->next_channel);
     } else {
         os_memmove(channel, channelInit, 4);
     }
@@ -298,6 +308,14 @@ void u2f_message_complete(u2f_service_t *service) {
     case U2F_CMD_MSG:
         u2f_handle_cmd_msg(service, service->transportBuffer + 3, length);
         break;
+#ifdef HAVE_FIDO2
+    case CTAP2_CMD_CBOR:
+        ctap2_handle_cmd_cbor(service, service->transportBuffer + 3, length);
+        break;
+    case CTAP2_CMD_CANCEL:
+        ctap2_handle_cmd_cancel(service, service->transportBuffer + 3, length);
+        break;
+#endif        	
     }
 }
 

@@ -1,7 +1,7 @@
 
 /*******************************************************************************
 *   Ledger Nano S - Secure firmware
-*   (c) 2019 Ledger
+*   (c) 2021 Ledger
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@
 #include <stdint.h>
 #include <string.h>
 #include "os.h"
-#include "cx.h"
 #include "u2f_service.h"
 #include "u2f_transport.h"
 #include "u2f_processing.h"

@@ -27,6 +27,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "os.h"
+#include "os_pic.h"
 #include "usbd_core.h"
 
 /** @addtogroup STM32_USBD_DEVICE_LIBRARY
@@ -271,7 +272,7 @@ USBD_StatusTypeDef USBD_LL_SetupStage(USBD_HandleTypeDef *pdev, uint8_t *psetup)
 * @param  epnum: endpoint index
 * @retval status
 */
-USBD_StatusTypeDef USBD_LL_DataOutStage(USBD_HandleTypeDef *pdev , uint8_t epnum, uint8_t *pdata, apdu_buffer_t * apdu_buffer)
+USBD_StatusTypeDef USBD_LL_DataOutStage(USBD_HandleTypeDef *pdev , uint8_t epnum, uint8_t *pdata)
 {
   USBD_EndpointTypeDef    *pep;
   
@@ -310,7 +311,7 @@ USBD_StatusTypeDef USBD_LL_DataOutStage(USBD_HandleTypeDef *pdev , uint8_t epnum
       if( usbd_is_valid_intf(pdev, intf) &&  (pdev->interfacesClass[intf].pClass->DataOut != NULL)&&
          (pdev->dev_state == USBD_STATE_CONFIGURED))
       {
-        ((DataOut_t)PIC(pdev->interfacesClass[intf].pClass->DataOut))(pdev, epnum, pdata, apdu_buffer) ; 
+        ((DataOut_t)PIC(pdev->interfacesClass[intf].pClass->DataOut))(pdev, epnum, pdata); 
       }
     }
   }  
@@ -338,7 +339,7 @@ USBD_StatusTypeDef USBD_LL_DataInStage(USBD_HandleTypeDef *pdev ,uint8_t epnum, 
       if(pep->rem_length > pep->maxpacket)
       {
         pep->rem_length -=  pep->maxpacket;
-        pdev->pData += pep->maxpacket;
+        pdev->pData = (uint8_t *)pdev->pData + pep->maxpacket;
        
         /* Prepare endpoint for premature end of transfer */
         /*
@@ -348,7 +349,7 @@ USBD_StatusTypeDef USBD_LL_DataInStage(USBD_HandleTypeDef *pdev ,uint8_t epnum, 
         */
         
         USBD_CtlContinueSendData (pdev, 
-                                  pdev->pData, 
+                                  (uint8_t *)pdev->pData,
                                   pep->rem_length);
         
       }
