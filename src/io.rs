@@ -87,14 +87,20 @@ pub struct Comm {
     buttons: ButtonsState
 }
 
-impl Comm {
-    pub fn new() -> Comm {
-        Comm {
+impl Default for Comm {
+    fn default() -> Self {
+        Self {
             apdu_buffer: [0u8; 260],
             rx: 0,
             tx: 0,
-            buttons: ButtonsState::new()
+            buttons: ButtonsState::new(),
         }
+    }
+}
+
+impl Comm {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// Send the currently held APDU
