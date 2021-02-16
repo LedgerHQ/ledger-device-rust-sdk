@@ -162,13 +162,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     // They all begin with `HAVE` and are ' ' and '\n' separated.
     let defines = content
         .split('\n')
-        .filter(|line| !line.starts_with('#')) // Remove line that are commented
+        .filter(|line| !line.starts_with('#')) // Remove lines that are commented
         .flat_map(|line| line.split(' ').filter(|word| word.starts_with("HAVE")))
         .collect::<Vec<&str>>();
 
     // Add the defines found in the Makefile.conf.cx to our build command.
     for define in defines {
-        command.define(define, Some(""));
+        // scott could use for_each
+        command.define(define, Some("1"));
     }
 
     command.compile("rust-app");

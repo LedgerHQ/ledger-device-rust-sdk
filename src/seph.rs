@@ -117,7 +117,6 @@ extern "C" {
         pdev: *mut USBD_HandleTypeDef,
         epnum: u8,
         pdata: *const u8,
-        arg1: *mut apdu_buffer_t,
     ) -> USBD_StatusTypeDef;
     pub fn USBD_LL_DataInStage(
         pdev: *mut USBD_HandleTypeDef,
@@ -164,7 +163,7 @@ pub fn handle_usb_event(buffer: &[u8]) {
     }
 }
 
-pub fn handle_usb_ep_xfer_event(apdu_buffer: &mut [u8], buffer: &[u8]) {
+pub fn handle_usb_ep_xfer_event(_apdu_buffer: &mut [u8], buffer: &[u8]) {
     let endpoint = buffer[3] & 0x7f;
     match UsbEp::from(buffer[4]) {
         UsbEp::USBEpXFERSetup => unsafe {
@@ -182,11 +181,8 @@ pub fn handle_usb_ep_xfer_event(apdu_buffer: &mut [u8], buffer: &[u8]) {
             if (endpoint as u32) < IO_USB_MAX_ENDPOINTS {
                 unsafe {
                     G_io_app.usb_ep_xfer_len[endpoint as usize] = buffer[5];
-                    let mut apdu_buf = apdu_buffer_t {
-                        buf: apdu_buffer.as_mut_ptr(),
-                        len: 260,
-                    };
-                    USBD_LL_DataOutStage(&mut USBD_Device, endpoint, &buffer[6], &mut apdu_buf);
+                    USBD_LL_DataOutStage(&mut USBD_Device, endpoint, &buffer[6]);
+                    // scott
                 }
             }
         }

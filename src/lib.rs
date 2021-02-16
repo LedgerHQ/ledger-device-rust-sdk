@@ -18,7 +18,7 @@ pub mod usbbindings;
 
 use bindings::*;
 
-use core::panic::PanicInfo;
+use core::{ffi::c_void, panic::PanicInfo};
 
 /// In case of runtime problems, return an internal error and exit the app
 #[inline]
@@ -142,13 +142,13 @@ pub fn exit_app(status: u8) -> ! {
 // The Rust version of Pic()
 // hopefully there are ways to avoid that
 extern "C" {
-    fn pic(link_address: u32) -> u32;
+    fn pic(link_address: *mut c_void) -> *mut c_void;
 }
 
 /// Performs code address translation for reading data located in the program
 /// and relocated during application installation.
 pub fn pic_rs<T>(x: &T) -> &T {
-    let ptr = unsafe { pic(x as *const T as u32) as *const T };
+    let ptr = unsafe { pic(x as *const T as *mut c_void) as *const T };
     unsafe { &*ptr }
 }
 
@@ -159,7 +159,7 @@ pub fn pic_rs<T>(x: &T) -> &T {
 /// data stored in the code as it resides in Flash memory. This is needed in
 /// particular when using the `nvm` module.
 pub fn pic_rs_mut<T>(x: &mut T) -> &mut T {
-    let ptr = unsafe { pic(x as *mut T as u32) as *mut T };
+    let ptr = unsafe { pic(x as *mut T as *mut c_void) as *mut T };
     unsafe { &mut *ptr }
 }
 

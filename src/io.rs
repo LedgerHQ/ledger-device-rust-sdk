@@ -1,4 +1,3 @@
-use crate::bindings::G_io_app;
 use crate::bindings::*;
 use crate::buttons::{get_button_event, ButtonEvent, ButtonsState};
 use crate::seph;
@@ -31,8 +30,8 @@ pub enum SyscallError {
     Unspecified,
 }
 
-impl From<i32> for SyscallError {
-    fn from(e: i32) -> SyscallError {
+impl From<u32> for SyscallError {
+    fn from(e: u32) -> SyscallError {
         match e {
             2 => SyscallError::InvalidParameter,
             3 => SyscallError::Overflow,
