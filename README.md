@@ -28,6 +28,31 @@ required.
 - install [Clang](http://releases.llvm.org/download.html).
 - install an [ARM GCC toolchain](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads)
 
+# Generating bindings for the C sdk
+
+The Rust SDK uses [FFI](https://doc.rust-lang.org/nomicon/ffi.html)s to call functions defined in the C SDK. The C function signatures and types are automatically "translated" to Rust by using [bindgen](https://rust-lang.github.io/rust-bindgen/introduction.html), which generates the appropriate bindings.
+
+The bindings are split into two different files:
+- The `bindings.rs` which contains all the os, io, and seproxyhal bindings.
+- The `usbbindings.rs` which contains basically all the bindings needed to interact with `lib_stusb`.
+
+Two corresponding header files exist in `binding_headers` directory: `bindings.h` and `usbbindings.h` which are provided in order for you to be able to re-generate those bindings easily. They contain all the `#define`s and `#include`s necessary to generate the appropriate bindings.
+
+Here are the steps to follow in order to generate those bindings by yourself:
+1. Make sure you have [bindgen setup](https://rust-lang.github.io/rust-bindgen/requirements.html)
+3. Run this command to generate the `bindings.rs` file: `bindgen ./binding_headers/bindings.h --use-core --no-prepend-enum-name --no-doc-comments --no-derive-debug --ctypes-prefix=cty --no-layout-tests --with-derive-default -- --target=thumbv7m-none-eabi -fshort-enums -Inanos-secure-sdk/lib_ux/include -Inanos-secure-sdk/lib_stusb/STM32_USB_Device_Library/Core/Inc -I/usr/arm-linux-gnueabihf/include -Inanos-secure-sdk/lib_stusb -Inanos-secure-sdk/include -Inanos-secure-sdk/lib_cxng/include > ./src/bindings.rs`
+4. Run this command to generate the `usbbindings.rs` file: `bindgen ./binding_headers/usbbindings.h --use-core --no-prepend-enum-name --no-doc-comments --no-derive-debug --ctypes-prefix=cty --no-layout-tests --with-derive-default -- --target=thumbv7m-none-eabi -fshort-enums -Inanos-secure-sdk/lib_ux/include -Inanos-secure-sdk/lib_stusb/STM32_USB_Device_Library/Core/Inc -I/usr/arm-linux-gnueabihf/include -Inanos-secure-sdk/lib_stusb -Inanos-secure-sdk/include -Inanos-secure-sdk/lib_cxng/include > ./src/usbbindings.rs`
+5. Modify the generated `.rs` files and add those lines at the BEGINNING of both files:
+```
+#![allow(non_snake_case)]
+#![allow(non_upper_case_globals)]
+#![allow(non_camel_case_types)]
+#![allow(clippy::upper_case_acronyms)]
+#![allow(clippy::too_many_arguments)]
+```
+6. Remove the line containing `IO_USB_MAX_ENDPOINTS` in the `bindings.rs` file.
+7. Profit!
+
 ## Contributing
 
 Make sure you've followed the installation steps above. In order for your PR to be accepted, it will have to pass the CI, which performs the following checks:
