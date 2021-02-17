@@ -343,20 +343,24 @@ impl<T, const N: usize> Collection<T, N> where T: Copy {
     ///
     /// * `index` - Index in the collection
     fn index_to_key(&self, index: usize) -> Option<usize> {
-        let mut next = index;
+        // Neat optimization: start by setting `next` to index,
+        // because we know we could not have found `index` allocated slots beforehand.
+        let mut next_key = index;
+        // Now count the number of allocated slots we have found up
+        // until this `index` (without including the slot at `index` itself).
         let mut count = self.count_allocated(index);
         loop {
-            match self.is_allocated(next) {
+            match self.is_allocated(next_key) {
                 Ok(_) => {
                     if count == index {
-                        return Some(next)
+                        return Some(next_key)
                     }
                     count += 1;
                 }
                 Err(KeyOutOfRange) => {
                     return None
                 }
-                Err(SlotIsFree) => next += 1,
+                Err(SlotIsFree) => next_key += 1,
             }
         }
     }
