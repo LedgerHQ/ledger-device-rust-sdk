@@ -7,7 +7,7 @@
 //! There is no filesystem or NVM allocated in BOLOS. Therefore any object
 //! stored by the application uses a fixed space in the program itself.
 //!
-//! # <repo_url> <label_or_branch> <variant>Examples
+//! # Examples
 //!
 //! The following piece of code declares a storage for an integer, with atomic
 //! update:
@@ -199,7 +199,7 @@ impl<T> AtomicStorage<T> where T: Copy {
     /// # Panics
     ///
     /// Panics if both storage elements are invalid (data corrupton),
-    /// althtough data corruption shall not be possible with tearing.
+    /// although data corruption shall not be possible with tearing.
     fn which(&self) -> AtomicStorageElem {
         if self.storage_a.is_valid() {
             StorageA
@@ -292,8 +292,8 @@ impl<T, const N: usize> Collection<T, N> where T: Copy {
     ///
     /// # Errors
     ///
-    /// Returns the appropriate error if the key is out of bounds or if
-    /// the indicated slot is not allocated.
+    /// Returns an error describing whether the key was out of bounds or
+    /// the indicated slot was not allocated.
     fn is_allocated(&self, key: usize) -> Result<(), KeyError> {
         match self.flags.get_ref().get(key) {
             Some(&byte) => {
