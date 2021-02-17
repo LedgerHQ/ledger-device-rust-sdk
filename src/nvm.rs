@@ -309,9 +309,7 @@ impl<T, const N: usize> Collection<T, N> where T: Copy {
 
     /// Returns the number of allocated slots.
     pub fn len(&self) -> usize {
-        self.flags.get_ref()
-            .iter()
-            .fold(0, |acc, &byte| acc + (byte == STORAGE_VALID) as u32) as usize
+        self.count_allocated(N)
     }
 
     /// Returns true if collection is empty
@@ -330,6 +328,14 @@ impl<T, const N: usize> Collection<T, N> where T: Copy {
         self.capacity() - self.len()
     }
 
+    /// Counts the number of allocated slots up until `len`.
+    fn count_allocated(&self, len: usize) -> usize {
+        self.flags.get_ref()
+            .iter()
+            .take(len)
+            .fold(0, |acc, &byte| acc + (byte == STORAGE_VALID) as u32) as usize
+    }
+
     /// Returns the `key` of an item in the internal storage, given the `index`
     /// in the collection. If `index` is too big, None is returned.
     ///
@@ -337,8 +343,8 @@ impl<T, const N: usize> Collection<T, N> where T: Copy {
     ///
     /// * `index` - Index in the collection
     fn index_to_key(&self, index: usize) -> Option<usize> {
-        let mut next = 0;
-        let mut count = 0;
+        let mut next = index;
+        let mut count = self.count_allocated(index);
         loop {
             match self.is_allocated(next) {
                 Ok(_) => {
