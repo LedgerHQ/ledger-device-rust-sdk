@@ -7,7 +7,7 @@
 //! There is no filesystem or NVM allocated in BOLOS. Therefore any object
 //! stored by the application uses a fixed space in the program itself.
 //!
-//! # Examples
+//! # <repo_url> <label_or_branch> <variant>Examples
 //!
 //! The following piece of code declares a storage for an integer, with atomic
 //! update:
@@ -40,7 +40,9 @@
 //! println!("counter value is {}", *counter.get_ref());
 //! ```
 
-use crate::bindings::*;
+use crate::bindings::nvm_write;
+use AtomicStorageElem::{StorageA, StorageB};
+use KeyError::{KeyOutOfRange, SlotIsFree};
 
 // Warning: currently alignment is fixed by magic values everywhere, since
 // rust does not allow using a constant in repr(align(...))
@@ -178,6 +180,11 @@ pub struct AtomicStorage<T> {
     // one is the "correct" one.
 }
 
+pub enum AtomicStorageElem {
+    StorageA,
+    StorageB,
+}
+
 impl<T> AtomicStorage<T> where T: Copy {
     /// Create an AtomicStorage<T> initialized with a given value.
     pub const fn new(value: &T) -> AtomicStorage<T> {
@@ -187,15 +194,17 @@ impl<T> AtomicStorage<T> where T: Copy {
         }
     }
 
-    /// Tell which of both storages contains the latest valid data. Returns
-    /// 0 for storage A, 1 for storage B. Panic if none of the storage are
-    /// valid (data corruption), although data corruption shall not be
-    /// possible with tearing.
-    fn which(&self) -> u32 {
+    /// Returns which storage contains the latest valid data.
+    /// 
+    /// # Panics
+    ///
+    /// Panics if both storage elements are invalid (data corrupton),
+    /// althtough data corruption shall not be possible with tearing.
+    fn which(&self) -> AtomicStorageElem {
         if self.storage_a.is_valid() {
-            0
+            StorageA
         } else if self.storage_b.is_valid() {
-            1
+            StorageB
         } else {
             panic!("invalidated atomic storage");
         }
@@ -205,30 +214,43 @@ impl<T> AtomicStorage<T> where T: Copy {
 impl<T> SingleStorage<T> for AtomicStorage<T> where T: Copy {
     /// Return reference to the stored value.
     fn get_ref(&self) -> &T {
-        if self.which() == 0 {
-            self.storage_a.get_ref()
-        } else {
-            self.storage_b.get_ref()
+        match self.which() {
+            StorageA => self.storage_a.get_ref(),
+            StorageB => self.storage_b.get_ref(),
         }
     }
 
     /// Update the value by writting to the NVM memory.
     /// Warning: this can be vulnerable to tearing - leading to partial write.
     fn update(&mut self, value: &T){
-        if self.which() == 0 {
-            self.storage_b.update(value);
-            self.storage_a.invalidate();
-        } else {
-            self.storage_a.update(value);
-            self.storage_b.invalidate();
+        match self.which() {
+            StorageA => {
+                self.storage_b.update(value);
+                self.storage_a.invalidate();
+            },
+            StorageB => {
+                self.storage_a.update(value);
+                self.storage_b.invalidate();
+            },
         }
     }
+}
+
+pub enum KeyError {
+    KeyOutOfRange,
+    SlotIsFree,
 }
 
 /// A Non-Volatile fixed-size collection of fixed-size items.
 /// Items insertion and deletion are atomic.
 /// Items update is not implemented because the atomicity of this operation
-/// cannot be garanteed here.
+/// cannot be guaranteed here.
+// We use the term `index` to represent the user-facing number of an element in the collection,
+// and the term `key` to represent the underlying offset at which the element is located in the collection.
+// e.g with `[0, 0, 1, 1, 0, 1, 0]` (with 0 being free slots and 1 being allocated slot)
+//            ↑  ↑  ↑  ↑  ↑  ↑  ↑
+// index:     -  -  0  1  -  2  -
+// key:       0, 1, 2, 3, 4, 5, 6
 pub struct Collection<T, const N: usize> {
     flags: AtomicStorage<[u8;N]>,
     slots: [AlignedStorage<T>;N]
@@ -245,12 +267,9 @@ impl<T, const N: usize> Collection<T, N> where T: Copy {
     /// Finds and returns a reference to a free slot, or returns None if
     /// all slots are allocated.
     fn find_free_slot(&self) -> Option<usize> {
-        for (i, e) in self.flags.get_ref().iter().enumerate() {
-            if *e != STORAGE_VALID {
-                return Some(i);
-            }
-        }
-        None
+        self.flags.get_ref()
+            .iter()
+            .position(|&e| e == STORAGE_VALID)
     }
 
     /// Adds an item in the collection. Returns an error if there is not free
@@ -269,31 +288,35 @@ impl<T, const N: usize> Collection<T, N> where T: Copy {
         }
     }
 
-    /// Returns true if the indicated slot is allocated, or false if it is
-    /// free.
-    pub fn is_allocated(&self, index: usize) -> bool {
-        self.flags.get_ref()[index] == STORAGE_VALID
+    /// Returns `Ok(())` if the indicated slot is allocated.
+    ///
+    /// # Errors
+    ///
+    /// Returns the appropriate error if the key is out of bounds or if
+    /// the indicated slot is not allocated.
+    fn is_allocated(&self, key: usize) -> Result<(), KeyError> {
+        match self.flags.get_ref().get(key) {
+            Some(&byte) => {
+                if byte == STORAGE_VALID {
+                    Ok(())
+                } else {
+                    Err(SlotIsFree)
+                }
+            },
+            None => Err(KeyOutOfRange)
+        }
     }
 
     /// Returns the number of allocated slots.
     pub fn len(&self) -> usize {
-        let mut result = 0;
-        for v in self.flags.get_ref() {
-            if *v == STORAGE_VALID {
-                result += 1;
-            }
-        }
-        result
+        self.flags.get_ref()
+            .iter()
+            .fold(0, |n, c| n + (*c == STORAGE_VALID) as u32) as usize
     }
 
     /// Returns true if collection is empty
     pub fn is_empty(&self) -> bool {
-        for v in self.flags.get_ref() {
-            if *v == STORAGE_VALID {
-                return false;
-            }
-        }
-        true
+        !self.flags.get_ref().iter().any(|v| *v == STORAGE_VALID)
     }
 
     /// Returns the maximum number of items the collection can store.
@@ -307,8 +330,8 @@ impl<T, const N: usize> Collection<T, N> where T: Copy {
         self.capacity() - self.len()
     }
 
-    /// Returns the index of an item in the internal storage, given the index
-    /// in the collection. If index is too big, None is returned.
+    /// Returns the `key` of an item in the internal storage, given the `index`
+    /// in the collection. If `index` is too big, None is returned.
     ///
     /// # Arguments
     ///
@@ -317,16 +340,18 @@ impl<T, const N: usize> Collection<T, N> where T: Copy {
         let mut next = 0;
         let mut count = 0;
         loop {
-            if next == N {
-                return None
-            }
-            if self.is_allocated(next) {
-                if count == index {
-                    return Some(next);
+            match self.is_allocated(next) {
+                Ok(_) => {
+                    if count == index {
+                        return Some(next)
+                    }
+                    count += 1;
                 }
-                count += 1
+                Err(KeyOutOfRange) => {
+                    return None
+                }
+                Err(SlotIsFree) => next += 1,
             }
-            next += 1
         }
     }
 
@@ -342,11 +367,15 @@ impl<T, const N: usize> Collection<T, N> where T: Copy {
         }
     }
 
-    /// Removes an item from the collection.
+    /// Removes the item located at `index` from the collection.
     ///
     /// # Arguments
     ///
     /// * `index` - Item index
+    ///
+    /// # Panics
+    ///
+    /// Panics if `index` is out of bounds.
     pub fn remove(&mut self, index: usize) {
         let key = self.index_to_key(index).unwrap();
         let mut new_flags = *self.flags.get_ref();
@@ -368,13 +397,13 @@ impl<'a, T, const N: usize> IntoIterator for &'a Collection<T, N>
     type IntoIter = CollectionIterator<'a, T, N>;
 
     fn into_iter(self) -> CollectionIterator<'a, T, N> {
-        CollectionIterator { container: &self, next: 0 }
+        CollectionIterator { container: &self, next_key: 0 }
     }
 }
 
 pub struct CollectionIterator<'a, T, const N: usize> where T: Copy {
     container: &'a Collection<T, N>,
-    next: usize
+    next_key: usize
 }
 
 impl<'a, T, const N: usize> Iterator for CollectionIterator<'a, T, N>
@@ -384,15 +413,18 @@ impl<'a, T, const N: usize> Iterator for CollectionIterator<'a, T, N>
 
     fn next(&mut self) -> core::option::Option<&'a T> {
         loop {
-            if self.next == N {
-                return None
+            match self.container.is_allocated(self.next_key) {
+                Err(KeyOutOfRange) => {
+                    return None
+                },
+                Ok(_) => {
+                    self.next_key += 1;
+                    return Some(self.container.slots[self.next_key - 1].get_ref())
+                }
+                Err(SlotIsFree) => {
+                    self.next_key += 1;
+                }
             }
-            if self.container.is_allocated(self.next) {
-                let result = Some(self.container.slots[self.next].get_ref());
-                self.next += 1;
-                return result;
-            }
-            self.next += 1;
         }
     }
 }
