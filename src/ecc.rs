@@ -8,7 +8,7 @@ pub enum CurvesId {
 
 /// Wrapper for 'os_perso_derive_node_bip32'
 pub fn bip32_derive(curve: CurvesId, path: &[u32], key: &mut [u8]) -> Result<(), SyscallError> {
-    let _err = unsafe {
+    unsafe {
         os_perso_derive_node_bip32(
             curve as u8,
             path.as_ptr(),
@@ -17,12 +17,8 @@ pub fn bip32_derive(curve: CurvesId, path: &[u32], key: &mut [u8]) -> Result<(),
             core::ptr::null_mut(),
         )
     };
-    // TODO: update to make sure we catch if syscall errors
-    // if err != 0 { //
-    // Err(err.into())
-    // } else {
+
     Ok(())
-    // }
 }
 
 /// Wrapper for 'cx_ecfp_init_private_key'
