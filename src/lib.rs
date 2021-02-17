@@ -16,7 +16,7 @@ pub mod random;
 pub mod seph;
 pub mod usbbindings;
 
-use bindings::*;
+use bindings::os_sched_exit;
 
 use core::{ffi::c_void, panic::PanicInfo};
 
