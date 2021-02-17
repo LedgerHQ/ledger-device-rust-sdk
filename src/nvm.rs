@@ -311,7 +311,7 @@ impl<T, const N: usize> Collection<T, N> where T: Copy {
     pub fn len(&self) -> usize {
         self.flags.get_ref()
             .iter()
-            .fold(0, |n, c| n + (*c == STORAGE_VALID) as u32) as usize
+            .fold(0, |acc, &byte| acc + (byte == STORAGE_VALID) as u32) as usize
     }
 
     /// Returns true if collection is empty
