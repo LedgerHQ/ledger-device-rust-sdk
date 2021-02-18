@@ -42,7 +42,6 @@
 
 use crate::bindings::nvm_write;
 use AtomicStorageElem::{StorageA, StorageB};
-use KeyError::{KeyOutOfRange, SlotIsFree};
 
 // Warning: currently alignment is fixed by magic values everywhere, since
 // rust does not allow using a constant in repr(align(...))
@@ -235,11 +234,7 @@ impl<T> SingleStorage<T> for AtomicStorage<T> where T: Copy {
         }
     }
 }
-
-pub enum KeyError {
-    KeyOutOfRange,
-    SlotIsFree,
-}
+pub struct KeyOutOfRange;
 
 /// A Non-Volatile fixed-size collection of fixed-size items.
 /// Items insertion and deletion are atomic.
@@ -288,19 +283,18 @@ impl<T, const N: usize> Collection<T, N> where T: Copy {
         }
     }
 
-    /// Returns `Ok(())` if the indicated slot is allocated.
+    /// Returns a boolean representing whether the slot at `key` was allocated or not.
     ///
     /// # Errors
     ///
-    /// Returns an error describing whether the key was out of bounds or
-    /// the indicated slot was not allocated.
-    fn is_allocated(&self, key: usize) -> Result<(), KeyError> {
+    /// Returns an error if the `key` is out of range.
+    fn is_allocated(&self, key: usize) -> Result<bool, KeyOutOfRange> {
         match self.flags.get_ref().get(key) {
             Some(&byte) => {
                 if byte == STORAGE_VALID {
-                    Ok(())
+                    Ok(true)
                 } else {
-                    Err(SlotIsFree)
+                    Ok(false)
                 }
             },
             None => Err(KeyOutOfRange)
@@ -345,23 +339,20 @@ impl<T, const N: usize> Collection<T, N> where T: Copy {
     fn index_to_key(&self, index: usize) -> Option<usize> {
         // Neat optimization: start by setting `next` to index,
         // because we know we could not have found `index` allocated slots beforehand.
-        let mut next_key = index;
+        let mut key = index;
         // Now count the number of allocated slots we have found up
         // until this `index` (without including the slot at `index` itself).
-        let mut count = self.count_allocated(index);
+        let mut allocated_count = self.count_allocated(index);
         loop {
-            match self.is_allocated(next_key) {
-                Ok(_) => {
-                    if count == index {
-                        return Some(next_key)
-                    }
-                    count += 1;
+            let is_allocated = self.is_allocated(key).ok()?;
+            if is_allocated {
+                if allocated_count == index {
+                    return Some(key);
                 }
-                Err(KeyOutOfRange) => {
-                    return None
-                }
-                Err(SlotIsFree) => next_key += 1,
-            }
+                allocated_count += 1;
+            } else {
+                key += 1;
+           }
         }
     }
 
@@ -423,17 +414,12 @@ impl<'a, T, const N: usize> Iterator for CollectionIterator<'a, T, N>
 
     fn next(&mut self) -> core::option::Option<&'a T> {
         loop {
-            match self.container.is_allocated(self.next_key) {
-                Err(KeyOutOfRange) => {
-                    return None
-                },
-                Ok(_) => {
-                    self.next_key += 1;
-                    return Some(self.container.slots[self.next_key - 1].get_ref())
-                }
-                Err(SlotIsFree) => {
-                    self.next_key += 1;
-                }
+            let is_allocated = self.container.is_allocated(self.next_key).ok()?;
+            if is_allocated {
+                self.next_key += 1;
+                return Some(self.container.slots[self.next_key - 1].get_ref())
+            } else {
+                self.next_key += 1;
             }
         }
     }
