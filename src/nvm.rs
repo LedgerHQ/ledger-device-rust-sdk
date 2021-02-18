@@ -360,9 +360,8 @@ where
                     return Some(key);
                 }
                 allocated_count += 1;
-            } else {
-                key += 1;
             }
+            key += 1;
         }
     }
 
