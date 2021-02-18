@@ -7,13 +7,16 @@ pub enum CurvesId {
 }
 
 /// Wrapper for 'os_perso_derive_node_bip32'
-#[must_use]
 pub fn bip32_derive(curve: CurvesId, path: &[u32], key: &mut [u8]) -> Result<(), SyscallError> {
-    let err = unsafe { os_perso_derive_node_bip32( curve as u8,
-                                     path.as_ptr(), 
-                                     path.len() as u32,
-                                     key.as_mut_ptr(),
-                                     core::ptr::null_mut() ) };
+    let err = unsafe {
+        os_perso_derive_node_bip32(
+            curve as u8,
+            path.as_ptr(),
+            path.len() as u32,
+            key.as_mut_ptr(),
+            core::ptr::null_mut(),
+        )
+    };
     if err != 0 {
         Err(err.into())
     } else {
@@ -22,13 +25,16 @@ pub fn bip32_derive(curve: CurvesId, path: &[u32], key: &mut [u8]) -> Result<(),
 }
 
 /// Wrapper for 'cx_ecfp_init_private_key'
-#[must_use]
 pub fn ec_init_key(curve: CurvesId, raw_key: &[u8]) -> Result<cx_ecfp_private_key_t, SyscallError> {
     let mut ec_k = cx_ecfp_private_key_t::default();
-    let err = unsafe { cx_ecfp_init_private_key(curve as u8, 
-        raw_key.as_ptr(), 
-        raw_key.len() as u32, 
-        &mut ec_k as *mut cx_ecfp_private_key_t) };
+    let err = unsafe {
+        cx_ecfp_init_private_key(
+            curve as u8,
+            raw_key.as_ptr(),
+            raw_key.len() as u32,
+            &mut ec_k as *mut cx_ecfp_private_key_t,
+        )
+    };
     if err != 0 {
         Err(err.into())
     } else {
@@ -37,15 +43,18 @@ pub fn ec_init_key(curve: CurvesId, raw_key: &[u8]) -> Result<cx_ecfp_private_ke
 }
 
 /// Wrapper for 'cx_ecfp_generate_pair'
-#[must_use]
-pub fn ec_get_pubkey(curve: CurvesId, privkey: &mut cx_ecfp_private_key_t) -> Result<cx_ecfp_public_key_t, SyscallError> {
+pub fn ec_get_pubkey(
+    curve: CurvesId,
+    privkey: &mut cx_ecfp_private_key_t,
+) -> Result<cx_ecfp_public_key_t, SyscallError> {
     let mut ec_pubkey = cx_ecfp_public_key_t::default();
-    let err = unsafe { 
+    let err = unsafe {
         cx_ecfp_generate_pair(
-            curve as u8, 
+            curve as u8,
             &mut ec_pubkey as *mut cx_ecfp_public_key_t,
-            privkey as *mut cx_ecfp_private_key_t, 
-            1)
+            privkey as *mut cx_ecfp_private_key_t,
+            1,
+        )
     };
     if err != 0 {
         Err(err.into())
@@ -54,40 +63,53 @@ pub fn ec_get_pubkey(curve: CurvesId, privkey: &mut cx_ecfp_private_key_t) -> Re
     }
 }
 
-pub type DEREncodedECDSASignature = [u8; 73];
+pub type DerEncodedEcdsaSignature = [u8; 73];
 /// Wrapper for 'cx_ecdsa_sign'
-pub fn ecdsa_sign(pvkey: &cx_ecfp_private_key_t, mode: i32, hash_id: u8, hash: &[u8]) -> Result<(DEREncodedECDSASignature,i32), ()> {
+pub fn ecdsa_sign(
+    pvkey: &cx_ecfp_private_key_t,
+    mode: i32,
+    hash_id: u8,
+    hash: &[u8],
+) -> Option<(DerEncodedEcdsaSignature, i32)> {
     let mut sig = [0u8; 73];
     let mut info = 0;
     let len = unsafe {
-        cx_ecdsa_sign(  pvkey, 
-                        mode,
-                        hash_id,
-                        hash.as_ptr(),
-                        hash.len() as u32,
-                        sig.as_mut_ptr(), 
-                        sig.len() as u32, 
-                        &mut info)
+        cx_ecdsa_sign(
+            pvkey,
+            mode,
+            hash_id,
+            hash.as_ptr(),
+            hash.len() as u32,
+            sig.as_mut_ptr(),
+            sig.len() as u32,
+            &mut info,
+        )
     };
     if len == 0 {
-        Err(())
+        None
     } else {
-        Ok((sig,len))
-    } 
+        Some((sig, len))
+    }
 }
 
 /// Wrapper for 'cx_ecdsa_verify'
-pub fn ecdsa_verify(pubkey: &cx_ecfp_public_key_t, sig: &[u8], mode: i32,
-hash_id: u8, hash: &[u8]) -> bool {
+pub fn ecdsa_verify(
+    pubkey: &cx_ecfp_public_key_t,
+    sig: &[u8],
+    mode: i32,
+    hash_id: u8,
+    hash: &[u8],
+) -> bool {
     let status = unsafe {
         cx_ecdsa_verify(
-           pubkey as *const cx_ecfp_public_key_t,
-           mode,
-           hash_id,
-           hash.as_ptr(),
-           hash.len() as u32,
-           sig.as_ptr(),
-           sig.len() as u32)
+            pubkey as *const cx_ecfp_public_key_t,
+            mode,
+            hash_id,
+            hash.as_ptr(),
+            hash.len() as u32,
+            sig.as_ptr(),
+            sig.len() as u32,
+        )
     };
     status == 1
 }
@@ -112,7 +134,7 @@ hash_id: u8, hash: &[u8]) -> bool {
 pub const fn make_bip32_path<const N: usize>(bytes: &[u8]) -> [u32; N] {
     // Describes current parser state
     #[derive(Copy, Clone)]
-    enum BIP32ParserState {
+    enum Bip32ParserState {
         FirstDigit,
         Digit,
         Hardened,
@@ -129,72 +151,66 @@ pub const fn make_bip32_path<const N: usize>(bytes: &[u8]) -> [u32; N] {
     let mut i = 2; // parsed character index
     let mut j = 0; // constructed path number index
     let mut acc = 0; // constructed path number
-    let mut state = BIP32ParserState::FirstDigit;
+    let mut state = Bip32ParserState::FirstDigit;
 
     while i < bytes.len() {
         let c = bytes[i];
         match state {
             // We are expecting a digit, after a /
             // This prevent having empty numbers, like //
-            BIP32ParserState::FirstDigit => {
-                match c {
-                    b'0'..=b'9' => {
-                        acc = (c - b'0') as u32;
-                        path[j] = acc;
-                        state = BIP32ParserState::Digit
-                    },
-                    _ => panic!("expected digit after '/'")
+            Bip32ParserState::FirstDigit => match c {
+                b'0'..=b'9' => {
+                    acc = (c - b'0') as u32;
+                    path[j] = acc;
+                    state = Bip32ParserState::Digit
                 }
+                _ => panic!("expected digit after '/'"),
             },
             // We are parsing digits for the current path token. We may also
             // find ' for hardening, or /.
-            BIP32ParserState::Digit => {
+            Bip32ParserState::Digit => {
                 match c {
                     b'0'..=b'9' => {
                         acc = acc * 10 + (c - b'0') as u32;
                         path[j] = acc;
-                    },
+                    }
                     // Hardening
                     b'\'' => {
                         path[j] = acc + 0x80000000;
                         j += 1;
-                        state = BIP32ParserState::Hardened
-                    },
+                        state = Bip32ParserState::Hardened
+                    }
                     // Separator for next number
                     b'/' => {
                         path[j] = acc;
                         j += 1;
-                        state = BIP32ParserState::FirstDigit
-                    },
-                    _ => panic!("unexpected character in path")
+                        state = Bip32ParserState::FirstDigit
+                    }
+                    _ => panic!("unexpected character in path"),
                 }
-            },
+            }
             // Previous number has hardening. Next character must be a /
             // separator.
-            BIP32ParserState::Hardened => {
-                match c {
-                    b'/' => state = BIP32ParserState::FirstDigit,
-                    _ => panic!("expected '/' character after hardening")
-                }
+            Bip32ParserState::Hardened => match c {
+                b'/' => state = Bip32ParserState::FirstDigit,
+                _ => panic!("expected '/' character after hardening"),
             },
         }
         i += 1;
     }
 
     // Prevent last character from being /
-    match state {
-        BIP32ParserState::FirstDigit => panic!("missing number in path"),
-        _ => {}
+    if let Bip32ParserState::FirstDigit = state {
+        panic!("missing number in path")
     }
 
     // Assert we parsed the exact expected number of tokens in the path
-    if j != N-1 {
+    if j != N - 1 {
         panic!("path is too short");
     }
 
     path
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -228,7 +244,7 @@ mod tests {
 
         let verif = ecdsa_verify(&pubkey, &sig[..sig_len as usize], rnd_mode, hash, message);
 
-        assert_eq!(verif , true);
+        assert_eq!(verif, true);
     }
 
     #[test]
@@ -248,7 +264,7 @@ mod tests {
         let pubkey = ec_get_pubkey(CurvesId::Secp256k1, &mut k)?;
         let verif = ecdsa_verify(&pubkey, &sig[..sig_len as usize], rnd_mode, hash, message);
 
-        assert_eq!(verif , true);
+        assert_eq!(verif, true);
     }
 
     #[test]
@@ -267,7 +283,7 @@ mod tests {
         }
         {
             const P: [u32; 4] = make_bip32_path(b"m/1234/5678'/91011/0");
-            assert_eq!(P, [1234u32, 5678u32+0x80000000u32, 91011u32, 0u32]);
+            assert_eq!(P, [1234u32, 5678u32 + 0x80000000u32, 91011u32, 0u32]);
         }
     }
 }

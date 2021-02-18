@@ -1,6 +1,6 @@
 extern crate cc;
-use std::process::Command;
 use std::path::Path;
+use std::process::Command;
 use std::{env, error::Error, fs::File, io::Write, path::PathBuf};
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -13,9 +13,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let sysroot = std::str::from_utf8(&output.stdout).unwrap().trim();
     let gcc_toolchain = if sysroot.is_empty() {
-                            String::from("/usr/include/")
+        String::from("/usr/include/")
     } else {
-        format!("{}/include",sysroot)
+        format!("{}/include", sysroot)
     };
 
     #[cfg(windows)]
@@ -122,7 +122,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .flag("-fropi")
         .flag("--target=thumbv6m-none-eabi")
         .flag("-fomit-frame-pointer")
-
         .flag("-mcpu=cortex-m0")
         .flag("-fno-common")
         .flag("-fdata-sections")

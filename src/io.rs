@@ -1,16 +1,16 @@
-use crate::bindings::*;
-use crate::seph;
-use crate::buttons::{ButtonEvent, ButtonsState, get_button_event};
-use core::ops::{Index, IndexMut};
-use core::convert::TryFrom;
 use crate::bindings::G_io_app;
+use crate::bindings::*;
+use crate::buttons::{get_button_event, ButtonEvent, ButtonsState};
+use crate::seph;
+use core::convert::TryFrom;
+use core::ops::{Index, IndexMut};
 
 #[derive(Copy, Clone)]
 #[repr(u16)]
 pub enum StatusWords {
-    OK = 0x9000,
+    Ok = 0x9000,
     NothingReceived = 0x6982,
-    BadCLA = 0x6e00,
+    BadCla = 0x6e00,
     BadLen = 0x6e01,
     UserCancelled = 0x6e02,
     Unknown = 0x6d00,
@@ -22,13 +22,13 @@ pub enum SyscallError {
     InvalidParameter = 2,
     Overflow,
     Security,
-    InvalidCRC,
+    InvalidCrc,
     InvalidChecksum,
     InvalidCounter,
     NotSupported,
     InvalidState,
     Timeout,
-    Unspecified
+    Unspecified,
 }
 
 impl From<i32> for SyscallError {
@@ -37,13 +37,13 @@ impl From<i32> for SyscallError {
             2 => SyscallError::InvalidParameter,
             3 => SyscallError::Overflow,
             4 => SyscallError::Security,
-            5 => SyscallError::InvalidCRC,
+            5 => SyscallError::InvalidCrc,
             6 => SyscallError::InvalidChecksum,
             7 => SyscallError::InvalidCounter,
             8 => SyscallError::NotSupported,
             9 => SyscallError::InvalidState,
             10 => SyscallError::Timeout,
-            _ => SyscallError::Unspecified
+            _ => SyscallError::Unspecified,
         }
     }
 }
@@ -67,9 +67,10 @@ impl From<SyscallError> for Reply {
 
 extern "C" {
     pub fn io_usb_hid_send(
-        sndfct: unsafe extern "C" fn(*mut u8, u16), 
-        sndlength: u16, 
-        apdu_buffer: *const u8);
+        sndfct: unsafe extern "C" fn(*mut u8, u16),
+        sndlength: u16,
+        apdu_buffer: *const u8,
+    );
 }
 
 /// Possible events returned by [`Comm::next_event`]
@@ -77,24 +78,30 @@ pub enum Event<T> {
     /// APDU event
     Command(T),
     /// Button press or release event
-    Button(ButtonEvent)
+    Button(ButtonEvent),
 }
 
 pub struct Comm {
     pub apdu_buffer: [u8; 260],
     pub rx: usize,
     pub tx: usize,
-    buttons: ButtonsState
+    buttons: ButtonsState,
 }
 
-impl Comm {
-    pub fn new() -> Comm {
-        Comm {
+impl Default for Comm {
+    fn default() -> Self {
+        Self {
             apdu_buffer: [0u8; 260],
             rx: 0,
             tx: 0,
-            buttons: ButtonsState::new()
+            buttons: ButtonsState::new(),
         }
+    }
+}
+
+impl Comm {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// Send the currently held APDU
@@ -111,21 +118,25 @@ impl Comm {
         }
 
         match unsafe { G_io_app.apdu_state } {
-            APDU_USB_HID => {
-                unsafe {
-                    io_usb_hid_send(io_usb_send_apdu_data, self.tx as u16, self.apdu_buffer.as_ptr());
-                }
+            APDU_USB_HID => unsafe {
+                io_usb_hid_send(
+                    io_usb_send_apdu_data,
+                    self.tx as u16,
+                    self.apdu_buffer.as_ptr(),
+                );
             },
-            APDU_RAW => { 
+            APDU_RAW => {
                 let len = (self.tx as u16).to_be_bytes();
                 seph::seph_send(&[seph::SephTags::RawAPDU as u8, len[0], len[1]]);
                 seph::seph_send(&self.apdu_buffer[..self.tx]);
             }
-            _ => ()
+            _ => (),
         }
         self.tx = 0;
         self.rx = 0;
-        unsafe {G_io_app.apdu_state = APDU_IDLE;}
+        unsafe {
+            G_io_app.apdu_state = APDU_IDLE;
+        }
     }
 
     /// Wait and return next button press event or APDU command.
@@ -191,14 +202,13 @@ impl Comm {
     pub fn next_event<T: TryFrom<u8>>(&mut self) -> Event<T> {
         let mut spi_buffer = [0u8; 128];
 
-        unsafe { 
-           G_io_app.apdu_state = APDU_IDLE;
-           G_io_app.apdu_media = IO_APDU_MEDIA_NONE;
-           G_io_app.apdu_length = 0; 
+        unsafe {
+            G_io_app.apdu_state = APDU_IDLE;
+            G_io_app.apdu_media = IO_APDU_MEDIA_NONE;
+            G_io_app.apdu_length = 0;
         }
 
         loop {
-
             // Signal end of command stream from SE to MCU
             // And prepare reception
             if !seph::is_status_sent() {
@@ -227,38 +237,42 @@ impl Comm {
             // Any other event (usb, xfer, ticker) is silently handled
             match seph::Events::from(tag) {
                 seph::Events::ButtonPush => {
-                    let button_info = spi_buffer[3]>>1;
+                    let button_info = spi_buffer[3] >> 1;
                     if let Some(btn_evt) = get_button_event(&mut self.buttons, button_info) {
-                        return Event::Button(btn_evt)
+                        return Event::Button(btn_evt);
                     }
-                },
+                }
                 seph::Events::USBEvent => {
                     if len == 1 {
                         seph::handle_usb_event(&spi_buffer);
                     }
-                },
+                }
                 seph::Events::USBXFEREvent => {
                     if len >= 3 {
                         seph::handle_usb_ep_xfer_event(&mut self.apdu_buffer, &spi_buffer);
                     }
-                },
-                seph::Events::CAPDUEvent => seph::handle_capdu_event(&mut self.apdu_buffer, &spi_buffer),
+                }
+                seph::Events::CAPDUEvent => {
+                    seph::handle_capdu_event(&mut self.apdu_buffer, &spi_buffer)
+                }
                 seph::Events::TickerEvent => { // unsafe{ G_io_app.ms += 100; }
-                    // crate::debug_write("ticker");
-                },
-                _ => ()
+                     // crate::debug_write("ticker");
+                }
+                _ => (),
             }
 
-            if unsafe{G_io_app.apdu_state } != APDU_IDLE && unsafe {G_io_app.apdu_length } > 0 {
-                self.rx = unsafe {G_io_app.apdu_length as usize };
+            if unsafe { G_io_app.apdu_state } != APDU_IDLE && unsafe { G_io_app.apdu_length } > 0 {
+                self.rx = unsafe { G_io_app.apdu_length as usize };
                 let res = T::try_from(self.apdu_buffer[1]);
                 match res {
-                    Ok(ins) => { return Event::Command(ins); }
+                    Ok(ins) => {
+                        return Event::Command(ins);
+                    }
                     Err(_) => {
                         // Invalid Ins code. Send automatically an error, mask
                         // the bad instruction to the application and just
                         // discard this event.
-                        self.reply(StatusWords::BadCLA);
+                        self.reply(StatusWords::BadCla);
                     }
                 }
             }
@@ -300,7 +314,9 @@ impl Comm {
     /// automatically performed by the `next_command` method itself.
     pub fn next_command<T: TryFrom<u8>>(&mut self) -> T {
         loop {
-            if let Event::Command(ins) = self.next_event() { return ins }
+            if let Event::Command(ins) = self.next_event() {
+                return ins;
+            }
         }
     }
 
@@ -325,7 +341,7 @@ impl Comm {
     /// Set the Status Word of the response to `StatusWords::OK` (which is equal
     /// to `0x9000`, and transmit the response.
     pub fn reply_ok(&mut self) {
-        self.reply(StatusWords::OK);
+        self.reply(StatusWords::Ok);
     }
 
     /// Return APDU Class and Instruction bytes as a tuple
@@ -347,7 +363,7 @@ impl Comm {
         let len = u16::from_le_bytes([self.apdu_buffer[2], self.apdu_buffer[3]]) as usize;
         match len {
             0 => Err(StatusWords::BadLen),
-            _ => Ok(&self.apdu_buffer[4..4+len])
+            _ => Ok(&self.apdu_buffer[4..4 + len]),
         }
     }
 

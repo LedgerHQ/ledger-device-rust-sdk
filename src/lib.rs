@@ -3,7 +3,6 @@
 #![feature(custom_test_frameworks)]
 #![reexport_test_harness_main = "test_main"]
 #![test_runner(sdk_test_runner)]
-#![feature(min_const_generics)]
 #![feature(const_fn)]
 #![feature(asm)]
 #![feature(const_panic)]
@@ -12,10 +11,10 @@ pub mod bindings;
 pub mod buttons;
 pub mod ecc;
 pub mod io;
-pub mod seph;
-pub mod random;
-pub mod usbbindings;
 pub mod nvm;
+pub mod random;
+pub mod seph;
+pub mod usbbindings;
 
 use bindings::*;
 
@@ -34,15 +33,15 @@ pub fn exiting_panic(_info: &PanicInfo) -> ! {
 /// as the project's current panic handler
 #[macro_export]
 macro_rules! set_panic {
-  ($f:expr) => {
-    use core::panic::PanicInfo;
-    #[panic_handler]
-    fn panic(info: &PanicInfo) -> ! {
-        $f(info)
-    }
-  };
+    ($f:expr) => {
+        use core::panic::PanicInfo;
+        #[panic_handler]
+        fn panic(info: &PanicInfo) -> ! {
+            $f(info)
+        }
+    };
 }
- 
+
 /// Debug 'print' function that uses ARM semihosting
 /// Prints only strings with no formatting
 #[cfg(feature = "speculos")]
@@ -89,12 +88,12 @@ pub fn sdk_test_runner(tests: &[&TestType]) {
             let t: &[u8] = core::mem::transmute(t);
             name = core::str::from_utf8_unchecked(t);
         }
-        let fp = unsafe{ pic(test.f as u32) };
+        let fp = unsafe { pic(test.f as u32) };
         let fp: fn() -> Result<(), ()> = unsafe { core::mem::transmute(fp) };
         let res = fp();
         match res {
             Ok(()) => debug_print("\x1b[1;32m   ok   \x1b[0m"),
-            Err(()) => debug_print("\x1b[1;31m  fail  \x1b[0m")
+            Err(()) => debug_print("\x1b[1;31m  fail  \x1b[0m"),
         }
         debug_print(modname);
         debug_print("::");
@@ -103,7 +102,7 @@ pub fn sdk_test_runner(tests: &[&TestType]) {
     }
 }
 
-/// This variant of `assert_eq!()` returns an error 
+/// This variant of `assert_eq!()` returns an error
 /// `Err(())` instead of panicking, to prevent tests
 /// from exiting on first failure
 #[cfg(feature = "speculos")]
@@ -136,21 +135,21 @@ pub extern "C" fn _start() -> ! {
 /// Wrapper for 'os_sched_exit'
 /// Exit application with status
 pub fn exit_app(status: u8) -> ! {
-    unsafe { os_sched_exit( status) };
-    loop {}
+    unsafe { os_sched_exit(status) };
+    unreachable!("Did not exit properly");
 }
 
-// The Rust version of PIC()
+// The Rust version of Pic()
 // hopefully there are ways to avoid that
 extern "C" {
-    fn pic(link_address: u32) -> u32; 
+    fn pic(link_address: u32) -> u32;
 }
 
 /// Performs code address translation for reading data located in the program
 /// and relocated during application installation.
 pub fn pic_rs<T>(x: &T) -> &T {
     let ptr = unsafe { pic(x as *const T as u32) as *const T };
-    unsafe{ & *ptr }
+    unsafe { &*ptr }
 }
 
 /// Performs code address translation for reading mutable data located in the
@@ -161,7 +160,7 @@ pub fn pic_rs<T>(x: &T) -> &T {
 /// particular when using the `nvm` module.
 pub fn pic_rs_mut<T>(x: &mut T) -> &mut T {
     let ptr = unsafe { pic(x as *mut T as u32) as *mut T };
-    unsafe{ &mut *ptr }
+    unsafe { &mut *ptr }
 }
 
 /// Data wrapper to force access through address translation with [`pic_rs`] or
@@ -172,18 +171,18 @@ pub fn pic_rs_mut<T>(x: &mut T) -> &mut T {
 ///
 /// ```
 /// // This constant data is stored in Code space, which is relocated.
-/// static DATA: PIC<u32> = PIC::new(42);
+/// static DATA: Pic<u32> = Pic::new(42);
 /// ...
-/// // Access with address translation is enforced thanks to PIC wrapper
+/// // Access with address translation is enforced thanks to Pic wrapper
 /// let x: u32 = *DATA.get_ref();
 /// ```
-pub struct PIC<T> {
-    data: T
+pub struct Pic<T> {
+    data: T,
 }
 
-impl<T> PIC<T> {
-    pub const fn new(data: T) -> PIC<T> {
-        PIC { data }
+impl<T> Pic<T> {
+    pub const fn new(data: T) -> Pic<T> {
+        Pic { data }
     }
 
     /// Returns translated reference to the wrapped data.
@@ -196,7 +195,6 @@ impl<T> PIC<T> {
         pic_rs_mut(&mut self.data)
     }
 }
-
 
 #[cfg(test)]
 #[no_mangle]
@@ -213,11 +211,11 @@ mod tests {
 
     #[test]
     fn test1() {
-        assert_eq!(2,2);
+        assert_eq!(2, 2);
     }
 
     #[test]
     fn test2() {
-        assert_eq!(3,2);
+        assert_eq!(3, 2);
     }
 }

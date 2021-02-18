@@ -23,6 +23,15 @@ On Ubuntu, `gcc-multilib` might also be required.
 Using rustc nightly builds is recommanded as some unstable features are
 required.
 
+- `rustup default nightly`
 - `rustup target add thumbv6m-none-eabi`
 - install [Clang](http://releases.llvm.org/download.html).
 - install an [ARM GCC toolchain](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads)
+
+## Contributing
+
+Make sure you've followed the installation steps above. In order for your PR to be accepted, it will have to pass the CI, which performs the following checks:
+
+- Check if the code builds on nightly
+- Check that `clippy` does not emit any warnings
+- check that your code follows `rustfmt`'s format (using `cargo fmt`)

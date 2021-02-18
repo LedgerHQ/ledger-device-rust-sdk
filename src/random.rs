@@ -17,8 +17,10 @@ pub fn rand_u32() -> u32 {
 /// # Arguments
 ///
 /// * `out` - Destination array.
-pub fn rand_bytes(out: &mut[u8]) {
-    unsafe { cx_rng(out.as_mut_ptr(), out.len() as u32); }
+pub fn rand_bytes(out: &mut [u8]) {
+    unsafe {
+        cx_rng(out.as_mut_ptr(), out.len() as u32);
+    }
 }
 
 /// Generates and returns a random number in the given range
