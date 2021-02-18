@@ -273,7 +273,7 @@ where
         self.flags
             .get_ref()
             .iter()
-            .position(|&e| e == STORAGE_VALID)
+            .position(|&e| e != STORAGE_VALID)
     }
 
     /// Adds an item in the collection. Returns an error if there is not free
