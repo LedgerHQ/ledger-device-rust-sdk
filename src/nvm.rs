@@ -40,7 +40,8 @@
 //! println!("counter value is {}", *counter.get_ref());
 //! ```
 
-use crate::bindings::*;
+use crate::bindings::nvm_write;
+use AtomicStorageElem::{StorageA, StorageB};
 
 // Warning: currently alignment is fixed by magic values everywhere, since
 // rust does not allow using a constant in repr(align(...))
@@ -177,6 +178,11 @@ pub struct AtomicStorage<T> {
                                // one is the "correct" one.
 }
 
+pub enum AtomicStorageElem {
+    StorageA,
+    StorageB,
+}
+
 impl<T> AtomicStorage<T>
 where
     T: Copy,
@@ -189,15 +195,17 @@ where
         }
     }
 
-    /// Tell which of both storages contains the latest valid data. Returns
-    /// 0 for storage A, 1 for storage B. Panic if none of the storage are
-    /// valid (data corruption), although data corruption shall not be
-    /// possible with tearing.
-    fn which(&self) -> u32 {
+    /// Returns which storage contains the latest valid data.
+    ///
+    /// # Panics
+    ///
+    /// Panics if both storage elements are invalid (data corrupton),
+    /// although data corruption shall not be possible with tearing.
+    fn which(&self) -> AtomicStorageElem {
         if self.storage_a.is_valid() {
-            0
+            StorageA
         } else if self.storage_b.is_valid() {
-            1
+            StorageB
         } else {
             panic!("invalidated atomic storage");
         }
@@ -210,30 +218,39 @@ where
 {
     /// Return reference to the stored value.
     fn get_ref(&self) -> &T {
-        if self.which() == 0 {
-            self.storage_a.get_ref()
-        } else {
-            self.storage_b.get_ref()
+        match self.which() {
+            StorageA => self.storage_a.get_ref(),
+            StorageB => self.storage_b.get_ref(),
         }
     }
 
     /// Update the value by writting to the NVM memory.
     /// Warning: this can be vulnerable to tearing - leading to partial write.
     fn update(&mut self, value: &T) {
-        if self.which() == 0 {
-            self.storage_b.update(value);
-            self.storage_a.invalidate();
-        } else {
-            self.storage_a.update(value);
-            self.storage_b.invalidate();
+        match self.which() {
+            StorageA => {
+                self.storage_b.update(value);
+                self.storage_a.invalidate();
+            }
+            StorageB => {
+                self.storage_a.update(value);
+                self.storage_b.invalidate();
+            }
         }
     }
 }
+pub struct KeyOutOfRange;
 
 /// A Non-Volatile fixed-size collection of fixed-size items.
 /// Items insertion and deletion are atomic.
 /// Items update is not implemented because the atomicity of this operation
-/// cannot be garanteed here.
+/// cannot be guaranteed here.
+// We use the term `index` to represent the user-facing number of an element in the collection,
+// and the term `key` to represent the underlying offset at which the element is located in the collection.
+// e.g with `[0, 0, 1, 1, 0, 1, 0]` (with 0 being free slots and 1 being allocated slot)
+//            ↑  ↑  ↑  ↑  ↑  ↑  ↑
+// index:     -  -  0  1  -  2  -
+// key:       0, 1, 2, 3, 4, 5, 6
 pub struct Collection<T, const N: usize> {
     flags: AtomicStorage<[u8; N]>,
     slots: [AlignedStorage<T>; N],
@@ -253,12 +270,10 @@ where
     /// Finds and returns a reference to a free slot, or returns None if
     /// all slots are allocated.
     fn find_free_slot(&self) -> Option<usize> {
-        for (i, e) in self.flags.get_ref().iter().enumerate() {
-            if *e != STORAGE_VALID {
-                return Some(i);
-            }
-        }
-        None
+        self.flags
+            .get_ref()
+            .iter()
+            .position(|&e| e == STORAGE_VALID)
     }
 
     /// Adds an item in the collection. Returns an error if there is not free
@@ -277,31 +292,32 @@ where
         }
     }
 
-    /// Returns true if the indicated slot is allocated, or false if it is
-    /// free.
-    pub fn is_allocated(&self, index: usize) -> bool {
-        self.flags.get_ref()[index] == STORAGE_VALID
+    /// Returns a boolean representing whether the slot at `key` was allocated or not.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `key` is out of range.
+    fn is_allocated(&self, key: usize) -> Result<bool, KeyOutOfRange> {
+        match self.flags.get_ref().get(key) {
+            Some(&byte) => {
+                if byte == STORAGE_VALID {
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
+            }
+            None => Err(KeyOutOfRange),
+        }
     }
 
     /// Returns the number of allocated slots.
     pub fn len(&self) -> usize {
-        let mut result = 0;
-        for v in self.flags.get_ref() {
-            if *v == STORAGE_VALID {
-                result += 1;
-            }
-        }
-        result
+        self.count_allocated(N)
     }
 
     /// Returns true if collection is empty
     pub fn is_empty(&self) -> bool {
-        for v in self.flags.get_ref() {
-            if *v == STORAGE_VALID {
-                return false;
-            }
-        }
-        true
+        !self.flags.get_ref().iter().any(|v| *v == STORAGE_VALID)
     }
 
     /// Returns the maximum number of items the collection can store.
@@ -315,26 +331,38 @@ where
         self.capacity() - self.len()
     }
 
-    /// Returns the index of an item in the internal storage, given the index
-    /// in the collection. If index is too big, None is returned.
+    /// Counts the number of allocated slots up until `len`.
+    fn count_allocated(&self, len: usize) -> usize {
+        self.flags
+            .get_ref()
+            .iter()
+            .take(len)
+            .fold(0, |acc, &byte| acc + (byte == STORAGE_VALID) as u32) as usize
+    }
+
+    /// Returns the `key` of an item in the internal storage, given the `index`
+    /// in the collection. If `index` is too big, None is returned.
     ///
     /// # Arguments
     ///
     /// * `index` - Index in the collection
     fn index_to_key(&self, index: usize) -> Option<usize> {
-        let mut next = 0;
-        let mut count = 0;
+        // Neat optimization: start by setting `next` to index,
+        // because we know we could not have found `index` allocated slots beforehand.
+        let mut key = index;
+        // Now count the number of allocated slots we have found up
+        // until this `index` (without including the slot at `index` itself).
+        let mut allocated_count = self.count_allocated(index);
         loop {
-            if next == N {
-                return None;
-            }
-            if self.is_allocated(next) {
-                if count == index {
-                    return Some(next);
+            let is_allocated = self.is_allocated(key).ok()?;
+            if is_allocated {
+                if allocated_count == index {
+                    return Some(key);
                 }
-                count += 1
+                allocated_count += 1;
+            } else {
+                key += 1;
             }
-            next += 1
         }
     }
 
@@ -350,11 +378,15 @@ where
         }
     }
 
-    /// Removes an item from the collection.
+    /// Removes the item located at `index` from the collection.
     ///
     /// # Arguments
     ///
     /// * `index` - Item index
+    ///
+    /// # Panics
+    ///
+    /// Panics if `index` is out of bounds.
     pub fn remove(&mut self, index: usize) {
         let key = self.index_to_key(index).unwrap();
         let mut new_flags = *self.flags.get_ref();
@@ -379,7 +411,7 @@ where
     fn into_iter(self) -> CollectionIterator<'a, T, N> {
         CollectionIterator {
             container: &self,
-            next: 0,
+            next_key: 0,
         }
     }
 }
@@ -389,7 +421,7 @@ where
     T: Copy,
 {
     container: &'a Collection<T, N>,
-    next: usize,
+    next_key: usize,
 }
 
 impl<'a, T, const N: usize> Iterator for CollectionIterator<'a, T, N>
@@ -400,15 +432,13 @@ where
 
     fn next(&mut self) -> core::option::Option<&'a T> {
         loop {
-            if self.next == N {
-                return None;
+            let is_allocated = self.container.is_allocated(self.next_key).ok()?;
+            if is_allocated {
+                self.next_key += 1;
+                return Some(self.container.slots[self.next_key - 1].get_ref());
+            } else {
+                self.next_key += 1;
             }
-            if self.container.is_allocated(self.next) {
-                let result = Some(self.container.slots[self.next].get_ref());
-                self.next += 1;
-                return result;
-            }
-            self.next += 1;
         }
     }
 }
