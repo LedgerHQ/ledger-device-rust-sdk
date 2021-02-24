@@ -51,7 +51,7 @@ impl From<i32> for SyscallError {
 /// Provide a type that will be used for replying
 /// an APDU with either a StatusWord or an SyscallError
 #[repr(transparent)]
-pub struct Reply(u16);
+pub struct Reply(pub u16);
 
 impl From<StatusWords> for Reply {
     fn from(sw: StatusWords) -> Reply {
