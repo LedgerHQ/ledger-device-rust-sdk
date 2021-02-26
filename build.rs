@@ -1,12 +1,11 @@
 extern crate cc;
-use std::path::Path;
+use std::path::{PathBuf, Path};
 use std::process::Command;
 use std::{
     env,
     error::Error,
     fs::File,
     io::{Read, Write},
-    path::PathBuf,
 };
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -70,13 +69,18 @@ fn main() -> Result<(), Box<dyn Error>> {
         .target("thumbv6m-none-eabi")
         .file("./src/c/src.c")
         .file("./src/c/sjlj.s")
-        .file(format!("{}/src/os.c", bolos_sdk))
+        .file(format!("{}/src/checks.c", bolos_sdk))
         .file(format!("{}/src/os_io_seproxyhal.c", bolos_sdk))
+        .file(format!("{}/src/os_io_task.c", bolos_sdk))
         .file(format!("{}/src/os_io_usb.c", bolos_sdk))
+        .file(format!("{}/src/os.c", bolos_sdk))
         .file(format!("{}/src/pic_internal.c", bolos_sdk))
         .file(format!("{}/src/pic.c", bolos_sdk))
+        .file(format!("{}/src/svc_call.s", bolos_sdk))
+        .file(format!("{}/src/svc_cx_call.s", bolos_sdk))
         .file(format!("{}/src/syscalls.c", bolos_sdk))
         .file(format!("{}/lib_ux/glyphs/glyphs.c", bolos_sdk))
+        .file(format!("{}/lib_ux/src/ux_stack.c", bolos_sdk))
         .file(format!("{}/lib_stusb/usbd_conf.c", bolos_sdk))
         .file(format!(
             "{}/lib_stusb/STM32_USB_Device_Library/Core/Src/usbd_core.c",
@@ -95,6 +99,23 @@ fn main() -> Result<(), Box<dyn Error>> {
             "{}/lib_stusb/STM32_USB_Device_Library/Class/HID/Src/usbd_hid.c",
             bolos_sdk
         ))
+        .file(format!("{}/lib_cxng/src/cx_rng.c", bolos_sdk))
+        .file(format!("{}/lib_cxng/src/cx_ecfp.c", bolos_sdk))
+        .file(format!("{}/lib_cxng/src/cx_eddsa.c", bolos_sdk))
+        .file(format!("{}/lib_cxng/src/cx_ram.c", bolos_sdk))
+        .file(format!("{}/lib_cxng/src/cx_hash.c", bolos_sdk))
+        .file(format!("{}/lib_cxng/src/cx_sha512.c", bolos_sdk))
+        .file(format!("{}/lib_cxng/src/cx_eddsa.c", bolos_sdk))
+        .file(format!("{}/lib_cxng/src/cx_ecdsa.c", bolos_sdk))
+        .file(format!("{}/lib_cxng/src/cx_rng_rfc6979.c", bolos_sdk))
+        .file(format!("{}/lib_cxng/src/cx_hmac.c", bolos_sdk))
+        .file(format!("{}/lib_cxng/src/cx_sha512_alt_m0.s", bolos_sdk))
+        .file(format!("{}/lib_cxng/src/cx_sha256.c", bolos_sdk))
+        .file(format!("{}/lib_cxng/src/cx_sha3.c", bolos_sdk))
+        .file(format!("{}/lib_cxng/src/cx_blake2b.c", bolos_sdk))
+        .file(format!("{}/lib_cxng/src/cx_Groestl-ref.c", bolos_sdk))
+        .file(format!("{}/lib_cxng/src/cx_utils.c", bolos_sdk))
+        .file(format!("{}/lib_cxng/src/cx_ripemd160.c", bolos_sdk))
         // The following flags should be the same as in wrapper
         //TODO : try to get rid of the flags in wrapper.h by using
         //      bindgen from within build.rs
@@ -169,7 +190,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Add the defines found in the Makefile.conf.cx to our build command.
     for define in defines {
         // scott could use for_each
-        command.define(define, Some("1"));
+        command.define(define, None);
     }
 
     command.compile("rust-app");

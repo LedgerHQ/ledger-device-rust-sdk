@@ -1,5 +1,17 @@
 #include "os.h"
 #include "os_io_seproxyhal.h"
+#include "ux.h"
+
+ux_state_t G_ux;
+
+unsigned char io_event(unsigned char channel) {
+  (void)channel;
+  return ('a');
+}
+
+void io_seproxyhal_display(const bagl_element_t *element) {
+  (void)element;
+}
 
 extern void sample_main();
 
