@@ -309,6 +309,7 @@ pub const SysTick_BASE: u32 = 3758153744;
 pub const NVIC_BASE: u32 = 3758153984;
 pub const SCB_BASE: u32 = 3758157056;
 pub const MPU_BASE: u32 = 3758157200;
+pub const ENDORSEMENT_MAX_ASN1_LENGTH: u32 = 72;
 pub const OS_PARSE_BERTLV_OFFSET_COMPARE_WITH_BUFFER: u32 = 2147483648;
 pub const OS_PARSE_BERTLV_OFFSET_GET_LENGTH: u32 = 1073741824;
 pub const APPLICATION_FLAG_MAIN: u32 = 1;
@@ -328,6 +329,14 @@ pub const APPLICATION_FLAG_ISSUER: u32 = 16384;
 pub const APPLICATION_FLAG_ENABLED: u32 = 32768;
 pub const APPLICATION_FLAG_AEM_PIN: u32 = 8;
 pub const APPLICATION_FLAG_NEG_MASK: u32 = 4294901760;
+pub const BOLOS_TRUE: u32 = 170;
+pub const BOLOS_FALSE: u32 = 85;
+pub const BOLOS_UX_OK: u32 = 170;
+pub const BOLOS_UX_CANCEL: u32 = 85;
+pub const BOLOS_UX_ERROR: u32 = 214;
+pub const BOLOS_UX_IGNORE: u32 = 151;
+pub const BOLOS_UX_REDRAW: u32 = 105;
+pub const BOLOS_UX_CONTINUE: u32 = 0;
 pub const OS_FLAG_RECOVERY: u32 = 1;
 pub const OS_FLAG_SIGNED_MCU_CODE: u32 = 2;
 pub const OS_FLAG_ONBOARDED: u32 = 4;
@@ -346,15 +355,33 @@ pub const IO_FLAGS: u32 = 248;
 pub const USB_SEGMENT_SIZE: u32 = 50;
 pub const BLE_SEGMENT_SIZE: u32 = 50;
 pub const NVM_ERASED_WORD_VALUE: u32 = 4294967295;
-pub const BOLOS_TRUE: u32 = 170;
-pub const BOLOS_FALSE: u32 = 85;
-pub const BOLOS_UX_OK: u32 = 170;
-pub const BOLOS_UX_CANCEL: u32 = 85;
-pub const BOLOS_UX_ERROR: u32 = 214;
-pub const BOLOS_UX_IGNORE: u32 = 151;
-pub const BOLOS_UX_REDRAW: u32 = 105;
-pub const BOLOS_UX_CONTINUE: u32 = 0;
 pub const DEFAULT_PIN_RETRIES: u32 = 3;
+pub const _STDIO_H: u32 = 1;
+pub const __GNUC_VA_LIST: u32 = 1;
+pub const _____fpos_t_defined: u32 = 1;
+pub const ____mbstate_t_defined: u32 = 1;
+pub const _____fpos64_t_defined: u32 = 1;
+pub const ____FILE_defined: u32 = 1;
+pub const __FILE_defined: u32 = 1;
+pub const __struct_FILE_defined: u32 = 1;
+pub const _IO_EOF_SEEN: u32 = 16;
+pub const _IO_ERR_SEEN: u32 = 32;
+pub const _IO_USER_LOCK: u32 = 32768;
+pub const _IOFBF: u32 = 0;
+pub const _IOLBF: u32 = 1;
+pub const _IONBF: u32 = 2;
+pub const BUFSIZ: u32 = 8192;
+pub const EOF: i32 = -1;
+pub const SEEK_SET: u32 = 0;
+pub const SEEK_CUR: u32 = 1;
+pub const SEEK_END: u32 = 2;
+pub const P_tmpdir: &[u8; 5usize] = b"/tmp\0";
+pub const _BITS_STDIO_LIM_H: u32 = 1;
+pub const L_tmpnam: u32 = 20;
+pub const TMP_MAX: u32 = 238328;
+pub const FILENAME_MAX: u32 = 4096;
+pub const L_ctermid: u32 = 9;
+pub const FOPEN_MAX: u32 = 16;
 pub const CX_OK: u32 = 0;
 pub const CX_CARRY: u32 = 4294967073;
 pub const CX_LOCKED: u32 = 4294967169;
@@ -506,7 +533,7 @@ pub const CX_COMPAT_APILEVEL: u32 = 12;
 pub const CXPORT_ED_DES: u32 = 1;
 pub const CXPORT_ED_AES: u32 = 2;
 pub const CXPORT_ED_RSA: u32 = 4;
-pub const SYSCALL_check_api_level_ID_IN: u32 = 1610613047;
+pub const SYSCALL_get_api_level_ID_IN: u32 = 1610613048;
 pub const SYSCALL_halt_ID_IN: u32 = 1610613308;
 pub const SYSCALL_nvm_write_ID_IN: u32 = 1610613631;
 pub const SYSCALL_nvm_erase_ID_IN: u32 = 1610686760;
@@ -565,6 +592,7 @@ pub const SYSCALL_cx_mont_pow_bn_ID_IN: u32 = 1610670860;
 pub const SYSCALL_cx_mont_invert_nprime_ID_IN: u32 = 1610671282;
 pub const SYSCALL_cx_bn_is_prime_ID_IN: u32 = 1610674027;
 pub const SYSCALL_cx_bn_next_prime_ID_IN: u32 = 1610674288;
+pub const SYSCALL_cx_bn_rng_ID_IN: u32 = 1610734972;
 pub const SYSCALL_cx_ecdomain_size_ID_IN: u32 = 1610690052;
 pub const SYSCALL_cx_ecdomain_parameters_length_ID_IN: u32 = 1610690484;
 pub const SYSCALL_cx_ecdomain_parameter_ID_IN: u32 = 1610690671;
@@ -593,8 +621,6 @@ pub const SYSCALL_cx_ecpoint_is_at_infinity_ID_IN: u32 = 1610697643;
 pub const SYSCALL_cx_crc32_hw_ID_IN: u32 = 1610678897;
 pub const SYSCALL_cx_get_random_bytes_ID_IN: u32 = 1610680181;
 pub const SYSCALL_cx_trng_get_random_data_ID_IN: u32 = 1610679926;
-pub const SYSCALL_cx_trng_selftest_ID_IN: u32 = 1610681415;
-pub const SYSCALL_cx_trng_init_ID_IN: u32 = 1610679769;
 pub const SYSCALL_os_perso_erase_all_ID_IN: u32 = 1610632181;
 pub const SYSCALL_os_perso_set_seed_ID_IN: u32 = 1610632892;
 pub const SYSCALL_os_perso_derive_and_set_seed_ID_IN: u32 = 1610633149;
@@ -1392,6 +1418,38 @@ pub struct MPU_Type {
     pub RASR: u32,
 }
 extern "C" {
+    pub fn os_endorsement_get_code_hash(buffer: *mut cty::c_uchar) -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_endorsement_get_public_key(
+        index: cty::c_uchar,
+        buffer: *mut cty::c_uchar,
+    ) -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_endorsement_get_public_key_certificate(
+        index: cty::c_uchar,
+        buffer: *mut cty::c_uchar,
+    ) -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_endorsement_key1_get_app_secret(buffer: *mut cty::c_uchar) -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_endorsement_key1_sign_data(
+        src: *mut cty::c_uchar,
+        srcLength: cty::c_uint,
+        signature: *mut cty::c_uchar,
+    ) -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_endorsement_key2_derive_sign_data(
+        src: *mut cty::c_uchar,
+        srcLength: cty::c_uint,
+        signature: *mut cty::c_uchar,
+    ) -> cty::c_uint;
+}
+extern "C" {
     pub fn halt();
 }
 extern "C" {
@@ -1404,6 +1462,61 @@ extern "C" {
         buffer: *mut *mut cty::c_void,
         maxlength: cty::c_uint,
     ) -> cty::c_uint;
+}
+pub type bolos_bool_t = cty::c_char;
+pub type bolos_task_status_t = cty::c_uchar;
+pub const TASK_BOLOS: task_unsecure_id_e = 0;
+pub const TASK_SYSCALL: task_unsecure_id_e = 1;
+pub const TASK_USERTASKS_START: task_unsecure_id_e = 2;
+pub const TASK_USER: task_unsecure_id_e = 2;
+pub const TASK_SUBTASKS_START: task_unsecure_id_e = 3;
+pub const TASK_SUBTASK_0: task_unsecure_id_e = 3;
+pub const TASK_BOLOS_UX: task_unsecure_id_e = 4;
+pub const TASK_MAXCOUNT: task_unsecure_id_e = 5;
+pub type task_unsecure_id_e = cty::c_uchar;
+extern "C" {
+    pub fn os_sched_exec(app_idx: cty::c_uint);
+}
+extern "C" {
+    pub fn os_sched_exit(exit_code: bolos_task_status_t);
+}
+extern "C" {
+    pub fn os_sched_is_running(task_idx: cty::c_uint) -> bolos_bool_t;
+}
+extern "C" {
+    pub fn os_sched_last_status(task_idx: cty::c_uint) -> bolos_task_status_t;
+}
+extern "C" {
+    pub fn os_sched_yield(status: bolos_task_status_t);
+}
+extern "C" {
+    pub fn os_sched_switch(task_idx: cty::c_uint, status: bolos_task_status_t);
+}
+extern "C" {
+    pub fn os_sched_current_task() -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_sched_create(
+        main: *mut cty::c_void,
+        nvram: *mut cty::c_void,
+        nvram_length: cty::c_uint,
+        ram0: *mut cty::c_void,
+        ram0_length: cty::c_uint,
+        stack: *mut cty::c_void,
+        stack_length: cty::c_uint,
+    ) -> cty::c_uint;
+}
+extern "C" {
+    pub fn os_sched_kill(taskidx: cty::c_uint);
+}
+#[repr(C)]
+#[derive(Default, Copy, Clone)]
+pub struct bolos_ux_asynch_callback_t {
+    pub asynchmodal_end_callback:
+        ::core::option::Option<unsafe extern "C" fn(ux_status: cty::c_uint)>,
+}
+extern "C" {
+    pub static mut G_io_asynch_ux_callback: bolos_ux_asynch_callback_t;
 }
 extern "C" {
     pub fn os_flags() -> cty::c_uint;
@@ -1428,7 +1541,7 @@ extern "C" {
     pub fn os_get_sn(buffer: *mut cty::c_uchar) -> cty::c_uint;
 }
 extern "C" {
-    pub fn check_api_level(apiLevel: cty::c_uint);
+    pub fn get_api_level() -> cty::c_uint;
 }
 extern "C" {
     pub static mut G_io_apdu_buffer: [cty::c_uchar; 260usize];
@@ -1490,7 +1603,6 @@ extern "C" {
 extern "C" {
     pub fn pic_internal(link_address: *mut cty::c_void) -> *mut cty::c_void;
 }
-pub type bolos_bool_t = cty::c_char;
 extern "C" {
     pub fn os_perso_set_pin(identity: cty::c_uint, pin: *mut cty::c_uchar, length: cty::c_uint);
 }
@@ -1512,8 +1624,494 @@ extern "C" {
 extern "C" {
     pub fn os_global_pin_retries() -> cty::c_uint;
 }
-pub type cx_err_t = u32;
 pub type size_t = cty::c_uint;
+pub type va_list = __builtin_va_list;
+pub type __gnuc_va_list = __builtin_va_list;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct __mbstate_t {
+    pub __count: cty::c_int,
+    pub __value: __mbstate_t__bindgen_ty_1,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union __mbstate_t__bindgen_ty_1 {
+    pub __wch: cty::c_int,
+    pub __wchb: [cty::c_char; 4usize],
+    _bindgen_union_align: u32,
+}
+impl Default for __mbstate_t__bindgen_ty_1 {
+    fn default() -> Self {
+        unsafe { ::core::mem::zeroed() }
+    }
+}
+impl Default for __mbstate_t {
+    fn default() -> Self {
+        unsafe { ::core::mem::zeroed() }
+    }
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct _G_fpos_t {
+    pub __pos: __off_t,
+    pub __state: __mbstate_t,
+}
+impl Default for _G_fpos_t {
+    fn default() -> Self {
+        unsafe { ::core::mem::zeroed() }
+    }
+}
+pub type __fpos_t = _G_fpos_t;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct _G_fpos64_t {
+    pub __pos: __off64_t,
+    pub __state: __mbstate_t,
+}
+impl Default for _G_fpos64_t {
+    fn default() -> Self {
+        unsafe { ::core::mem::zeroed() }
+    }
+}
+pub type __fpos64_t = _G_fpos64_t;
+pub type __FILE = _IO_FILE;
+pub type FILE = _IO_FILE;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct _IO_marker {
+    _unused: [u8; 0],
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct _IO_codecvt {
+    _unused: [u8; 0],
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct _IO_wide_data {
+    _unused: [u8; 0],
+}
+pub type _IO_lock_t = cty::c_void;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct _IO_FILE {
+    pub _flags: cty::c_int,
+    pub _IO_read_ptr: *mut cty::c_char,
+    pub _IO_read_end: *mut cty::c_char,
+    pub _IO_read_base: *mut cty::c_char,
+    pub _IO_write_base: *mut cty::c_char,
+    pub _IO_write_ptr: *mut cty::c_char,
+    pub _IO_write_end: *mut cty::c_char,
+    pub _IO_buf_base: *mut cty::c_char,
+    pub _IO_buf_end: *mut cty::c_char,
+    pub _IO_save_base: *mut cty::c_char,
+    pub _IO_backup_base: *mut cty::c_char,
+    pub _IO_save_end: *mut cty::c_char,
+    pub _markers: *mut _IO_marker,
+    pub _chain: *mut _IO_FILE,
+    pub _fileno: cty::c_int,
+    pub _flags2: cty::c_int,
+    pub _old_offset: __off_t,
+    pub _cur_column: cty::c_ushort,
+    pub _vtable_offset: cty::c_schar,
+    pub _shortbuf: [cty::c_char; 1usize],
+    pub _lock: *mut _IO_lock_t,
+    pub _offset: __off64_t,
+    pub _codecvt: *mut _IO_codecvt,
+    pub _wide_data: *mut _IO_wide_data,
+    pub _freeres_list: *mut _IO_FILE,
+    pub _freeres_buf: *mut cty::c_void,
+    pub __pad5: size_t,
+    pub _mode: cty::c_int,
+    pub _unused2: [cty::c_char; 40usize],
+}
+impl Default for _IO_FILE {
+    fn default() -> Self {
+        unsafe { ::core::mem::zeroed() }
+    }
+}
+pub type off_t = __off_t;
+pub type ssize_t = __ssize_t;
+pub type fpos_t = __fpos_t;
+extern "C" {
+    pub static mut stdin: *mut FILE;
+}
+extern "C" {
+    pub static mut stdout: *mut FILE;
+}
+extern "C" {
+    pub static mut stderr: *mut FILE;
+}
+extern "C" {
+    pub fn remove(__filename: *const cty::c_char) -> cty::c_int;
+}
+extern "C" {
+    pub fn rename(__old: *const cty::c_char, __new: *const cty::c_char) -> cty::c_int;
+}
+extern "C" {
+    pub fn renameat(
+        __oldfd: cty::c_int,
+        __old: *const cty::c_char,
+        __newfd: cty::c_int,
+        __new: *const cty::c_char,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn tmpfile() -> *mut FILE;
+}
+extern "C" {
+    pub fn tmpnam(__s: *mut cty::c_char) -> *mut cty::c_char;
+}
+extern "C" {
+    pub fn tmpnam_r(__s: *mut cty::c_char) -> *mut cty::c_char;
+}
+extern "C" {
+    pub fn tempnam(__dir: *const cty::c_char, __pfx: *const cty::c_char) -> *mut cty::c_char;
+}
+extern "C" {
+    pub fn fclose(__stream: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn fflush(__stream: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn fflush_unlocked(__stream: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn fopen(__filename: *const cty::c_char, __modes: *const cty::c_char) -> *mut FILE;
+}
+extern "C" {
+    pub fn freopen(
+        __filename: *const cty::c_char,
+        __modes: *const cty::c_char,
+        __stream: *mut FILE,
+    ) -> *mut FILE;
+}
+extern "C" {
+    pub fn fdopen(__fd: cty::c_int, __modes: *const cty::c_char) -> *mut FILE;
+}
+extern "C" {
+    pub fn fmemopen(__s: *mut cty::c_void, __len: size_t, __modes: *const cty::c_char)
+        -> *mut FILE;
+}
+extern "C" {
+    pub fn open_memstream(__bufloc: *mut *mut cty::c_char, __sizeloc: *mut size_t) -> *mut FILE;
+}
+extern "C" {
+    pub fn setbuf(__stream: *mut FILE, __buf: *mut cty::c_char);
+}
+extern "C" {
+    pub fn setvbuf(
+        __stream: *mut FILE,
+        __buf: *mut cty::c_char,
+        __modes: cty::c_int,
+        __n: size_t,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn setbuffer(__stream: *mut FILE, __buf: *mut cty::c_char, __size: size_t);
+}
+extern "C" {
+    pub fn setlinebuf(__stream: *mut FILE);
+}
+extern "C" {
+    pub fn fprintf(__stream: *mut FILE, __format: *const cty::c_char, ...) -> cty::c_int;
+}
+extern "C" {
+    pub fn printf(__format: *const cty::c_char, ...) -> cty::c_int;
+}
+extern "C" {
+    pub fn sprintf(__s: *mut cty::c_char, __format: *const cty::c_char, ...) -> cty::c_int;
+}
+extern "C" {
+    pub fn vfprintf(
+        __s: *mut FILE,
+        __format: *const cty::c_char,
+        __arg: __builtin_va_list,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn vprintf(__format: *const cty::c_char, __arg: __builtin_va_list) -> cty::c_int;
+}
+extern "C" {
+    pub fn vsprintf(
+        __s: *mut cty::c_char,
+        __format: *const cty::c_char,
+        __arg: __builtin_va_list,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn snprintf(
+        __s: *mut cty::c_char,
+        __maxlen: cty::c_uint,
+        __format: *const cty::c_char,
+        ...
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn vsnprintf(
+        __s: *mut cty::c_char,
+        __maxlen: cty::c_uint,
+        __format: *const cty::c_char,
+        __arg: __builtin_va_list,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn vdprintf(
+        __fd: cty::c_int,
+        __fmt: *const cty::c_char,
+        __arg: __gnuc_va_list,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn dprintf(__fd: cty::c_int, __fmt: *const cty::c_char, ...) -> cty::c_int;
+}
+extern "C" {
+    pub fn fscanf(__stream: *mut FILE, __format: *const cty::c_char, ...) -> cty::c_int;
+}
+extern "C" {
+    pub fn scanf(__format: *const cty::c_char, ...) -> cty::c_int;
+}
+extern "C" {
+    pub fn sscanf(__s: *const cty::c_char, __format: *const cty::c_char, ...) -> cty::c_int;
+}
+extern "C" {
+    #[link_name = "\u{1}__isoc99_fscanf"]
+    pub fn fscanf1(__stream: *mut FILE, __format: *const cty::c_char, ...) -> cty::c_int;
+}
+extern "C" {
+    #[link_name = "\u{1}__isoc99_scanf"]
+    pub fn scanf1(__format: *const cty::c_char, ...) -> cty::c_int;
+}
+extern "C" {
+    #[link_name = "\u{1}__isoc99_sscanf"]
+    pub fn sscanf1(__s: *const cty::c_char, __format: *const cty::c_char, ...) -> cty::c_int;
+}
+extern "C" {
+    pub fn vfscanf(
+        __s: *mut FILE,
+        __format: *const cty::c_char,
+        __arg: __builtin_va_list,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn vscanf(__format: *const cty::c_char, __arg: __builtin_va_list) -> cty::c_int;
+}
+extern "C" {
+    pub fn vsscanf(
+        __s: *const cty::c_char,
+        __format: *const cty::c_char,
+        __arg: __builtin_va_list,
+    ) -> cty::c_int;
+}
+extern "C" {
+    #[link_name = "\u{1}__isoc99_vfscanf"]
+    pub fn vfscanf1(
+        __s: *mut FILE,
+        __format: *const cty::c_char,
+        __arg: __builtin_va_list,
+    ) -> cty::c_int;
+}
+extern "C" {
+    #[link_name = "\u{1}__isoc99_vscanf"]
+    pub fn vscanf1(__format: *const cty::c_char, __arg: __builtin_va_list) -> cty::c_int;
+}
+extern "C" {
+    #[link_name = "\u{1}__isoc99_vsscanf"]
+    pub fn vsscanf1(
+        __s: *const cty::c_char,
+        __format: *const cty::c_char,
+        __arg: __builtin_va_list,
+    ) -> cty::c_int;
+}
+extern "C" {
+    pub fn fgetc(__stream: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn getc(__stream: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn getchar() -> cty::c_int;
+}
+extern "C" {
+    pub fn getc_unlocked(__stream: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn getchar_unlocked() -> cty::c_int;
+}
+extern "C" {
+    pub fn fgetc_unlocked(__stream: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn fputc(__c: cty::c_int, __stream: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn putc(__c: cty::c_int, __stream: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn putchar(__c: cty::c_int) -> cty::c_int;
+}
+extern "C" {
+    pub fn fputc_unlocked(__c: cty::c_int, __stream: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn putc_unlocked(__c: cty::c_int, __stream: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn putchar_unlocked(__c: cty::c_int) -> cty::c_int;
+}
+extern "C" {
+    pub fn getw(__stream: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn putw(__w: cty::c_int, __stream: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn fgets(__s: *mut cty::c_char, __n: cty::c_int, __stream: *mut FILE) -> *mut cty::c_char;
+}
+extern "C" {
+    pub fn __getdelim(
+        __lineptr: *mut *mut cty::c_char,
+        __n: *mut size_t,
+        __delimiter: cty::c_int,
+        __stream: *mut FILE,
+    ) -> __ssize_t;
+}
+extern "C" {
+    pub fn getdelim(
+        __lineptr: *mut *mut cty::c_char,
+        __n: *mut size_t,
+        __delimiter: cty::c_int,
+        __stream: *mut FILE,
+    ) -> __ssize_t;
+}
+extern "C" {
+    pub fn getline(
+        __lineptr: *mut *mut cty::c_char,
+        __n: *mut size_t,
+        __stream: *mut FILE,
+    ) -> __ssize_t;
+}
+extern "C" {
+    pub fn fputs(__s: *const cty::c_char, __stream: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn puts(__s: *const cty::c_char) -> cty::c_int;
+}
+extern "C" {
+    pub fn ungetc(__c: cty::c_int, __stream: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn fread(
+        __ptr: *mut cty::c_void,
+        __size: cty::c_uint,
+        __n: cty::c_uint,
+        __stream: *mut FILE,
+    ) -> cty::c_uint;
+}
+extern "C" {
+    pub fn fwrite(
+        __ptr: *const cty::c_void,
+        __size: cty::c_uint,
+        __n: cty::c_uint,
+        __s: *mut FILE,
+    ) -> cty::c_uint;
+}
+extern "C" {
+    pub fn fread_unlocked(
+        __ptr: *mut cty::c_void,
+        __size: size_t,
+        __n: size_t,
+        __stream: *mut FILE,
+    ) -> size_t;
+}
+extern "C" {
+    pub fn fwrite_unlocked(
+        __ptr: *const cty::c_void,
+        __size: size_t,
+        __n: size_t,
+        __stream: *mut FILE,
+    ) -> size_t;
+}
+extern "C" {
+    pub fn fseek(__stream: *mut FILE, __off: cty::c_long, __whence: cty::c_int) -> cty::c_int;
+}
+extern "C" {
+    pub fn ftell(__stream: *mut FILE) -> cty::c_long;
+}
+extern "C" {
+    pub fn rewind(__stream: *mut FILE);
+}
+extern "C" {
+    pub fn fseeko(__stream: *mut FILE, __off: __off_t, __whence: cty::c_int) -> cty::c_int;
+}
+extern "C" {
+    pub fn ftello(__stream: *mut FILE) -> __off_t;
+}
+extern "C" {
+    pub fn fgetpos(__stream: *mut FILE, __pos: *mut fpos_t) -> cty::c_int;
+}
+extern "C" {
+    pub fn fsetpos(__stream: *mut FILE, __pos: *const fpos_t) -> cty::c_int;
+}
+extern "C" {
+    pub fn clearerr(__stream: *mut FILE);
+}
+extern "C" {
+    pub fn feof(__stream: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn ferror(__stream: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn clearerr_unlocked(__stream: *mut FILE);
+}
+extern "C" {
+    pub fn feof_unlocked(__stream: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn ferror_unlocked(__stream: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn perror(__s: *const cty::c_char);
+}
+extern "C" {
+    pub static mut sys_nerr: cty::c_int;
+}
+extern "C" {
+    pub static mut sys_errlist: [*const cty::c_char; 0usize];
+}
+extern "C" {
+    pub fn fileno(__stream: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn fileno_unlocked(__stream: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn popen(__command: *const cty::c_char, __modes: *const cty::c_char) -> *mut FILE;
+}
+extern "C" {
+    pub fn pclose(__stream: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn ctermid(__s: *mut cty::c_char) -> *mut cty::c_char;
+}
+extern "C" {
+    pub fn flockfile(__stream: *mut FILE);
+}
+extern "C" {
+    pub fn ftrylockfile(__stream: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn funlockfile(__stream: *mut FILE);
+}
+extern "C" {
+    pub fn __uflow(arg1: *mut FILE) -> cty::c_int;
+}
+extern "C" {
+    pub fn __overflow(arg1: *mut FILE, arg2: cty::c_int) -> cty::c_int;
+}
+pub type cx_err_t = u32;
 pub type wchar_t = cty::c_uint;
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
@@ -1664,10 +2262,35 @@ pub const CX_SHA3_256: cx_md_e = 12;
 pub const CX_SHA3_512: cx_md_e = 13;
 pub type cx_md_e = cty::c_uchar;
 pub use self::cx_md_e as cx_md_t;
+pub type cx_hash_t = cx_hash_header_s;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct cx_hash_info_t {
+    pub md_type: cx_md_t,
+    pub output_size: size_t,
+    pub block_size: size_t,
+    pub init_func: ::core::option::Option<unsafe extern "C" fn(ctx: *mut cx_hash_t) -> cx_err_t>,
+    pub update_func: ::core::option::Option<
+        unsafe extern "C" fn(ctx: *mut cx_hash_t, data: *const u8, len: size_t) -> cx_err_t,
+    >,
+    pub finish_func: ::core::option::Option<
+        unsafe extern "C" fn(ctx: *mut cx_hash_t, digest: *mut u8) -> cx_err_t,
+    >,
+    pub init_ex_func: ::core::option::Option<
+        unsafe extern "C" fn(ctx: *mut cx_hash_t, output_size: size_t) -> cx_err_t,
+    >,
+    pub output_size_func:
+        ::core::option::Option<unsafe extern "C" fn(ctx: *const cx_hash_t) -> size_t>,
+}
+impl Default for cx_hash_info_t {
+    fn default() -> Self {
+        unsafe { ::core::mem::zeroed() }
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_hash_header_s {
-    pub algo: cx_md_t,
+    pub info: *const cx_hash_info_t,
     pub counter: u32,
 }
 impl Default for cx_hash_header_s {
@@ -1675,7 +2298,6 @@ impl Default for cx_hash_header_s {
         unsafe { ::core::mem::zeroed() }
     }
 }
-pub type cx_hash_t = cx_hash_header_s;
 extern "C" {
     pub fn cx_hash_get_size(ctx: *const cx_hash_t) -> size_t;
 }
@@ -1702,11 +2324,7 @@ extern "C" {
 extern "C" {
     pub fn cx_hash_final(hash: *mut cx_hash_t, digest: *mut u8) -> cx_err_t;
 }
-#[repr(C)]
-#[derive(Default, Copy, Clone)]
-pub struct cx_bn_t {
-    pub ref_: u16,
-}
+pub type cx_bn_t = u32;
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct cx_bn_mont_ctx_t {
@@ -1740,181 +2358,133 @@ extern "C" {
     pub fn cx_bn_destroy(x: *mut cx_bn_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_nbytes(x: *const cx_bn_t, nbytes: *mut size_t) -> cx_err_t;
+    pub fn cx_bn_nbytes(x: cx_bn_t, nbytes: *mut size_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_init(x: *mut cx_bn_t, value: *const u8, value_nbytes: size_t) -> cx_err_t;
+    pub fn cx_bn_init(x: cx_bn_t, value: *const u8, value_nbytes: size_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_rand(x: *mut cx_bn_t) -> cx_err_t;
+    pub fn cx_bn_rand(x: cx_bn_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_copy(a: *mut cx_bn_t, b: *const cx_bn_t) -> cx_err_t;
+    pub fn cx_bn_copy(a: cx_bn_t, b: cx_bn_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_set_u32(x: *mut cx_bn_t, n: u32) -> cx_err_t;
+    pub fn cx_bn_set_u32(x: cx_bn_t, n: u32) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_get_u32(x: *const cx_bn_t, n: *mut u32) -> cx_err_t;
+    pub fn cx_bn_get_u32(x: cx_bn_t, n: *mut u32) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_export(x: *const cx_bn_t, bytes: *mut u8, nbytes: size_t) -> cx_err_t;
+    pub fn cx_bn_export(x: cx_bn_t, bytes: *mut u8, nbytes: size_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_cmp(a: *const cx_bn_t, b: *const cx_bn_t, diff: *mut cty::c_int) -> cx_err_t;
+    pub fn cx_bn_cmp(a: cx_bn_t, b: cx_bn_t, diff: *mut cty::c_int) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_cmp_u32(a: *const cx_bn_t, b: u32, diff: *mut cty::c_int) -> cx_err_t;
+    pub fn cx_bn_cmp_u32(a: cx_bn_t, b: u32, diff: *mut cty::c_int) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_is_odd(n: *const cx_bn_t, odd: *mut bool) -> cx_err_t;
+    pub fn cx_bn_is_odd(n: cx_bn_t, odd: *mut bool) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_xor(r: *mut cx_bn_t, a: *const cx_bn_t, b: *const cx_bn_t) -> cx_err_t;
+    pub fn cx_bn_xor(r: cx_bn_t, a: cx_bn_t, b: cx_bn_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_or(r: *mut cx_bn_t, a: *const cx_bn_t, b: *const cx_bn_t) -> cx_err_t;
+    pub fn cx_bn_or(r: cx_bn_t, a: cx_bn_t, b: cx_bn_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_and(r: *mut cx_bn_t, a: *const cx_bn_t, b: *const cx_bn_t) -> cx_err_t;
+    pub fn cx_bn_and(r: cx_bn_t, a: cx_bn_t, b: cx_bn_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_tst_bit(x: *const cx_bn_t, pos: u32, set: *mut bool) -> cx_err_t;
+    pub fn cx_bn_tst_bit(x: cx_bn_t, pos: u32, set: *mut bool) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_set_bit(x: *mut cx_bn_t, pos: u32) -> cx_err_t;
+    pub fn cx_bn_set_bit(x: cx_bn_t, pos: u32) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_clr_bit(x: *mut cx_bn_t, pos: u32) -> cx_err_t;
+    pub fn cx_bn_clr_bit(x: cx_bn_t, pos: u32) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_shr(x: *mut cx_bn_t, n: u32) -> cx_err_t;
+    pub fn cx_bn_shr(x: cx_bn_t, n: u32) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_shl(x: *mut cx_bn_t, n: u32) -> cx_err_t;
+    pub fn cx_bn_shl(x: cx_bn_t, n: u32) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_cnt_bits(n: *mut cx_bn_t, nbits: *mut u32) -> cx_err_t;
+    pub fn cx_bn_cnt_bits(n: cx_bn_t, nbits: *mut u32) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_add(r: *mut cx_bn_t, a: *const cx_bn_t, b: *const cx_bn_t) -> cx_err_t;
+    pub fn cx_bn_add(r: cx_bn_t, a: cx_bn_t, b: cx_bn_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_sub(r: *mut cx_bn_t, a: *const cx_bn_t, b: *const cx_bn_t) -> cx_err_t;
+    pub fn cx_bn_sub(r: cx_bn_t, a: cx_bn_t, b: cx_bn_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_mul(r: *mut cx_bn_t, a: *const cx_bn_t, b: *const cx_bn_t) -> cx_err_t;
+    pub fn cx_bn_mul(r: cx_bn_t, a: cx_bn_t, b: cx_bn_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_mod_add(
-        r: *mut cx_bn_t,
-        a: *const cx_bn_t,
-        b: *const cx_bn_t,
-        n: *const cx_bn_t,
-    ) -> cx_err_t;
+    pub fn cx_bn_mod_add(r: cx_bn_t, a: cx_bn_t, b: cx_bn_t, n: cx_bn_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_mod_sub(
-        r: *mut cx_bn_t,
-        a: *const cx_bn_t,
-        b: *const cx_bn_t,
-        n: *const cx_bn_t,
-    ) -> cx_err_t;
+    pub fn cx_bn_mod_sub(r: cx_bn_t, a: cx_bn_t, b: cx_bn_t, n: cx_bn_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_mod_mul(
-        r: *mut cx_bn_t,
-        a: *const cx_bn_t,
-        b: *const cx_bn_t,
-        n: *const cx_bn_t,
-    ) -> cx_err_t;
+    pub fn cx_bn_mod_mul(r: cx_bn_t, a: cx_bn_t, b: cx_bn_t, n: cx_bn_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_reduce(r: *mut cx_bn_t, d: *const cx_bn_t, n: *const cx_bn_t) -> cx_err_t;
+    pub fn cx_bn_reduce(r: cx_bn_t, d: cx_bn_t, n: cx_bn_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_mod_sqrt(
-        bn_r: *mut cx_bn_t,
-        bn_a: *const cx_bn_t,
-        bn_n: *const cx_bn_t,
-        sign: u32,
-    ) -> cx_err_t;
+    pub fn cx_bn_mod_sqrt(bn_r: cx_bn_t, bn_a: cx_bn_t, bn_n: cx_bn_t, sign: u32) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_mod_pow_bn(
-        r: *mut cx_bn_t,
-        a: *const cx_bn_t,
-        e: *const cx_bn_t,
-        n: *const cx_bn_t,
-    ) -> cx_err_t;
+    pub fn cx_bn_mod_pow_bn(r: cx_bn_t, a: cx_bn_t, e: cx_bn_t, n: cx_bn_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_mod_pow(
-        r: *mut cx_bn_t,
-        a: *const cx_bn_t,
-        e: *const u8,
-        e_len: u32,
-        n: *const cx_bn_t,
-    ) -> cx_err_t;
+    pub fn cx_bn_mod_pow(r: cx_bn_t, a: cx_bn_t, e: *const u8, e_len: u32, n: cx_bn_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_mod_pow2(
-        r: *mut cx_bn_t,
-        a: *const cx_bn_t,
-        e: *const u8,
-        e_len: u32,
-        n: *const cx_bn_t,
-    ) -> cx_err_t;
+    pub fn cx_bn_mod_pow2(r: cx_bn_t, a: cx_bn_t, e: *const u8, e_len: u32, n: cx_bn_t)
+        -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_mod_invert_nprime(
-        r: *mut cx_bn_t,
-        a: *const cx_bn_t,
-        n: *const cx_bn_t,
-    ) -> cx_err_t;
+    pub fn cx_bn_mod_invert_nprime(r: cx_bn_t, a: cx_bn_t, n: cx_bn_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_mod_u32_invert(r: *mut cx_bn_t, a: u32, n: *mut cx_bn_t) -> cx_err_t;
+    pub fn cx_bn_mod_u32_invert(r: cx_bn_t, a: u32, n: cx_bn_t) -> cx_err_t;
 }
 extern "C" {
     pub fn cx_mont_alloc(ctx: *mut cx_bn_mont_ctx_t, length: size_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_mont_init(ctx: *mut cx_bn_mont_ctx_t, n: *const cx_bn_t) -> cx_err_t;
+    pub fn cx_mont_init(ctx: *mut cx_bn_mont_ctx_t, n: cx_bn_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_mont_init2(
-        ctx: *mut cx_bn_mont_ctx_t,
-        n: *const cx_bn_t,
-        h: *const cx_bn_t,
-    ) -> cx_err_t;
+    pub fn cx_mont_init2(ctx: *mut cx_bn_mont_ctx_t, n: cx_bn_t, h: cx_bn_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_mont_to_montgomery(
-        x: *mut cx_bn_t,
-        z: *const cx_bn_t,
-        ctx: *const cx_bn_mont_ctx_t,
-    ) -> cx_err_t;
+    pub fn cx_mont_to_montgomery(x: cx_bn_t, z: cx_bn_t, ctx: *const cx_bn_mont_ctx_t) -> cx_err_t;
 }
 extern "C" {
     pub fn cx_mont_from_montgomery(
-        z: *mut cx_bn_t,
-        x: *const cx_bn_t,
+        z: cx_bn_t,
+        x: cx_bn_t,
         ctx: *const cx_bn_mont_ctx_t,
     ) -> cx_err_t;
 }
 extern "C" {
     pub fn cx_mont_mul(
-        r: *mut cx_bn_t,
-        a: *const cx_bn_t,
-        b: *const cx_bn_t,
+        r: cx_bn_t,
+        a: cx_bn_t,
+        b: cx_bn_t,
         ctx: *const cx_bn_mont_ctx_t,
     ) -> cx_err_t;
 }
 extern "C" {
     pub fn cx_mont_pow(
-        r: *mut cx_bn_t,
-        a: *const cx_bn_t,
+        r: cx_bn_t,
+        a: cx_bn_t,
         e: *const u8,
         e_len: u32,
         ctx: *const cx_bn_mont_ctx_t,
@@ -1922,24 +2492,23 @@ extern "C" {
 }
 extern "C" {
     pub fn cx_mont_pow_bn(
-        r: *mut cx_bn_t,
-        a: *const cx_bn_t,
-        e: *const cx_bn_t,
+        r: cx_bn_t,
+        a: cx_bn_t,
+        e: cx_bn_t,
         ctx: *const cx_bn_mont_ctx_t,
     ) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_mont_invert_nprime(
-        r: *mut cx_bn_t,
-        a: *const cx_bn_t,
-        ctx: *const cx_bn_mont_ctx_t,
-    ) -> cx_err_t;
+    pub fn cx_mont_invert_nprime(r: cx_bn_t, a: cx_bn_t, ctx: *const cx_bn_mont_ctx_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_is_prime(n: *const cx_bn_t, prime: *mut bool) -> cx_err_t;
+    pub fn cx_bn_is_prime(n: cx_bn_t, prime: *mut bool) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_bn_next_prime(n: *mut cx_bn_t) -> cx_err_t;
+    pub fn cx_bn_next_prime(n: cx_bn_t) -> cx_err_t;
+}
+extern "C" {
+    pub fn cx_bn_rng(bn_r: cx_bn_t, bn_n: cx_bn_t) -> cx_err_t;
 }
 pub const CX_CURVE_NONE: cx_curve_e = 0;
 pub const CX_CURVE_WEIERSTRASS_START: cx_curve_e = 32;
@@ -2099,7 +2668,7 @@ extern "C" {
     pub fn cx_ecdomain_parameter_bn(
         cv: cx_curve_t,
         id: cx_curve_dom_param_t,
-        p: *mut cx_bn_t,
+        p: cx_bn_t,
     ) -> cx_err_t;
 }
 extern "C" {
@@ -2125,11 +2694,7 @@ extern "C" {
     ) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_ecpoint_init_bn(
-        P: *mut cx_ecpoint_t,
-        x: *const cx_bn_t,
-        y: *const cx_bn_t,
-    ) -> cx_err_t;
+    pub fn cx_ecpoint_init_bn(P: *mut cx_ecpoint_t, x: cx_bn_t, y: cx_bn_t) -> cx_err_t;
 }
 extern "C" {
     pub fn cx_ecpoint_export(
@@ -2177,13 +2742,20 @@ extern "C" {
     pub fn cx_ecpoint_rnd_scalarmul(P: *mut cx_ecpoint_t, k: *const u8, k_len: size_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_ecpoint_rnd_scalarmul_bn(P: *mut cx_ecpoint_t, bn_k: *const cx_bn_t) -> cx_err_t;
+    pub fn cx_ecpoint_rnd_scalarmul_bn(P: *mut cx_ecpoint_t, bn_k: cx_bn_t) -> cx_err_t;
+}
+extern "C" {
+    pub fn cx_ecpoint_rnd_fixed_scalarmul(
+        P: *mut cx_ecpoint_t,
+        k: *const u8,
+        k_len: size_t,
+    ) -> cx_err_t;
 }
 extern "C" {
     pub fn cx_ecpoint_scalarmul(P: *mut cx_ecpoint_t, k: *const u8, k_len: size_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_ecpoint_scalarmul_bn(P: *mut cx_ecpoint_t, bn_k: *const cx_bn_t) -> cx_err_t;
+    pub fn cx_ecpoint_scalarmul_bn(P: *mut cx_ecpoint_t, bn_k: cx_bn_t) -> cx_err_t;
 }
 extern "C" {
     pub fn cx_ecpoint_double_scalarmul(
@@ -2201,8 +2773,8 @@ extern "C" {
         R: *mut cx_ecpoint_t,
         P: *mut cx_ecpoint_t,
         Q: *mut cx_ecpoint_t,
-        bn_k: *const cx_bn_t,
-        bn_r: *const cx_bn_t,
+        bn_k: cx_bn_t,
+        bn_r: cx_bn_t,
     ) -> cx_err_t;
 }
 extern "C" {
@@ -2536,82 +3108,11 @@ extern "C" {
 extern "C" {
     pub fn os_setting_set(setting_id: cty::c_uint, value: *mut cty::c_uchar, length: cty::c_uint);
 }
-pub type bolos_task_status_t = cty::c_uchar;
-pub const TASK_BOLOS: task_unsecure_id_e = 0;
-pub const TASK_SYSCALL: task_unsecure_id_e = 1;
-pub const TASK_USERTASKS_START: task_unsecure_id_e = 2;
-pub const TASK_USER: task_unsecure_id_e = 2;
-pub const TASK_SUBTASKS_START: task_unsecure_id_e = 3;
-pub const TASK_SUBTASK_0: task_unsecure_id_e = 3;
-pub const TASK_BOLOS_UX: task_unsecure_id_e = 4;
-pub const TASK_MAXCOUNT: task_unsecure_id_e = 5;
-pub type task_unsecure_id_e = cty::c_uchar;
-extern "C" {
-    pub fn os_sched_exec(app_idx: cty::c_uint);
-}
-extern "C" {
-    pub fn os_sched_exit(exit_code: bolos_task_status_t);
-}
-extern "C" {
-    pub fn os_sched_is_running(task_idx: cty::c_uint) -> bolos_bool_t;
-}
-extern "C" {
-    pub fn os_sched_last_status(task_idx: cty::c_uint) -> bolos_task_status_t;
-}
-extern "C" {
-    pub fn os_sched_yield(status: bolos_task_status_t);
-}
-extern "C" {
-    pub fn os_sched_switch(task_idx: cty::c_uint, status: bolos_task_status_t);
-}
-extern "C" {
-    pub fn os_sched_current_task() -> cty::c_uint;
-}
-extern "C" {
-    pub fn os_sched_create(
-        main: *mut cty::c_void,
-        nvram: *mut cty::c_void,
-        nvram_length: cty::c_uint,
-        ram0: *mut cty::c_void,
-        ram0_length: cty::c_uint,
-        stack: *mut cty::c_void,
-        stack_length: cty::c_uint,
-    ) -> cty::c_uint;
-}
-extern "C" {
-    pub fn os_sched_kill(taskidx: cty::c_uint);
-}
-#[repr(C)]
-#[derive(Default, Copy, Clone)]
-pub struct bolos_ux_asynch_callback_t {
-    pub asynchmodal_end_callback:
-        ::core::option::Option<unsafe extern "C" fn(ux_status: cty::c_uint)>,
-}
-extern "C" {
-    pub static mut G_io_asynch_ux_callback: bolos_ux_asynch_callback_t;
-}
 extern "C" {
     pub fn u4be_encode(buffer: *mut cty::c_uchar, offset: cty::c_uint, value: cty::c_uint);
 }
 extern "C" {
     pub fn u4le_encode(buffer: *mut cty::c_uchar, offset: cty::c_uint, value: cty::c_uint);
-}
-extern "C" {
-    pub fn os_memmove(
-        dst: *mut cty::c_void,
-        src: *const cty::c_void,
-        length: cty::c_uint,
-    ) -> *mut cty::c_void;
-}
-extern "C" {
-    pub fn os_memset(dst: *mut cty::c_void, c: cty::c_uchar, length: cty::c_uint);
-}
-extern "C" {
-    pub fn os_memcmp(
-        buf1: *const cty::c_void,
-        buf2: *const cty::c_void,
-        length: cty::c_uint,
-    ) -> cty::c_char;
 }
 extern "C" {
     pub fn os_memset4(dst: *mut cty::c_void, initval: cty::c_uint, nbintval: cty::c_uint);
@@ -2632,6 +3133,26 @@ extern "C" {
     ) -> cty::c_char;
 }
 extern "C" {
+    pub fn os_memmove(
+        dest: *mut cty::c_void,
+        src: *const cty::c_void,
+        n: size_t,
+    ) -> *mut cty::c_void;
+}
+extern "C" {
+    pub fn os_memcpy(
+        dest: *mut cty::c_void,
+        src: *const cty::c_void,
+        n: size_t,
+    ) -> *mut cty::c_void;
+}
+extern "C" {
+    pub fn os_memcmp(s1: *const cty::c_void, s2: *const cty::c_void, n: size_t) -> cty::c_int;
+}
+extern "C" {
+    pub fn os_memset(s: *mut cty::c_void, c: cty::c_int, n: size_t) -> *mut cty::c_void;
+}
+extern "C" {
     pub fn app_main();
 }
 extern "C" {
@@ -2646,14 +3167,6 @@ extern "C" {
 extern "C" {
     pub fn screen_printc(c: cty::c_uchar);
 }
-extern "C" {
-    pub fn snprintf(
-        str_: *mut cty::c_char,
-        str_size: cty::c_uint,
-        format: *const cty::c_char,
-        ...
-    ) -> cty::c_int;
-}
 pub const BOLOS_UX_INITIALIZE: bolos_ux_e = 0;
 pub const BOLOS_UX_EVENT: bolos_ux_e = 1;
 pub const BOLOS_UX_KEYBOARD: bolos_ux_e = 2;
@@ -2667,17 +3180,6 @@ pub use self::bolos_ux_e as bolos_ux_t;
 pub struct bolos_ux_params_s {
     pub ux_id: bolos_ux_t,
     pub len: cty::c_uint,
-    pub u: bolos_ux_params_s__bindgen_ty_1,
-}
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub union bolos_ux_params_s__bindgen_ty_1 {
-    _bindgen_union_align: [u8; 0usize],
-}
-impl Default for bolos_ux_params_s__bindgen_ty_1 {
-    fn default() -> Self {
-        unsafe { ::core::mem::zeroed() }
-    }
 }
 impl Default for bolos_ux_params_s {
     fn default() -> Self {
@@ -2884,7 +3386,7 @@ impl Default for cx_ripemd160_s {
 }
 pub type cx_ripemd160_t = cx_ripemd160_s;
 extern "C" {
-    pub fn cx_ripemd160_init_no_throw(hash: *mut cx_ripemd160_t);
+    pub fn cx_ripemd160_init_no_throw(hash: *mut cx_ripemd160_t) -> cx_err_t;
 }
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -2901,10 +3403,10 @@ impl Default for cx_sha256_s {
 }
 pub type cx_sha256_t = cx_sha256_s;
 extern "C" {
-    pub fn cx_sha224_init_no_throw(hash: *mut cx_sha256_t);
+    pub fn cx_sha224_init_no_throw(hash: *mut cx_sha256_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_sha256_init_no_throw(hash: *mut cx_sha256_t);
+    pub fn cx_sha256_init_no_throw(hash: *mut cx_sha256_t) -> cx_err_t;
 }
 extern "C" {
     pub fn cx_hash_sha256(in_: *const u8, len: size_t, out: *mut u8, out_len: size_t) -> size_t;
@@ -2924,10 +3426,10 @@ impl Default for cx_sha512_s {
 }
 pub type cx_sha512_t = cx_sha512_s;
 extern "C" {
-    pub fn cx_sha384_init_no_throw(hash: *mut cx_sha512_t);
+    pub fn cx_sha384_init_no_throw(hash: *mut cx_sha512_t) -> cx_err_t;
 }
 extern "C" {
-    pub fn cx_sha512_init_no_throw(hash: *mut cx_sha512_t);
+    pub fn cx_sha512_init_no_throw(hash: *mut cx_sha512_t) -> cx_err_t;
 }
 extern "C" {
     pub fn cx_hash_sha512(in_: *const u8, in_len: size_t, out: *mut u8, out_len: size_t) -> size_t;
@@ -3186,21 +3688,18 @@ extern "C" {
         outLength: size_t,
     ) -> cx_err_t;
 }
-pub type cx_rng_u32_range_randfunc_t = ::core::option::Option<unsafe extern "C" fn() -> u32>;
 extern "C" {
-    pub fn cx_rng_u32_range_func(a: u32, b: u32, randfunc: cx_rng_u32_range_randfunc_t) -> u32;
-}
-extern "C" {
-    pub fn cx_rng_u32_range(a: u32, b: u32) -> u32;
-}
-extern "C" {
-    pub fn cx_rng_u32() -> u32;
+    pub fn cx_rng_no_throw(buffer: *mut u8, len: size_t);
 }
 extern "C" {
     pub fn cx_rng_u8() -> u8;
 }
 extern "C" {
-    pub fn cx_rng_no_throw(buffer: *mut u8, len: size_t);
+    pub fn cx_rng_u32() -> u32;
+}
+pub type cx_rng_u32_range_randfunc_t = ::core::option::Option<unsafe extern "C" fn() -> u32>;
+extern "C" {
+    pub fn cx_rng_u32_range_func(a: u32, b: u32, randfunc: cx_rng_u32_range_randfunc_t) -> u32;
 }
 extern "C" {
     pub fn cx_rng_rfc6979(
@@ -3217,8 +3716,8 @@ extern "C" {
 }
 extern "C" {
     pub fn cx_math_cmp_no_throw(
-        a: *mut u8,
-        b: *mut u8,
+        a: *const u8,
+        b: *const u8,
         length: size_t,
         diff: *mut cty::c_int,
     ) -> cx_err_t;
@@ -3456,4 +3955,15 @@ extern "C" {
 }
 extern "C" {
     pub fn cx_crc16_update(crc: u16, buffer: *const cty::c_void, len: size_t) -> u16;
+}
+pub type __builtin_va_list = __va_list;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct __va_list {
+    pub __ap: *mut cty::c_void,
+}
+impl Default for __va_list {
+    fn default() -> Self {
+        unsafe { ::core::mem::zeroed() }
+    }
 }

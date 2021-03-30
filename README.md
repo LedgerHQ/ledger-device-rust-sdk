@@ -40,12 +40,12 @@ Two corresponding header files exist in `binding_headers` directory: `bindings.h
 
 Here are the steps to follow in order to generate those bindings by yourself:
 1. Make sure you have [bindgen setup](https://rust-lang.github.io/rust-bindgen/requirements.html)
-3. Run this command to generate the `bindings.rs` file:
+3. Run this command to generate the `bindings.rs` file (you might need to adapt `-I/usr/arm-linux/gnueabihf/include` to your configuration):
 ```
-bindgen ./binding_headers/bindings.h --use-core --no-prepend-enum-name --no-doc-comments --no-derive-debug --ctypes-prefix=cty --no-layout-tests --with-derive-default -- --target=thumbv7m-none-eabi -fshort-enums -Inanos-secure-sdk/include -Inanos-secure-sdk/lib_cxng/include > ./src/bindings.rs
-4. Run this command to generate the `usbbindings.rs` file:
+bindgen ./binding_headers/bindings.h --use-core --no-prepend-enum-name --no-doc-comments --no-derive-debug --ctypes-prefix=cty --no-layout-tests --with-derive-default -- --target=thumbv7m-none-eabi -fshort-enums -I/usr/arm-linux-gnueabihf/include -Inanos-secure-sdk/include -Inanos-secure-sdk/lib_cxng/include > ./src/bindings.rs
+4. Run this command to generate the `usbbindings.rs` file (you might need to adapt `-I/usr/arm-linux-gnueabihf/include` to your configuration):
 ```
-bindgen ./binding_headers/usbbindings.h --use-core --no-prepend-enum-name --no-doc-comments --no-derive-debug --ctypes-prefix=cty --no-layout-tests --with-derive-default -- --target=thumbv7m-none-eabi -fshort-enums -Inanos-secure-sdk/lib_stusb/STM32_USB_Device_Library/Core/Inc -I/usr/arm-linux-gnueabihf/include -Inanos-secure-sdk/lib_stusb
+bindgen ./binding_headers/usbbindings.h --use-core --no-prepend-enum-name --no-doc-comments --no-derive-debug --ctypes-prefix=cty --no-layout-tests --with-derive-default -- --target=thumbv7m-none-eabi -fshort-enums -Inanos-secure-sdk/lib_stusb/STM32_USB_Device_Library/Core/Inc -I/usr/arm-linux-gnueabihf/include -Inanos-secure-sdk/lib_stusb > ./src/usbbindings.rs
 ```
 5. Modify the generated `.rs` files and add those lines at the BEGINNING of both files:
 ```
