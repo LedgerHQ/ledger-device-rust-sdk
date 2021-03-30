@@ -148,37 +148,56 @@ cx_err_t cx_pkcs1_eme_oaep_encode(cx_md_t hID, uint8_t *em, size_t em_len, const
 cx_err_t cx_pkcs1_eme_oaep_decode(cx_md_t hID, uint8_t *em, size_t em_len, uint8_t *m, size_t *mLen);
 
 // For PKCS1.5
+#define PKCS1_DIGEST_BUFFER_LENGTH              64
+
 struct cx_pkcs1_s {
     union {
         cx_hash_t   hash;
+#if defined(HAVE_SHA256)
         cx_sha256_t sha256;
+#endif // HAVE_SHA256
+
+#if defined(HAVE_SHA512)
         cx_sha512_t sha512;
+#endif // HAVE_SHA512
     } hash_ctx;
-    uint8_t       digest[CX_SHA512_SIZE];
+    uint8_t       digest[PKCS1_DIGEST_BUFFER_LENGTH];
     uint8_t       MGF1[512];
 };
 typedef  struct cx_pkcs1_s cx_pkcs1_t;
 
+#if defined(HAVE_SHA224)
 #define CX_OID_SHA224_LENGTH    19
 extern uint8_t const C_cx_oid_sha224[CX_OID_SHA224_LENGTH];
+#endif // HAVE_SHA224
+
+#if defined(HAVE_SHA256)
 #define CX_OID_SHA256_LENGTH    19
 extern uint8_t const C_cx_oid_sha256[CX_OID_SHA256_LENGTH];
+#endif // HAVE_SHA256
+
+#if defined(HAVE_SHA384)
 #define CX_OID_SHA384_LENGTH    19
 extern uint8_t const C_cx_oid_sha384[CX_OID_SHA384_LENGTH];
+#endif // HAVE_SHA384
+
+#if defined(HAVE_SHA512)
 #define CX_OID_SHA512_LENGTH    19
 extern uint8_t const C_cx_oid_sha512[CX_OID_SHA512_LENGTH];
+#endif // HAVE_SHA512
+
+#if defined(HAVE_SHA3)
 #define CX_OID_SHA3_256_LENGTH  19
 extern uint8_t const C_cx_oid_sha3_256[CX_OID_SHA3_256_LENGTH];
+
 #define CX_OID_SHA3_512_LENGTH  19
 extern uint8_t const C_cx_oid_sha3_512[CX_OID_SHA3_512_LENGTH];
+#endif // HAVE_SHA3
 
 cx_err_t cx_rsa_get_public_components(const cx_rsa_public_key_t *key, uint8_t **e, uint8_t **n);
 cx_err_t cx_rsa_get_private_components(const cx_rsa_private_key_t *key, uint8_t **d, uint8_t **n);
 
 cx_err_t cx_rsa_private_key_ctx_size(const cx_rsa_private_key_t *key, size_t *size);
 
-
-
-#endif
-
+#endif // CX_RSA_H
 #endif // HAVE_RSA

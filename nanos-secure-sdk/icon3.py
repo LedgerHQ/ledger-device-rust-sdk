@@ -193,7 +193,8 @@ def main():
 
                 # Print image data
                 if args.glyphcheader:
-                    print("extern unsigned char const C_{0}_bitmap[];".format(image_name))
+                    image_data = image_to_packed_buffer(im, new_indices, bits_per_pixel)
+                    print("extern unsigned char const C_{0}_bitmap[{1:d}];".format(image_name, len(image_data)))
                 else:
                     print("unsigned char const C_{0}_bitmap[] = {{".format(image_name))
 
@@ -206,7 +207,7 @@ def main():
 
             if args.glyphcheader:
                 print("""#ifdef HAVE_BAGL
-        #include \"ux.h\"
+        #include \"bagl.h\"
         extern const bagl_icon_details_t C_{0};
         #endif // GLYPH_{0}_BPP
         #endif // HAVE_BAGL""".format(image_name))
@@ -216,7 +217,7 @@ def main():
                     if color_array_serialized in colors_array:
                         color_ref = colors_array[color_array_serialized]
                 print("""#ifdef HAVE_BAGL
-        #include \"ux.h\"
+        #include \"bagl.h\"
         const bagl_icon_details_t C_{0} = {{ GLYPH_{0}_WIDTH, GLYPH_{0}_HEIGHT, {1}, C_{2}_colors, C_{0}_bitmap }};
         #endif // HAVE_BAGL""".format(image_name, int(math.log(num_colors, 2)), color_ref))
             else:

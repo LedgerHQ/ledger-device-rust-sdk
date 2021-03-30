@@ -62,7 +62,7 @@ typedef struct cx_ripemd160_s cx_ripemd160_t;
  *
  * @return algorithm identifier
  */
-  void cx_ripemd160_init_no_throw(cx_ripemd160_t *hash);
+cx_err_t cx_ripemd160_init_no_throw(cx_ripemd160_t *hash);
 
 static inline int cx_ripemd160_init ( cx_ripemd160_t * hash )
 {

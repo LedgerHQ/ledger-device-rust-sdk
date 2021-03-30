@@ -64,7 +64,7 @@ typedef struct cx_sha256_s cx_sha256_t;
  *
  * @return algorithm identifier
  */
-void cx_sha224_init_no_throw(cx_sha256_t *hash);
+cx_err_t cx_sha224_init_no_throw(cx_sha256_t *hash);
 
 static inline int cx_sha224_init ( cx_sha256_t * hash )
 {
@@ -81,7 +81,7 @@ static inline int cx_sha224_init ( cx_sha256_t * hash )
  *
  * @return algorithm identifier
  */
-void cx_sha256_init_no_throw(cx_sha256_t *hash);
+cx_err_t cx_sha256_init_no_throw(cx_sha256_t *hash);
 
 static inline int cx_sha256_init ( cx_sha256_t * hash )
 {

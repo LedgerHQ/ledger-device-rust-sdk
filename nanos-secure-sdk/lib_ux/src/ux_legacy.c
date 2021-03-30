@@ -65,6 +65,10 @@ const bagl_element_t* ux_menu_element_preprocessor(const bagl_element_t* element
 
   // ask the current entry first, to setup other entries
   const ux_menu_entry_t* current_entry = (const ux_menu_entry_t*)PIC(ux_menu_get_entry(ux_menu.current_entry));
+  if (current_entry == NULL) {
+    return NULL;
+  }
+  const bagl_icon_details_t* current_entry_icon = (const bagl_icon_details_t*)PIC(current_entry->icon);
 
   const ux_menu_entry_t* previous_entry = NULL;
   if (ux_menu.current_entry) {
@@ -88,8 +92,7 @@ const bagl_element_t* ux_menu_element_preprocessor(const bagl_element_t* element
       break;
     // previous setting name
     case 0x41:
-      if (!current_entry
-        || current_entry->line2 != NULL 
+      if (current_entry->line2 != NULL
         || current_entry->icon != NULL
         || ux_menu.current_entry == 0
         || ux_menu.menu_entries_count == 1 
@@ -102,8 +105,7 @@ const bagl_element_t* ux_menu_element_preprocessor(const bagl_element_t* element
       break;
     // next setting name
     case 0x42:
-      if (!current_entry
-        || current_entry->line2 != NULL 
+      if (current_entry->line2 != NULL
         || current_entry->icon != NULL
         || ux_menu.current_entry == ux_menu.menu_entries_count-1
         || ux_menu.menu_entries_count == 1
@@ -114,7 +116,7 @@ const bagl_element_t* ux_menu_element_preprocessor(const bagl_element_t* element
       G_ux.tmp_element.text = next_entry->line1;
       break;
     case 0x10:
-      if (!current_entry || current_entry->icon == NULL) {
+      if (current_entry->icon == NULL) {
         return NULL;
       }
       G_ux.tmp_element.text = (const char*)current_entry->icon;
@@ -123,24 +125,28 @@ const bagl_element_t* ux_menu_element_preprocessor(const bagl_element_t* element
       }
       break;
     case 0x20:
-      if (!current_entry || current_entry->line2 != NULL) {
+      if (current_entry->line2 != NULL) {
         return NULL;
       }
       G_ux.tmp_element.text = current_entry->line1;
       goto adjust_text_x;
     case 0x21:
-      if (!current_entry || current_entry->line2 == NULL) {
+      if (current_entry->line2 == NULL) {
         return NULL;
       }
       G_ux.tmp_element.text = current_entry->line1;
       goto adjust_text_x;
     case 0x22:
-      if (!current_entry || current_entry->line2 == NULL) {
+      if (current_entry->line2 == NULL) {
         return NULL;
       }
       G_ux.tmp_element.text = current_entry->line2;
     adjust_text_x:
-      if (current_entry && current_entry->text_x) {
+      if (current_entry_icon) {
+        G_ux.tmp_element.component.x += current_entry_icon->width;
+        G_ux.tmp_element.component.width -= current_entry_icon->width;
+      }
+      if (current_entry->text_x) {
         G_ux.tmp_element.component.x = current_entry->text_x;
         // discard the 'center' flag
         G_ux.tmp_element.component.font_id = BAGL_FONT_OPEN_SANS_EXTRABOLD_11px;
@@ -160,6 +166,9 @@ unsigned int ux_menu_elements_button (unsigned int button_mask, unsigned int but
   UNUSED(button_mask_counter);
 
   const ux_menu_entry_t* current_entry = (const ux_menu_entry_t*)PIC(ux_menu_get_entry(ux_menu.current_entry));
+  if (current_entry == NULL) {
+    return 1;
+  }
 
   switch (button_mask) {
     // enter menu or exit menu

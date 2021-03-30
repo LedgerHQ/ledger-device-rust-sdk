@@ -16,7 +16,7 @@
 *  limitations under the License.
 ********************************************************************************/
 
-#if !defined(HAVE_BOLOS)
+#if !defined(HAVE_BOLOS) && defined(HAVE_PENDING_REVIEW_SCREEN)
 
 #include "bolos_target.h"
 #include "checks.h"
@@ -31,7 +31,7 @@
 extern unsigned int const _install_parameters;
 
 // This function is the button callback associated with the 'ui_audited_elements' array below.
-static unsigned int ui_audited_elements_button(unsigned int button_mask, unsigned int button_mask_counter) {
+static unsigned int ui_audited_elements_button(unsigned int button_mask, unsigned int button_mask_counter __attribute__((unused))) {
   unsigned int slot;
 
   // As soon as the user presses both buttons, we reinitialize the UX and buttons,
@@ -140,4 +140,4 @@ void check_audited_app(void) {
   }
 }
 
-#endif // !defined(HAVE_BOLOS)
+#endif // !defined(HAVE_BOLOS)  && defined(HAVE_PENDING_REVIEW_SCREEN)

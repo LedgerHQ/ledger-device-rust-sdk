@@ -143,8 +143,8 @@ void io_seproxyhal_handle_usb_event(void) {
       if (G_io_app.apdu_media != IO_APDU_MEDIA_NONE) {
         THROW(EXCEPTION_IO_RESET);
       }
-      os_memset(G_io_app.usb_ep_xfer_len, 0, sizeof(G_io_app.usb_ep_xfer_len));
-      os_memset(G_io_app.usb_ep_timeouts, 0, sizeof(G_io_app.usb_ep_timeouts));
+      memset(G_io_app.usb_ep_xfer_len, 0, sizeof(G_io_app.usb_ep_xfer_len));
+      memset(G_io_app.usb_ep_timeouts, 0, sizeof(G_io_app.usb_ep_timeouts));
       break;
     case SEPROXYHAL_TAG_USB_EVENT_SOF:
       USBD_LL_SOF(&USBD_Device);
@@ -191,7 +191,11 @@ void io_seproxyhal_handle_usb_ep_xfer_event(void) {
     case SEPROXYHAL_TAG_USB_EP_XFER_OUT:
       if (epnum < IO_USB_MAX_ENDPOINTS) {
         // saved just in case it is needed ...
-        G_io_app.usb_ep_xfer_len[epnum] = MIN(G_io_seproxyhal_spi_buffer[5], sizeof(G_io_seproxyhal_spi_buffer) - 6);
+#if IO_SEPROXYHAL_BUFFER_SIZE_B - 6 >= 256
+        G_io_app.usb_ep_xfer_len[epnum] = G_io_seproxyhal_spi_buffer[5];
+#else
+        G_io_app.usb_ep_xfer_len[epnum] = MIN(G_io_seproxyhal_spi_buffer[5], IO_SEPROXYHAL_BUFFER_SIZE_B - 6);
+#endif
         // prepare reception
         USBD_LL_DataOutStage(&USBD_Device, epnum, &G_io_seproxyhal_spi_buffer[6]);
       }
@@ -385,7 +389,7 @@ void io_seproxyhal_handle_capdu_event(void) {
     G_io_app.apdu_state = APDU_RAW; // for next call to io_exchange
     G_io_app.apdu_length = MIN(size, max);
     // copy apdu to apdu buffer
-    os_memmove(G_io_apdu_buffer, G_io_seproxyhal_spi_buffer+3, G_io_app.apdu_length);
+    memcpy(G_io_apdu_buffer, G_io_seproxyhal_spi_buffer+3, G_io_app.apdu_length);
   }
 }
 
@@ -533,7 +537,7 @@ void io_seproxyhal_init(void) {
 #ifdef TARGET_NANOX
   unsigned int plane = G_io_app.plane_mode;
 #endif // TARGET_NANOX
-  os_memset(&G_io_app, 0, sizeof(G_io_app));
+  memset(&G_io_app, 0, sizeof(G_io_app));
 #ifdef TARGET_NANOX
   G_io_app.plane_mode = plane;
 #endif // TARGET_NANOX
@@ -555,9 +559,9 @@ void io_seproxyhal_init(void) {
   io_seproxyhal_init_ux();
   io_seproxyhal_init_button();
 
-#if !defined(HAVE_BOLOS)
+#if !defined(HAVE_BOLOS) && defined(HAVE_PENDING_REVIEW_SCREEN)
   check_audited_app();
-#endif // !defined(HAVE_BOLOS)
+#endif // !defined(HAVE_BOLOS) && defined(HAVE_PENDING_REVIEW_SCREEN)
 }
 
 void io_seproxyhal_init_ux(void) {
@@ -637,7 +641,7 @@ unsigned int io_seproxyhal_touch_over(const bagl_element_t* element, bagl_elemen
   }
 
   // swap colors
-  os_memmove(&e, (void*)element, sizeof(bagl_element_t));
+  memcpy(&e, (void*)element, sizeof(bagl_element_t));
   e.component.fgcolor = element->overfgcolor;
   e.component.bgcolor = element->overbgcolor;
 
@@ -769,7 +773,7 @@ void io_seproxyhal_display_bitmap(int x, int y, unsigned int w, unsigned int h, 
   if (w && h) {
     bagl_component_t c;
     bagl_icon_details_t d;
-    os_memset(&c, 0, sizeof(c));
+    memset(&c, 0, sizeof(c));
     c.type = BAGL_ICON;
     c.x = x;
     c.y = y;
@@ -881,7 +885,7 @@ void io_seproxyhal_display_icon(bagl_component_t* icon_component, bagl_icon_deta
   // }
 
   // ensure not being out of bounds in the icon component agianst the declared icon real size
-  os_memmove(&icon_component_mod, icon_component, sizeof(bagl_component_t));
+  memcpy(&icon_component_mod, icon_component, sizeof(bagl_component_t));
   icon_component_mod.width = icon_details->width;
   icon_component_mod.height = icon_details->height;
   icon_component = &icon_component_mod;
@@ -926,7 +930,7 @@ void io_seproxyhal_display_icon(bagl_component_t* icon_component, bagl_icon_deta
   const bagl_icon_details_t* icon_details = (bagl_icon_details_t*)PIC(icon_det);
   if (icon_details && icon_details->bitmap) {
     // ensure not being out of bounds in the icon component agianst the declared icon real size
-    os_memmove(&icon_component_mod, (void *)PIC(icon_component), sizeof(bagl_component_t));
+    memcpy(&icon_component_mod, (void *)PIC(icon_component), sizeof(bagl_component_t));
     icon_component_mod.width = icon_details->width;
     icon_component_mod.height = icon_details->height;
     icon_component = &icon_component_mod;
@@ -1365,12 +1369,11 @@ unsigned short io_exchange(unsigned char channel, unsigned short tx_len) {
     // fetch next apdu
     if (debug_apdus_offset < sizeof(debug_apdus)) {
       G_io_apdu_length = debug_apdus[debug_apdus_offset]&0xFF;
-      os_memmove(G_io_apdu_buffer, &debug_apdus[debug_apdus_offset+1], G_io_apdu_length);
+      memcpy(G_io_apdu_buffer, &debug_apdus[debug_apdus_offset+1], G_io_apdu_length);
       debug_apdus_offset += G_io_apdu_length+1;
       return G_io_apdu_length;
     }
   }
-  after_debug:
 #endif // DEBUG_APDU
 
 reply_apdu:
@@ -1477,9 +1480,9 @@ reply_apdu:
             G_io_apdu_buffer[tx_len] = 0x90; //G_io_apdu_buffer[tx_len-2];
             G_io_apdu_buffer[tx_len+1] = 0x00; //G_io_apdu_buffer[tx_len-1];
             tx_len += 2;
-            os_memmove(G_io_apdu_buffer + APDU_OFF_DATA, G_io_apdu_buffer, tx_len);
+            memmove(G_io_apdu_buffer + APDU_OFF_DATA, G_io_apdu_buffer, tx_len);
             // zeroize user presence and counter
-            os_memset(G_io_apdu_buffer, 0, APDU_OFF_DATA);
+            memset(G_io_apdu_buffer, 0, APDU_OFF_DATA);
             u2f_message_reply(&G_io_u2f, U2F_CMD_MSG, G_io_apdu_buffer, tx_len+5);
 
 #else // U2F_PROXY_MAGIC

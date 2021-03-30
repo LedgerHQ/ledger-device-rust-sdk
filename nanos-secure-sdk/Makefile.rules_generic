@@ -56,10 +56,14 @@ prepare:
 default: bin/app.apdu
 
 obj/%.o: %.c $(GLYPH_DESTC) prepare Makefile
-	@echo "[CC]	  $@"
+	@echo "[CC]   $@"
 	$(L)$(call cc_cmdline,$(INCLUDES_PATH), $(DEFINES),$<,$@)
 
 obj/%.o: %.s
+	@echo "[AS]   $@"
+	$(L)$(call as_cmdline,$(INCLUDES_PATH), $(DEFINES),$<,$@)
+
+obj/%.o: %.S
 	@echo "[AS]   $@"
 	$(L)$(call as_cmdline,$(INCLUDES_PATH), $(DEFINES),$<,$@)
 
@@ -84,6 +88,9 @@ bin/app.apdu bin/app.sha256: bin/app.elf
 
 # link_cmdline(objects,dest)		Macro that is used to format arguments for the linker
 link_cmdline = $(LD) $(LDFLAGS) -o $(2) $(1)
+ifneq ($(APP_STACK_SIZE),)
+link_cmdline += -Wl,--defsym=stack_size=$(APP_STACK_SIZE)
+endif
 
 # cc_cmdline(include,defines,src,dest)	Macro that is used to format arguments for the compiler
 # dependency files are generated along the object file
@@ -97,4 +104,4 @@ as_cmdline = $(AS) -c $(AFLAGS) $(addprefix -D,$(2)) $(addprefix -I,$(1)) -o $(4
 SCAN_BUILD ?= scan-build
 SCAN_BUILD_OUTPUT ?= $(CURDIR)/output-scan-build
 scan-build:
-	$(SCAN_BUILD) --use-cc=$(CC) -analyze-headers -o $(SCAN_BUILD_OUTPUT) $(MAKE) default
+	$(SCAN_BUILD) --use-cc=$(CC) -analyze-headers -enable-checker security -enable-checker unix -enable-checker valist -o $(SCAN_BUILD_OUTPUT) $(MAKE) default

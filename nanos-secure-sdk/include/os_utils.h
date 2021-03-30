@@ -1,6 +1,7 @@
 #pragma once
 
 #include "arch.h"
+#include "decorators.h"
 
 /**
  * Helper to perform compilation time assertions
@@ -70,22 +71,9 @@ void u4le_encode(unsigned char *buffer, unsigned int offset,
 /* ----------------------------------------------------------------------- */
 /* -                            OS FUNCTIONS                             - */
 /* ----------------------------------------------------------------------- */
-#define os_swap_u16(u16)                                                       \
-  ((((unsigned short)(u16) << 8) & 0xFF00U) |                                  \
-   (((unsigned short)(u16) >> 8) & 0x00FFU))
+#define os_swap_u16(u16) __builtin_bswap16(u16)
+#define os_swap_u32(u32) __builtin_bswap32(u32)
 
-#define os_swap_u32(u32)                                                       \
-  (((unsigned long int)(u32) >> 24) |                                          \
-   (((unsigned long int)(u32) << 8) & 0x00FF0000UL) |                          \
-   (((unsigned long int)(u32) >> 8) & 0x0000FF00UL) |                          \
-   ((unsigned long int)(u32) << 24))
-
-void *os_memmove(void *dst, const void *src, unsigned int length);
-#define os_memcpy os_memmove
-
-void os_memset(void *dst, unsigned char c, unsigned int length);
-char os_memcmp(const void WIDE *buf1, const void WIDE *buf2,
-               unsigned int length);
 void os_memset4(void *dst, unsigned int initval, unsigned int nbintval);
 void os_xor(void *dst, void WIDE *src1, void WIDE *src2, unsigned int length);
 
@@ -106,3 +94,11 @@ char os_secure_memcmp(void *src1, void *src2, unsigned int length);
 #ifdef macro_offsetof
 #define offsetof(type, field) ((unsigned int)&(((type *)NULL)->field))
 #endif
+
+void *os_memmove(void *dest, const void *src, size_t n)
+    __attribute__((deprecated));
+void *os_memcpy(void *dest, const void *src, size_t n)
+    __attribute__((deprecated));
+int os_memcmp(const void *s1, const void *s2, size_t n)
+    __attribute__((deprecated));
+void *os_memset(void *s, int c, size_t n) __attribute__((deprecated));

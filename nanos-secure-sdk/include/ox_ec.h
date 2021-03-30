@@ -333,8 +333,7 @@ SYSCALL cx_err_t cx_ecdomain_parameter(cx_curve_t cv, cx_curve_dom_param_t id,
  *
  */
 SYSCALL cx_err_t cx_ecdomain_parameter_bn(cx_curve_t cv,
-                                          cx_curve_dom_param_t id,
-                                          cx_bn_t *p PLENGTH(sizeof(cx_bn_t)));
+                                          cx_curve_dom_param_t id, cx_bn_t p);
 
 /**
  *
@@ -372,8 +371,7 @@ SYSCALL cx_err_t cx_ecpoint_init(cx_ecpoint_t *P PLENGTH(sizeof(cx_ecpoint_t)),
  */
 SYSCALL cx_err_t
 cx_ecpoint_init_bn(cx_ecpoint_t *P PLENGTH(sizeof(cx_ecpoint_t)),
-                   const cx_bn_t *x PLENGTH(sizeof(cx_bn_t)),
-                   const cx_bn_t *y PLENGTH(sizeof(cx_bn_t)));
+                   const cx_bn_t x, const cx_bn_t y);
 
 /**
  *
@@ -440,7 +438,14 @@ cx_ecpoint_rnd_scalarmul(cx_ecpoint_t *P PLENGTH(sizeof(cx_ecpoint_t)),
  */
 SYSCALL cx_err_t
 cx_ecpoint_rnd_scalarmul_bn(cx_ecpoint_t *P PLENGTH(sizeof(cx_ecpoint_t)),
-                            const cx_bn_t *bn_k PLENGTH(sizeof(cx_bn_t)));
+                            const cx_bn_t bn_k PLENGTH(sizeof(cx_bn_t)));
+
+/**
+ *
+ */
+SYSCALL cx_err_t
+cx_ecpoint_rnd_fixed_scalarmul(cx_ecpoint_t *P PLENGTH(sizeof(cx_ecpoint_t)),
+                               const uint8_t *k PLENGTH(k_len), size_t k_len);
 
 /**
  *
@@ -454,7 +459,7 @@ cx_ecpoint_scalarmul(cx_ecpoint_t *P PLENGTH(sizeof(cx_ecpoint_t)),
  */
 SYSCALL cx_err_t
 cx_ecpoint_scalarmul_bn(cx_ecpoint_t *P PLENGTH(sizeof(cx_ecpoint_t)),
-                        const cx_bn_t *bn_k PLENGTH(sizeof(cx_bn_t)));
+                        const cx_bn_t bn_k PLENGTH(sizeof(cx_bn_t)));
 
 /**
  *
@@ -473,8 +478,7 @@ SYSCALL cx_err_t
 cx_ecpoint_double_scalarmul_bn(cx_ecpoint_t *R PLENGTH(sizeof(cx_ecpoint_t)),
                                cx_ecpoint_t *P PLENGTH(sizeof(cx_ecpoint_t)),
                                cx_ecpoint_t *Q PLENGTH(sizeof(cx_ecpoint_t)),
-                               const cx_bn_t *bn_k PLENGTH(sizeof(cx_bn_t)),
-                               const cx_bn_t *bn_r PLENGTH(sizeof(cx_bn_t)));
+                               const cx_bn_t bn_k, const cx_bn_t bn_r);
 
 /**
  *

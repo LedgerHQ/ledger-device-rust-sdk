@@ -43,8 +43,8 @@ typedef struct bolos_ux_params_s {
   // length of parameters in the u union to be copied during the syscall.
   unsigned int len;
 
-  union {
 #if (defined(TARGET_BLUE) || defined(HAVE_BLE))
+  union {
     // Structure for the lib ux.
 #if defined(TARGET_BLUE)
     struct {
@@ -63,9 +63,8 @@ typedef struct bolos_ux_params_s {
       char pairing_info[16];
     } pairing_request;
 #endif // HAVE_BLE
-#endif // (defined(TARGET_BLUE) || defined(HAVE_BLE))
   } u;
-
+#endif // (defined(TARGET_BLUE) || defined(HAVE_BLE))
 } bolos_ux_params_t;
 
 #endif // ! HAVE_BOLOS

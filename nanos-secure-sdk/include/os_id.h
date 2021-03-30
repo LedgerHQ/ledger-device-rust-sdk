@@ -3,6 +3,7 @@
 #include "appflags.h"
 #include "bolos_target.h"
 #include "decorators.h"
+#include "os_task.h"
 
 /* ----------------------------------------------------------------------- */
 /* -                            ID FUNCTIONS                             - */
@@ -39,5 +40,13 @@ os_bootloader_version(unsigned char *version PLENGTH(maxlength),
  */
 unsigned int os_get_sn(unsigned char *buffer);
 
-// check API level
-SYSCALL void check_api_level(unsigned int apiLevel);
+// get API level
+SYSCALL unsigned int get_api_level(void);
+
+#ifndef HAVE_BOLOS
+static inline void check_api_level(unsigned int apiLevel) {
+  if (apiLevel < get_api_level()) {
+    os_sched_exit(-1);
+  }
+}
+#endif

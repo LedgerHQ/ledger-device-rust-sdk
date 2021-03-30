@@ -83,7 +83,9 @@ static inline int cx_ecdsa_sign ( const cx_ecfp_private_key_t * pvkey, int mode,
   size_t sig_len_ = sig_len;
   uint32_t info_;
   CX_THROW(cx_ecdsa_sign_no_throw(pvkey, mode, hashID, hash, hash_len, sig, &sig_len_, &info_));
-  *info = (uint32_t)info_;
+  if (info) {
+    *info = (uint32_t)info_;
+  }
   return sig_len_;
 }
 

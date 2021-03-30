@@ -133,14 +133,8 @@ static inline int cx_des ( const cx_des_key_t * key, int mode, const unsigned ch
   return out_len_;
 }
 
-/*
- *
- */
   void cx_des_enc_block(const cx_des_key_t *key, const uint8_t *inblock, uint8_t *outblock);
 
-/*
- *
- */
   void cx_des_dec_block(const cx_des_key_t *key, const uint8_t *inblock, uint8_t *outblock);
 
 #endif // HAVE_DES

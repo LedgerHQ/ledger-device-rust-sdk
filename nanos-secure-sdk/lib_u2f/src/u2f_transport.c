@@ -121,7 +121,7 @@ void u2f_transport_sent(u2f_service_t* service, u2f_transport_media_t media) {
         uint16_t offset = 0;
         // Fragment
         if (media == U2F_MEDIA_USB) {
-            os_memmove(G_io_usb_ep_buffer, service->channel, 4);
+            memcpy(G_io_usb_ep_buffer, service->channel, 4);
             offset += 4;
         }
         if (service->transportPacketIndex == 0) {
@@ -132,7 +132,7 @@ void u2f_transport_sent(u2f_service_t* service, u2f_transport_media_t media) {
             G_io_usb_ep_buffer[offset++] = (service->transportPacketIndex - 1);
         }
         if (service->transportBuffer != NULL) {
-            os_memmove(G_io_usb_ep_buffer + headerSize,
+            memmove(G_io_usb_ep_buffer + headerSize,
                        service->transportBuffer + service->transportOffset, blockSize);
         }
         service->transportOffset += blockSize;
@@ -150,7 +150,7 @@ void u2f_transport_sent(u2f_service_t* service, u2f_transport_media_t media) {
 void u2f_transport_send_usb_user_presence_required(u2f_service_t *service) {
     uint16_t offset = 0;
     service->sending = true;
-    os_memmove(G_io_usb_ep_buffer, service->channel, 4);
+    memcpy(G_io_usb_ep_buffer, service->channel, 4);
     offset += 4;
     G_io_usb_ep_buffer[offset++] = U2F_CMD_MSG;
     G_io_usb_ep_buffer[offset++] = 0;
@@ -163,7 +163,7 @@ void u2f_transport_send_usb_user_presence_required(u2f_service_t *service) {
 void u2f_transport_send_wink(u2f_service_t *service) {
     uint16_t offset = 0;
     service->sending = true;
-    os_memmove(G_io_usb_ep_buffer, service->channel, 4);
+    memcpy(G_io_usb_ep_buffer, service->channel, 4);
     offset += 4;
     G_io_usb_ep_buffer[offset++] = U2F_CMD_WINK;
     G_io_usb_ep_buffer[offset++] = 0;
@@ -177,7 +177,7 @@ void u2f_transport_send_wink(u2f_service_t *service) {
 void u2f_transport_ctap2_send_keepalive(u2f_service_t *service, uint8_t reason) {
     uint16_t offset = 0;
     service->sending = true;
-    os_memmove(G_io_usb_ep_buffer, service->channel, 4);
+    memcpy(G_io_usb_ep_buffer, service->channel, 4);
     offset += 4;
     G_io_usb_ep_buffer[offset++] = CTAP2_STATUS_KEEPALIVE;
     G_io_usb_ep_buffer[offset++] = 0;
@@ -282,7 +282,7 @@ void u2f_transport_received(u2f_service_t *service, uint8_t *buffer,
     }
     if (media == U2F_MEDIA_USB) {
         // hold the current channel value to reply to, for example, INIT commands within flow of segments.
-        os_memmove(service->channel, buffer, 4);
+        memcpy(service->channel, buffer, 4);
     }
 
 #ifdef HAVE_FIDO2
@@ -307,7 +307,7 @@ void u2f_transport_received(u2f_service_t *service, uint8_t *buffer,
     // no previous chunk processed for the current message
     if (service->transportOffset == 0
         // on USB we could get an INIT within a flow of segments.
-        || (media == U2F_MEDIA_USB && os_memcmp(service->transportChannel, service->channel, 4) != 0)
+        || (media == U2F_MEDIA_USB && memcmp(service->transportChannel, service->channel, 4) != 0)
         // CTAP2 transport test (HID-1)
         || (buffer[channelHeader] == U2F_CMD_INIT)) {
         if (size < (channelHeader + 3)) {
@@ -327,7 +327,7 @@ void u2f_transport_received(u2f_service_t *service, uint8_t *buffer,
         // immediately
         if (media == U2F_MEDIA_USB) {
             if ((service->transportState == U2F_HANDLE_SEGMENTED) &&
-                (os_memcmp(service->channel, service->transportChannel, 4) !=
+                (memcmp(service->channel, service->transportChannel, 4) !=
                  0) &&
                 (buffer[channelHeader] != U2F_CMD_INIT)) {
                 // special error case, we reply but don't change the current state of the transport (ongoing message for example)
@@ -335,7 +335,7 @@ void u2f_transport_received(u2f_service_t *service, uint8_t *buffer,
                 uint16_t offset = 0;
                 // Fragment
                 if (media == U2F_MEDIA_USB) {
-                    os_memmove(G_io_usb_ep_buffer, service->channel, 4);
+                    memcpy(G_io_usb_ep_buffer, service->channel, 4);
                     offset += 4;
                 }
                 G_io_usb_ep_buffer[offset++] = U2F_STATUS_ERROR;
@@ -402,7 +402,7 @@ void u2f_transport_received(u2f_service_t *service, uint8_t *buffer,
         //if (buffer[channelHeader] != U2F_CMD_INIT) 
         {
             xfer_len = MIN(size - (channelHeader), U2F_COMMAND_HEADER_SIZE+commandLength);
-            os_memmove(service->transportBuffer, buffer + channelHeader, xfer_len);
+            memmove(service->transportBuffer, buffer + channelHeader, xfer_len);
             if (media == U2F_MEDIA_USB) {
                 service->commandCrc = cx_crc16_update(0, service->transportBuffer, xfer_len);
             }
@@ -411,7 +411,7 @@ void u2f_transport_received(u2f_service_t *service, uint8_t *buffer,
             service->transportMedia = media;
             // initialize the response
             service->transportPacketIndex = 0;
-            os_memmove(service->transportChannel, service->channel, 4);
+            memcpy(service->transportChannel, service->channel, 4);
         }
     } else {
         // Continuation
@@ -438,7 +438,7 @@ void u2f_transport_received(u2f_service_t *service, uint8_t *buffer,
         }
         if (media == U2F_MEDIA_USB) {
             // Check the channel
-            if (os_memcmp(buffer, service->channel, 4) != 0) {
+            if (memcmp(buffer, service->channel, 4) != 0) {
                 u2f_transport_error(service, ERROR_CHANNEL_BUSY);
                 goto error;
             }
@@ -450,7 +450,7 @@ void u2f_transport_received(u2f_service_t *service, uint8_t *buffer,
             goto error;
         }
         xfer_len = MIN(size - (channelHeader + 1), service->transportLength - service->transportOffset);
-        os_memmove(service->transportBuffer + service->transportOffset, buffer + channelHeader + 1, xfer_len);
+        memmove(service->transportBuffer + service->transportOffset, buffer + channelHeader + 1, xfer_len);
         if (media == U2F_MEDIA_USB) {
             service->commandCrc = cx_crc16_update(service->commandCrc, service->transportBuffer + service->transportOffset, xfer_len);
         }        
@@ -479,11 +479,11 @@ error:
 }
 
 bool u2f_is_channel_broadcast(uint8_t *channel) {
-    return (os_memcmp(channel, BROADCAST_CHANNEL, 4) == 0);
+    return (memcmp(channel, BROADCAST_CHANNEL, 4) == 0);
 }
 
 bool u2f_is_channel_forbidden(uint8_t *channel) {
-    return (os_memcmp(channel, FORBIDDEN_CHANNEL, 4) == 0);
+    return (memcmp(channel, FORBIDDEN_CHANNEL, 4) == 0);
 }
 
 /**

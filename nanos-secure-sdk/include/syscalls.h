@@ -5,7 +5,7 @@
 #ifndef SYSCALL_DEFS_H
 #define SYSCALL_DEFS_H
 
-#define SYSCALL_check_api_level_ID_IN 0x60000137UL
+#define SYSCALL_get_api_level_ID_IN 0x60000138UL
 #define SYSCALL_halt_ID_IN 0x6000023cUL
 #define SYSCALL_nvm_write_ID_IN 0x6000037fUL
 #define SYSCALL_nvm_erase_ID_IN 0x60012128UL
@@ -64,6 +64,7 @@
 #define SYSCALL_cx_mont_invert_nprime_ID_IN 0x6000e4b2UL
 #define SYSCALL_cx_bn_is_prime_ID_IN 0x6000ef6bUL
 #define SYSCALL_cx_bn_next_prime_ID_IN 0x6000f070UL
+#define SYSCALL_cx_bn_rng_ID_IN 0x6001dd7cUL
 #define SYSCALL_cx_ecdomain_size_ID_IN 0x60012e04UL
 #define SYSCALL_cx_ecdomain_parameters_length_ID_IN 0x60012fb4UL
 #define SYSCALL_cx_ecdomain_parameter_ID_IN 0x6001306fUL
@@ -84,6 +85,11 @@
 #define SYSCALL_cx_ecpoint_scalarmul_bn_ID_IN 0x600111f0UL
 #define SYSCALL_cx_ecpoint_rnd_scalarmul_ID_IN 0x6001274dUL
 #define SYSCALL_cx_ecpoint_rnd_scalarmul_bn_ID_IN 0x60012889UL
+
+#ifdef HAVE_FIXED_SCALAR_LENGTH
+#define SYSCALL_cx_ecpoint_rnd_fixed_scalarmul_ID_IN 0x6001293cUL
+#endif // HAVE_FIXED_SCALAR_LENGTH
+
 #define SYSCALL_cx_ecpoint_double_scalarmul_ID_IN 0x600148a8UL
 #define SYSCALL_cx_ecpoint_double_scalarmul_bn_ID_IN 0x60014a9dUL
 #define SYSCALL_cx_ecpoint_cmp_ID_IN 0x6000fbc5UL
@@ -93,8 +99,6 @@
 
 #define SYSCALL_cx_get_random_bytes_ID_IN 0x60010775
 #define SYSCALL_cx_trng_get_random_data_ID_IN 0x60010676UL
-#define SYSCALL_cx_trng_selftest_ID_IN 0x60010c47UL
-#define SYSCALL_cx_trng_init_ID_IN 0x600105d9UL
 
 #define SYSCALL_os_perso_erase_all_ID_IN 0x60004bf5UL
 #define SYSCALL_os_perso_set_seed_ID_IN 0x60004ebcUL

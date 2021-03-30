@@ -47,9 +47,9 @@
  *   < 0 if a is less than b
  *   > 0 if a is greater than b
  */
-cx_err_t cx_math_cmp_no_throw(uint8_t *a, uint8_t *b, size_t length, int *diff);
+cx_err_t cx_math_cmp_no_throw(const uint8_t *a, const uint8_t *b, size_t length, int *diff);
 
-static inline int32_t cx_math_cmp(uint8_t *a, uint8_t *b, size_t length) {
+static inline int32_t cx_math_cmp(const uint8_t *a, const uint8_t *b, size_t length) {
   int diff;
   CX_THROW(cx_math_cmp_no_throw(a, b, length, &diff));
   return diff;

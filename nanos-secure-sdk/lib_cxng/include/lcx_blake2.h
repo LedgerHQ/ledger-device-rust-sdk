@@ -25,8 +25,8 @@
 #ifndef LCX_BLAKE2_H
 #define LCX_BLAKE2_H
 
-#include "lcx_hash.h"
 #include "lcx_wrappers.h"
+#include "lcx_hash.h"
 #include <stddef.h>
 #include <stdint.h>
 

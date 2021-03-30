@@ -274,7 +274,7 @@ static inline int cx_hmac ( cx_hmac_t * hmac, int mode, const unsigned char * in
 {
   CX_THROW(cx_hmac_no_throw(hmac, mode, in, len, mac, mac_len));
 
-  switch (hmac->hash_ctx.algo) {
+  switch (hmac->hash_ctx.info->md_type) {
 #ifdef HAVE_SHA224
   case CX_SHA224: return CX_SHA224_SIZE;
 #endif

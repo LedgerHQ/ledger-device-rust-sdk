@@ -26,14 +26,16 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define PBKDF2_BUFFER_LENGTH                    64
+
 /* ========= PBKDF2 ========= */
 struct cx_pbkdf2_s {
   // salt buffer used to initialize each pbkdf2 turn.
   uint8_t   salt[384];
   uint8_t   sha512out[64]; // avoid stack usage in derive_and_set_seed
 
-  uint8_t   work[CX_SHA512_SIZE];
-  uint8_t   md1[CX_SHA512_SIZE];
+  uint8_t   work[PBKDF2_BUFFER_LENGTH];
+  uint8_t   md1[PBKDF2_BUFFER_LENGTH];
   union {
     #if !defined(HAVE_SHA512) && !defined(HAVE_SHA384) && !defined(HAVE_SHA256) && !defined(HAVE_SHA224)
     #error No hmac defined for pbkdf2 support

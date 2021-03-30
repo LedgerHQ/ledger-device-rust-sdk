@@ -24,10 +24,6 @@
 #include "lcx_hash.h"
 #include <stddef.h>
 
-#ifdef HAVE_RIPEMD160
-#define RIPEMD_BLOCK_SIZE 64
-#endif
-
 #if defined(HAVE_SHA256) || defined(HAVE_SHA224)
 #define SHA256_BLOCK_SIZE 64
 #endif
@@ -47,19 +43,6 @@ cx_err_t cx_groestl(cx_hash_t *hash, uint32_t mode, const uint8_t *in, size_t in
 #ifdef HAVE_BLAKE2
 cx_err_t cx_blake2b(cx_hash_t *hash, uint32_t mode, const uint8_t *in, size_t in_len, uint8_t *out, size_t out_len);
 #endif
-
-/* Generic API */
-typedef struct {
-  cx_md_t md_type;
-  size_t  output_size;
-  size_t  block_size;
-  void (*init_func)(cx_hash_t *ctx);
-  cx_err_t (*update_func)(cx_hash_t *ctx, const uint8_t *data, size_t len);
-  void (*finish_func)(cx_hash_t *ctx, uint8_t *digest);
-  cx_err_t (*init_ex_func)(cx_hash_t *ctx, size_t output_size);
-  bool (*validate_context)(const cx_hash_t *ctx);
-  size_t (*output_size_func)(const cx_hash_t *ctx);
-} cx_hash_info_t;
 
 const cx_hash_info_t *cx_hash_get_info(cx_md_t md_type);
 

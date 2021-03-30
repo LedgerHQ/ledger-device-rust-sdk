@@ -16,10 +16,11 @@
 *  limitations under the License.
 ********************************************************************************/
 
-#ifdef HAVE_IO_U2F
-
 #include <stdint.h>
 #include <string.h>
+
+#ifdef HAVE_IO_U2F
+
 #include "os.h"
 #include "u2f_service.h"
 #include "u2f_transport.h"
@@ -30,11 +31,11 @@
 
 void u2f_io_send(uint8_t *buffer, uint16_t length, u2f_transport_media_t media) {
     if (media == U2F_MEDIA_USB) {
-        os_memmove(G_io_usb_ep_buffer, buffer, length);
+        memmove(G_io_usb_ep_buffer, buffer, length);
         // wipe the remaining to avoid :
         // 1/ data leaks
         // 2/ invalid junk
-        os_memset(G_io_usb_ep_buffer+length, 0, sizeof(G_io_usb_ep_buffer)-length);
+        memset(G_io_usb_ep_buffer+length, 0, sizeof(G_io_usb_ep_buffer)-length);
     }
     switch (media) {
     case U2F_MEDIA_USB:

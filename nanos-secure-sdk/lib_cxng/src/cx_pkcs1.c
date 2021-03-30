@@ -32,66 +32,115 @@
 /* ----------------------------------------------------------------------- */
 /*                                                                         */
 /* ----------------------------------------------------------------------- */
+
+#if defined(HAVE_SHA224)
 /* sha224 OID */
 const uint8_t C_cx_oid_sha224[CX_OID_SHA224_LENGTH] = {0x30, 0x2d, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01,
                                                        0x65, 0x03, 0x04, 0x02, 0x04, 0x05, 0x00, 0x04, 0x1c};
+#endif // HAVE_SHA224
+
+#if defined(HAVE_SHA256)
 /* sha256 OID */
 const uint8_t C_cx_oid_sha256[CX_OID_SHA256_LENGTH] = {0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01,
                                                        0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20};
+#endif // HAVE_SHA256
+
+#if defined(HAVE_SHA384)
 /* sha384 OID */
 const uint8_t C_cx_oid_sha384[CX_OID_SHA384_LENGTH] = {0x30, 0x41, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01,
                                                        0x65, 0x03, 0x04, 0x02, 0x02, 0x05, 0x00, 0x04, 0x30};
+#endif // HAVE_SHA384
+
+#if defined(HAVE_SHA512)
 /* sha512 OID */
 const uint8_t C_cx_oid_sha512[CX_OID_SHA512_LENGTH] = {0x30, 0x51, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01,
                                                        0x65, 0x03, 0x04, 0x02, 0x03, 0x05, 0x00, 0x04, 0x40};
+#endif // HAVE_SHA512
+
+#if defined(HAVE_SHA3)
 /* sha3-256 OID */
 const uint8_t C_cx_oid_sha3_256[CX_OID_SHA3_256_LENGTH]
                                                     = {0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01,
                                                        0x65, 0x03, 0x04, 0x02, 0x08, 0x05, 0x00, 0x04, 0x20};
+
 /* sha3-512 OID */
 const uint8_t C_cx_oid_sha3_512[CX_OID_SHA3_512_LENGTH]
                                                     = {0x30, 0x51, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01,
                                                        0x65, 0x03, 0x04, 0x02, 0x0a, 0x05, 0x00, 0x04, 0x40};
-
+#endif // HAVE_SHA3
 
 size_t cx_pkcs1_get_hash_len(cx_md_t hID) {
   switch (hID) {
+#if defined(HAVE_SHA224)
   case CX_SHA224:
     return 224/8;
+#endif // HAVE_SHA224
+
+#if defined(HAVE_SHA256)
   case CX_SHA256:
-  case CX_SHA3_256:
     return 256/8;
+#endif // HAVE_SHA256
+
+#if defined(HAVE_SHA384)
   case CX_SHA384:
     return 384/8;
+#endif // HAVE_SHA384
+
+#if defined(HAVE_SHA512)
   case CX_SHA512:
+    return 512/8;
+#endif // HAVE_SHA512
+
+#if defined(HAVE_SHA3)
+  case CX_SHA3_256:
+    return 256/8;
+
   case CX_SHA3_512:
     return 512/8;
+#endif // HAVE_SHA3
+
   default:
     break;
   }
- return 0;
+  return 0;
 }
 
 static const uint8_t *cx_pkcs1_get_hash_oid(cx_md_t hID, size_t *len) {
   switch (hID) {
+#if defined(HAVE_SHA224)
   case CX_SHA224:
     *len = sizeof(C_cx_oid_sha224);
     return C_cx_oid_sha224;
+#endif // HAVE_SHA224
+
+#if defined(HAVE_SHA256)
   case CX_SHA256:
     *len = sizeof(C_cx_oid_sha256);
     return C_cx_oid_sha256;
+#endif // HAVE_SHA256
+
+#if defined(HAVE_SHA384)
   case CX_SHA384:
     *len = sizeof(C_cx_oid_sha384);
     return C_cx_oid_sha384;
+#endif // HAVE_SHA384
+
+#if defined(HAVE_SHA512)
   case CX_SHA512:
     *len = sizeof(C_cx_oid_sha512);
     return C_cx_oid_sha512;
+#endif // HAVE_SHA512
+
+#if defined(HAVE_SHA3)
   case CX_SHA3_256:
       *len = sizeof(C_cx_oid_sha3_256);
       return C_cx_oid_sha3_256;
+
   case CX_SHA3_512:
     *len = sizeof(C_cx_oid_sha3_512);
     return C_cx_oid_sha3_512;
+#endif // HAVE_SHA3
+
   default:
     break;
   }
@@ -109,19 +158,24 @@ static const uint8_t C_cx_pss_zeros[] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 // We only support the empty string label, defined as default.
 // The following arrays are the corresponding hash applied to this empty string label.
+#if defined(HAVE_SHA224)
 static const uint8_t C_cx_oeap_sha224_[] = {
   0xd1, 0x4a, 0x02, 0x8c, 0x2a, 0x3a, 0x2b, 0xc9,
   0x47, 0x61, 0x02, 0xbb, 0x28, 0x82, 0x34, 0xc4,
   0x15, 0xa2, 0xb0, 0x1f, 0x82, 0x8e, 0xa6, 0x2a,
   0xc5, 0xb3, 0xe4, 0x2f};
+#endif // HAVE_SHA224
 
+#if defined(HAVE_SHA256)
 static const uint8_t C_cx_oeap_sha256_[] = {
   0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14,
   0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f, 0xb9, 0x24,
   0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b, 0x93, 0x4c,
   0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55,
 };
+#endif // HAVE_SHA256
 
+#if defined(HAVE_SHA384)
 static const uint8_t C_cx_oeap_sha384_[] = {
   0x38, 0xb0, 0x60, 0xa7, 0x51, 0xac, 0x96, 0x38,
   0x4c, 0xd9, 0x32, 0x7e, 0xb1, 0xb1, 0xe3, 0x6a,
@@ -129,7 +183,9 @@ static const uint8_t C_cx_oeap_sha384_[] = {
   0x4c, 0x0c, 0xc7, 0xbf, 0x63, 0xf6, 0xe1, 0xda,
   0x27, 0x4e, 0xde, 0xbf, 0xe7, 0x6f, 0x65, 0xfb,
   0xd5, 0x1a, 0xd2, 0xf1, 0x48, 0x98, 0xb9, 0x5b};
+#endif // HAVE_SHA384
 
+#if defined(HAVE_SHA512)
 static const uint8_t C_cx_oeap_sha512_[] = {
   0xcf, 0x83, 0xe1, 0x35, 0x7e, 0xef, 0xb8, 0xbd,
   0xf1, 0x54, 0x28, 0x50, 0xd6, 0x6d, 0x80, 0x07,
@@ -139,21 +195,34 @@ static const uint8_t C_cx_oeap_sha512_[] = {
   0xff, 0x83, 0x18, 0xd2, 0x87, 0x7e, 0xec, 0x2f,
   0x63, 0xb9, 0x31, 0xbd, 0x47, 0x41, 0x7a, 0x81,
   0xa5, 0x38, 0x32, 0x7a, 0xf9, 0x27, 0xda, 0x3e};
+#endif // HAVE_SHA512
 
 static const uint8_t *cx_pkcs1_get_hash_oeap(cx_md_t hID, size_t *len) {
   switch (hID) {
+#if defined(HAVE_SHA224)
   case CX_SHA224:
     *len = sizeof(C_cx_oeap_sha224_);
     return C_cx_oeap_sha224_;
+#endif // HAVE_SHA224
+
+#if defined(HAVE_SHA256)
   case CX_SHA256:
     *len = sizeof(C_cx_oeap_sha256_);
     return C_cx_oeap_sha256_;
+#endif // HAVE_SHA256
+
+#if defined(HAVE_SHA384)
   case CX_SHA384:
     *len = sizeof(C_cx_oeap_sha384_);
     return C_cx_oeap_sha384_;
+#endif // HAVE_SHA384
+
+#if defined(HAVE_SHA512)
   case CX_SHA512:
     *len = sizeof(C_cx_oeap_sha512_);
     return C_cx_oeap_sha512_;
+#endif // HAVE_SHA512
+
   default:
     break;
   }

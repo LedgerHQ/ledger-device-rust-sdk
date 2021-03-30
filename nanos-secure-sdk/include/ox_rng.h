@@ -24,7 +24,7 @@
 #include "decorators.h"
 
 SYSCALL void cx_trng_get_random_data(uint8_t *buf PLENGTH(size), size_t size);
-SYSCALL void cx_trng_selftest(void);
-SYSCALL void cx_trng_init(void);
+void cx_trng_selftest(void);
+void cx_trng_init(void);
 
 #endif // OX_RNG_H

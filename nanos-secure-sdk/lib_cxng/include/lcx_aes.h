@@ -127,14 +127,8 @@ static inline int cx_aes ( const cx_aes_key_t * key, int mode, const unsigned ch
   return out_len_;
 }
 
-/*
- *
- */
 cx_err_t cx_aes_enc_block(const cx_aes_key_t *key, const uint8_t *inblock, uint8_t *outblock);
 
-/*
- *
- */
 cx_err_t cx_aes_dec_block(const cx_aes_key_t *key, const uint8_t *inblock, uint8_t *outblock);
 
 #endif

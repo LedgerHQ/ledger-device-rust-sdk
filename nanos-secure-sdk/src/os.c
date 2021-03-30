@@ -36,54 +36,10 @@ void os_boot(void) {
 }
 #endif // BOLOS_OS_UPGRADER_APP
 
-
-void *os_memmove(void * dst, const void * src, unsigned int length) {
-#define DSTCHAR ((unsigned char *)dst)
-#define SRCCHAR ((unsigned char *)src)
-  if (dst > src) {
-    while(length--) {
-      DSTCHAR[length] = SRCCHAR[length];
-    }
-  }
-  else {
-    unsigned short l = 0;
-    while (length--) {
-      DSTCHAR[l] = SRCCHAR[l];
-      l++;
-    }
-  }
-  return dst;
-#undef DSTCHAR
-}
-
-void os_memset(void * dst, unsigned char c, unsigned int length) {
-#define DSTCHAR ((unsigned char *)dst)
-  while(length--) {
-    DSTCHAR[length] = c;
-  }
-#undef DSTCHAR
-}
-
 void os_memset4(void* dst, unsigned int initval, unsigned int nbintval) {
   while(nbintval--) {
     ((unsigned int*) dst)[nbintval] = initval;
   }
-}
-
-char os_memcmp(const void * buf1, const void * buf2, unsigned int length) {
-  unsigned char const *p, *q;
-  unsigned int i;
-
-  p = buf1;
-  q = buf2;
-
-  for (i = 0; i < length; i++) {
-    if (p[i] != q[i]) {
-      return p[i] > q[i] ? 1 : -1;
-    }
-  }
-
-  return 0;
 }
 
 void os_xor(void * dst, void * src1, void * src2, unsigned int length) {
@@ -234,7 +190,7 @@ unsigned int os_parse_bertlv(unsigned char* mem, unsigned int mem_len,
       }
 
       if (!check_equals_buffer) {
-        os_memmove(*buffer, tlv+offset, maxlength);
+        memmove(*buffer, tlv+offset, maxlength);
       }
       else {
         ret = os_secure_memcmp(*buffer, tlv+offset, maxlength) == 0;
@@ -272,4 +228,20 @@ void u4be_encode(unsigned char* buffer, unsigned int offset, unsigned int value)
 
 void u4le_encode(unsigned char* buffer, unsigned int offset, unsigned int value) {
   U4LE_ENCODE(buffer, offset, value);
+}
+
+void *os_memmove(void *dest, const void *src, size_t n) {
+  return memmove(dest, src, n);
+}
+
+void *os_memcpy(void *dest, const void *src, size_t n) {
+  return memmove(dest, src, n);
+}
+
+int os_memcmp(const void *s1, const void *s2, size_t n) {
+  return memcmp(s1, s2, n);
+}
+
+void *os_memset(void *s, int c, size_t n) {
+  return memset(s, c, n);
 }

@@ -28,11 +28,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define CX_RFC6979_BUFFER_LENGTH                64
+#define CX_RFC6979_MAX_RLEN                     66
 
-#define CX_RFC6979_MAX_RLEN CX_ECDSA_MAX_ORDER_LEN
 typedef struct {
-  uint8_t  v[CX_SHA512_SIZE+1];
-  uint8_t  k[CX_SHA512_SIZE];
+  uint8_t  v[CX_RFC6979_BUFFER_LENGTH + 1];
+  uint8_t  k[CX_RFC6979_BUFFER_LENGTH];
   uint8_t  q[CX_RFC6979_MAX_RLEN];
   uint32_t q_len;
   uint32_t r_len;

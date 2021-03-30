@@ -21,7 +21,7 @@
  * Include "lbcxng.h" instead
  */
 
-#ifdef HAVE_SHA512
+#if defined(HAVE_SHA384) || defined(HAVE_SHA512)
 
 #ifndef LCX_SHA512_H
 #define LCX_SHA512_H
@@ -55,7 +55,7 @@ typedef struct cx_sha512_s cx_sha512_t;
  *
  * @return algorithm identifier
  */
-void cx_sha384_init_no_throw(cx_sha512_t *hash);
+cx_err_t cx_sha384_init_no_throw(cx_sha512_t *hash);
 
 static inline int cx_sha384_init ( cx_sha512_t * hash )
 {
@@ -71,7 +71,7 @@ static inline int cx_sha384_init ( cx_sha512_t * hash )
  *
  * @return algorithm identifier
  */
-void cx_sha512_init_no_throw(cx_sha512_t *hash);
+cx_err_t cx_sha512_init_no_throw(cx_sha512_t *hash);
 
 static inline int cx_sha512_init ( cx_sha512_t * hash )
 {
@@ -98,4 +98,4 @@ static inline int cx_sha512_init ( cx_sha512_t * hash )
 
 #endif
 
-#endif // HAVE_SHA512
+#endif // defined(HAVE_SHA384) || defined(HAVE_SHA512)

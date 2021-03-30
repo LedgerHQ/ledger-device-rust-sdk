@@ -29,13 +29,14 @@ MEMORY
 }
 
 PAGE_SIZE  = 64;
-STACK_SIZE = 512;
+STACK_SIZE = DEFINED(stack_size) ? stack_size : 1024;
 END_STACK  = ORIGIN(SRAM) + LENGTH(SRAM);
 
 /*
  * Ensure correct remap cx address
  */
 OFF_G_cx           = 0x20001400 - ORIGIN(CXSRAM);
+_cx_trampoline     = 0x120001;
 
 /*
  * Declare application entry point

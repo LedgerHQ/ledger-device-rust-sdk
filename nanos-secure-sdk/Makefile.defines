@@ -54,10 +54,9 @@ CFLAGS   += -O3 -Os
 CFLAGS   += -fomit-frame-pointer -momit-leaf-frame-pointer
 CFLAGS   += -mcpu=cortex-m0plus -mthumb
 CFLAGS   += -fno-common -mtune=cortex-m0plus -mlittle-endian
-CFLAGS   += -std=gnu99 -Werror=int-to-pointer-cast -Wall -Wextra #-save-temps
+CFLAGS   += -std=gnu99 -Werror=int-to-pointer-cast -Wall -Wextra -Wno-main
 CFLAGS   += -fdata-sections -ffunction-sections -funsigned-char -fshort-enums
 CFLAGS   += -mno-unaligned-access
-CFLAGS   += -Wno-unused-parameter -Wno-duplicate-decl-specifier
 CFLAGS   +=  --target=armv6m-none-eabi
 CFLAGS   += -fropi
 CFLAGS   += -fno-jump-tables # avoid jump tables for switch to avoid problems with invalid PIC access
@@ -67,13 +66,13 @@ AFLAGS   += -ggdb2 -O3 -Os -mcpu=cortex-m0plus -fno-common -mtune=cortex-m0plus
 
 LDFLAGS  += -gdwarf-2  -gstrict-dwarf
 LDFLAGS  += -O3 -Os
-LDFLAGS  += -I/usr/include
 LDFLAGS  += -fomit-frame-pointer
 LDFLAGS  += -Wall
 LDFLAGS  += -mcpu=cortex-m0plus -mthumb
 LDFLAGS  += -fno-common -ffunction-sections -fdata-sections -fwhole-program
 LDFLAGS  += -mno-unaligned-access
-LDFLAGS  +=   -Wl,--gc-sections -Wl,-Map,debug/app.map #,--cref
+LDFLAGS  += -Wl,--gc-sections -Wl,-Map,debug/app.map
+LDFLAGS  += --specs=nano.specs
 
 ifeq ($(TARGET_NAME),TARGET_NANOX)
 CFLAGS   += -frwpi
@@ -106,4 +105,3 @@ endif
 
 # define the default makefile target (high in include to avoid glyph.h or what not specific target to be the default one when no target passed on the make command line)
 all: default
-

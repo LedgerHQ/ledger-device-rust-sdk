@@ -73,17 +73,30 @@ typedef enum cx_md_e cx_md_t;
  */
 #define CX_HASH_MAX_BLOCK_COUNT 65535
 
+/** Convenience type. See #cx_hash_header_s. */
+typedef struct cx_hash_header_s cx_hash_t;
+
+/* Generic API */
+typedef struct {
+  cx_md_t md_type;
+  size_t  output_size;
+  size_t  block_size;
+  cx_err_t (*init_func)(cx_hash_t *ctx);
+  cx_err_t (*update_func)(cx_hash_t *ctx, const uint8_t *data, size_t len);
+  cx_err_t (*finish_func)(cx_hash_t *ctx, uint8_t *digest);
+  cx_err_t (*init_ex_func)(cx_hash_t *ctx, size_t output_size);
+  size_t (*output_size_func)(const cx_hash_t *ctx);
+} cx_hash_info_t;
+
 /**
  * Common Message Digest context, used as abstract type.
  */
 struct cx_hash_header_s {
-  /** Message digest identifier, See cx_md_e. */
-  cx_md_t algo;
+  /** Hash description. */
+  const cx_hash_info_t *info;
   /** Number of block already processed */
   uint32_t counter;
 };
-/** Convenience type. See #cx_hash_header_s. */
-typedef struct cx_hash_header_s cx_hash_t;
 
 size_t cx_hash_get_size(const cx_hash_t *ctx);
 
@@ -154,7 +167,8 @@ cx_err_t cx_hash_init(cx_hash_t *hash, cx_md_t hash_id);
  * @param [in] output_size
  *    for blake, groestl, shake.
  *
- * @return algorithm identifier
+ * @return algorithm identifier, or 0 if the 'hash_id'
+ *    identifier is not supported.
  */
 cx_err_t cx_hash_init_ex(cx_hash_t *hash, cx_md_t hash_id, size_t output_size);
 

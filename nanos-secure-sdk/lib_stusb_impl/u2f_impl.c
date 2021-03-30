@@ -16,10 +16,11 @@
 *  limitations under the License.
 ********************************************************************************/
 
-#ifdef HAVE_IO_U2F
-
 #include <stdint.h>
 #include <string.h>
+
+#ifdef HAVE_IO_U2F
+
 #include "os.h"
 #include "os_io_seproxyhal.h"
 #include "u2f_service.h"
@@ -122,11 +123,11 @@ void u2f_apdu_sign(u2f_service_t *service, uint8_t p1, uint8_t p2,
         // this apdu is not subject to proxy magic masking
         // APDU is F1 D0 00 00 00 to get the magic proxy
         // RAPDU: <>
-        if (os_memcmp(buffer+U2F_HANDLE_SIGN_HEADER_SIZE, "\xF1\xD0\x00\x00\x00", 5) == 0 ) {
+        if (memcmp(buffer+U2F_HANDLE_SIGN_HEADER_SIZE, "\xF1\xD0\x00\x00\x00", 5) == 0 ) {
             // U2F_PROXY_MAGIC is given as a 0 terminated string
             G_io_apdu_buffer[0] = sizeof(U2F_PROXY_MAGIC)-1;
-            os_memmove(G_io_apdu_buffer+1, U2F_PROXY_MAGIC, sizeof(U2F_PROXY_MAGIC)-1);
-            os_memmove(G_io_apdu_buffer+1+sizeof(U2F_PROXY_MAGIC)-1, "\x90\x00\x90\x00", 4);
+            memcpy(G_io_apdu_buffer+1, U2F_PROXY_MAGIC, sizeof(U2F_PROXY_MAGIC)-1);
+            memcpy(G_io_apdu_buffer+1+sizeof(U2F_PROXY_MAGIC)-1, "\x90\x00\x90\x00", 4);
             u2f_message_reply(service, U2F_CMD_MSG,
                               (uint8_t *)G_io_apdu_buffer,
                               G_io_apdu_buffer[0]+1+2+2);
@@ -148,7 +149,7 @@ void u2f_apdu_sign(u2f_service_t *service, uint8_t p1, uint8_t p2,
     }
 
     // make the apdu available to higher layers
-    os_memmove(G_io_apdu_buffer, buffer + U2F_HANDLE_SIGN_HEADER_SIZE, keyHandleLength);
+    memmove(G_io_apdu_buffer, buffer + U2F_HANDLE_SIGN_HEADER_SIZE, keyHandleLength);
     G_io_app.apdu_length = keyHandleLength;
     G_io_app.apdu_media = IO_APDU_MEDIA_U2F; // the effective transport is managed by the U2F layer
     G_io_app.apdu_state = APDU_U2F;
@@ -197,10 +198,10 @@ void u2f_handle_cmd_init(u2f_service_t *service, uint8_t *buffer,
 	service->next_channel += 1;
         U4BE_ENCODE(channel, 0, service->next_channel);
     } else {
-        os_memmove(channel, channelInit, 4);
+        memcpy(channel, channelInit, 4);
     }
-    os_memmove(G_io_apdu_buffer, buffer, 8);
-    os_memmove(G_io_apdu_buffer + 8, channel, 4);
+    memmove(G_io_apdu_buffer, buffer, 8);
+    memcpy(G_io_apdu_buffer + 8, channel, 4);
     G_io_apdu_buffer[12] = INIT_U2F_VERSION;
     G_io_apdu_buffer[13] = INIT_DEVICE_VERSION_MAJOR;
     G_io_apdu_buffer[14] = INIT_DEVICE_VERSION_MINOR;
@@ -208,9 +209,9 @@ void u2f_handle_cmd_init(u2f_service_t *service, uint8_t *buffer,
     G_io_apdu_buffer[16] = INIT_CAPABILITIES;
 
     if (u2f_is_channel_broadcast(channelInit)) {
-        os_memset(service->channel, 0xff, 4);
+        memset(service->channel, 0xff, 4);
     } else {
-        os_memmove(service->channel, channel, 4);
+        memcpy(service->channel, channel, 4);
     }
     u2f_message_reply(service, U2F_CMD_INIT, G_io_apdu_buffer, 17);
 }
@@ -252,7 +253,7 @@ void u2f_handle_cmd_msg(u2f_service_t *service, uint8_t *buffer,
 #ifndef U2F_PROXY_MAGIC
 
     // No proxy mode, just pass the APDU as it is to the upper layer
-    os_memmove(G_io_apdu_buffer, buffer, length);
+    memmove(G_io_apdu_buffer, buffer, length);
     G_io_app.apdu_length = length;
     G_io_app.apdu_media = IO_APDU_MEDIA_U2F; // the effective transport is managed by the U2F layer
     G_io_app.apdu_state = APDU_U2F;

@@ -24,6 +24,7 @@
 
 // FIXME: for backward compatibility. To be removed.
 #include "os_debug.h"
+#include "os_endorsement.h"
 #include "os_halt.h"
 #include "os_helpers.h"
 #include "os_id.h"

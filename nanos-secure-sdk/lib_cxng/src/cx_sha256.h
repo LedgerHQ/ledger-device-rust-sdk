@@ -8,9 +8,16 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#ifdef HAVE_SHA224
+extern const cx_hash_info_t cx_sha224_info;
+#endif // HAVE_SHA224
+
+#ifdef HAVE_SHA256
+extern const cx_hash_info_t cx_sha256_info;
+#endif // HAVE_SHA256
+
 cx_err_t cx_sha256_update(cx_sha256_t *ctx, const uint8_t *data, size_t len);
-void cx_sha256_final(cx_sha256_t *ctx, uint8_t *digest);
-bool   cx_sha256_validate_context(const cx_sha256_t *ctx);
+cx_err_t cx_sha256_final(cx_sha256_t *ctx, uint8_t *digest);
 
 #endif // CX_SHA256_H
 #endif // HAVE_SHA256

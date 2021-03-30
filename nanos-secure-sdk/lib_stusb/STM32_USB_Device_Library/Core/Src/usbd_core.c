@@ -29,6 +29,7 @@
 #include "os.h"
 #include "os_pic.h"
 #include "usbd_core.h"
+#include "usbd_ioreq.h"
 
 /** @addtogroup STM32_USBD_DEVICE_LIBRARY
 * @{

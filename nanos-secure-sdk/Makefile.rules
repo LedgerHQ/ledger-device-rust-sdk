@@ -27,8 +27,8 @@ ifeq ($(NO_CXNG),)
 INCLUDES_PATH += $(BOLOS_SDK)/lib_cxng/include
 endif
 
-SOURCE_PATH   += $(BOLOS_SDK)/src $(foreach libdir, $(SDK_SOURCE_PATH), $(dir $(shell find $(BOLOS_SDK)/$(libdir) -name '*.c' -or -name '*.s'))) $(dir $(shell find $(APP_SOURCE_PATH) -name '*.c' -or -name '*.s'))
-SOURCE_FILES  += $(shell find $(SOURCE_PATH) -name '*.c' -or -name '*.s') $(GLYPH_DESTC) $(APP_SOURCE_FILES)
+SOURCE_PATH   += $(BOLOS_SDK)/src $(foreach libdir, $(SDK_SOURCE_PATH), $(dir $(shell find $(BOLOS_SDK)/$(libdir) -name '*.[csS]'))) $(dir $(shell find $(APP_SOURCE_PATH) -name '*.[csS]'))
+SOURCE_FILES  += $(shell find $(SOURCE_PATH) -name '*.[csS]') $(GLYPH_DESTC) $(APP_SOURCE_FILES)
 INCLUDES_PATH += $(dir $(foreach libdir, $(SDK_SOURCE_PATH), $(dir $(shell find $(BOLOS_SDK)/$(libdir) -name '*.h')))) include $(BOLOS_SDK)/include $(BOLOS_SDK)/include/arm $(dir $(shell find $(APP_SOURCE_PATH) -name '*.h'))
 
 VPATH += $(dir $(SOURCE_FILES))

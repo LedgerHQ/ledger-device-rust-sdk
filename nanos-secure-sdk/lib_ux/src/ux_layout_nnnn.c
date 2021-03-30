@@ -45,7 +45,7 @@ const bagl_element_t* ux_layout_nnnn_prepro(const bagl_element_t* element) {
   const ux_layout_nnnn_params_t* params = (const ux_layout_nnnn_params_t*)ux_stack_get_current_step_params();
 
 	// ocpy element before any mod
-	os_memmove(&G_ux.tmp_element, element, sizeof(bagl_element_t));
+	memcpy(&G_ux.tmp_element, element, sizeof(bagl_element_t));
 
   // for dashboard, setup the current application's name
   switch (element->component.userid) {

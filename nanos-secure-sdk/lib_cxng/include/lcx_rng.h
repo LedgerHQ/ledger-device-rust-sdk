@@ -29,6 +29,41 @@
 #include "lcx_wrappers.h"
 #include "lcx_hash.h"
 
+/**
+ * Generate a random buffer, each bytes between 0 and 255*
+ *
+ * @param [out] buffer to randomize
+ * @param [in]  buffer length
+ */
+void cx_rng_no_throw(uint8_t *buffer, size_t len);
+
+static inline unsigned char *cx_rng(uint8_t *buffer, size_t len)
+{
+  cx_rng_no_throw(buffer, len);
+  return buffer;
+}
+
+/**
+ * Generate 32 bits of random. This function is implemented as a SUDOCALL to
+ * allow calls from constrained tasks (IO sometimes needs random numbers).
+ * @return a random 32bits.
+ */
+static inline uint32_t cx_rng_u32(void) {
+  uint32_t r;
+  cx_rng_no_throw((uint8_t *)&r, sizeof(uint32_t));
+  return r;
+}
+
+/**
+ * Generate 8 bits of random.
+ * @return a random 8bits.
+ */
+static inline uint8_t cx_rng_u8(void) {
+  uint8_t r;
+  cx_rng_no_throw((uint8_t *)&r, sizeof(uint8_t));
+  return r;
+}
+
 typedef uint32_t (*cx_rng_u32_range_randfunc_t)(void);
 
 /**
@@ -50,33 +85,8 @@ uint32_t cx_rng_u32_range_func(uint32_t a, uint32_t b, cx_rng_u32_range_randfunc
  *
  * @return generated random.
  */
-uint32_t cx_rng_u32_range(uint32_t a, uint32_t b);
-
-/**
- * Generate 32 bits of random. This function is implemented as a SUDOCALL to
- * allow calls from constrained tasks (IO sometimes needs random numbers).
- * @return a random 32bits.
- */
-uint32_t cx_rng_u32(void);
-
-/**
- * Generate 8 bits of random.
- * @return a random 8bits.
- */
-uint8_t cx_rng_u8(void);
-
-/**
- * Generate a random buffer, each bytes between 0 and 255*
- *
- * @param [out] buffer to randomize
- * @param [in]  buffer length
- */
-void cx_rng_no_throw(uint8_t *buffer, size_t len);
-
-static inline unsigned char * cx_rng ( unsigned char * buffer, unsigned int len )
-{
-  cx_rng_no_throw(buffer, len);
-  return buffer;
+static inline uint32_t cx_rng_u32_range(uint32_t a, uint32_t b) {
+  return cx_rng_u32_range_func(a, b, cx_rng_u32);
 }
 
 /**
