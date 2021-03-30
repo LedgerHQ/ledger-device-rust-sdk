@@ -99,23 +99,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             "{}/lib_stusb/STM32_USB_Device_Library/Class/HID/Src/usbd_hid.c",
             bolos_sdk
         ))
-        .file(format!("{}/lib_cxng/src/cx_rng.c", bolos_sdk))
-        .file(format!("{}/lib_cxng/src/cx_ecfp.c", bolos_sdk))
-        .file(format!("{}/lib_cxng/src/cx_eddsa.c", bolos_sdk))
-        .file(format!("{}/lib_cxng/src/cx_ram.c", bolos_sdk))
-        .file(format!("{}/lib_cxng/src/cx_hash.c", bolos_sdk))
-        .file(format!("{}/lib_cxng/src/cx_sha512.c", bolos_sdk))
-        .file(format!("{}/lib_cxng/src/cx_eddsa.c", bolos_sdk))
-        .file(format!("{}/lib_cxng/src/cx_ecdsa.c", bolos_sdk))
-        .file(format!("{}/lib_cxng/src/cx_rng_rfc6979.c", bolos_sdk))
-        .file(format!("{}/lib_cxng/src/cx_hmac.c", bolos_sdk))
-        .file(format!("{}/lib_cxng/src/cx_sha512_alt_m0.s", bolos_sdk))
-        .file(format!("{}/lib_cxng/src/cx_sha256.c", bolos_sdk))
-        .file(format!("{}/lib_cxng/src/cx_sha3.c", bolos_sdk))
-        .file(format!("{}/lib_cxng/src/cx_blake2b.c", bolos_sdk))
-        .file(format!("{}/lib_cxng/src/cx_Groestl-ref.c", bolos_sdk))
         .file(format!("{}/lib_cxng/src/cx_utils.c", bolos_sdk))
-        .file(format!("{}/lib_cxng/src/cx_ripemd160.c", bolos_sdk))
+        .file(format!("{}/lib_cxng/src/cx_exported_functions.c", bolos_sdk))
+        .file(format!("{}/lib_cxng/src/cx_utils.c", bolos_sdk))
         // The following flags should be the same as in wrapper
         //TODO : try to get rid of the flags in wrapper.h by using
         //      bindgen from within build.rs
