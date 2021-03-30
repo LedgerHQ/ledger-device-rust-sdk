@@ -79,6 +79,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .file(format!("{}/src/svc_call.s", bolos_sdk))
         .file(format!("{}/src/svc_cx_call.s", bolos_sdk))
         .file(format!("{}/src/syscalls.c", bolos_sdk))
+        .file(format!("{}/src/cx_stubs.S", bolos_sdk))
         .file(format!("{}/lib_ux/glyphs/glyphs.c", bolos_sdk))
         .file(format!("{}/lib_ux/src/ux_stack.c", bolos_sdk))
         .file(format!("{}/lib_stusb/usbd_conf.c", bolos_sdk))

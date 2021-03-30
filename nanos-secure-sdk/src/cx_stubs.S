@@ -8,12 +8,11 @@
     .section .text.\name
     .thumb_func
     .weak \name
-    .func \name
+    .global \name
     \name:
       push {r0-r1}
-      ldr  r0, =#\id
+      ldr  r0, =\id
       b    cx_trampoline_helper
-    .endfunc
 .endm
 
 CX_TRAMPOLINE _NR_cx_aes_dec_block                         cx_aes_dec_block

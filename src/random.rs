@@ -1,7 +1,7 @@
 //! Random number generation functions
 
-use crate::bindings::{cx_rng_u32, cx_rng_u8};
 use core::ops::Range;
+use crate::bindings::{cx_rng_u8, cx_rng_u32};
 use num_traits::{Bounded, PrimInt, Unsigned};
 
 /// In-house random trait for generating random numbers.
