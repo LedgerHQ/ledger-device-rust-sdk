@@ -28,7 +28,7 @@ required.
 - install [Clang](http://releases.llvm.org/download.html).
 - install an [ARM GCC toolchain](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads)
 
-# Generating bindings for the C sdk
+## Generating bindings for the C sdk
 
 The Rust SDK uses [FFI](https://doc.rust-lang.org/nomicon/ffi.html)s to call functions defined in the C SDK. The C function signatures and types are automatically "translated" to Rust by using [bindgen](https://rust-lang.github.io/rust-bindgen/introduction.html), which generates the appropriate bindings.
 
@@ -40,14 +40,15 @@ Two corresponding header files exist in `binding_headers` directory: `bindings.h
 
 Here are the steps to follow in order to generate those bindings by yourself:
 1. Make sure you have [bindgen setup](https://rust-lang.github.io/rust-bindgen/requirements.html)
-3. Run this command to generate the `bindings.rs` file (you might need to adapt `-I/usr/arm-linux/gnueabihf/include` to your configuration):
+2. Run this command to generate the `bindings.rs` file (you might need to adapt `-I/usr/arm-linux/gnueabihf/include` to your configuration):
 ```
 bindgen ./binding_headers/bindings.h --use-core --no-prepend-enum-name --no-doc-comments --no-derive-debug --ctypes-prefix=cty --no-layout-tests --with-derive-default -- --target=thumbv7m-none-eabi -fshort-enums -I/usr/arm-linux-gnueabihf/include -Inanos-secure-sdk/include -Inanos-secure-sdk/lib_cxng/include > ./src/bindings.rs
-4. Run this command to generate the `usbbindings.rs` file (you might need to adapt `-I/usr/arm-linux-gnueabihf/include` to your configuration):
+```
+3. Run this command to generate the `usbbindings.rs` file (you might need to adapt `-I/usr/arm-linux-gnueabihf/include` to your configuration):
 ```
 bindgen ./binding_headers/usbbindings.h --use-core --no-prepend-enum-name --no-doc-comments --no-derive-debug --ctypes-prefix=cty --no-layout-tests --with-derive-default -- --target=thumbv7m-none-eabi -fshort-enums -Inanos-secure-sdk/lib_stusb/STM32_USB_Device_Library/Core/Inc -I/usr/arm-linux-gnueabihf/include -Inanos-secure-sdk/lib_stusb > ./src/usbbindings.rs
 ```
-5. Modify the generated `.rs` files and add those lines at the BEGINNING of both files:
+4. Modify the generated `.rs` files and add those lines at the BEGINNING of both files:
 ```
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
@@ -55,10 +56,16 @@ bindgen ./binding_headers/usbbindings.h --use-core --no-prepend-enum-name --no-d
 #![allow(clippy::upper_case_acronyms)]
 #![allow(clippy::too_many_arguments)]
 ```
-6. Remove the line containing `IO_USB_MAX_ENDPOINTS` in the `bindings.rs` file.
-7. Profit!
+5. Remove the line containing `IO_USB_MAX_ENDPOINTS` in the `bindings.rs` file.
+6. Profit!
 
 Note that for step 4, you might need to change `/usr/arm-linux/gnueabihf/include` to another directory that includes the `stdio.h` header for the arm target.
+
+## Building with rustc < 1.54
+
+Building before rustc 1.54 should fail with `error[E0635]: unknown feature const_fn_trait_bound`.
+
+This is solved by activating a specific feature: `cargo build --features pre1_54`
 
 ## Contributing
 

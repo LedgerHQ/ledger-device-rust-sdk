@@ -6,6 +6,7 @@
 #![feature(const_fn)]
 #![feature(asm)]
 #![feature(const_panic)]
+#![cfg_attr(not(feature = "pre1_54"), feature(const_fn_trait_bound))]
 
 pub mod bindings;
 pub mod buttons;
