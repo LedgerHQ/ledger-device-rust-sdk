@@ -40,7 +40,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     f.write_all(&output.stdout).unwrap();
 
-    println!("{:?}", output.stderr);
+    println!("{}", String::from_utf8_lossy(&output.stderr));
 
     let output = Command::new(py_cmd)
         .arg(&format!("{}/icon3.py", bolos_sdk))
@@ -56,7 +56,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut f = File::create(&dest_path.join("glyphs.h")).unwrap();
     f.write_all(&output.stdout).unwrap();
 
-    println!("{:?}", output.stderr);
+    println!("{}", String::from_utf8_lossy(&output.stderr));
     assert!(output.status.success());
 
     cc::Build::new()
