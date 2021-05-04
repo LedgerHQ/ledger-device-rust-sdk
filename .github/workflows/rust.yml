@@ -25,17 +25,17 @@ jobs:
           toolchain: nightly
           override: true
           target: thumbv6m-none-eabi 
+          components: rustfmt, clippy
       - name: Cargo build
         uses: actions-rs/cargo@v1
         with:
-          command: build
-      - run: rustup component add clippy
+          command: build 
+          args: --features pre1_54
       - name: Cargo clippy
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: -- -D warnings
-      - run: rustup component add rustfmt
+          args: --features pre1_54 -- -D warnings
       - name: Cargo fmt
         uses: actions-rs/cargo@v1
         with:
