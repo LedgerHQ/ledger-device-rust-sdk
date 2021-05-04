@@ -432,11 +432,9 @@ where
     fn next(&mut self) -> core::option::Option<&'a T> {
         loop {
             let is_allocated = self.container.is_allocated(self.next_key).ok()?;
+            self.next_key += 1;
             if is_allocated {
-                self.next_key += 1;
                 return Some(self.container.slots[self.next_key - 1].get_ref());
-            } else {
-                self.next_key += 1;
             }
         }
     }

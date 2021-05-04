@@ -28,6 +28,12 @@ required.
 - install [Clang](http://releases.llvm.org/download.html).
 - install an [ARM GCC toolchain](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads)
 
+### Building with rustc < 1.54
+
+Building before rustc 1.54 should fail with `error[E0635]: unknown feature const_fn_trait_bound`.
+
+This is solved by activating a specific feature: `cargo build --features pre1_54`
+
 ## Contributing
 
 Make sure you've followed the installation steps above. In order for your PR to be accepted, it will have to pass the CI, which performs the following checks:
