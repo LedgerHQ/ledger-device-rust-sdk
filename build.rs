@@ -100,9 +100,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             "{}/lib_stusb/STM32_USB_Device_Library/Class/HID/Src/usbd_hid.c",
             bolos_sdk
         ))
-        .file(format!("{}/lib_cxng/src/cx_utils.c", bolos_sdk))
         .file(format!("{}/lib_cxng/src/cx_exported_functions.c", bolos_sdk))
-        .file(format!("{}/lib_cxng/src/cx_utils.c", bolos_sdk))
         // The following flags should be the same as in wrapper
         //TODO : try to get rid of the flags in wrapper.h by using
         //      bindgen from within build.rs

@@ -78,17 +78,17 @@ pub fn sdk_test_runner(tests: &[&TestType]) {
         let modname;
         let name;
         unsafe {
-            let t = pic(test.modname.as_ptr() as u32) as *const u8;
+            let t = pic(test.modname.as_ptr() as *mut c_void) as *const u8;
             let t = core::ptr::slice_from_raw_parts(t, test.modname.len());
             let t: &[u8] = core::mem::transmute(t);
             modname = core::str::from_utf8_unchecked(t);
 
-            let t = pic(test.name.as_ptr() as u32) as *const u8;
+            let t = pic(test.name.as_ptr() as *mut c_void) as *const u8;
             let t = core::ptr::slice_from_raw_parts(t, test.name.len());
             let t: &[u8] = core::mem::transmute(t);
             name = core::str::from_utf8_unchecked(t);
         }
-        let fp = unsafe { pic(test.f as u32) };
+        let fp = unsafe { pic(test.f as *mut c_void) };
         let fp: fn() -> Result<(), ()> = unsafe { core::mem::transmute(fp) };
         let res = fp();
         match res {
