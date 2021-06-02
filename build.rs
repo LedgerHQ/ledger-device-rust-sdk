@@ -45,7 +45,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     f.write_all(&output.stdout).unwrap();
 
-    println!("{:?}", output.stderr);
+    println!("{}", std::str::from_utf8(&output.stderr).unwrap());
 
     let output = Command::new(py_cmd)
         .arg(&format!("{}/icon3.py", bolos_sdk))
@@ -61,7 +61,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut f = File::create(&dest_path.join("glyphs.h")).unwrap();
     f.write_all(&output.stdout).unwrap();
 
-    println!("{:?}", output.stderr);
+    println!("{}", std::str::from_utf8(&output.stderr).unwrap());
     assert!(output.status.success());
 
     let mut command = cc::Build::new()
@@ -70,10 +70,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .file("./src/c/src.c")
         .file("./src/c/sjlj.s")
         .file(format!("{}/src/checks.c", bolos_sdk))
-        .file(format!("{}/src/os_io_seproxyhal.c", bolos_sdk))
-        .file(format!("{}/src/os_io_task.c", bolos_sdk))
         .file(format!("{}/src/os_io_usb.c", bolos_sdk))
-        .file(format!("{}/src/os.c", bolos_sdk))
         .file(format!("{}/src/pic_internal.c", bolos_sdk))
         .file(format!("{}/src/pic.c", bolos_sdk))
         .file(format!("{}/src/svc_call.s", bolos_sdk))
@@ -81,7 +78,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .file(format!("{}/src/syscalls.c", bolos_sdk))
         .file(format!("{}/src/cx_stubs.S", bolos_sdk))
         .file(format!("{}/lib_ux/glyphs/glyphs.c", bolos_sdk))
-        .file(format!("{}/lib_ux/src/ux_stack.c", bolos_sdk))
         .file(format!("{}/lib_stusb/usbd_conf.c", bolos_sdk))
         .file(format!(
             "{}/lib_stusb/STM32_USB_Device_Library/Core/Src/usbd_core.c",
@@ -108,6 +104,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         //TODO : try to get rid of the flags in wrapper.h by using
         //      bindgen from within build.rs
         .define("ST31", None)
+        .define("HAVE_LOCAL_APDU_BUFFER", None)
         .define("IO_HID_EP_LENGTH", Some("64"))
         .define("USB_SEGMENT_SIZE", Some("64"))
         .define("OS_IO_SEPROXYHAL", None)
@@ -118,8 +115,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .define("IO_SEPROXYHAL_BUFFER_SIZE_B", Some("128"))
         .include(gcc_toolchain)
         .include(format!("{}/include", bolos_sdk))
-        .include(format!("{}/lib_ux/glyphs", bolos_sdk))
-        .include(format!("{}/lib_ux/include", bolos_sdk))
         .include(format!("{}/lib_stusb", bolos_sdk))
         .include(format!("{}/lib_stusb_impl", bolos_sdk))
         .include(format!("{}/lib_cxng/include", bolos_sdk))

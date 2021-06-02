@@ -244,7 +244,7 @@ impl Comm {
                 }
                 seph::Events::USBEvent => {
                     if len == 1 {
-                        seph::handle_usb_event(&spi_buffer);
+                        seph::handle_usb_event(spi_buffer[3]);
                     }
                 }
                 seph::Events::USBXFEREvent => {
