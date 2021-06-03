@@ -211,7 +211,7 @@ pub fn handle_usb_ep_xfer_event(apdu_buffer: &mut [u8], buffer: &[u8]) {
 }
 
 pub fn handle_capdu_event(apdu_buffer: &mut [u8], buffer: &[u8]) {
-    let mut io_app = unsafe { G_io_app };
+    let mut io_app = unsafe { &mut G_io_app };
     if io_app.apdu_state == APDU_IDLE {
         let max = (apdu_buffer.len() - 3).min(buffer.len() - 3);
         let size = u16::from_be_bytes([buffer[1], buffer[2]]) as usize;
@@ -245,33 +245,3 @@ pub fn handle_event(mut apdu_buffer: &mut [u8], spi_buffer: &[u8]) {
         _ => (),
     }
 }
-
-// // void io_usb_send_ep(unsigned int ep, unsigned char* buffer, unsigned short length, unsigned int timeout) {
-// fn io_usb_send_ep(ep: u32, buffer: &[u8], length: u16, timeout: u32) { 
-//     // won't send if overflowing seproxyhal buffer format
-//     if (length > 255) {
-//         return;
-//     }
-//     let total_length = (3+length).to_be_bytes();
-//     let response = [
-//         UsbEp::USBEpPrepare, 
-//         total_length[0],
-//         total_length[1],
-//         ep | 0x80,
-//         UsbEp::USBEpPrepareDirIn,
-//         (length & 0xff) as u8
-//     ];
-
-//     seph_send(response);
-//     seph_send(buffer);
-//     // setup timeout of the endpoint
-//     unsafe {
-//         G_io_app.usb_ep_timeouts[ep&0x7F].timeout = IO_RAPDU_TRANSMIT_TIMEOUT_MS;
-//     }
-// }
-
-// // void io_usb_send_apdu_data(unsigned char* buffer, unsigned short length) {
-// extern "C" fn io_usb_send_apdu_data(buffer: *[u8, length: u16) {
-//   // wait for 20 events before hanging up and timeout (~2 seconds of timeout)
-//   io_usb_send_ep(0x82, buffer, length, 20);
-// }
