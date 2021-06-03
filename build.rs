@@ -1,5 +1,5 @@
 extern crate cc;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Command;
 use std::{
     env,
@@ -23,53 +23,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         format!("{}/include", sysroot)
     };
 
-    #[cfg(windows)]
-    let py_cmd = "python";
-
-    #[cfg(unix)]
-    let py_cmd = "python3";
-
-    let output = Command::new(py_cmd)
-        .arg(&format!("./{}/icon3.py", bolos_sdk))
-        .arg(&format!("{}/lib_ux/glyphs/icon_down.gif", bolos_sdk))
-        .arg(&format!("{}/lib_ux/glyphs/icon_left.gif", bolos_sdk))
-        .arg(&format!("{}/lib_ux/glyphs/icon_right.gif", bolos_sdk))
-        .arg(&format!("{}/lib_ux/glyphs/icon_up.gif", bolos_sdk))
-        .arg("--glyphcfile")
-        .output()
-        .expect("failed");
-
-    let main_path = format!("{}/lib_ux/glyphs/", bolos_sdk);
-    let dest_path = Path::new(&main_path);
-    let mut f = File::create(&dest_path.join("glyphs.c")).unwrap();
-
-    f.write_all(&output.stdout).unwrap();
-
-    println!("{}", std::str::from_utf8(&output.stderr).unwrap());
-
-    let output = Command::new(py_cmd)
-        .arg(&format!("{}/icon3.py", bolos_sdk))
-        .arg(&format!("{}/lib_ux/glyphs/icon_down.gif", bolos_sdk))
-        .arg(&format!("{}/lib_ux/glyphs/icon_left.gif", bolos_sdk))
-        .arg(&format!("{}/lib_ux/glyphs/icon_right.gif", bolos_sdk))
-        .arg(&format!("{}/lib_ux/glyphs/icon_up.gif", bolos_sdk))
-        .arg("--glyphcheader")
-        .output()
-        .expect("failed");
-
-    let dest_path = Path::new(&main_path);
-    let mut f = File::create(&dest_path.join("glyphs.h")).unwrap();
-    f.write_all(&output.stdout).unwrap();
-
-    println!("{}", std::str::from_utf8(&output.stderr).unwrap());
-    assert!(output.status.success());
-
     let mut command = cc::Build::new()
         .compiler("clang")
         .target("thumbv6m-none-eabi")
         .file("./src/c/src.c")
         .file("./src/c/sjlj.s")
-        .file(format!("{}/src/checks.c", bolos_sdk))
         .file(format!("{}/src/os_io_usb.c", bolos_sdk))
         .file(format!("{}/src/pic_internal.c", bolos_sdk))
         .file(format!("{}/src/pic.c", bolos_sdk))
@@ -77,7 +35,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .file(format!("{}/src/svc_cx_call.s", bolos_sdk))
         .file(format!("{}/src/syscalls.c", bolos_sdk))
         .file(format!("{}/src/cx_stubs.S", bolos_sdk))
-        .file(format!("{}/lib_ux/glyphs/glyphs.c", bolos_sdk))
         .file(format!("{}/lib_stusb/usbd_conf.c", bolos_sdk))
         .file(format!(
             "{}/lib_stusb/STM32_USB_Device_Library/Core/Src/usbd_core.c",
