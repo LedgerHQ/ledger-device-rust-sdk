@@ -1,8 +1,24 @@
 //! Random number generation functions
 
-use crate::bindings::{cx_rng_u32, cx_rng_u8};
+// use crate::bindings::{cx_rng_u32, cx_rng_u8};
 use core::ops::Range;
 use num_traits::{Bounded, PrimInt, Unsigned};
+
+extern "C" {
+    pub fn cx_rng_no_throw(
+        buffer: *mut u8,
+        len: u32,
+    ); 
+}
+
+/// Fills a byte array with random bytes.
+///
+/// # Arguments
+///
+/// * `out` - Destination array.
+pub fn rand_bytes(out: &mut[u8]) {
+    unsafe { cx_rng_no_throw(out.as_mut_ptr(), out.len() as u32); }
+}
 
 /// In-house random trait for generating random numbers.
 pub trait Random
@@ -48,12 +64,16 @@ where
 
 impl Random for u8 {
     fn random() -> Self {
-        unsafe { cx_rng_u8() }
+        let mut r = [0u8; 1];
+        unsafe { cx_rng_no_throw(r.as_mut_ptr(), 1); }
+        r[0]
     }
 }
 
 impl Random for u32 {
     fn random() -> Self {
-        unsafe { cx_rng_u32() }
+        let mut r = [0u8; 4];
+        unsafe { cx_rng_no_throw(r.as_mut_ptr(), 4); }
+        u32::from_be_bytes(r)
     }
 }
