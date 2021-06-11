@@ -30,12 +30,11 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build 
-          args: --features pre1_54
       - name: Cargo clippy
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --features pre1_54 -- -D warnings
+          args: -- -D warnings
       - name: Cargo fmt
         uses: actions-rs/cargo@v1
         with:
