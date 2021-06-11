@@ -37,9 +37,6 @@
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <stdint.h>
 
 #ifndef _BITS_STDINT_INTN_H

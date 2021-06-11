@@ -1,10 +1,15 @@
 extern crate cc;
-use std::path::Path;
+use std::path::PathBuf;
 use std::process::Command;
-use std::{env, error::Error, fs::File, io::Write, path::PathBuf};
+use std::{
+    env,
+    error::Error,
+    fs::File,
+    io::{Read, Write},
+};
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let bolos_sdk = "./nanos-secure-sdk/".to_string();
+    let bolos_sdk = "./nanos-secure-sdk".to_string();
 
     let output = Command::new("arm-none-eabi-gcc")
         .arg("-print-sysroot")
@@ -18,59 +23,18 @@ fn main() -> Result<(), Box<dyn Error>> {
         format!("{}/include", sysroot)
     };
 
-    #[cfg(windows)]
-    let py_cmd = "python";
-
-    #[cfg(unix)]
-    let py_cmd = "python3";
-
-    let output = Command::new(py_cmd)
-        .arg(&format!("./{}/icon3.py", bolos_sdk))
-        .arg(&format!("{}/lib_ux/glyphs/icon_down.gif", bolos_sdk))
-        .arg(&format!("{}/lib_ux/glyphs/icon_left.gif", bolos_sdk))
-        .arg(&format!("{}/lib_ux/glyphs/icon_right.gif", bolos_sdk))
-        .arg(&format!("{}/lib_ux/glyphs/icon_up.gif", bolos_sdk))
-        .arg("--glyphcfile")
-        .output()
-        .expect("failed");
-
-    let main_path = format!("{}/lib_ux/glyphs/", bolos_sdk);
-    let dest_path = Path::new(&main_path);
-    let mut f = File::create(&dest_path.join("glyphs.c")).unwrap();
-
-    f.write_all(&output.stdout).unwrap();
-
-    println!("{}", String::from_utf8_lossy(&output.stderr));
-
-    let output = Command::new(py_cmd)
-        .arg(&format!("{}/icon3.py", bolos_sdk))
-        .arg(&format!("{}/lib_ux/glyphs/icon_down.gif", bolos_sdk))
-        .arg(&format!("{}/lib_ux/glyphs/icon_left.gif", bolos_sdk))
-        .arg(&format!("{}/lib_ux/glyphs/icon_right.gif", bolos_sdk))
-        .arg(&format!("{}/lib_ux/glyphs/icon_up.gif", bolos_sdk))
-        .arg("--glyphcheader")
-        .output()
-        .expect("failed");
-
-    let dest_path = Path::new(&main_path);
-    let mut f = File::create(&dest_path.join("glyphs.h")).unwrap();
-    f.write_all(&output.stdout).unwrap();
-
-    println!("{}", String::from_utf8_lossy(&output.stderr));
-    assert!(output.status.success());
-
-    cc::Build::new()
+    let mut command = cc::Build::new()
         .compiler("clang")
         .target("thumbv6m-none-eabi")
         .file("./src/c/src.c")
         .file("./src/c/sjlj.s")
-        .file(format!("{}/src/os.c", bolos_sdk))
-        .file(format!("{}/src/os_io_seproxyhal.c", bolos_sdk))
         .file(format!("{}/src/os_io_usb.c", bolos_sdk))
         .file(format!("{}/src/pic_internal.c", bolos_sdk))
         .file(format!("{}/src/pic.c", bolos_sdk))
+        .file(format!("{}/src/svc_call.s", bolos_sdk))
+        .file(format!("{}/src/svc_cx_call.s", bolos_sdk))
         .file(format!("{}/src/syscalls.c", bolos_sdk))
-        .file(format!("{}/lib_ux/glyphs/glyphs.c", bolos_sdk))
+        .file(format!("{}/src/cx_stubs.S", bolos_sdk))
         .file(format!("{}/lib_stusb/usbd_conf.c", bolos_sdk))
         .file(format!(
             "{}/lib_stusb/STM32_USB_Device_Library/Core/Src/usbd_core.c",
@@ -89,10 +53,15 @@ fn main() -> Result<(), Box<dyn Error>> {
             "{}/lib_stusb/STM32_USB_Device_Library/Class/HID/Src/usbd_hid.c",
             bolos_sdk
         ))
+        .file(format!(
+            "{}/lib_cxng/src/cx_exported_functions.c",
+            bolos_sdk
+        ))
         // The following flags should be the same as in wrapper
         //TODO : try to get rid of the flags in wrapper.h by using
         //      bindgen from within build.rs
         .define("ST31", None)
+        .define("HAVE_LOCAL_APDU_BUFFER", None)
         .define("IO_HID_EP_LENGTH", Some("64"))
         .define("USB_SEGMENT_SIZE", Some("64"))
         .define("OS_IO_SEPROXYHAL", None)
@@ -103,10 +72,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         .define("IO_SEPROXYHAL_BUFFER_SIZE_B", Some("128"))
         .include(gcc_toolchain)
         .include(format!("{}/include", bolos_sdk))
-        .include(format!("{}/lib_ux/glyphs", bolos_sdk))
-        .include(format!("{}/lib_ux/include", bolos_sdk))
         .include(format!("{}/lib_stusb", bolos_sdk))
         .include(format!("{}/lib_stusb_impl", bolos_sdk))
+        .include(format!("{}/lib_cxng/include", bolos_sdk))
         .include(format!(
             "{}/lib_stusb/STM32_USB_Device_Library/Core/Inc",
             bolos_sdk
@@ -146,7 +114,26 @@ fn main() -> Result<(), Box<dyn Error>> {
         .flag("-Wno-duplicate-decl-specifier")
         .flag("-Wno-#warnings")
         .flag("-Wno-int-conversion")
-        .compile("rust-app");
+        .clone();
+
+    let mut makefile = File::open(format!("{}/Makefile.conf.cx", bolos_sdk)).unwrap();
+    let mut content = String::new();
+    makefile.read_to_string(&mut content).unwrap();
+    // Extract the defines from the Makefile.conf.cx.
+    // They all begin with `HAVE` and are ' ' and '\n' separated.
+    let defines = content
+        .split('\n')
+        .filter(|line| !line.starts_with('#')) // Remove lines that are commented
+        .flat_map(|line| line.split(' ').filter(|word| word.starts_with("HAVE")))
+        .collect::<Vec<&str>>();
+
+    // Add the defines found in the Makefile.conf.cx to our build command.
+    for define in defines {
+        // scott could use for_each
+        command.define(define, None);
+    }
+
+    command.compile("rust-app");
 
     // Copy this crate's linker script into the working directory of
     // the application so that it can be used there for the layout.

@@ -1,7 +1,7 @@
 
 /*******************************************************************************
 *   Ledger Nano S - Secure firmware
-*   (c) 2019 Ledger
+*   (c) 2021 Ledger
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -17,9 +17,51 @@
 ********************************************************************************/
 
 #include "os_io_usb.h"
+#include "os_utils.h"
+#include "lcx_rng.h"
 #include <string.h>
 
 #ifdef HAVE_USB_APDU
+
+unsigned char G_io_usb_ep_buffer[MAX(USB_SEGMENT_SIZE, BLE_SEGMENT_SIZE)];
+
+uint16_t io_seproxyhal_get_ep_rx_size(uint8_t epnum) {
+  if ((epnum & 0x7F) < IO_USB_MAX_ENDPOINTS) {
+    return G_io_app.usb_ep_xfer_len[epnum&0x7F];
+  }
+  return 0;
+}
+
+#ifndef IO_RAPDU_TRANSMIT_TIMEOUT_MS 
+#define IO_RAPDU_TRANSMIT_TIMEOUT_MS 2000UL
+#endif // IO_RAPDU_TRANSMIT_TIMEOUT_MS
+
+// TODO, refactor this using the USB DataIn event like for the U2F tunnel
+// TODO add a blocking parameter, for HID KBD sending, or use a USB busy flag per channel to know if 
+// the transfer has been processed or not. and move on to the next transfer on the same endpoint
+void io_usb_send_ep(unsigned int ep, unsigned char* buffer, unsigned short length, unsigned int timeout) {
+  // won't send if overflowing seproxyhal buffer format
+  if (length > 255) {
+    return;
+  }
+
+  uint8_t buf[6]; 
+  buf[0] = SEPROXYHAL_TAG_USB_EP_PREPARE;
+  buf[1] = (3+length)>>8;
+  buf[2] = (3+length);
+  buf[3] = ep|0x80;
+  buf[4] = SEPROXYHAL_TAG_USB_EP_PREPARE_DIR_IN;
+  buf[5] = length;
+  io_seproxyhal_spi_send(buf, 6);
+  io_seproxyhal_spi_send(buffer, length);
+  // setup timeout of the endpoint
+  G_io_app.usb_ep_timeouts[ep&0x7F].timeout = IO_RAPDU_TRANSMIT_TIMEOUT_MS;
+}
+
+void io_usb_send_apdu_data(unsigned char* buffer, unsigned short length) {
+  // wait for 20 events before hanging up and timeout (~2 seconds of timeout)
+  io_usb_send_ep(0x82, buffer, length, 20);
+}
 
 /**
  *  Ledger Protocol 
@@ -57,12 +99,25 @@ volatile unsigned int   G_io_usb_hid_remaining_length;
 volatile unsigned int   G_io_usb_hid_sequence_number;
 volatile unsigned char* G_io_usb_hid_current_buffer;
 
-io_usb_hid_receive_status_t io_usb_hid_receive (io_send_t sndfct, unsigned char* buffer, unsigned short l, apdu_buffer_t * dst_buffer) 
-{
+io_usb_hid_receive_status_t io_usb_hid_receive (io_send_t sndfct, unsigned char* buffer, unsigned short l, apdu_buffer_t * apdu_buffer) {
+  uint8_t * apdu_buf;
+  uint16_t * apdu_buf_len;
+#ifndef HAVE_LOCAL_APDU_BUFFER
+  if (apdu_buffer == NULL) {
+    apdu_buf = G_io_apdu_buffer;
+    apdu_buf_len = sizeof(G_io_apdu_buffer);
+  } 
+  else 
+#endif // HAVE_LOCAL_APDU_BUFFER
+  {
+    apdu_buf = apdu_buffer->buf;
+    apdu_buf_len = apdu_buffer->len;
+  }
+    
   // avoid over/under flows
   if (buffer != G_io_usb_ep_buffer) {
-    os_memset(G_io_usb_ep_buffer, 0, sizeof(G_io_usb_ep_buffer));
-    os_memmove(G_io_usb_ep_buffer, buffer, MIN(l, sizeof(G_io_usb_ep_buffer)));
+    memset(G_io_usb_ep_buffer, 0, sizeof(G_io_usb_ep_buffer));
+    memmove(G_io_usb_ep_buffer, buffer, MIN(l, sizeof(G_io_usb_ep_buffer)));
   }
 
   // process the chunk content
@@ -82,14 +137,14 @@ io_usb_hid_receive_status_t io_usb_hid_receive (io_send_t sndfct, unsigned char*
       // total apdu size to receive
       G_io_usb_hid_total_length = U2BE(G_io_usb_ep_buffer, 5); //(G_io_usb_ep_buffer[5]<<8)+(G_io_usb_ep_buffer[6]&0xFF);
       // check for invalid length encoding (more data in chunk that announced in the total apdu)
-      if (G_io_usb_hid_total_length > dst_buffer->len) {
+      if (G_io_usb_hid_total_length > (uint32_t)apdu_buf_len) {
         goto apdu_reset;
       }
       // seq and total length
       l -= 2;
       // compute remaining size to receive
       G_io_usb_hid_remaining_length = G_io_usb_hid_total_length;
-      G_io_usb_hid_current_buffer = dst_buffer->buf;
+      G_io_usb_hid_current_buffer = apdu_buf;
 
       // retain the channel id to use for the reply
       G_io_usb_hid_channel = U2BE(G_io_usb_ep_buffer, 0);
@@ -97,8 +152,13 @@ io_usb_hid_receive_status_t io_usb_hid_receive (io_send_t sndfct, unsigned char*
       if (l > G_io_usb_hid_remaining_length) {
         l = G_io_usb_hid_remaining_length;
       }
+
+      if (l > sizeof(G_io_usb_ep_buffer) - 7) {
+        l = sizeof(G_io_usb_ep_buffer) - 7;
+      }
+
       // copy data
-      os_memmove((void*)G_io_usb_hid_current_buffer, G_io_usb_ep_buffer+7, l);
+      memmove((void*)G_io_usb_hid_current_buffer, G_io_usb_ep_buffer+7, l);
     }
     else {
       // check for invalid length encoding (more data in chunk that announced in the total apdu)
@@ -106,9 +166,13 @@ io_usb_hid_receive_status_t io_usb_hid_receive (io_send_t sndfct, unsigned char*
         l = G_io_usb_hid_remaining_length;
       }
 
+      if (l > sizeof(G_io_usb_ep_buffer) - 5) {
+        l = sizeof(G_io_usb_ep_buffer) - 5;
+      }
+
       /// This is a following chunk
       // append content
-      os_memmove((void*)G_io_usb_hid_current_buffer, G_io_usb_ep_buffer+5, l);
+      memmove((void*)G_io_usb_hid_current_buffer, G_io_usb_ep_buffer+5, l);
     }
     // factorize (f)
     G_io_usb_hid_current_buffer += l;
@@ -118,7 +182,7 @@ io_usb_hid_receive_status_t io_usb_hid_receive (io_send_t sndfct, unsigned char*
 
   case 0x00: // get version ID
     // do not reset the current apdu reception if any
-    os_memset(G_io_usb_ep_buffer+3, 0, 4); // PROTOCOL VERSION is 0
+    memset(G_io_usb_ep_buffer+3, 0, 4); // PROTOCOL VERSION is 0
     // send the response
     sndfct(G_io_usb_ep_buffer, IO_HID_EP_LENGTH);
     // await for the next chunk
@@ -126,7 +190,7 @@ io_usb_hid_receive_status_t io_usb_hid_receive (io_send_t sndfct, unsigned char*
 
   case 0x01: // ALLOCATE CHANNEL
     // do not reset the current apdu reception if any
-    cx_rng(G_io_usb_ep_buffer+3, 4);
+    cx_rng_no_throw(G_io_usb_ep_buffer+3, 4);
     // send the response
     sndfct(G_io_usb_ep_buffer, IO_HID_EP_LENGTH);
     // await for the next chunk
@@ -169,7 +233,7 @@ void io_usb_hid_sent(io_send_t sndfct) {
   // only prepare next chunk if some data to be sent remain
   if (G_io_usb_hid_remaining_length && G_io_usb_hid_current_buffer) {
     // fill the chunk
-    os_memset(G_io_usb_ep_buffer, 0, sizeof(G_io_usb_ep_buffer));
+    memset(G_io_usb_ep_buffer, 0, sizeof(G_io_usb_ep_buffer));
 
     // keep the channel identifier
     G_io_usb_ep_buffer[0] = (G_io_usb_hid_channel>>8)&0xFF;
@@ -182,13 +246,13 @@ void io_usb_hid_sent(io_send_t sndfct) {
       l = ((G_io_usb_hid_remaining_length>IO_HID_EP_LENGTH-7) ? IO_HID_EP_LENGTH-7 : G_io_usb_hid_remaining_length);
       G_io_usb_ep_buffer[5] = G_io_usb_hid_remaining_length>>8;
       G_io_usb_ep_buffer[6] = G_io_usb_hid_remaining_length;
-      os_memmove(G_io_usb_ep_buffer+7, (const void*)G_io_usb_hid_current_buffer, l);
+      memmove(G_io_usb_ep_buffer+7, (const void*)G_io_usb_hid_current_buffer, l);
       G_io_usb_hid_current_buffer += l;
       G_io_usb_hid_remaining_length -= l;
     }
     else {
       l = ((G_io_usb_hid_remaining_length>IO_HID_EP_LENGTH-5) ? IO_HID_EP_LENGTH-5 : G_io_usb_hid_remaining_length);
-      os_memmove(G_io_usb_ep_buffer+5, (const void*)G_io_usb_hid_current_buffer, l);
+      memmove(G_io_usb_ep_buffer+5, (const void*)G_io_usb_hid_current_buffer, l);
       G_io_usb_hid_current_buffer += l;
       G_io_usb_hid_remaining_length -= l;   
     }

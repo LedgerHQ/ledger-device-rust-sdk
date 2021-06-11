@@ -1,21 +1,28 @@
 MEMORY
 {
   DISCARD (rwx) : ORIGIN = 0xd0000000, LENGTH = 1M
+
   FLASH   (rx)  : ORIGIN = 0xc0d00000, LENGTH = 400K
-  SRAM    (rwx) : ORIGIN = 0x20001800, LENGTH = 4K
+  SRAM    (rwx) : ORIGIN = 0x20000200, LENGTH = 4K+512
+  CXSRAM  (rwx) : ORIGIN = 0x20001400, LENGTH = 1K
 }
 
 PAGE_SIZE  = 64;
-STACK_SIZE = 2048;
+STACK_SIZE = DEFINED(stack_size) ? stack_size : 1024;
 END_STACK  = ORIGIN(SRAM) + LENGTH(SRAM);
+
+/*
+ * Ensure correct remap cx address
+ */
+OFF_G_cx           = 0x20001400 - ORIGIN(CXSRAM);
+_cx_trampoline     = 0x120001;
 
 SECTIONS
 {
   .text :
   {
     _text = .;
-    PROVIDE(_nvram = .);
-    PROVIDE(_setjmp = setjmp);
+    _nvram_start = .;
 
     *(.boot*)
     *(.text*)
@@ -23,7 +30,7 @@ SECTIONS
 
     . = ALIGN(4);
     _etext = .;
-  } > FLASH
+  } > FLASH = 0x00
 
   .nvm_data :
   {
@@ -36,8 +43,7 @@ SECTIONS
     _envram_data = .;
 
     _install_parameters = .;
-    PROVIDE(N_install_parameters = .);
-    PROVIDE(_envram = .);
+    _nvram_end = .;
   } > FLASH 
 
   .data :
@@ -54,6 +60,15 @@ SECTIONS
 
 
   ASSERT( (_edata - _data) <= 0, ".data section must be empty" )
+
+  .cx_ram : {
+    _cxram = .;
+
+    . = _cxram + OFF_G_cx;
+    *(.bss.G_cx)
+
+    . = _cxram + LENGTH(CXSRAM);
+  } > CXSRAM = 0x00
 
   .bss :
   {
@@ -73,17 +88,20 @@ SECTIONS
     PROVIDE( _estack = ABSOLUTE(END_STACK) );
   } > SRAM = 0x00
 
+
   .stack_sizes (INFO):
   {
     KEEP(*(.stack_sizes));
   }
 
-  DEBUG (INFO) :
+  DEBUG (NOLOAD) :
   {
     libc.a ( * )
     libm.a ( * )
     libgcc.a ( * )
     *(.ARM.exidx* .gnu.linkonce.armexidx.*)
   } > DISCARD
-
 }
+
+PROVIDE(_nvram = ABSOLUTE(_nvram_start));
+PROVIDE(_envram = ABSOLUTE(_nvram_end));

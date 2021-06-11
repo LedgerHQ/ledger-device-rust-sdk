@@ -31,6 +31,7 @@
   ******************************************************************************
 */
 #include "os_io_seproxyhal.h"
+#include "os_helpers.h"
 /* Includes ------------------------------------------------------------------*/
 #include "usbd_def.h"
 #include "usbd_core.h"
@@ -61,14 +62,15 @@ USBD_StatusTypeDef  USBD_LL_Init (USBD_HandleTypeDef *pdev)
   */
 USBD_StatusTypeDef  USBD_LL_DeInit (USBD_HandleTypeDef *pdev)
 {
+  uint8_t buffer[4];
   UNUSED(pdev);
+
   // usb off
-  uint8_t buf[4];
-  buf[0] = SEPROXYHAL_TAG_USB_CONFIG;
-  buf[1] = 0;
-  buf[2] = 1;
-  buf[3] = SEPROXYHAL_TAG_USB_CONFIG_DISCONNECT;
-  io_seproxyhal_spi_send(buf, 4);
+  buffer[0] = SEPROXYHAL_TAG_USB_CONFIG;
+  buffer[1] = 0;
+  buffer[2] = 1;
+  buffer[3] = SEPROXYHAL_TAG_USB_CONFIG_DISCONNECT;
+  io_seproxyhal_spi_send(buffer, 4);
 
   return USBD_OK; 
 }

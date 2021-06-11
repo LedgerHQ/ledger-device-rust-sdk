@@ -247,7 +247,7 @@ pub struct KeyOutOfRange;
 /// cannot be guaranteed here.
 // We use the term `index` to represent the user-facing number of an element in the collection,
 // and the term `key` to represent the underlying offset at which the element is located in the collection.
-// e.g with `[0, 0, 1, 1, 0, 1, 0]` (with 0 being free slots and 1 being allocated slot)
+// e.g with `[0, 0, 1, 1, 0, 1, 0]` (with 0s representing free slots and 1s representing allocated slots)
 //            ↑  ↑  ↑  ↑  ↑  ↑  ↑
 // index:     -  -  0  1  -  2  -
 // key:       0, 1, 2, 3, 4, 5, 6
@@ -409,7 +409,7 @@ where
 
     fn into_iter(self) -> CollectionIterator<'a, T, N> {
         CollectionIterator {
-            container: &self,
+            container: self,
             next_key: 0,
         }
     }

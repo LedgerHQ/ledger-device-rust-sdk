@@ -8,7 +8,7 @@ pub enum CurvesId {
 
 /// Wrapper for 'os_perso_derive_node_bip32'
 pub fn bip32_derive(curve: CurvesId, path: &[u32], key: &mut [u8]) -> Result<(), SyscallError> {
-    let err = unsafe {
+    unsafe {
         os_perso_derive_node_bip32(
             curve as u8,
             path.as_ptr(),
@@ -17,18 +17,15 @@ pub fn bip32_derive(curve: CurvesId, path: &[u32], key: &mut [u8]) -> Result<(),
             core::ptr::null_mut(),
         )
     };
-    if err != 0 {
-        Err(err.into())
-    } else {
-        Ok(())
-    }
+
+    Ok(())
 }
 
 /// Wrapper for 'cx_ecfp_init_private_key'
 pub fn ec_init_key(curve: CurvesId, raw_key: &[u8]) -> Result<cx_ecfp_private_key_t, SyscallError> {
     let mut ec_k = cx_ecfp_private_key_t::default();
     let err = unsafe {
-        cx_ecfp_init_private_key(
+        cx_ecfp_init_private_key_no_throw(
             curve as u8,
             raw_key.as_ptr(),
             raw_key.len() as u32,
@@ -49,11 +46,11 @@ pub fn ec_get_pubkey(
 ) -> Result<cx_ecfp_public_key_t, SyscallError> {
     let mut ec_pubkey = cx_ecfp_public_key_t::default();
     let err = unsafe {
-        cx_ecfp_generate_pair(
+        cx_ecfp_generate_pair_no_throw(
             curve as u8,
             &mut ec_pubkey as *mut cx_ecfp_public_key_t,
             privkey as *mut cx_ecfp_private_key_t,
-            1,
+            true,
         )
     };
     if err != 0 {
@@ -67,51 +64,43 @@ pub type DerEncodedEcdsaSignature = [u8; 73];
 /// Wrapper for 'cx_ecdsa_sign'
 pub fn ecdsa_sign(
     pvkey: &cx_ecfp_private_key_t,
-    mode: i32,
+    mode: u32,
     hash_id: u8,
     hash: &[u8],
-) -> Option<(DerEncodedEcdsaSignature, i32)> {
+) -> Option<(DerEncodedEcdsaSignature, u32)> {
     let mut sig = [0u8; 73];
     let mut info = 0;
+    let sig_len = &mut (sig.len() as u32); // scott
     let len = unsafe {
-        cx_ecdsa_sign(
+        cx_ecdsa_sign_no_throw(
             pvkey,
             mode,
             hash_id,
             hash.as_ptr(),
             hash.len() as u32,
             sig.as_mut_ptr(),
-            sig.len() as u32,
+            sig_len,
             &mut info,
         )
     };
-    if len == 0 {
+    if len != CX_OK {
         None
     } else {
-        Some((sig, len))
+        Some((sig, *sig_len))
     }
 }
 
 /// Wrapper for 'cx_ecdsa_verify'
-pub fn ecdsa_verify(
-    pubkey: &cx_ecfp_public_key_t,
-    sig: &[u8],
-    mode: i32,
-    hash_id: u8,
-    hash: &[u8],
-) -> bool {
-    let status = unsafe {
-        cx_ecdsa_verify(
+pub fn ecdsa_verify(pubkey: &cx_ecfp_public_key_t, sig: &[u8], hash: &[u8]) -> bool {
+    unsafe {
+        cx_ecdsa_verify_no_throw(
             pubkey as *const cx_ecfp_public_key_t,
-            mode,
-            hash_id,
             hash.as_ptr(),
             hash.len() as u32,
             sig.as_ptr(),
             sig.len() as u32,
         )
-    };
-    status == 1
+    }
 }
 
 /// Creates at compile time an array from the ASCII values of a correctly
@@ -222,27 +211,24 @@ mod tests {
     const PATH: [u32; 5] = make_bip32_path(b"m/44'/535348'/0'/0/0");
 
     impl From<SyscallError> for () {
-        fn from(_: SyscallError) -> () {
-            ()
-        }
+        fn from(_: SyscallError) {}
     }
-
     #[test]
     fn ecdsa() {
         // Test signature bindings with an ECDSA + verification
         let mut raw_key = [0u8; 32];
-        let message = b"test_message1";
-        let rnd_mode = (CX_RND_RFC6979 | CX_LAST) as i32;
-        let hash = CX_SHA256;
+        let hash = b"test_message1";
+        let rnd_mode = (CX_RND_RFC6979 | CX_LAST) as u32;
+        let hash_id = CX_SHA256;
 
         bip32_derive(CurvesId::Secp256k1, &PATH, &mut raw_key)?;
 
         let mut k = ec_init_key(CurvesId::Secp256k1, &raw_key)?;
-        let (sig, sig_len) = ecdsa_sign(&k, rnd_mode, hash, message)?;
+        let (sig, sig_len) = ecdsa_sign(&k, rnd_mode, hash_id, hash).unwrap();
 
         let pubkey = ec_get_pubkey(CurvesId::Secp256k1, &mut k)?;
 
-        let verif = ecdsa_verify(&pubkey, &sig[..sig_len as usize], rnd_mode, hash, message);
+        let verif = ecdsa_verify(&pubkey, &sig[..sig_len as usize], hash);
 
         assert_eq!(verif, true);
     }
@@ -252,17 +238,17 @@ mod tests {
         // Test signature bindings with a deterministic ECDSA + verification
 
         let mut raw_key = [0u8; 32];
-        let message = b"test_message";
-        let rnd_mode = (CX_RND_RFC6979 | CX_LAST) as i32;
-        let hash = CX_SHA256;
+        let hash = b"test_message";
+        let rnd_mode = (CX_RND_RFC6979 | CX_LAST) as u32;
+        let hash_id = CX_SHA256;
 
         bip32_derive(CurvesId::Secp256k1, &PATH, &mut raw_key)?;
 
         let mut k = ec_init_key(CurvesId::Secp256k1, &raw_key)?;
-        let (sig, sig_len) = ecdsa_sign(&k, rnd_mode, hash, message)?;
+        let (sig, sig_len) = ecdsa_sign(&k, rnd_mode, hash_id, hash).unwrap();
 
         let pubkey = ec_get_pubkey(CurvesId::Secp256k1, &mut k)?;
-        let verif = ecdsa_verify(&pubkey, &sig[..sig_len as usize], rnd_mode, hash, message);
+        let verif = ecdsa_verify(&pubkey, &sig[..sig_len as usize], hash);
 
         assert_eq!(verif, true);
     }

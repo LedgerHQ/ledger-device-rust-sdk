@@ -3,7 +3,6 @@
 #![feature(custom_test_frameworks)]
 #![reexport_test_harness_main = "test_main"]
 #![test_runner(sdk_test_runner)]
-#![feature(const_fn)]
 #![feature(asm)]
 #![feature(const_panic)]
 #![cfg_attr(not(feature = "pre1_54"), feature(const_fn_trait_bound))]
@@ -17,9 +16,9 @@ pub mod random;
 pub mod seph;
 pub mod usbbindings;
 
-use bindings::*;
+use bindings::os_sched_exit;
 
-use core::panic::PanicInfo;
+use core::{ffi::c_void, panic::PanicInfo};
 
 /// In case of runtime problems, return an internal error and exit the app
 #[inline]
@@ -79,17 +78,17 @@ pub fn sdk_test_runner(tests: &[&TestType]) {
         let modname;
         let name;
         unsafe {
-            let t = pic(test.modname.as_ptr() as u32) as *const u8;
+            let t = pic(test.modname.as_ptr() as *mut c_void) as *const u8;
             let t = core::ptr::slice_from_raw_parts(t, test.modname.len());
             let t: &[u8] = core::mem::transmute(t);
             modname = core::str::from_utf8_unchecked(t);
 
-            let t = pic(test.name.as_ptr() as u32) as *const u8;
+            let t = pic(test.name.as_ptr() as *mut c_void) as *const u8;
             let t = core::ptr::slice_from_raw_parts(t, test.name.len());
             let t: &[u8] = core::mem::transmute(t);
             name = core::str::from_utf8_unchecked(t);
         }
-        let fp = unsafe { pic(test.f as u32) };
+        let fp = unsafe { pic(test.f as *mut c_void) };
         let fp: fn() -> Result<(), ()> = unsafe { core::mem::transmute(fp) };
         let res = fp();
         match res {
@@ -143,13 +142,13 @@ pub fn exit_app(status: u8) -> ! {
 // The Rust version of Pic()
 // hopefully there are ways to avoid that
 extern "C" {
-    fn pic(link_address: u32) -> u32;
+    fn pic(link_address: *mut c_void) -> *mut c_void;
 }
 
 /// Performs code address translation for reading data located in the program
 /// and relocated during application installation.
 pub fn pic_rs<T>(x: &T) -> &T {
-    let ptr = unsafe { pic(x as *const T as u32) as *const T };
+    let ptr = unsafe { pic(x as *const T as *mut c_void) as *const T };
     unsafe { &*ptr }
 }
 
@@ -160,7 +159,7 @@ pub fn pic_rs<T>(x: &T) -> &T {
 /// data stored in the code as it resides in Flash memory. This is needed in
 /// particular when using the `nvm` module.
 pub fn pic_rs_mut<T>(x: &mut T) -> &mut T {
-    let ptr = unsafe { pic(x as *mut T as u32) as *mut T };
+    let ptr = unsafe { pic(x as *mut T as *mut c_void) as *mut T };
     unsafe { &mut *ptr }
 }
 

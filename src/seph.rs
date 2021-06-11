@@ -29,6 +29,8 @@ pub enum UsbEp {
     USBEpXFERSetup = SEPROXYHAL_TAG_USB_EP_XFER_SETUP as u8,
     USBEpXFERIn = SEPROXYHAL_TAG_USB_EP_XFER_IN as u8,
     USBEpXFEROut = SEPROXYHAL_TAG_USB_EP_XFER_OUT as u8,
+    USBEpPrepare = SEPROXYHAL_TAG_USB_EP_PREPARE as u8,
+    USBEpPrepareDirIn = SEPROXYHAL_TAG_USB_EP_PREPARE_DIR_IN as u8,
     Unknown,
 }
 
@@ -66,6 +68,8 @@ impl From<u8> for UsbEp {
             SEPROXYHAL_TAG_USB_EP_XFER_SETUP => UsbEp::USBEpXFERSetup,
             SEPROXYHAL_TAG_USB_EP_XFER_IN => UsbEp::USBEpXFERIn,
             SEPROXYHAL_TAG_USB_EP_XFER_OUT => UsbEp::USBEpXFEROut,
+            SEPROXYHAL_TAG_USB_EP_PREPARE => UsbEp::USBEpPrepare,
+            SEPROXYHAL_TAG_USB_EP_PREPARE_DIR_IN => UsbEp::USBEpPrepareDirIn,
             _ => UsbEp::Unknown,
         }
     }
@@ -107,6 +111,18 @@ pub fn send_general_status() {
 /// FFI bindings to USBD functions inlined here for clarity
 /// and also because some of the generated ones are incorrectly
 /// assuming mutable pointers when they are not
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct apdu_buffer_s {
+    pub buf: *mut u8,
+    pub len: u16,
+}
+impl Default for apdu_buffer_s {
+    fn default() -> Self {
+        unsafe { ::core::mem::zeroed() }
+    }
+}
+pub type ApduBufferT = apdu_buffer_s;
 extern "C" {
     pub static mut USBD_Device: USBD_HandleTypeDef;
     pub fn USBD_LL_SetupStage(
@@ -117,7 +133,7 @@ extern "C" {
         pdev: *mut USBD_HandleTypeDef,
         epnum: u8,
         pdata: *const u8,
-        arg1: *mut apdu_buffer_t,
+        arg1: *mut ApduBufferT,
     ) -> USBD_StatusTypeDef;
     pub fn USBD_LL_DataInStage(
         pdev: *mut USBD_HandleTypeDef,
@@ -136,8 +152,8 @@ extern "C" {
 
 /// Below is a straightforward translation of the corresponding functions
 /// in the C SDK, they could be improved
-pub fn handle_usb_event(buffer: &[u8]) {
-    match Events::from(buffer[3]) {
+pub fn handle_usb_event(event: u8) {
+    match Events::from(event) {
         Events::USBEventReset => {
             unsafe {
                 USBD_LL_SetSpeed(&mut USBD_Device, 1 /*USBD_SPEED_FULL*/);
@@ -182,7 +198,7 @@ pub fn handle_usb_ep_xfer_event(apdu_buffer: &mut [u8], buffer: &[u8]) {
             if (endpoint as u32) < IO_USB_MAX_ENDPOINTS {
                 unsafe {
                     G_io_app.usb_ep_xfer_len[endpoint as usize] = buffer[5];
-                    let mut apdu_buf = apdu_buffer_t {
+                    let mut apdu_buf = ApduBufferT {
                         buf: apdu_buffer.as_mut_ptr(),
                         len: 260,
                     };
@@ -195,7 +211,7 @@ pub fn handle_usb_ep_xfer_event(apdu_buffer: &mut [u8], buffer: &[u8]) {
 }
 
 pub fn handle_capdu_event(apdu_buffer: &mut [u8], buffer: &[u8]) {
-    let mut io_app = unsafe { G_io_app };
+    let mut io_app = unsafe { &mut G_io_app };
     if io_app.apdu_state == APDU_IDLE {
         let max = (apdu_buffer.len() - 3).min(buffer.len() - 3);
         let size = u16::from_be_bytes([buffer[1], buffer[2]]) as usize;
@@ -216,29 +232,16 @@ pub fn handle_event(mut apdu_buffer: &mut [u8], spi_buffer: &[u8]) {
     match Events::from(spi_buffer[0]) {
         Events::USBEvent => {
             if len == 1 {
-                handle_usb_event(spi_buffer);
+                handle_usb_event(spi_buffer[3]);
             }
         }
         Events::USBXFEREvent => {
             if len >= 3 {
-                handle_usb_ep_xfer_event(&mut apdu_buffer, &spi_buffer);
+                handle_usb_ep_xfer_event(&mut apdu_buffer, spi_buffer);
             }
         }
-        Events::CAPDUEvent => handle_capdu_event(&mut apdu_buffer, &spi_buffer),
+        Events::CAPDUEvent => handle_capdu_event(&mut apdu_buffer, spi_buffer),
         Events::TickerEvent => { /* unsafe{ G_io_app.ms += 100; } */ }
         _ => (),
     }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::assert_eq_err as assert_eq;
-//     use crate::TestType;
-//     use testmacro::test_item as test;
-
-//     #[test]
-//     fn seph_exchange() {
-
-//     }
-// }

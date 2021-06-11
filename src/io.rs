@@ -1,4 +1,3 @@
-use crate::bindings::G_io_app;
 use crate::bindings::*;
 use crate::buttons::{get_button_event, ButtonEvent, ButtonsState};
 use crate::seph;
@@ -16,6 +15,7 @@ pub enum StatusWords {
     Unknown = 0x6d00,
     Panic = 0xe000,
 }
+
 #[derive(Debug)]
 #[repr(u8)]
 pub enum SyscallError {
@@ -31,8 +31,8 @@ pub enum SyscallError {
     Unspecified,
 }
 
-impl From<i32> for SyscallError {
-    fn from(e: i32) -> SyscallError {
+impl From<u32> for SyscallError {
+    fn from(e: u32) -> SyscallError {
         match e {
             2 => SyscallError::InvalidParameter,
             3 => SyscallError::Overflow,
@@ -244,7 +244,7 @@ impl Comm {
                 }
                 seph::Events::USBEvent => {
                     if len == 1 {
-                        seph::handle_usb_event(&spi_buffer);
+                        seph::handle_usb_event(spi_buffer[3]);
                     }
                 }
                 seph::Events::USBXFEREvent => {
