@@ -409,7 +409,7 @@ where
 
     fn into_iter(self) -> CollectionIterator<'a, T, N> {
         CollectionIterator {
-            container: &self,
+            container: self,
             next_key: 0,
         }
     }

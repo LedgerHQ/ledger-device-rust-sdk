@@ -237,10 +237,10 @@ pub fn handle_event(mut apdu_buffer: &mut [u8], spi_buffer: &[u8]) {
         }
         Events::USBXFEREvent => {
             if len >= 3 {
-                handle_usb_ep_xfer_event(&mut apdu_buffer, &spi_buffer);
+                handle_usb_ep_xfer_event(&mut apdu_buffer, spi_buffer);
             }
         }
-        Events::CAPDUEvent => handle_capdu_event(&mut apdu_buffer, &spi_buffer),
+        Events::CAPDUEvent => handle_capdu_event(&mut apdu_buffer, spi_buffer),
         Events::TickerEvent => { /* unsafe{ G_io_app.ms += 100; } */ }
         _ => (),
     }
