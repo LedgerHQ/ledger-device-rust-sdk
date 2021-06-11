@@ -5,10 +5,7 @@ use core::ops::Range;
 use num_traits::{Bounded, PrimInt, Unsigned};
 
 extern "C" {
-    pub fn cx_rng_no_throw(
-        buffer: *mut u8,
-        len: u32,
-    ); 
+    pub fn cx_rng_no_throw(buffer: *mut u8, len: u32);
 }
 
 /// Fills a byte array with random bytes.
@@ -16,8 +13,10 @@ extern "C" {
 /// # Arguments
 ///
 /// * `out` - Destination array.
-pub fn rand_bytes(out: &mut[u8]) {
-    unsafe { cx_rng_no_throw(out.as_mut_ptr(), out.len() as u32); }
+pub fn rand_bytes(out: &mut [u8]) {
+    unsafe {
+        cx_rng_no_throw(out.as_mut_ptr(), out.len() as u32);
+    }
 }
 
 /// In-house random trait for generating random numbers.
@@ -65,7 +64,9 @@ where
 impl Random for u8 {
     fn random() -> Self {
         let mut r = [0u8; 1];
-        unsafe { cx_rng_no_throw(r.as_mut_ptr(), 1); }
+        unsafe {
+            cx_rng_no_throw(r.as_mut_ptr(), 1);
+        }
         r[0]
     }
 }
@@ -73,7 +74,9 @@ impl Random for u8 {
 impl Random for u32 {
     fn random() -> Self {
         let mut r = [0u8; 4];
-        unsafe { cx_rng_no_throw(r.as_mut_ptr(), 4); }
+        unsafe {
+            cx_rng_no_throw(r.as_mut_ptr(), 4);
+        }
         u32::from_be_bytes(r)
     }
 }
