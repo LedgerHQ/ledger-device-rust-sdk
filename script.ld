@@ -14,7 +14,6 @@ END_STACK  = ORIGIN(SRAM) + LENGTH(SRAM);
 /*
  * Ensure correct remap cx address
  */
-OFF_G_cx           = 0x20001400 - ORIGIN(CXSRAM);
 _cx_trampoline     = 0x120001;
 
 SECTIONS
@@ -62,12 +61,7 @@ SECTIONS
   ASSERT( (_edata - _data) <= 0, ".data section must be empty" )
 
   .cx_ram : {
-    _cxram = .;
-
-    . = _cxram + OFF_G_cx;
     *(.bss.G_cx)
-
-    . = _cxram + LENGTH(CXSRAM);
   } > CXSRAM = 0x00
 
   .bss :
@@ -94,7 +88,7 @@ SECTIONS
     KEEP(*(.stack_sizes));
   }
 
-  DEBUG (NOLOAD) :
+  DEBUG (NOLOAD):
   {
     libc.a ( * )
     libm.a ( * )
