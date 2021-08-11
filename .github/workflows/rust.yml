@@ -18,7 +18,6 @@ jobs:
         with:
           release: '9-2019-q4'
       - uses: actions/checkout@v2
-      - run: python3 -m pip install pillow
       - name: Install thumbv6 target
         uses: actions-rs/toolchain@v1
         with:
