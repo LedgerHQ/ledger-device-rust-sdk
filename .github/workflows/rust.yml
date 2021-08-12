@@ -7,7 +7,8 @@ on:
     branches: [ master ]
   workflow_dispatch:
     inputs: 
-      name: 'Unnamed'
+      name: 
+        description: 'Manually triggered'
 
 env:
   CARGO_TERM_COLOR: always
