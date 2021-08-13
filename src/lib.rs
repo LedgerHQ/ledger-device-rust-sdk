@@ -120,15 +120,65 @@ macro_rules! assert_eq_err {
     }};
 }
 
+#[cfg(not(test))]
+extern "Rust" {
+    fn sample_main();
+}
+
+#[no_mangle]
+static mut G_io_app: bindings::io_seph_app_t = bindings::io_seph_app_t {
+    apdu_state: 0,
+    apdu_length: 0,
+    io_flags: 0,
+    apdu_media: 0,
+    ms: 0,
+    usb_ep_xfer_len: [0u8; usbbindings::IO_USB_MAX_ENDPOINTS as usize],
+    usb_ep_timeouts: [bindings::io_seph_s__bindgen_ty_1 { timeout: 0 };
+        usbbindings::IO_USB_MAX_ENDPOINTS as usize],
+};
+
 extern "C" {
-    fn c_main();
+    pub fn io_usb_hid_init();
 }
 
 #[link_section = ".boot"]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    // Main is in C until the try_context can be set properly from Rust
-    unsafe { c_main() };
+    unsafe {
+        asm!("cpsie i");
+    }
+    // check api level
+    if bindings::CX_COMPAT_APILEVEL < unsafe { bindings::get_api_level() } {
+        exit_app(0xff);
+    }
+
+    unsafe {
+        G_io_app = bindings::io_seph_app_t {
+            apdu_state: bindings::APDU_IDLE,
+            apdu_length: 0,
+            io_flags: 0,
+            apdu_media: bindings::IO_APDU_MEDIA_NONE,
+            ms: 0,
+            usb_ep_xfer_len: [0u8; usbbindings::IO_USB_MAX_ENDPOINTS as usize],
+            usb_ep_timeouts: [bindings::io_seph_s__bindgen_ty_1 { timeout: 0 };
+                usbbindings::IO_USB_MAX_ENDPOINTS as usize],
+        };
+
+        io_usb_hid_init();
+
+        bindings::USB_power(0);
+        bindings::USB_power(1);
+    }
+
+    // Required for correct NVM data access
+    unsafe {
+        asm!("mov r9, {}", in(reg) bindings::pic_internal(0xc0d0_0000 as *mut c_void) );
+    }
+
+    // Call the 'main' defined in the application
+    unsafe {
+        sample_main();
+    }
     exit_app(1);
 }
 

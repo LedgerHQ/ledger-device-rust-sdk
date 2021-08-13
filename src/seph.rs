@@ -200,9 +200,14 @@ pub fn handle_usb_ep_xfer_event(apdu_buffer: &mut [u8], buffer: &[u8]) {
                     G_io_app.usb_ep_xfer_len[endpoint as usize] = buffer[5];
                     let mut apdu_buf = ApduBufferT {
                         buf: apdu_buffer.as_mut_ptr(),
-                        len: 260,
+                        len: apdu_buffer.len() as u16,
                     };
-                    USBD_LL_DataOutStage(&mut USBD_Device, endpoint, &buffer[6], &mut apdu_buf);
+                    USBD_LL_DataOutStage(
+                        &mut USBD_Device,
+                        endpoint,
+                        buffer[6..].as_ptr(),
+                        &mut apdu_buf,
+                    );
                 }
             }
         }
