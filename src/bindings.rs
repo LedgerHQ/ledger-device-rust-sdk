@@ -85,8 +85,6 @@ where
         }
     }
 }
-pub const IO_HID_EP_LENGTH: u32 = 50;
-pub const IO_SEPROXYHAL_BUFFER_SIZE_B: u32 = 300;
 pub const TARGET_ID: u32 = 823132164;
 pub const __NVIC_PRIO_BITS: u32 = 2;
 pub const __Vendor_SysTickConfig: u32 = 0;
