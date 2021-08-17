@@ -48,11 +48,7 @@
 #define HAVE_ECDSA
 #define HAVE_EDDSA
 #define HAVE_ECSCHNORR
-#define IO_HID_EP_LENGTH 50
-#define OS_IO_SEPROXYHAL
-#define IO_SEPROXYHAL_BUFFER_SIZE_B 300
 #define HAVE_IO_USB
-#define IO_USB_MAX_ENDPOINTS 6
 #include "os.h"
 #include "os_io_seproxyhal.h"
 #include "libcxng.h"
