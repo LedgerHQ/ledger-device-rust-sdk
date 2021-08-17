@@ -170,11 +170,6 @@ pub extern "C" fn _start() -> ! {
         bindings::USB_power(1);
     }
 
-    // Required for correct NVM data access
-    unsafe {
-        asm!("mov r9, {}", in(reg) bindings::pic_internal(0xc0d0_0000 as *mut c_void) );
-    }
-
     // Call the 'main' defined in the application
     unsafe {
         sample_main();
