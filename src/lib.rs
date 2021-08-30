@@ -141,16 +141,25 @@ extern "C" {
     pub fn io_usb_hid_init();
 }
 
+#[inline(never)]
+fn check_api_level() {
+    // Circumvent bolos bug
+    // Cannot invoke a syscall if stack pointers is
+    // too close from its initial value when entering the app
+    let _tmp = [1u32; 11];
+    if bindings::CX_COMPAT_APILEVEL < unsafe { bindings::get_api_level() } {
+        exit_app(0xff);
+    }
+}
+
 #[link_section = ".boot"]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     unsafe {
         asm!("cpsie i");
     }
-    // check api level
-    if bindings::CX_COMPAT_APILEVEL < unsafe { bindings::get_api_level() } {
-        exit_app(0xff);
-    }
+
+    check_api_level();
 
     unsafe {
         G_io_app = bindings::io_seph_app_t {
