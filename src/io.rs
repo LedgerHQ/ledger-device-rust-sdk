@@ -359,11 +359,16 @@ impl Comm {
         self.apdu_buffer[3]
     }
 
+    /// Retrieve the APDU's data section.
+    /// It is assumed that the APDU is composed as
+    /// CLA | INS | P1 | P2 | Lc (length) | DATA ...
+    ///  0  |  1  |  2 |  3 |    4       |  5 ...
+    /// each field except DATA being a single byte.
     pub fn get_data(&self) -> Result<&[u8], StatusWords> {
-        let len = u16::from_le_bytes([self.apdu_buffer[2], self.apdu_buffer[3]]) as usize;
+        let len = self.apdu_buffer[4] as usize;
         match len {
             0 => Err(StatusWords::BadLen),
-            _ => Ok(&self.apdu_buffer[4..4 + len]),
+            _ => Ok(&self.apdu_buffer[5..5 + len]),
         }
     }
 
