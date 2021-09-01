@@ -360,10 +360,27 @@ impl Comm {
     }
 
     pub fn get_data(&self) -> Result<&[u8], StatusWords> {
-        let len = u16::from_le_bytes([self.apdu_buffer[2], self.apdu_buffer[3]]) as usize;
-        match len {
-            0 => Err(StatusWords::BadLen),
-            _ => Ok(&self.apdu_buffer[4..4 + len]),
+        if self.rx == 4 {
+            Ok(&[]) // Conforming zero-data APDU
+        } else {
+            let first_len_byte = self.apdu_buffer[4] as usize;
+            let get_data_from_buffer = |len, offset| {
+                if len == 0 || len + offset > self.rx {
+                    Err(StatusWords::BadLen)
+                } else {
+                    Ok(&self.apdu_buffer[offset..offset + len])
+                }
+            };
+            match (first_len_byte, self.rx) {
+                (0, 5) => Ok(&[]), // Non-conforming zero-data APDU
+                (0, 6) => Err(StatusWords::BadLen),
+                (0, _) => {
+                    let len =
+                        u16::from_le_bytes([self.apdu_buffer[5], self.apdu_buffer[6]]) as usize;
+                    get_data_from_buffer(len, 7)
+                }
+                (len, _) => get_data_from_buffer(len, 5),
+            }
         }
     }
 
