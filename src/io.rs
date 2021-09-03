@@ -79,6 +79,8 @@ pub enum Event<T> {
     Command(T),
     /// Button press or release event
     Button(ButtonEvent),
+    /// Ticker
+    Ticker,
 }
 
 pub struct Comm {
@@ -255,9 +257,7 @@ impl Comm {
                 seph::Events::CAPDUEvent => {
                     seph::handle_capdu_event(&mut self.apdu_buffer, &spi_buffer)
                 }
-                seph::Events::TickerEvent => { // unsafe{ G_io_app.ms += 100; }
-                     // crate::debug_write("ticker");
-                }
+                seph::Events::TickerEvent => return Event::Ticker,
                 _ => (),
             }
 
