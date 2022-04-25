@@ -1,6 +1,6 @@
-# Ledger Nano S SDK for Rust Applications
+# Ledger Nano SDK for Rust Applications
 
-Crate that allows developing Ledger Nano S apps in Rust with a default configuration.
+Crate that allows developing Ledger Nano apps in Rust with a default configuration.
 
 Contains:
 
@@ -24,9 +24,30 @@ Using rustc nightly builds is recommanded as some unstable features are
 required.
 
 - `rustup default nightly`
-- `rustup target add thumbv6m-none-eabi`
+- `rustup target add thumbv6m-none-eabi` for Nano S and Nano X builds
+- `rustup target add thumbv8m.main-none-eabi` for Nano S+ builds
 - install [Clang](http://releases.llvm.org/download.html).
 - install an [ARM GCC toolchain](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads)
+
+This SDK provides three [custom target](https://doc.rust-lang.org/rustc/targets/custom.html) files for Nano S, Nano X and Nano S+.
+
+### Building for Nano S
+
+```
+cargo build --release -Z build-std=core --target=./nanos.json
+```
+
+### Building for Nano X
+
+```
+cargo build --release -Z build-std=core --target=./nanox.json
+```
+
+### Building for Nano S+
+
+```
+cargo build --release -Z build-std=core --target=./nanosplus.json
+```
 
 ## Generating bindings for the C sdk
 

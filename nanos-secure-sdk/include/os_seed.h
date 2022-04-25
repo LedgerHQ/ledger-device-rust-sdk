@@ -49,6 +49,12 @@ SYSCALL PERMISSION(APPLICATION_FLAG_BOLOS_UX) void os_perso_finalize(void);
 // @return BOLOS_UX_OK when perso is onboarded.
 SYSCALL bolos_bool_t os_perso_isonboarded(void);
 
+SYSCALL void os_perso_set_onboarding_status(unsigned int pin_set,
+                                            unsigned int kind,
+                                            unsigned int count,
+                                            unsigned int total,
+                                            unsigned int isConfirming);
+
 // derive the seed for the requested BIP32 path
 SYSCALL void os_perso_derive_node_bip32(
     cx_curve_t curve,
@@ -93,6 +99,9 @@ SYSCALL void os_perso_derive_eip2333(
  * seed => derivation (path 0xda7aba5e/0xc1a551c5) => priv key =SECP256K1=>
  * pubkey => sha512 => cookie
  */
+
+#if defined(HAVE_SEED_COOKIE)
 SYSCALL unsigned int
 os_perso_seed_cookie(unsigned char *seed_cookie PLENGTH(seed_cookie_length),
                      unsigned int seed_cookie_length);
+#endif // HAVE_SEED_COOKIE

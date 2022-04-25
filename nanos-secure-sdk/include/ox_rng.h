@@ -1,7 +1,7 @@
 
 /*******************************************************************************
 *   Ledger Nano S - Secure firmware
-*   (c) 2021 Ledger
+*   (c) 2022 Ledger
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -16,6 +16,13 @@
 *  limitations under the License.
 ********************************************************************************/
 
+/**
+ * @file    ox_rng.h
+ * @brief   Random number generation syscall.
+ *
+ * This file contains the function for getting random data from the TRNG.
+ */
+
 #ifndef OX_RNG_H
 #define OX_RNG_H
 
@@ -23,8 +30,18 @@
 
 #include "decorators.h"
 
+/**
+ * @brief   Get random data from the True Random Number Generation.
+ *
+ * @param[out] buf  Buffer where to store the random data.
+ *
+ * @param[in]  size Size of the random data in bytes.
+ *
+ */
 SYSCALL void cx_trng_get_random_data(uint8_t *buf PLENGTH(size), size_t size);
+
 void cx_trng_selftest(void);
+
 void cx_trng_init(void);
 
 #endif // OX_RNG_H

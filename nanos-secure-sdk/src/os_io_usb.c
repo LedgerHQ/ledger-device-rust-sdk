@@ -39,7 +39,7 @@ uint16_t io_seproxyhal_get_ep_rx_size(uint8_t epnum) {
 // TODO, refactor this using the USB DataIn event like for the U2F tunnel
 // TODO add a blocking parameter, for HID KBD sending, or use a USB busy flag per channel to know if 
 // the transfer has been processed or not. and move on to the next transfer on the same endpoint
-void io_usb_send_ep(unsigned int ep, unsigned char* buffer, unsigned short length, unsigned int timeout) {
+void io_usb_send_ep(unsigned int ep, unsigned char* buffer, unsigned short length, __attribute__((unused)) unsigned int timeout) {
   // won't send if overflowing seproxyhal buffer format
   if (length > 255) {
     return;
@@ -101,7 +101,7 @@ volatile unsigned char* G_io_usb_hid_current_buffer;
 
 io_usb_hid_receive_status_t io_usb_hid_receive (io_send_t sndfct, unsigned char* buffer, unsigned short l, apdu_buffer_t * apdu_buffer) {
   uint8_t * apdu_buf;
-  uint16_t * apdu_buf_len;
+  uint16_t apdu_buf_len;
 #ifndef HAVE_LOCAL_APDU_BUFFER
   if (apdu_buffer == NULL) {
     apdu_buf = G_io_apdu_buffer;

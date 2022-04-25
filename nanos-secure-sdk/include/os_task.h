@@ -1,7 +1,7 @@
 #pragma once
 
 #include "appflags.h"
-#include "bolos_target.h"
+
 #include "decorators.h"
 #include "os_types.h"
 
@@ -30,8 +30,14 @@ enum task_unsecure_id_e {
 // current app task
 SYSCALL TASKSWITCH PERMISSION(APPLICATION_FLAG_BOLOS_UX) void os_sched_exec(
     unsigned int app_idx);
+
 // exit the current task
+#ifdef HAVE_BOLOS
 SYSCALL void os_sched_exit(bolos_task_status_t exit_code);
+#else
+SYSCALL void __attribute__((noreturn))
+os_sched_exit(bolos_task_status_t exit_code);
+#endif
 
 // returns true when the given task is running, false else.
 SYSCALL bolos_bool_t os_sched_is_running(unsigned int task_idx);

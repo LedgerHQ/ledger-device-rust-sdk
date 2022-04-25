@@ -1,7 +1,7 @@
 #pragma once
 
 #ifndef HAVE_BOLOS_NO_CUSTOMCA
-#include "bolos_target.h"
+
 #include "decorators.h"
 
 /* ----------------------------------------------------------------------- */
