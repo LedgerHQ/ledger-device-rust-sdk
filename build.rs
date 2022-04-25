@@ -69,7 +69,7 @@ fn finalize_nanosplus_configuration(command: &mut cc::Build, bolos_sdk: &String)
 
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let bolos_sdk = "./nanos-secure-sdk".to_string();
+    let bolos_sdk = "./ledger-secure-sdk".to_string();
 
     let output = Command::new("arm-none-eabi-gcc")
         .arg("-print-sysroot")
