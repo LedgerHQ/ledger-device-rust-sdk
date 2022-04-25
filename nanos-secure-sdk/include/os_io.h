@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include "bolos_target.h"
+
 #include "os_math.h"
 
 /* ----------------------------------------------------------------------- */

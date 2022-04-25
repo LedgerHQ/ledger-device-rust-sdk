@@ -14,6 +14,7 @@ impl ButtonsState {
 
 /// Event types needed by
 /// an application
+#[derive(PartialEq)]
 pub enum ButtonEvent {
     LeftButtonPress,
     RightButtonPress,

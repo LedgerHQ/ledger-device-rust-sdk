@@ -1,6 +1,6 @@
 #ifdef HAVE_BLE
 
-#include "bolos_target.h"
+
 #include "decorators.h"
 
 /**

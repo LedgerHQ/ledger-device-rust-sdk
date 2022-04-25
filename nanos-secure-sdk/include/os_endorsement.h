@@ -1,6 +1,6 @@
 #pragma once
 
-#include "bolos_target.h"
+
 #include "decorators.h"
 
 /* ----------------------------------------------------------------------- */

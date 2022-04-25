@@ -1,7 +1,7 @@
 
 /*******************************************************************************
 *   Ledger Nano S - Secure firmware
-*   (c) 2021 Ledger
+*   (c) 2022 Ledger
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@
 #ifndef OS_H
 #define OS_H
 
-#include "bolos_target.h"
 #include "os_hal.h"
 
 // FIXME: for backward compatibility. To be removed.
@@ -46,6 +45,8 @@
 
 // Keep these includes atm.
 #include "os_types.h"
+
+#include "syscalls.h"
 
 /**
  * Quality development guidelines:
@@ -88,7 +89,7 @@
 void app_main(void);
 
 // os initialization function to be called by application entry point
-void os_boot();
+void os_boot(void);
 
 /**
  * Function takes 0 for first call. Returns 0 when timeout has occured. Returned
@@ -119,27 +120,21 @@ os is not an application (it calls ux upon user inputs)
 /* ----------------------------------------------------------------------- */
 /* -                          DEBUG FUNCTIONS                           - */
 /* ----------------------------------------------------------------------- */
+#ifdef HAVE_PRINTF
 void screen_printf(const char *format, ...);
-
-// emit a single byte
-void screen_printc(unsigned char const c);
+void mcu_usb_printf(const char *format, ...);
+#else // !HAVE_PRINTF
+#define PRINTF(...)
+#endif // !HAVE_PRINTF
 
 // redefined if string.h not included
+#ifdef HAVE_SPRINTF
 int snprintf(char *str, size_t str_size, const char *format, ...);
-
-#ifndef PRINTF
-#define PRINTF(...)
-#endif
+#endif // HAVE_SPRINTF
 
 // syscall test
 // SYSCALL void dummy_1(unsigned int* p PLENGTH(2+len+15+ len + 16 +
 // sizeof(io_send_t) + 1 ), unsigned int len);
-
-#ifdef BOLOS_DEBUG
-#ifdef TARGET_NANOX
-SYSCALL void trigger_gpio3(unsigned int val);
-#endif // TARGET_NANOX
-#endif // BOLOS_DEBUG
 
 /* ----------------------------------------------------------------------- */
 /*   -                            I/O I2C                                - */
@@ -201,9 +196,5 @@ SYSCALL void io_debug(char *chars, unsigned int len);
 #endif // BOLOS_RELEASE
 
 #endif // HAVE_IO_I2C
-
-#ifndef SYSCALL_GENERATE
-#include "syscalls.h"
-#endif // SYSCALL_GENERATE
 
 #endif // OS_H

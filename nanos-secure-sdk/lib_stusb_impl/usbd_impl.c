@@ -45,6 +45,7 @@
   ******************************************************************************
   */ 
 
+#include <string.h>
 #include "os.h"
 #include "os_io_usb.h"
 
@@ -122,6 +123,20 @@
 #ifdef HAVE_VID_PID_PROBER
 #define USBD_VID                      0x2581
 #define USBD_PID                      0xf1d1
+static uint8_t const USBD_PRODUCT_FS_STRING[] = {
+  10*2+2,
+  USB_DESC_TYPE_STRING,
+  'N', 0,
+  'a', 0,
+  'n', 0,
+  'o', 0,
+  '-', 0,
+  'U', 0,
+  '2', 0,
+  'F', 0,
+  '-', 0,
+  'P', 0,
+};
 #else
 #define USBD_VID                      0x2C97
 #if defined(TARGET_BLUE)
@@ -179,6 +194,27 @@ static uint8_t const USBD_PRODUCT_FS_STRING[] = {
   'o', 0,
   ' ', 0,
   'X', 0,
+};
+#elif defined(TARGET_NANOS2)
+#ifndef HAVE_LEGACY_PID
+#define USBD_PID                      0x5000
+#else // HAVE_LEGACY_PID
+#define USBD_PID                      0x0005
+#endif // HAVE_LEGACY_PID
+static uint8_t const USBD_PRODUCT_FS_STRING[] = {
+  11*2+2,
+  USB_DESC_TYPE_STRING,
+  'N', 0,
+  'a', 0,
+  'n', 0,
+  'o', 0,
+  ' ', 0,
+  'S', 0,
+  ' ', 0,
+  'P', 0,
+  'l', 0,
+  'u', 0,
+  's', 0,
 };
 #else
 #error unknown TARGET_ID

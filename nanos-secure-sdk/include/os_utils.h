@@ -63,6 +63,10 @@ void u4be_encode(unsigned char *buffer, unsigned int offset,
 void u4le_encode(unsigned char *buffer, unsigned int offset,
                  unsigned int value);
 
+int bytes_to_hex(char *out, size_t outl, const void *value, size_t len);
+int bytes_to_lowercase_hex(char *out, size_t outl, const void *value,
+                           size_t len);
+
 #define ARRAYLEN(array) (sizeof(array) / sizeof(array[0]))
 #define INARRAY(elementptr, array)                                             \
   ((unsigned int)elementptr >= (unsigned int)array &&                          \
@@ -75,10 +79,10 @@ void u4le_encode(unsigned char *buffer, unsigned int offset,
 #define os_swap_u32(u32) __builtin_bswap32(u32)
 
 void os_memset4(void *dst, unsigned int initval, unsigned int nbintval);
-void os_xor(void *dst, void WIDE *src1, void WIDE *src2, unsigned int length);
+void os_xor(void *dst, void *src1, void *src2, unsigned int length);
 
 // Secure memory comparison
-char os_secure_memcmp(void *src1, void *src2, unsigned int length);
+char os_secure_memcmp(const void *src1, const void *src2, size_t length);
 
 // Alignement-related
 #define UPPER_ALIGN(adr, align, type)                                          \

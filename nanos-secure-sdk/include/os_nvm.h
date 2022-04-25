@@ -1,11 +1,11 @@
 #pragma once
 
-#include "bolos_target.h"
+
 #include "decorators.h"
 
 #if defined(ST31)
 #define NVM_ERASED_WORD_VALUE 0xFFFFFFFFUL
-#elif defined(ST33)
+#elif defined(ST33) | defined(ST33K1M5)
 #define NVM_ERASED_WORD_VALUE 0xFFFFFFFF
 #endif
 
