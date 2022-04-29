@@ -89,6 +89,7 @@ SECTIONS
     libm.a ( * )
     libgcc.a ( * )
     *(.ARM.exidx* .gnu.linkonce.armexidx.*)
+    *(.debug_info)
   }
 }
 
