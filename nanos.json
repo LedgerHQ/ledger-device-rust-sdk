@@ -14,7 +14,8 @@
   "panic-strategy": "abort",
   "pre-link-args": {
       "ld.lld": [
-          "-Tnanos_script.ld"
+          "-Tnanos_layout.ld",
+          "-Tlink.ld"
       ]
   },
   "relocation-model": "ropi",

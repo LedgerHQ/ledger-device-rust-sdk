@@ -202,11 +202,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("cargo:rustc-link-search={}", out_dir.display());
     // copy
     let linkerscript = match target.unwrap().to_str().unwrap() {
-        "nanos" => "nanos_script.ld",
-        "nanox" => "nanox_script.ld",
-        "nanosplus" => "nanosplus_script.ld",
+        "nanos" => "nanos_layout.ld",
+        "nanox" => "nanox_layout.ld",
+        "nanosplus" => "nanosplus_layout.ld",
         _ => ""
     };
     std::fs::copy(linkerscript, out_dir.join(linkerscript))?;
+    std::fs::copy("link.ld", out_dir.join("link.ld"))?;
     Ok(())
 }
