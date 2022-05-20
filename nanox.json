@@ -13,7 +13,8 @@
   "panic-strategy": "abort",
   "pre-link-args": {
       "ld.lld": [
-          "-Tnanox_script.ld"
+          "-Tnanox_layout.ld",
+          "-Tlink.ld"
       ]
   },
   "relocation-model": "ropi-rwpi",
