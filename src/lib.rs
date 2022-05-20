@@ -7,6 +7,10 @@
 #![feature(generic_const_exprs)]
 
 pub mod bindings;
+
+#[cfg(nanox)]
+pub mod ble;
+
 pub mod buttons;
 pub mod ecc;
 pub mod io;

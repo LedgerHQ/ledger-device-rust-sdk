@@ -9,6 +9,7 @@ use std::{
 };
 
 fn finalize_nanos_configuration(command: &mut cc::Build, bolos_sdk: &String) -> String {
+    println!("cargo:rustc-cfg=nanos");
     command.target("thumbv6m-none-eabi")
         .define("ST31", None)
         .define("TARGET_NANOS", None)
@@ -21,10 +22,11 @@ fn finalize_nanos_configuration(command: &mut cc::Build, bolos_sdk: &String) -> 
         .include(format!("{}/nanos/", bolos_sdk))
         .include(format!("{}/nanos/lib_cxng/include", bolos_sdk))
         .flag("-fropi");
-        format!("{}/nanos/Makefile.conf.cx", bolos_sdk)
+    format!("{}/nanos/Makefile.conf.cx", bolos_sdk)
 }
 
 fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &String) -> String {
+    println!("cargo:rustc-cfg=nanox");
     command.target("thumbv6m-none-eabi")
         .define("ST33", None)
         .define("TARGET_NANOX", None)
@@ -35,6 +37,21 @@ fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &String) -> 
         .define("HAVE_MCU_PROTECT", None)
         .define("HAVE_SE_BUTTON", None)
         .define("HAVE_SE_SCREEN", None)
+        .define("HAVE_MCU_SERIAL_STORAGE", None)
+        .define("HAVE_BLE", None)
+        .define("HAVE_BLE_APDU", None)
+        .file(format!("{}/nanox/ledger_protocol.c", bolos_sdk))
+        .file(format!("{}/nanox/lib_blewbxx/core/auto/ble_gap_aci.c", bolos_sdk))
+        .file(format!("{}/nanox/lib_blewbxx/core/auto/ble_gatt_aci.c", bolos_sdk))
+        .file(format!("{}/nanox/lib_blewbxx/core/auto/ble_hal_aci.c", bolos_sdk))
+        .file(format!("{}/nanox/lib_blewbxx/core/auto/ble_hci_le.c", bolos_sdk))
+        .file(format!("{}/nanox/lib_blewbxx/core/template/osal.c", bolos_sdk))
+        .file(format!("{}/nanox/lib_blewbxx_impl/src/ledger_ble.c", bolos_sdk))
+        .include(format!("{}/nanox/lib_blewbxx/include", bolos_sdk))
+        .include(format!("{}/nanox/lib_blewbxx/core", bolos_sdk))
+        .include(format!("{}/nanox/lib_blewbxx/core/auto", bolos_sdk))
+        .include(format!("{}/nanox/lib_blewbxx/core/template", bolos_sdk))
+        .include(format!("{}/nanox/lib_blewbxx_impl/include", bolos_sdk))
         .file(format!("{}/nanox/syscalls.c", bolos_sdk))
         .file(format!("{}/nanox/cx_stubs.S", bolos_sdk))
         .file(format!("{}/nanox/lib_cxng/src/cx_exported_functions.c", bolos_sdk))
@@ -44,10 +61,11 @@ fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &String) -> 
         .flag("-ffixed-r9")
         .flag("-fropi")
         .flag("-frwpi");
-        format!("{}/nanox/Makefile.conf.cx", bolos_sdk)
+    format!("{}/nanox/Makefile.conf.cx", bolos_sdk)
 }
 
 fn finalize_nanosplus_configuration(command: &mut cc::Build, bolos_sdk: &String) -> String {
+    println!("cargo:rustc-cfg=nanosplus");
     command.target("thumbv8m.main-none-eabi")
         .define("ST33K1M5", None)
         .define("TARGET_NANOS2", None)
@@ -64,7 +82,7 @@ fn finalize_nanosplus_configuration(command: &mut cc::Build, bolos_sdk: &String)
         .include(format!("{}/nanosplus/lib_cxng/include", bolos_sdk))
         .flag("-fropi")
         .flag("-frwpi");
-        format!("{}/nanosplus/Makefile.conf.cx", bolos_sdk)
+    format!("{}/nanosplus/Makefile.conf.cx", bolos_sdk)
 }
 
 
@@ -131,6 +149,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             bolos_sdk
         ))
         .debug(true)
+        .flag("-Oz")
         .flag("-fomit-frame-pointer")
         .flag("-fno-common")
         .flag("-fdata-sections")
@@ -150,6 +169,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         "nanosplus" => finalize_nanosplus_configuration(&mut command, &bolos_sdk),
         _ => "".to_string() 
     };
+
+    // all 'finalize_...' functions also declare a new 'cfg' variable corresponding
+    // to the name of the target (as #[cfg(target = "nanox")] does not work, for example)
+    // this allows code to easily import things depending on the target
 
     let mut makefile = File::open(cx_makefile).unwrap();
     let mut content = String::new();
