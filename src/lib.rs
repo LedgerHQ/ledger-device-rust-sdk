@@ -6,6 +6,10 @@
 #![cfg_attr(not(feature = "pre1_54"), feature(const_fn_trait_bound))]
 
 pub mod bindings;
+
+#[cfg(nanox)]
+pub mod ble;
+
 pub mod buttons;
 pub mod ecc;
 pub mod io;

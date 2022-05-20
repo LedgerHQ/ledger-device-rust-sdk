@@ -1,8 +1,12 @@
-#include "os.h"
-#include "os_io_seproxyhal.h"
+#include "exceptions.h"
+#include "os_apilevel.h"
 #include "string.h"
 #include "seproxyhal_protocol.h"
+#include "os_id.h"
 #include "os_io_usb.h"
+#ifdef HAVE_BLE
+  #include "ledger_ble.h"
+#endif
 
 extern void sample_main();
 
@@ -36,18 +40,22 @@ int c_main(void) {
     #endif
         memset(&G_io_app, 0, sizeof(G_io_app));
 
+    #ifdef HAVE_BLE
+        G_io_app.plane_mode = plane;
+    #endif
         G_io_app.apdu_state = APDU_IDLE;
         G_io_app.apdu_length = 0;
         G_io_app.apdu_media = IO_APDU_MEDIA_NONE;
 
         G_io_app.ms = 0;
-    #ifdef HAVE_BLE 
-        G_io_app.plane_mode = plane;
-    #endif
         io_usb_hid_init();
 
         USB_power(0);
         USB_power(1);
+        
+    #ifdef HAVE_BLE 
+        LEDGER_BLE_init();
+    #endif
         sample_main();
       }
       CATCH(EXCEPTION_IO_RESET) {
