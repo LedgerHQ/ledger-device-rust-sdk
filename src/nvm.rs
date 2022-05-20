@@ -178,8 +178,8 @@ macro_rules! atomic_storage {
             // This is currently garanteed by the alignment of AlignedStorage.
             storage_a: SafeStorage<T>,
             storage_b: SafeStorage<T>, // We also accept situations where both storages are marked as valid, which
-                                    // can happen with tearing. This is not a problem, and we consider the first
-                                    // one is the "correct" one.
+                                       // can happen with tearing. This is not a problem, and we consider the first
+                                       // one is the "correct" one.
         }
     };
 }

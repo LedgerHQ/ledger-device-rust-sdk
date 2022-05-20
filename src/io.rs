@@ -1,7 +1,7 @@
 use crate::bindings::*;
-use crate::buttons::{get_button_event, ButtonEvent, ButtonsState};
 #[cfg(nanox)]
 use crate::ble;
+use crate::buttons::{get_button_event, ButtonEvent, ButtonsState};
 
 use crate::seph;
 use core::convert::TryFrom;
@@ -135,11 +135,11 @@ impl Comm {
                 let len = (self.tx as u16).to_be_bytes();
                 seph::seph_send(&[seph::SephTags::RawAPDU as u8, len[0], len[1]]);
                 seph::seph_send(&self.apdu_buffer[..self.tx]);
-            },
+            }
             #[cfg(nanox)]
             APDU_BLE => {
                 ble::send(&self.apdu_buffer[..self.tx]);
-            },
+            }
             _ => (),
         }
         self.tx = 0;
@@ -262,7 +262,9 @@ impl Comm {
                         seph::handle_usb_ep_xfer_event(&mut self.apdu_buffer, &spi_buffer);
                     }
                 }
-                seph::Events::CAPDUEvent => seph::handle_capdu_event(&mut self.apdu_buffer, &spi_buffer),
+                seph::Events::CAPDUEvent => {
+                    seph::handle_capdu_event(&mut self.apdu_buffer, &spi_buffer)
+                }
 
                 #[cfg(nanox)]
                 seph::Events::BleReceive => ble::receive(&mut self.apdu_buffer, &spi_buffer),
