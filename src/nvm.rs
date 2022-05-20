@@ -104,8 +104,8 @@ impl<T> SingleStorage<T> for AlignedStorage<T> {
     fn update(&mut self, value: &T) {
         unsafe {
             nvm_write(
-                &self.value as *const T as *const cty::c_void as *mut cty::c_void,
-                value as *const T as *const cty::c_void as *mut cty::c_void,
+                &self.value as *const T as *const core::ffi::c_void as *mut core::ffi::c_void,
+                value as *const T as *const core::ffi::c_void as *mut core::ffi::c_void,
                 core::mem::size_of::<T>() as u32,
             );
             let mut _dummy = &self.value;

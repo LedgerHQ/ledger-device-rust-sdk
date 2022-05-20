@@ -3,7 +3,7 @@
 #![feature(custom_test_frameworks)]
 #![reexport_test_harness_main = "test_main"]
 #![test_runner(sdk_test_runner)]
-#![cfg_attr(not(feature = "pre1_54"), feature(const_fn_trait_bound))]
+#![feature(core_ffi_c)]
 
 pub mod bindings;
 
