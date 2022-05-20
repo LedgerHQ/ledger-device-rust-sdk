@@ -20,6 +20,7 @@
 #define OS_IO_USB_H
 
 #include "os_io_seproxyhal.h"
+#include "os_io.h"
 
 #ifdef HAVE_USB_APDU
 

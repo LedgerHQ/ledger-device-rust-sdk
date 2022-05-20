@@ -35,6 +35,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "usbd_conf.h"
+#include "os_io.h"
 
 /** @addtogroup STM32_USBD_DEVICE_LIBRARY
   * @{

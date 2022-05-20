@@ -42,7 +42,6 @@
     a ^= b;                                                                    \
   }
 
-extern unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 
 SYSCALL void io_seph_send(const unsigned char *buffer PLENGTH(length),
                           unsigned short length);
