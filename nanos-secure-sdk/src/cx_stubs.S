@@ -8,7 +8,6 @@
     .section .text.\name
     .thumb_func
     .weak \name
-    .global \name
     \name:
       push {r0-r1}
       ldr  r0, =\id
