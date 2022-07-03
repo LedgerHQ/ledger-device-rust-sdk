@@ -190,7 +190,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         "nanos" => finalize_nanos_configuration(&mut command, &bolos_sdk),
         "nanox" => finalize_nanox_configuration(&mut command, &bolos_sdk),
         "nanosplus" => finalize_nanosplus_configuration(&mut command, &bolos_sdk),
-        _ => "".to_string(),
+        target_name => panic!(
+            "invalid target `{}`, expected one of `nanos`, `nanox`, `nanosplus`. Run with `cargo build -Z build-std=core --target=./<target name>.json`",
+            target_name
+        ),
     };
 
     // all 'finalize_...' functions also declare a new 'cfg' variable corresponding
