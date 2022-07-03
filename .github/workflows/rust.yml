@@ -16,6 +16,11 @@ env:
 jobs:
   build_clippy_fmt:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        target: ["nanos", "nanox", "nanosplus"]
+
     steps:
       - name: arm-none-eabi-gcc
         uses: fiam/arm-none-eabi-gcc@v1.0.3
@@ -36,26 +41,16 @@ jobs:
           override: true
           target: thumbv8m.main-none-eabi 
           components: rust-src, rustfmt, clippy
-      - name: Cargo build Nano S
+      - name: Cargo build
         uses: actions-rs/cargo@v1
         with:
           command: build 
-          args: -Z build-std=core --target ./nanos.json
-      - name: Cargo build Nano X
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: -Z build-std=core --target ./nanox.json
-      - name: Cargo build Nano S Plus
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: -Z build-std=core --target ./nanosplus.json
+          args: -Z build-std=core --target ./{{ matrix.target }}.json
       - name: Cargo clippy
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: -- -D warnings
+          args: -Z build-std=core --target ./{{ matrix.target }}.json -- -D warnings
       - name: Cargo fmt
         uses: actions-rs/cargo@v1
         with:
