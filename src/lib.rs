@@ -3,7 +3,6 @@
 #![feature(custom_test_frameworks)]
 #![reexport_test_harness_main = "test_main"]
 #![test_runner(sdk_test_runner)]
-#![feature(asm)]
 #![feature(const_panic)]
 #![cfg_attr(not(feature = "pre1_54"), feature(const_fn_trait_bound))]
 
@@ -18,6 +17,7 @@ pub mod usbbindings;
 
 use bindings::os_sched_exit;
 
+use core::arch::asm;
 use core::{ffi::c_void, panic::PanicInfo};
 
 /// In case of runtime problems, return an internal error and exit the app
