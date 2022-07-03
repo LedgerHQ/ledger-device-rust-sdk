@@ -46,12 +46,12 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build 
-          args: -Z build-std=core --target ./{{ matrix.target }}.json
+          args: -Z build-std=core --target ./${{ matrix.target }}.json
       - name: Cargo clippy
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: -Z build-std=core --target ./{{ matrix.target }}.json -- -D warnings
+          args: -Z build-std=core --target ./${{ matrix.target }}.json -- -D warnings
       - name: Cargo fmt
         uses: actions-rs/cargo@v1
         with:
