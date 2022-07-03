@@ -28,14 +28,14 @@ jobs:
           toolchain: nightly
           override: true
           target: thumbv6m-none-eabi 
-          components: rustfmt, clippy
+          components: rust-src, rustfmt, clippy
       - name: Install thumbv8 target (Nano S Plus)
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
           override: true
           target: thumbv8m.main-none-eabi 
-          components: rustfmt, clippy
+          components: rust-src, rustfmt, clippy
       - name: Cargo build Nano S
         uses: actions-rs/cargo@v1
         with:
