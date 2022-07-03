@@ -29,10 +29,21 @@ jobs:
           override: true
           target: thumbv6m-none-eabi 
           components: rustfmt, clippy
-      - name: Cargo build
+      - name: Cargo build Nano S
         uses: actions-rs/cargo@v1
         with:
           command: build 
+          args: -Z build-std=core --target ./nanos.json
+      - name: Cargo build Nano X
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: -Z build-std=core --target ./nanox.json
+      - name: Cargo build Nano S Plus
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: -Z build-std=core --target ./nanosplus.json
       - name: Cargo clippy
         uses: actions-rs/cargo@v1
         with:
