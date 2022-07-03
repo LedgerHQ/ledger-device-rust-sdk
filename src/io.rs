@@ -77,7 +77,7 @@ extern "C" {
 }
 
 /// Possible events returned by [`Comm::next_event`]
-#[derive(PartialEq)]
+#[derive(Eq, PartialEq)]
 pub enum Event<T> {
     /// APDU event
     Command(T),
