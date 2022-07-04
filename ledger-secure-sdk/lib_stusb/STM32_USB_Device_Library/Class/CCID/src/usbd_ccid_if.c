@@ -28,6 +28,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "os.h"
 #include "usbd_ccid_if.h"
+#include <string.h> 
 
 #ifdef HAVE_USB_CLASS_CCID
 
@@ -414,13 +415,14 @@ static void  CCID_Response_SendData(USBD_HandleTypeDef  *pdev,
       THROW(SWO_IOL_OFW_04);
     }
 
-    G_io_seproxyhal_spi_buffer[0] = SEPROXYHAL_TAG_USB_EP_PREPARE;
-    G_io_seproxyhal_spi_buffer[1] = (3+len)>>8;
-    G_io_seproxyhal_spi_buffer[2] = (3+len);
-    G_io_seproxyhal_spi_buffer[3] = CCID_BULK_IN_EP;
-    G_io_seproxyhal_spi_buffer[4] = SEPROXYHAL_TAG_USB_EP_PREPARE_DIR_IN;
-    G_io_seproxyhal_spi_buffer[5] = len;
-    io_seproxyhal_spi_send(G_io_seproxyhal_spi_buffer, 6);
+    uint8_t spi_buffer[6]; 
+    spi_buffer[0] = SEPROXYHAL_TAG_USB_EP_PREPARE;
+    spi_buffer[1] = (3+len)>>8;
+    spi_buffer[2] = (3+len);
+    spi_buffer[3] = CCID_BULK_IN_EP;
+    spi_buffer[4] = SEPROXYHAL_TAG_USB_EP_PREPARE_DIR_IN;
+    spi_buffer[5] = len;
+    io_seproxyhal_spi_send(spi_buffer, 6);
     io_seproxyhal_spi_send(buf, len);
 }
 
@@ -444,14 +446,15 @@ void CCID_IntMessage(USBD_HandleTypeDef  *pdev)
     
     CCID_SetIntrTransferStatus(0);  /* Reset the Status */
     CCID_UpdSlotChange(0);    /* Reset the Status of Slot Change */
-    
-    G_io_seproxyhal_spi_buffer[0] = SEPROXYHAL_TAG_USB_EP_PREPARE;
-    G_io_seproxyhal_spi_buffer[1] = (3+2)>>8;
-    G_io_seproxyhal_spi_buffer[2] = (3+2);
-    G_io_seproxyhal_spi_buffer[3] = CCID_INTR_IN_EP;
-    G_io_seproxyhal_spi_buffer[4] = SEPROXYHAL_TAG_USB_EP_PREPARE_DIR_IN;
-    G_io_seproxyhal_spi_buffer[5] = 2;
-    io_seproxyhal_spi_send(G_io_seproxyhal_spi_buffer, 6);
+
+    uint8_t spi_buffer[6]; 
+    spi_buffer[0] = SEPROXYHAL_TAG_USB_EP_PREPARE;
+    spi_buffer[1] = (3+2)>>8;
+    spi_buffer[2] = (3+2);
+    spi_buffer[3] = CCID_INTR_IN_EP;
+    spi_buffer[4] = SEPROXYHAL_TAG_USB_EP_PREPARE_DIR_IN;
+    spi_buffer[5] = 2;
+    io_seproxyhal_spi_send(spi_buffer, 6);
     io_seproxyhal_spi_send(G_io_ccid.UsbIntMessageBuffer, 2);
   }
 }  
@@ -590,6 +593,14 @@ void io_usb_ccid_reply(unsigned char* buffer, unsigned short length) {
   // forge reply
   RDR_to_PC_DataBlock(SLOT_NO_ERROR);
 
+  // start sending rpely
+  CCID_Send_Reply(&USBD_Device);
+}
+
+void io_usb_ccid_reply_bare(unsigned short length) {
+  G_io_ccid.bulk_header.bulkin.dwLength = length;
+  // forge reply
+  RDR_to_PC_DataBlock(SLOT_NO_ERROR);
   // start sending rpely
   CCID_Send_Reply(&USBD_Device);
 }

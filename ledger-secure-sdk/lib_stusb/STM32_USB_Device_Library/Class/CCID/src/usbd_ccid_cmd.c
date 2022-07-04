@@ -27,6 +27,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "usbd_ccid_cmd.h"
+#include <string.h>
 
 #ifdef HAVE_USB_CLASS_CCID
 
@@ -231,28 +232,28 @@ uint8_t  PC_to_RDR_XfrBlock(void)
   if (error != 0) 
     return error;
     
-    if (G_io_ccid.bulk_header.bulkout.dwLength > IO_CCID_DATA_BUFFER_SIZE)
-    { /* Check amount of Data Sent by Host is > than memory allocated ? */
-     
-      return SLOTERROR_BAD_DWLENGTH;
-    }
-
-
-    /* wLevelParameter = Size of expected data to be returned by the 
-                          bulk-IN endpoint */
-    expectedLength = (G_io_ccid.bulk_header.bulkout.bSpecific_2 << 8) | 
-                      G_io_ccid.bulk_header.bulkout.bSpecific_1;   
-
-    reqlen = G_io_ccid.bulk_header.bulkout.dwLength;
+  if (G_io_ccid.bulk_header.bulkout.dwLength > IO_CCID_DATA_BUFFER_SIZE)
+  { /* Check amount of Data Sent by Host is > than memory allocated ? */
     
-    G_io_ccid.bulk_header.bulkin.dwLength = (uint16_t)expectedLength;  
+    return SLOTERROR_BAD_DWLENGTH;
+  }
 
 
-    error = SC_XferBlock(&G_io_ccid_data_buffer[0], 
-                     reqlen, 
-                     &expectedLength); 
+  /* wLevelParameter = Size of expected data to be returned by the 
+                        bulk-IN endpoint */
+  expectedLength = (G_io_ccid.bulk_header.bulkout.bSpecific_2 << 8) | 
+                    G_io_ccid.bulk_header.bulkout.bSpecific_1;   
 
-   if (error != SLOT_NO_ERROR)
+  reqlen = G_io_ccid.bulk_header.bulkout.dwLength;
+  
+  G_io_ccid.bulk_header.bulkin.dwLength = (uint16_t)expectedLength;  
+
+
+  error = SC_XferBlock(&G_io_ccid_data_buffer[0], 
+                    reqlen, 
+                    &expectedLength); 
+
+  if (error != SLOT_NO_ERROR)
   {
     CCID_UpdateCommandStatus(BM_COMMAND_STATUS_FAILED, BM_ICC_PRESENT_ACTIVE);
   }
@@ -639,7 +640,6 @@ uint8_t  PC_TO_RDR_SetDataRateAndClockFrequency(void)
   uint8_t error;
   uint32_t clockFrequency;
   uint32_t dataRate;
-  uint32_t temp =0;
   
   error = CCID_CheckCommandParams(CHK_PARAM_SLOT |\
     CHK_PARAM_CARD_PRESENT |\
