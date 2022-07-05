@@ -152,15 +152,15 @@ fn main() -> Result<(), Box<dyn Error>> {
             bolos_sdk
         ))
         .file(format!(
-            "{}/lib_stusb/STM32_USB_Device_Library/Class/CCID/Src/usbd_ccid_cmd.c",
+            "{}/lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_cmd.c",
             bolos_sdk
         ))
         .file(format!(
-            "{}/lib_stusb/STM32_USB_Device_Library/Class/CCID/Src/usbd_ccid_core.c",
+            "{}/lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_core.c",
             bolos_sdk
         ))
         .file(format!(
-            "{}/lib_stusb/STM32_USB_Device_Library/Class/CCID/Src/usbd_ccid_if.c",
+            "{}/lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_if.c",
             bolos_sdk
         ))
         .define("HAVE_LOCAL_APDU_BUFFER", None)
@@ -187,7 +187,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             bolos_sdk
         ))
         .include(format!(
-            "{}/lib_stusb/STM32_USB_Device_Library/Class/CCID/Inc",
+            "{}/lib_stusb/STM32_USB_Device_Library/Class/CCID/inc",
             bolos_sdk
         ))
         .flag("-Oz")
