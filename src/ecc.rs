@@ -4,6 +4,7 @@ use crate::io::SyscallError;
 #[repr(u8)]
 pub enum CurvesId {
     Secp256k1 = CX_CURVE_SECP256K1,
+    Secp256r1 = CX_CURVE_SECP256R1,
 }
 
 /// Wrapper for 'os_perso_derive_node_bip32'
