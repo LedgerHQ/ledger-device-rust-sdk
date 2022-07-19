@@ -3,6 +3,8 @@
 #![feature(custom_test_frameworks)]
 #![reexport_test_harness_main = "test_main"]
 #![test_runner(sdk_test_runner)]
+#![allow(incomplete_features)]
+#![feature(generic_const_exprs)]
 
 pub mod bindings;
 pub mod buttons;
@@ -19,7 +21,6 @@ use core::{ffi::c_void, panic::PanicInfo};
 
 /// In case of runtime problems, return an internal error and exit the app
 #[inline]
-#[cfg_attr(test, panic_handler)]
 pub fn exiting_panic(_info: &PanicInfo) -> ! {
     let mut comm = io::Comm::new();
     comm.reply(io::StatusWords::Panic);
@@ -57,6 +58,32 @@ pub fn debug_print(s: &str) {
             );
         }
     }
+}
+
+#[cfg(feature = "speculos")]
+pub fn to_hex(m: u32) -> [u8; 8] {
+    let mut hex = [0u8; 8];
+    let mut i = 0;
+    for c in m.to_be_bytes().iter() {
+        let c0 = char::from_digit((c >> 4).into(), 16).unwrap();
+        let c1 = char::from_digit((c & 0xf).into(), 16).unwrap();
+        hex[i] = c0 as u8;
+        hex[i + 1] = c1 as u8;
+        i += 2;
+    }
+    hex
+}
+
+#[cfg(test)]
+#[cfg_attr(test, panic_handler)]
+pub fn test_panic(info: &PanicInfo) -> ! {
+    debug_print("Panic! ");
+    let loc = info.location().unwrap();
+    debug_print(loc.file());
+    debug_print("\n");
+    debug_print(core::str::from_utf8(&to_hex(loc.line())).unwrap());
+    debug_print("\n");
+    exit_app(0);
 }
 
 /// Custom type used to implement tests
@@ -201,21 +228,4 @@ impl<T> Pic<T> {
 fn sample_main() {
     test_main();
     exit_app(0);
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::assert_eq_err as assert_eq;
-    use testmacro::test_item as test;
-
-    #[test]
-    fn test1() {
-        assert_eq!(2, 2);
-    }
-
-    #[test]
-    fn test2() {
-        assert_eq!(3, 2);
-    }
 }

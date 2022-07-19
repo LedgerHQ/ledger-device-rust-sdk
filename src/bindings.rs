@@ -2977,14 +2977,14 @@ extern "C" {
         pvkey: *mut cx_ecfp_private_key_t,
     ) -> cx_err_t;
 }
-extern "C" {
-    pub fn cx_ecfp_generate_pair_no_throw(
-        curve: cx_curve_t,
-        pubkey: *mut cx_ecfp_public_key_t,
-        privkey: *mut cx_ecfp_private_key_t,
-        keepprivate: bool,
-    ) -> cx_err_t;
-}
+// extern "C" {
+//     pub fn cx_ecfp_generate_pair_no_throw(
+//         curve: cx_curve_t,
+//         pubkey: *mut cx_ecfp_public_key_t,
+//         privkey: *mut cx_ecfp_private_key_t,
+//         keepprivate: bool,
+//     ) -> cx_err_t;
+// }
 extern "C" {
     pub fn cx_ecfp_generate_pair2_no_throw(
         curve: cx_curve_t,
@@ -3870,47 +3870,47 @@ extern "C" {
         outblock: *mut u8,
     ) -> cx_err_t;
 }
-extern "C" {
-    pub fn cx_ecdsa_sign_no_throw(
-        pvkey: *const cx_ecfp_private_key_t,
-        mode: u32,
-        hashID: cx_md_t,
-        hash: *const u8,
-        hash_len: size_t,
-        sig: *mut u8,
-        sig_len: *mut size_t,
-        info: *mut u32,
-    ) -> cx_err_t;
-}
-extern "C" {
-    pub fn cx_ecdsa_verify_no_throw(
-        pukey: *const cx_ecfp_public_key_t,
-        hash: *const u8,
-        hash_len: size_t,
-        sig: *const u8,
-        sig_len: size_t,
-    ) -> bool;
-}
-extern "C" {
-    pub fn cx_eddsa_sign_no_throw(
-        pvkey: *const cx_ecfp_private_key_t,
-        hashID: cx_md_t,
-        hash: *const u8,
-        hash_len: size_t,
-        sig: *mut u8,
-        sig_len: size_t,
-    ) -> cx_err_t;
-}
-extern "C" {
-    pub fn cx_eddsa_verify_no_throw(
-        pukey: *const cx_ecfp_public_key_t,
-        hashID: cx_md_t,
-        hash: *const u8,
-        hash_len: size_t,
-        sig: *const u8,
-        sig_len: size_t,
-    ) -> bool;
-}
+// extern "C" {
+//     pub fn cx_ecdsa_sign_no_throw(
+//         pvkey: *const cx_ecfp_private_key_t,
+//         mode: u32,
+//         hashID: cx_md_t,
+//         hash: *const u8,
+//         hash_len: size_t,
+//         sig: *mut u8,
+//         sig_len: *mut size_t,
+//         info: *mut u32,
+//     ) -> cx_err_t;
+// }
+// extern "C" {
+//     pub fn cx_ecdsa_verify_no_throw(
+//         pukey: *const cx_ecfp_public_key_t,
+//         hash: *const u8,
+//         hash_len: size_t,
+//         sig: *const u8,
+//         sig_len: size_t,
+//     ) -> bool;
+// }
+// extern "C" {
+//     pub fn cx_eddsa_sign_no_throw(
+//         pvkey: *const cx_ecfp_private_key_t,
+//         hashID: cx_md_t,
+//         hash: *const u8,
+//         hash_len: size_t,
+//         sig: *mut u8,
+//         sig_len: size_t,
+//     ) -> cx_err_t;
+// }
+// extern "C" {
+//     pub fn cx_eddsa_verify_no_throw(
+//         pukey: *const cx_ecfp_public_key_t,
+//         hashID: cx_md_t,
+//         hash: *const u8,
+//         hash_len: size_t,
+//         sig: *const u8,
+//         sig_len: size_t,
+//     ) -> bool;
+// }
 extern "C" {
     pub fn cx_encode_coord(coord: *mut u8, len: cty::c_int, sign: cty::c_int);
 }
