@@ -5,7 +5,7 @@ extern "C" {
 
 pub fn send(buf: &[u8]) {
     unsafe {
-        G_io_apdu_buffer.copy_from_slice(buf);
+        G_io_apdu_buffer[..buf.len()].copy_from_slice(buf);
         io_usb_ccid_reply_bare(buf.len() as u16);
     }
 }
