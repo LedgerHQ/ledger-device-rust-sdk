@@ -3,7 +3,8 @@
 #![feature(custom_test_frameworks)]
 #![reexport_test_harness_main = "test_main"]
 #![test_runner(sdk_test_runner)]
-#![feature(core_ffi_c)]
+#![allow(incomplete_features)]
+#![feature(generic_const_exprs)]
 
 pub mod bindings;
 
@@ -43,9 +44,6 @@ macro_rules! set_panic {
         }
     };
 }
-
-#[cfg(feature = "speculos")]
-use core::arch::asm;
 
 /// Debug 'print' function that uses ARM semihosting
 /// Prints only strings with no formatting
