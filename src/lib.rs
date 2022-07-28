@@ -15,6 +15,7 @@ pub mod usbbindings;
 
 use bindings::os_sched_exit;
 
+use core::arch::asm;
 use core::{ffi::c_void, panic::PanicInfo};
 
 /// In case of runtime problems, return an internal error and exit the app
