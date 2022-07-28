@@ -24,10 +24,22 @@ Using rustc nightly builds is recommanded as some unstable features are
 required.
 
 - `rustup default nightly`
-- `rustup target add thumbv6m-none-eabi` for Nano S and Nano X builds
-- `rustup target add thumbv8m.main-none-eabi` for Nano S+ builds
+- `rustup component add rust-src`
 - install [Clang](http://releases.llvm.org/download.html).
-- install an [ARM GCC toolchain](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads)
+- install an [ARM gcc toolchain](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads)
+
+If you wish to install the ARM gcc toolchain using your distribution's packages, these commands should work:
+
+```bash
+# On Debian and Ubuntu
+sudo apt install clang gcc-arm-none-eabi gcc-multilib
+
+# On Fedora or Red Hat Entreprise Linux
+sudo dnf install clang arm-none-eabi-gcc arm-none-eabi-newlib
+
+# On ArchLinux
+sudo pacman -S clang arm-none-eabi-gcc arm-none-eabi-newlib
+```
 
 This SDK provides three [custom target](https://doc.rust-lang.org/rustc/targets/custom.html) files for Nano S, Nano X and Nano S+.
 
