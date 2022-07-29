@@ -16,28 +16,36 @@ env:
 jobs:
   build_clippy_fmt:
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ["nanos", "nanox", "nanosplus"]
+
     steps:
       - name: arm-none-eabi-gcc
         uses: fiam/arm-none-eabi-gcc@v1.0.3
         with:
           release: '9-2019-q4'
-      - uses: actions/checkout@v2
-      - name: Install thumbv6 target
+      - name: Install clang
+        run: sudo apt-get update && sudo apt install -y clang
+      - name: Install toolchains
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
-          override: true
-          target: thumbv6m-none-eabi 
-          components: rustfmt, clippy
+          default: true
+          components: rust-src, rustfmt, clippy
+      - uses: actions/checkout@v2
       - name: Cargo build
         uses: actions-rs/cargo@v1
         with:
           command: build 
+          args: -Z build-std=core --target ./${{ matrix.target }}.json
       - name: Cargo clippy
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: -- -D warnings
+          args: -Z build-std=core --target ./${{ matrix.target }}.json -- -D warnings
       - name: Cargo fmt
         uses: actions-rs/cargo@v1
         with:

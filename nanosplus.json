@@ -1,0 +1,23 @@
+{
+  "abi": "eabi",
+  "arch": "arm",
+  "c-enum-min-bits": 8,
+  "data-layout": "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64",
+  "emit-debug-gdb-scripts": false,
+  "executables": true,
+  "frame-pointer": "always",
+  "linker": "rust-lld",
+  "linker-flavor": "ld.lld",
+  "llvm-target": "thumbv8m.main-none-eabi",
+  "max-atomic-width": 32,
+  "panic-strategy": "abort",
+  "pre-link-args": {
+      "ld.lld": [
+          "-Tnanosplus_layout.ld",
+          "-Tlink.ld"
+      ]
+  },
+  "relocation-model": "ropi-rwpi",
+  "singlethread": true,
+  "target-pointer-width": "32"
+}

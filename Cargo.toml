@@ -1,24 +1,20 @@
 [package]
 name = "nanos_sdk"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["yhql"]
-edition = "2018"
+edition = "2021"
 
 [build-dependencies]
-cc = "1.0"
+cc = "1.0.73"
 
 [dev-dependencies]
 testmacro = { git = "https://github.com/yhql/testmacro"} 
 
 [dependencies]
-cty = "0.2.0"
 num-traits = { version = "0.2.14", default-features = false }
 
-[profile.dev]
-panic = "abort"
 
 [profile.release]
-panic = "abort"
 opt-level = 's' 
 lto = true
 

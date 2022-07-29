@@ -104,8 +104,8 @@ impl<T> SingleStorage<T> for AlignedStorage<T> {
     fn update(&mut self, value: &T) {
         unsafe {
             nvm_write(
-                &self.value as *const T as *const cty::c_void as *mut cty::c_void,
-                value as *const T as *const cty::c_void as *mut cty::c_void,
+                &self.value as *const T as *const core::ffi::c_void as *mut core::ffi::c_void,
+                value as *const T as *const core::ffi::c_void as *mut core::ffi::c_void,
                 core::mem::size_of::<T>() as u32,
             );
             let mut _dummy = &self.value;
@@ -167,16 +167,29 @@ impl<T> SingleStorage<T> for SafeStorage<T> {
 
 /// Non-Volatile data storage with atomic update support.
 /// Takes at minimum twice the size of the data to be stored, plus 2 bytes.
-#[repr(align(64))]
-pub struct AtomicStorage<T> {
-    // We must keep the storage B in another page, so when we update the
-    // storage A, erasing the page of A won't modify the storage for B.
-    // This is currently garanteed by the alignment of AlignedStorage.
-    storage_a: SafeStorage<T>,
-    storage_b: SafeStorage<T>, // We also accept situations where both storages are marked as valid, which
-                               // can happen with tearing. This is not a problem, and we consider the first
-                               // one is the "correct" one.
+/// Aligning to the required page size is done through a macro
+/// as `#[repr(align(N))]` does not accept variable 'N'
+macro_rules! atomic_storage {
+    ($n:expr) => {
+        #[repr(align($n))]
+        pub struct AtomicStorage<T> {
+            // We must keep the storage B in another page, so when we update the
+            // storage A, erasing the page of A won't modify the storage for B.
+            // This is currently garanteed by the alignment of AlignedStorage.
+            storage_a: SafeStorage<T>,
+            storage_b: SafeStorage<T>, // We also accept situations where both storages are marked as valid, which
+                                       // can happen with tearing. This is not a problem, and we consider the first
+                                       // one is the "correct" one.
+        }
+    };
 }
+
+#[cfg(nanos)]
+atomic_storage!(64);
+#[cfg(nanox)]
+atomic_storage!(256);
+#[cfg(nanosplus)]
+atomic_storage!(512);
 
 pub enum AtomicStorageElem {
     StorageA,

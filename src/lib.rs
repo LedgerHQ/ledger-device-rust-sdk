@@ -7,11 +7,16 @@
 #![feature(generic_const_exprs)]
 
 pub mod bindings;
+
+#[cfg(nanox)]
+pub mod ble;
+
 pub mod buttons;
 pub mod ecc;
 pub mod io;
 pub mod nvm;
 pub mod random;
+pub mod screen;
 pub mod seph;
 pub mod usbbindings;
 
@@ -40,11 +45,11 @@ macro_rules! set_panic {
     };
 }
 
+/// Debug 'print' function that uses ARM semihosting
+/// Prints only strings with no formatting
 #[cfg(feature = "speculos")]
 use core::arch::asm;
 
-/// Debug 'print' function that uses ARM semihosting
-/// Prints only strings with no formatting
 #[cfg(feature = "speculos")]
 pub fn debug_print(s: &str) {
     let p = s.as_bytes().as_ptr();
