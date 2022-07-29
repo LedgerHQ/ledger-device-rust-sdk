@@ -382,6 +382,10 @@ macro_rules! impl_curve {
             pub fn new() -> ECPrivateKey<$size, $curvetype> {
                 ECPrivateKey::<$size, $curvetype>::new(CurvesId::$typename)
             }
+
+            pub fn from_bip32(path: &[u32]) -> ECPrivateKey<$size, $curvetype> {
+                ECPrivateKey::<$size, $curvetype>::new(CurvesId::$typename).bip32_fill(path)
+            }
         }
     };
 }
@@ -534,7 +538,7 @@ mod tests {
 
     #[test]
     fn ecdsa_secp256k1() {
-        let sk = Secp256k1::new().bip32_fill(&PATH);
+        let sk = Secp256k1::from_bip32(&PATH);
         let s = sk
             .deterministic_sign(TEST_HASH)
             .map_err(display_error_code)?;
@@ -546,7 +550,7 @@ mod tests {
 
     #[test]
     fn ecdsa_secp256r1() {
-        let sk = Secp256r1::new().bip32_fill(&PATH);
+        let sk = Secp256r1::from_bip32(&PATH);
         let s = sk
             .deterministic_sign(TEST_HASH)
             .map_err(display_error_code)?;
@@ -558,7 +562,7 @@ mod tests {
 
     #[test]
     fn ecdsa_secp384r1() {
-        let sk = Secp384r1::new().bip32_fill(&PATH);
+        let sk = Secp384r1::from_bip32(&PATH);
         let s = sk
             .deterministic_sign(TEST_HASH)
             .map_err(display_error_code)?;
@@ -570,7 +574,7 @@ mod tests {
 
     // #[test]
     // fn ecdsa_secp521r1() {
-    //     let sk = Secp521r1::new().bip32_fill(&PATH);
+    //     let sk = Secp521r1::from_bip32(&PATH);
     //     let s = sk.deterministic_sign(TEST_HASH).map_err(display_error_code)?;
     //     let pk = sk.public_key().map_err(display_error_code)?;
     //     assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
@@ -578,7 +582,7 @@ mod tests {
 
     #[test]
     fn ecdsa_brainpool256r1() {
-        let sk = BrainpoolP256R1::new().bip32_fill(&PATH);
+        let sk = BrainpoolP256R1::from_bip32(&PATH);
         let pk = sk.public_key().map_err(display_error_code)?;
         let s = sk
             .deterministic_sign(TEST_HASH)
@@ -590,7 +594,7 @@ mod tests {
 
     #[test]
     fn ecdsa_brainpool320r1() {
-        let sk = BrainpoolP320R1::new().bip32_fill(&PATH);
+        let sk = BrainpoolP320R1::from_bip32(&PATH);
         let s = sk
             .deterministic_sign(TEST_HASH)
             .map_err(display_error_code)?;
@@ -602,7 +606,7 @@ mod tests {
 
     #[test]
     fn ecdsa_brainpool384r1() {
-        let sk = BrainpoolP384R1::new().bip32_fill(&PATH);
+        let sk = BrainpoolP384R1::from_bip32(&PATH);
         let s = sk
             .deterministic_sign(TEST_HASH)
             .map_err(display_error_code)?;
@@ -614,7 +618,7 @@ mod tests {
 
     #[test]
     fn ecdsa_brainpool512r1() {
-        let sk = BrainpoolP512R1::new().bip32_fill(&PATH);
+        let sk = BrainpoolP512R1::from_bip32(&PATH);
         let s = sk
             .deterministic_sign(TEST_HASH)
             .map_err(display_error_code)?;
@@ -626,7 +630,7 @@ mod tests {
 
     // #[test]
     // fn ecdsa_frp256v1() {
-    //     let sk = FRP256v1::new().bip32_fill(&PATH);
+    //     let sk = FRP256v1::from_bip32(&PATH);
     //     let s = sk.deterministic_sign(TEST_HASH, CX_SHA256).map_err(display_error_code)?;
     //     let pk = sk.public_key().map_err(display_error_code)?;
     //     assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
@@ -634,7 +638,7 @@ mod tests {
 
     #[test]
     fn ecdsa_stark256() {
-        let sk = Stark256::new().bip32_fill(&PATH);
+        let sk = Stark256::from_bip32(&PATH);
         let s = sk
             .deterministic_sign(TEST_HASH)
             .map_err(display_error_code)?;
@@ -646,7 +650,7 @@ mod tests {
 
     #[test]
     fn eddsa_ed25519() {
-        let sk = Ed25519::new().bip32_fill(&PATH);
+        let sk = Ed25519::from_bip32(&PATH);
         let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
         let pk = sk.public_key().map_err(display_error_code)?;
         assert_eq!(pk.verify((&s.0, s.1), TEST_HASH, CX_SHA512), true);
@@ -654,7 +658,7 @@ mod tests {
 
     // #[test]
     // fn ecdsa_ed448() {
-    //     let sk = Ed448::new().bip32_fill(&PATH);
+    //     let sk = Ed448::from_bip32(&PATH);
     //     let s = sk.sign(TEST_HASH, CX_SHAKE256).map_err(display_error_code)?;
     //     let pk = sk.public_key().map_err(display_error_code)?;
     //     assert_eq!(pk.verify((&s.0, s.1), TEST_HASH, CX_SHAKE256), true);

@@ -13,9 +13,7 @@ use nanos_sdk::ecc::{make_bip32_path, BrainpoolP384R1};
 const PATH: [u32; 5] = make_bip32_path(b"m/44'/123'/0'/0/0");
 
 fn sign_message_const(m: &[u8], path: &[u32]) -> Result<([u8; 104], u32), u32> {
-    Ok(BrainpoolP384R1::new()
-        .bip32_fill(path)
-        .deterministic_sign(m)?)
+    Ok(BrainpoolP384R1::from_bip32(path).deterministic_sign(m)?)
 }
 
 #[no_mangle]
