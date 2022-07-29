@@ -42,7 +42,7 @@ pub fn sdk_bagl_hal_draw_bitmap_within_rect(
     inverted: bool,
     bitmap: &[u8],
 ) {
-    let inverted_ptr = [inverted as u32, !inverted as u32].as_ptr();
+    let inverted = [inverted as u32, !inverted as u32];
     unsafe {
         bagl_hal_draw_bitmap_within_rect(
             x,
@@ -50,7 +50,7 @@ pub fn sdk_bagl_hal_draw_bitmap_within_rect(
             width,
             height,
             2,
-            inverted_ptr,
+            inverted.as_ptr(),
             1,
             bitmap.as_ptr(),
             (bitmap.len() * 8) as u32,
