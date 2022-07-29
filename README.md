@@ -1,4 +1,4 @@
-# Ledger Nano SDK for Rust Applications
+# Ledger wallets SDK for Rust Applications
 
 Crate that allows developing Ledger Nano apps in Rust with a default configuration.
 
@@ -7,21 +7,27 @@ Contains:
 - low-level pre-generated bindings to the C SDK version 2.0
 - some safe wrappers over common syscalls
 - IO abstractions
+- signature abstractions
 
-This SDK is still in BETA as wrappers are currently missing, but two apps were made using it:
+This SDK is incomplete in the sense that wrappers are currently missing, and not all wrappers have a nice Rust abstraction on top, but two apps were made using it:
 
 - [A demo application with a signature UI workflow](https://github.com/LedgerHQ/rust-app)
 - [A Password Manager](https://github.com/LedgerHQ/rust-app-password-manager)
 
-All issues and PRs are welcome ! 
+You can submit an issue or even a pull request if you wish to contribute, we will check what we can do.
+
+## Supported devices
+
+|       Nano S       |       Nano X       |    Nano S Plus     |
+| ------------------ | ------------------ | ------------------ |
+| :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 
 ## Usage
 
-Building requires adding a toolchain to your Rust installation, and both Clang and arm-none-eabi-gcc.
+Building requires adding `rust-src` to your Rust installation, and both Clang and arm-none-eabi-gcc.
 On Ubuntu, `gcc-multilib` might also be required.
 
-Using rustc nightly builds is recommanded as some unstable features are
-required.
+Using rustc nightly builds is mandatory as some unstable features are required.
 
 - `rustup default nightly`
 - `rustup component add rust-src`
