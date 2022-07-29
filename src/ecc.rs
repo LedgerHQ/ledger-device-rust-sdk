@@ -1,13 +1,422 @@
 use crate::bindings::*;
-use crate::io::SyscallError;
 
 #[repr(u8)]
+#[derive(Copy, Clone)]
 pub enum CurvesId {
     Secp256k1 = CX_CURVE_SECP256K1,
+    Secp256r1 = CX_CURVE_SECP256R1,
+    Secp384r1 = CX_CURVE_SECP384R1,
+    BrainpoolP256T1 = CX_CURVE_BrainPoolP256T1,
+    BrainpoolP256R1 = CX_CURVE_BrainPoolP256R1,
+    BrainpoolP320R1 = CX_CURVE_BrainPoolP320R1,
+    BrainpoolP320T1 = CX_CURVE_BrainPoolP320T1,
+    BrainpoolP384T1 = CX_CURVE_BrainPoolP384T1,
+    BrainpoolP384R1 = CX_CURVE_BrainPoolP384R1,
+    BrainpoolP512T1 = CX_CURVE_BrainPoolP512T1,
+    BrainpoolP512R1 = CX_CURVE_BrainPoolP512R1,
+    Bls12381G1 = CX_CURVE_BLS12_381_G1, // unsupported in speculos
+    FRP256v1 = CX_CURVE_FRP256V1,       // unsupported in speculos
+    Stark256 = CX_CURVE_Stark256,
+    Ed25519 = CX_CURVE_Ed25519,
+    Ed448 = CX_CURVE_Ed448,           // unsupported in speculos
+    Curve25519 = CX_CURVE_Curve25519, // unsupported in speculos
+    Curve448 = CX_CURVE_Curve448,     // unsupported in speculos
+    Secp521r1 = CX_CURVE_SECP521R1,   // unsupported in speculos
+    Invalid,
 }
 
+pub enum CxError {
+    Carry,
+    Locked,
+    Unlocked,
+    NotLocked,
+    NotUnlocked,
+    InternalError,
+    InvalidParameterSize,
+    InvalidParameterValue,
+    InvalidParameter,
+    NotInvertible,
+    Overflow,
+    MemoryFull,
+    NoResidue,
+    PointAtInfinity,
+    InvalidPoint,
+    InvalidCurve,
+    GenericError,
+}
+
+impl From<u32> for CxError {
+    fn from(x: u32) -> CxError {
+        match x {
+            CX_CARRY => CxError::Carry,
+            CX_LOCKED => CxError::Carry,
+            CX_UNLOCKED => CxError::Unlocked,
+            CX_NOT_LOCKED => CxError::NotLocked,
+            CX_NOT_UNLOCKED => CxError::NotUnlocked,
+            CX_INTERNAL_ERROR => CxError::InternalError,
+            CX_INVALID_PARAMETER_SIZE => CxError::InvalidParameterSize,
+            CX_INVALID_PARAMETER_VALUE => CxError::InvalidParameterValue,
+            CX_INVALID_PARAMETER => CxError::InvalidParameter,
+            CX_NOT_INVERTIBLE => CxError::NotInvertible,
+            CX_OVERFLOW => CxError::Overflow,
+            CX_MEMORY_FULL => CxError::MemoryFull,
+            CX_NO_RESIDUE => CxError::NoResidue,
+            CX_EC_INFINITE_POINT => CxError::PointAtInfinity,
+            CX_EC_INVALID_POINT => CxError::InvalidPoint,
+            CX_EC_INVALID_CURVE => CxError::InvalidCurve,
+            _ => CxError::GenericError,
+        }
+    }
+}
+
+impl From<CxError> for u32 {
+    fn from(e: CxError) -> u32 {
+        e as u32
+    }
+}
+
+extern "C" {
+    pub fn cx_ecfp_generate_pair_no_throw(
+        curve: cx_curve_t,
+        pubkey: *mut ECCKeyRaw,
+        privkey: *const ECCKeyRaw, // This binding is forced to 'const' assuming `keepprivate` will always be set to `true`
+        keepprivate: bool,
+    ) -> cx_err_t;
+    pub fn cx_ecdsa_sign_no_throw(
+        pvkey: *const ECCKeyRaw,
+        mode: u32,
+        hashID: cx_md_t,
+        hash: *const u8,
+        hash_len: size_t,
+        sig: *mut u8,
+        sig_len: *mut size_t,
+        info: *mut u32,
+    ) -> cx_err_t;
+    pub fn cx_ecdsa_verify_no_throw(
+        pukey: *const ECCKeyRaw,
+        hash: *const u8,
+        hash_len: size_t,
+        sig: *const u8,
+        sig_len: size_t,
+    ) -> bool;
+    pub fn cx_eddsa_sign_no_throw(
+        pvkey: *const ECCKeyRaw,
+        hashID: cx_md_t,
+        hash: *const u8,
+        hash_len: size_t,
+        sig: *mut u8,
+        sig_len: size_t,
+    ) -> cx_err_t;
+    pub fn cx_eddsa_verify_no_throw(
+        pukey: *const ECCKeyRaw,
+        hashID: cx_md_t,
+        hash: *const u8,
+        hash_len: size_t,
+        sig: *const u8,
+        sig_len: size_t,
+    ) -> bool;
+}
+
+/// This structure serves the sole purpose of being cast into
+/// from `ECPrivateKey` or `ECPublicKey` when calling bindings
+/// to elliptic curve cryptographic bindings
+/// It is not intended to be constructed directly.
+#[repr(C)]
+pub struct ECCKeyRaw {
+    curve: CurvesId,
+    keylength: usize,
+    key: [u8; 160],
+}
+
+/// This structure matches the lower-level C `cx_ecfp_private_key_t` type
+/// so it can be passed to ecc-related syscalls as itself, rather than
+/// making an entirely different structure that would need to allocate
+/// exactly this type before calling C functions.
+/// It has two const parameters `N` and `TY` which represent the length
+/// in bytes of the buffer holding the key, and the type of curve among
+/// 'W' (Weierstrass), 'M' (Montgomery) and 'E' (Edwards).
+/// This latter const parameter allows routing the signing function to
+/// the correct call. ECDSA for example cannot be used for Edwards'
+/// curves, we have to use EdDSA instead.
+#[repr(C)]
+pub struct ECPrivateKey<const N: usize, const TY: char> {
+    curve: CurvesId,
+    keylength: usize,
+    key: [u8; N],
+}
+
+/// Represents a public key, its layout matching the C SDK's `cx_ecfp_public_key_t` type.
+///
+/// An ECPublicKey can only be created by calling `ECPrivateKey::public_key()`
+/// It is parameterized by the length of the buffer as well and, as this
+/// buffer has to be exactly twice the size of the private key + 1 byte,
+/// it is constructed from the private key using its const length parameter.
+///
+/// # Examples
+///
+/// ```
+/// let sk = ECPrivateKey::<32, 'W'>::new();
+/// let public_key = sk.public_key();
+/// ```
+#[repr(C)]
+pub struct ECPublicKey<const S: usize, const TY: char> {
+    curve: CurvesId,
+    keylength: usize,
+    pubkey: [u8; S],
+}
+
+impl<const N: usize, const TY: char> Default for ECPrivateKey<N, TY> {
+    fn default() -> ECPrivateKey<N, TY> {
+        ECPrivateKey {
+            curve: CurvesId::Invalid,
+            keylength: N,
+            key: [0u8; N],
+        }
+    }
+}
+
+/// Cleanup keys from memory when dropping this structure.
+impl<const N: usize, const TY: char> Drop for ECPrivateKey<N, TY> {
+    #[inline(never)]
+    fn drop(&mut self) {
+        self.key.fill_with(|| 0);
+    }
+}
+
+/// This is the most generic implementation for ECPrivateKey.
+/// It provides a way to create a new private key structure
+/// by specifying its length (const parameter `N`), and its
+/// type (const parameter `TY`).
+/// It defines the needed lengths for holding a complete
+/// signature (`const Y`) and a public key (`const S`)
+impl<const N: usize, const TY: char> ECPrivateKey<N, TY> {
+    /// Size of the public key relative to the private key's size
+    pub const P: usize = 2 * N + 1;
+
+    /// Size of the encoded signature relative to the private key's size
+    pub const S: usize = 6 + 2 * (N + 1);
+
+    /// Create a new private key from a curve identifier and with a given
+    /// length and type. The preferred way to create a key is by using
+    /// a curve type directly like `Secp256k1::new()`
+    pub fn new(curve: CurvesId) -> ECPrivateKey<N, TY> {
+        ECPrivateKey {
+            curve,
+            keylength: N,
+            key: [0u8; N],
+        }
+    }
+
+    /// Fill the key buffer `ECPrivateKey<_,_>.key` with bytes
+    /// derived from the seed through BIP32 using the curve secp256k1
+    pub fn bip32_fill(mut self, path: &[u32]) -> ECPrivateKey<N, TY> {
+        bip32_derive(CurvesId::Secp256k1, path, &mut self.key);
+        self
+    }
+
+    /// Retrieve the public key corresponding to the private key (`self`)
+    /// The size of the structure holding fits exactly that public key.
+    ///
+    /// # Const annotation
+    ///
+    /// The result of this function is an `ECPublicKey<{Self::P}, TY>`
+    /// where `Self::P` is a constant computed at compile time which is
+    /// (for Weierstrass curves at least) 2*N+1. The `TY` parameter
+    /// is the curve type, which is the same as the private key.
+    ///
+    /// The `where [(); Self::P]:` clause can be surprising: it is some
+    /// sort of an 'existential'  clause that is here to make sure that
+    /// `Self::P` can actually be computed. An explanation can be found
+    /// [here](https://blog.rust-lang.org/inside-rust/2021/09/06/Splitting-const-generics.html#featuregeneric_const_exprs)
+    pub fn public_key(&self) -> Result<ECPublicKey<{ Self::P }, TY>, CxError>
+    where
+        [(); Self::P]:,
+    {
+        let mut pubkey = ECPublicKey::<{ Self::P }, TY>::new(self.curve);
+        let err = unsafe {
+            cx_ecfp_generate_pair_no_throw(
+                self.curve as u8,
+                &mut pubkey as *mut ECPublicKey<{ Self::P }, TY> as *mut ECCKeyRaw,
+                self as *const ECPrivateKey<N, TY> as *const ECCKeyRaw,
+                true,
+            )
+        };
+        if err != 0 {
+            Err(err.into())
+        } else {
+            Ok(pubkey)
+        }
+    }
+}
+
+/// Weierstrass Curves-specific implementation
+impl<const N: usize> ECPrivateKey<N, 'W'> {
+    /// Sign the incoming message/hash using ECDSA in the given `mode` and with the given hash identifier.
+    /// This is a helper function. The two main interfaces are
+    /// - [`deterministic_sign`]
+    /// - [`sign`]
+    fn ecdsa_sign(
+        &self,
+        hash: &[u8],
+        hash_id: u8,
+        mode: u32,
+    ) -> Result<([u8; Self::S], u32), CxError> {
+        let mut sig = [0u8; Self::S];
+        let mut sig_len = Self::S as u32;
+        let mut info = 0;
+        let len = unsafe {
+            cx_ecdsa_sign_no_throw(
+                self as *const ECPrivateKey<N, 'W'> as *const ECCKeyRaw,
+                mode,
+                hash_id,
+                hash.as_ptr(),
+                hash.len() as u32,
+                sig.as_mut_ptr(),
+                &mut sig_len,
+                &mut info,
+            )
+        };
+        if len != CX_OK {
+            Err(len.into())
+        } else {
+            Ok((sig, sig_len))
+        }
+    }
+
+    /// Sign a message/hash using ECDSA with RFC6979, which provides a deterministic nonce rather than
+    /// a random one. This nonce is computed using a hash function, hence this function uses an
+    /// additional parameter `hash_id` that specifies which one it should use.
+    pub fn deterministic_sign(&self, hash: &[u8]) -> Result<([u8; Self::S], u32), CxError> {
+        let hash_id = match self.keylength {
+            x if x <= 32 => CX_SHA256,
+            x if x <= 48 => CX_SHA384,
+            x if x <= 64 => CX_SHA512,
+            _ => CX_BLAKE2B,
+        };
+        self.ecdsa_sign(hash, hash_id, (CX_RND_RFC6979 | CX_LAST) as u32)
+    }
+
+    /// Sign a message/hash using ECDSA in its original form
+    pub fn sign(&self, hash: &[u8]) -> Result<([u8; Self::S], u32), CxError> {
+        self.ecdsa_sign(hash, 0, (CX_RND_TRNG | CX_LAST) as u32)
+    }
+}
+
+/// Edwards Curves-specific implementation
+impl<const N: usize> ECPrivateKey<N, 'E'> {
+    /// Size of an Edwards curve public key relative to the private key size
+    pub const EP: usize = 2 * N;
+
+    pub fn sign(&self, hash: &[u8]) -> Result<([u8; Self::EP], u32), CxError> {
+        let mut sig = [0u8; Self::EP];
+        let sig_len = Self::EP as u32;
+        let hash_id = match self.keylength {
+            x if x <= 32 => CX_SHA512,
+            _ => CX_BLAKE2B,
+        };
+        let len = unsafe {
+            cx_eddsa_sign_no_throw(
+                self as *const ECPrivateKey<N, 'E'> as *const ECCKeyRaw,
+                hash_id,
+                hash.as_ptr(),
+                hash.len() as u32,
+                sig.as_mut_ptr(),
+                sig_len,
+            )
+        };
+        if len != CX_OK {
+            Err(len.into())
+        } else {
+            Ok((sig, sig_len))
+        }
+    }
+}
+
+/// General implementation for a public key.
+impl<const P: usize, const TY: char> ECPublicKey<P, TY> {
+    /// Size of a signature relative to the public key's size
+    pub const S: usize = 7 + P; // 6 + 2*(N+1)  and S = 2*N + 1
+
+    /// Creates a new ECPublicKey structure from a curve identifier
+    pub fn new(curve_id: CurvesId) -> ECPublicKey<P, TY> {
+        ECPublicKey::<P, TY> {
+            curve: curve_id,
+            keylength: P,
+            pubkey: [0u8; P],
+        }
+    }
+}
+
+/// Specific signature verification for Weierstrass curves, which
+/// all use ECDSA.
+impl<const P: usize> ECPublicKey<P, 'W'> {
+    pub fn verify(&self, signature: (&[u8], u32), hash: &[u8]) -> bool {
+        unsafe {
+            cx_ecdsa_verify_no_throw(
+                self as *const ECPublicKey<P, 'W'> as *const ECCKeyRaw,
+                hash.as_ptr(),
+                hash.len() as u32,
+                signature.0.as_ptr(),
+                signature.1,
+            )
+        }
+    }
+}
+
+/// Specific signature verification for Edwards curves, which all use EdDSA
+impl<const P: usize> ECPublicKey<P, 'E'> {
+    pub fn verify(&self, signature: (&[u8], u32), hash: &[u8], hash_id: u8) -> bool {
+        unsafe {
+            cx_eddsa_verify_no_throw(
+                self as *const ECPublicKey<P, 'E'> as *const ECCKeyRaw,
+                hash_id,
+                hash.as_ptr(),
+                hash.len() as u32,
+                signature.0.as_ptr(),
+                signature.1,
+            )
+        }
+    }
+}
+
+/// This macro is used to easily generate zero-sized structures named after a Curve.
+/// Each curve has a method `new()` that takes no arguments and returns the correctly
+/// const-typed `ECPrivateKey`.
+macro_rules! impl_curve {
+    ($typename:ident, $size:expr, $curvetype:expr) => {
+        pub struct $typename {}
+        impl $typename {
+            #[allow(clippy::new_ret_no_self)]
+            pub fn new() -> ECPrivateKey<$size, $curvetype> {
+                ECPrivateKey::<$size, $curvetype>::new(CurvesId::$typename)
+            }
+
+            pub fn from_bip32(path: &[u32]) -> ECPrivateKey<$size, $curvetype> {
+                ECPrivateKey::<$size, $curvetype>::new(CurvesId::$typename).bip32_fill(path)
+            }
+        }
+    };
+}
+
+impl_curve!(Secp256k1, 32, 'W');
+impl_curve!(Secp256r1, 32, 'W');
+impl_curve!(Secp384r1, 48, 'W');
+// impl_curve!( Secp521r1, 66, 'W' );
+impl_curve!(BrainpoolP256R1, 32, 'W');
+impl_curve!(BrainpoolP256T1, 32, 'W');
+impl_curve!(BrainpoolP320R1, 40, 'W');
+impl_curve!(BrainpoolP320T1, 40, 'W');
+impl_curve!(BrainpoolP384R1, 48, 'W');
+impl_curve!(BrainpoolP384T1, 48, 'W');
+impl_curve!(BrainpoolP512R1, 64, 'W');
+impl_curve!(BrainpoolP512T1, 64, 'W');
+impl_curve!(Stark256, 32, 'W');
+impl_curve!(Ed25519, 32, 'E');
+// impl_curve!( FRP256v1, 32, 'W' );
+// impl_curve!( Ed448, 57, 'E' );
+
 /// Wrapper for 'os_perso_derive_node_bip32'
-pub fn bip32_derive(curve: CurvesId, path: &[u32], key: &mut [u8]) -> Result<(), SyscallError> {
+pub fn bip32_derive(curve: CurvesId, path: &[u32], key: &mut [u8]) {
     unsafe {
         os_perso_derive_node_bip32(
             curve as u8,
@@ -17,90 +426,6 @@ pub fn bip32_derive(curve: CurvesId, path: &[u32], key: &mut [u8]) -> Result<(),
             core::ptr::null_mut(),
         )
     };
-
-    Ok(())
-}
-
-/// Wrapper for 'cx_ecfp_init_private_key'
-pub fn ec_init_key(curve: CurvesId, raw_key: &[u8]) -> Result<cx_ecfp_private_key_t, SyscallError> {
-    let mut ec_k = cx_ecfp_private_key_t::default();
-    let err = unsafe {
-        cx_ecfp_init_private_key_no_throw(
-            curve as u8,
-            raw_key.as_ptr(),
-            raw_key.len() as u32,
-            &mut ec_k as *mut cx_ecfp_private_key_t,
-        )
-    };
-    if err != 0 {
-        Err(err.into())
-    } else {
-        Ok(ec_k)
-    }
-}
-
-/// Wrapper for 'cx_ecfp_generate_pair'
-pub fn ec_get_pubkey(
-    curve: CurvesId,
-    privkey: &mut cx_ecfp_private_key_t,
-) -> Result<cx_ecfp_public_key_t, SyscallError> {
-    let mut ec_pubkey = cx_ecfp_public_key_t::default();
-    let err = unsafe {
-        cx_ecfp_generate_pair_no_throw(
-            curve as u8,
-            &mut ec_pubkey as *mut cx_ecfp_public_key_t,
-            privkey as *mut cx_ecfp_private_key_t,
-            true,
-        )
-    };
-    if err != 0 {
-        Err(err.into())
-    } else {
-        Ok(ec_pubkey)
-    }
-}
-
-pub type DerEncodedEcdsaSignature = [u8; 73];
-/// Wrapper for 'cx_ecdsa_sign'
-pub fn ecdsa_sign(
-    pvkey: &cx_ecfp_private_key_t,
-    mode: u32,
-    hash_id: u8,
-    hash: &[u8],
-) -> Option<(DerEncodedEcdsaSignature, u32)> {
-    let mut sig = [0u8; 73];
-    let mut info = 0;
-    let sig_len = &mut (sig.len() as u32); // scott
-    let len = unsafe {
-        cx_ecdsa_sign_no_throw(
-            pvkey,
-            mode,
-            hash_id,
-            hash.as_ptr(),
-            hash.len() as u32,
-            sig.as_mut_ptr(),
-            sig_len,
-            &mut info,
-        )
-    };
-    if len != CX_OK {
-        None
-    } else {
-        Some((sig, *sig_len))
-    }
-}
-
-/// Wrapper for 'cx_ecdsa_verify'
-pub fn ecdsa_verify(pubkey: &cx_ecfp_public_key_t, sig: &[u8], hash: &[u8]) -> bool {
-    unsafe {
-        cx_ecdsa_verify_no_throw(
-            pubkey as *const cx_ecfp_public_key_t,
-            hash.as_ptr(),
-            hash.len() as u32,
-            sig.as_ptr(),
-            sig.len() as u32,
-        )
-    }
 }
 
 /// Creates at compile time an array from the ASCII values of a correctly
@@ -210,48 +535,142 @@ mod tests {
 
     const PATH: [u32; 5] = make_bip32_path(b"m/44'/535348'/0'/0/0");
 
-    impl From<SyscallError> for () {
-        fn from(_: SyscallError) {}
+    fn display_error_code(e: CxError) {
+        let ec = crate::to_hex(e.into());
+        crate::debug_print("\tError code: \x1b[1;33m");
+        crate::debug_print(core::str::from_utf8(&ec).unwrap());
+        crate::debug_print("\x1b[0m\n");
     }
+
+    const TEST_HASH: &[u8; 13] = b"test_message1";
+
     #[test]
-    fn ecdsa() {
-        // Test signature bindings with an ECDSA + verification
-        let mut raw_key = [0u8; 32];
-        let hash = b"test_message1";
-        let rnd_mode = (CX_RND_RFC6979 | CX_LAST) as u32;
-        let hash_id = CX_SHA256;
-
-        bip32_derive(CurvesId::Secp256k1, &PATH, &mut raw_key)?;
-
-        let mut k = ec_init_key(CurvesId::Secp256k1, &raw_key)?;
-        let (sig, sig_len) = ecdsa_sign(&k, rnd_mode, hash_id, hash).unwrap();
-
-        let pubkey = ec_get_pubkey(CurvesId::Secp256k1, &mut k)?;
-
-        let verif = ecdsa_verify(&pubkey, &sig[..sig_len as usize], hash);
-
-        assert_eq!(verif, true);
+    fn ecdsa_secp256k1() {
+        let sk = Secp256k1::from_bip32(&PATH);
+        let s = sk
+            .deterministic_sign(TEST_HASH)
+            .map_err(display_error_code)?;
+        let pk = sk.public_key().map_err(display_error_code)?;
+        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
+        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
+        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
     }
 
     #[test]
-    fn deterministic_ecdsa() {
-        // Test signature bindings with a deterministic ECDSA + verification
-
-        let mut raw_key = [0u8; 32];
-        let hash = b"test_message";
-        let rnd_mode = (CX_RND_RFC6979 | CX_LAST) as u32;
-        let hash_id = CX_SHA256;
-
-        bip32_derive(CurvesId::Secp256k1, &PATH, &mut raw_key)?;
-
-        let mut k = ec_init_key(CurvesId::Secp256k1, &raw_key)?;
-        let (sig, sig_len) = ecdsa_sign(&k, rnd_mode, hash_id, hash).unwrap();
-
-        let pubkey = ec_get_pubkey(CurvesId::Secp256k1, &mut k)?;
-        let verif = ecdsa_verify(&pubkey, &sig[..sig_len as usize], hash);
-
-        assert_eq!(verif, true);
+    fn ecdsa_secp256r1() {
+        let sk = Secp256r1::from_bip32(&PATH);
+        let s = sk
+            .deterministic_sign(TEST_HASH)
+            .map_err(display_error_code)?;
+        let pk = sk.public_key().map_err(display_error_code)?;
+        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
+        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
+        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
     }
+
+    #[test]
+    fn ecdsa_secp384r1() {
+        let sk = Secp384r1::from_bip32(&PATH);
+        let s = sk
+            .deterministic_sign(TEST_HASH)
+            .map_err(display_error_code)?;
+        let pk = sk.public_key().map_err(display_error_code)?;
+        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
+        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
+        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
+    }
+
+    // #[test]
+    // fn ecdsa_secp521r1() {
+    //     let sk = Secp521r1::from_bip32(&PATH);
+    //     let s = sk.deterministic_sign(TEST_HASH).map_err(display_error_code)?;
+    //     let pk = sk.public_key().map_err(display_error_code)?;
+    //     assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
+    // }
+
+    #[test]
+    fn ecdsa_brainpool256r1() {
+        let sk = BrainpoolP256R1::from_bip32(&PATH);
+        let pk = sk.public_key().map_err(display_error_code)?;
+        let s = sk
+            .deterministic_sign(TEST_HASH)
+            .map_err(display_error_code)?;
+        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
+        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
+        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
+    }
+
+    #[test]
+    fn ecdsa_brainpool320r1() {
+        let sk = BrainpoolP320R1::from_bip32(&PATH);
+        let s = sk
+            .deterministic_sign(TEST_HASH)
+            .map_err(display_error_code)?;
+        let pk = sk.public_key().map_err(display_error_code)?;
+        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
+        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
+        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
+    }
+
+    #[test]
+    fn ecdsa_brainpool384r1() {
+        let sk = BrainpoolP384R1::from_bip32(&PATH);
+        let s = sk
+            .deterministic_sign(TEST_HASH)
+            .map_err(display_error_code)?;
+        let pk = sk.public_key().map_err(display_error_code)?;
+        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
+        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
+        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
+    }
+
+    #[test]
+    fn ecdsa_brainpool512r1() {
+        let sk = BrainpoolP512R1::from_bip32(&PATH);
+        let s = sk
+            .deterministic_sign(TEST_HASH)
+            .map_err(display_error_code)?;
+        let pk = sk.public_key().map_err(display_error_code)?;
+        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
+        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
+        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
+    }
+
+    // #[test]
+    // fn ecdsa_frp256v1() {
+    //     let sk = FRP256v1::from_bip32(&PATH);
+    //     let s = sk.deterministic_sign(TEST_HASH, CX_SHA256).map_err(display_error_code)?;
+    //     let pk = sk.public_key().map_err(display_error_code)?;
+    //     assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
+    // }
+
+    #[test]
+    fn ecdsa_stark256() {
+        let sk = Stark256::from_bip32(&PATH);
+        let s = sk
+            .deterministic_sign(TEST_HASH)
+            .map_err(display_error_code)?;
+        let pk = sk.public_key().map_err(display_error_code)?;
+        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
+        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
+        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
+    }
+
+    #[test]
+    fn eddsa_ed25519() {
+        let sk = Ed25519::from_bip32(&PATH);
+        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
+        let pk = sk.public_key().map_err(display_error_code)?;
+        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH, CX_SHA512), true);
+    }
+
+    // #[test]
+    // fn ecdsa_ed448() {
+    //     let sk = Ed448::from_bip32(&PATH);
+    //     let s = sk.sign(TEST_HASH, CX_SHAKE256).map_err(display_error_code)?;
+    //     let pk = sk.public_key().map_err(display_error_code)?;
+    //     assert_eq!(pk.verify((&s.0, s.1), TEST_HASH, CX_SHAKE256), true);
+    // }
 
     #[test]
     fn test_make_bip32_path() {
