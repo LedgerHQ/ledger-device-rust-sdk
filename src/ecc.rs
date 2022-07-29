@@ -175,6 +175,14 @@ impl<const N: usize, const TY: char> Default for ECPrivateKey<N, TY> {
     }
 }
 
+/// Cleanup keys from memory when dropping this structure.
+impl<const N: usize, const TY: char> Drop for ECPrivateKey<N, TY> {
+    #[inline(never)]
+    fn drop(&mut self) {
+        self.key.fill_with(|| 0);
+    }
+}
+
 /// This is the most generic implementation for ECPrivateKey.
 /// It provides a way to create a new private key structure
 /// by specifying its length (const parameter `N`), and its
