@@ -25,6 +25,7 @@ pub enum CurvesId {
     Invalid,
 }
 
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum CxError {
     Carry,
     Locked,
@@ -344,6 +345,20 @@ impl<const P: usize, const TY: char> ECPublicKey<P, TY> {
             keylength: P,
             pubkey: [0u8; P],
         }
+    }
+}
+
+/// Access public key value by reference
+impl<const P: usize, const TY: char> AsRef<[u8]> for ECPublicKey<P, TY> {
+    fn as_ref(&self) -> &[u8] {
+        &self.pubkey
+    }
+}
+
+/// Access public key value by reference
+impl<const P: usize, const TY: char> From<ECPublicKey<P, TY>> for [u8; P] {
+    fn from(p: ECPublicKey<P, TY>) -> Self {
+        p.pubkey
     }
 }
 
