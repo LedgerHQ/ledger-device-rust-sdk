@@ -176,6 +176,20 @@ impl<const N: usize, const TY: char> Default for ECPrivateKey<N, TY> {
     }
 }
 
+/// Access private key value by reference
+impl<const N: usize, const TY: char> AsRef<[u8]> for ECPrivateKey<N, TY> {
+    fn as_ref(&self) -> &[u8] {
+        &self.key
+    }
+}
+
+/// Convert private key to bytes
+impl <const N: usize, const TY: char> ECPrivateKey<N, TY> {
+    pub fn to_bytes(&self) -> [u8; N] {
+        self.key
+    }
+}
+
 /// Cleanup keys from memory when dropping this structure.
 impl<const N: usize, const TY: char> Drop for ECPrivateKey<N, TY> {
     #[inline(never)]
