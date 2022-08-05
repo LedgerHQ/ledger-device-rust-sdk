@@ -25,7 +25,7 @@ pub enum CurvesId {
     Invalid,
 }
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum CxError {
     Carry,
     Locked,
@@ -166,6 +166,7 @@ pub struct ECPublicKey<const S: usize, const TY: char> {
     pubkey: [u8; S],
 }
 
+/// Create a default (empty/invalid) private key object
 impl<const N: usize, const TY: char> Default for ECPrivateKey<N, TY> {
     fn default() -> ECPrivateKey<N, TY> {
         ECPrivateKey {
@@ -173,20 +174,6 @@ impl<const N: usize, const TY: char> Default for ECPrivateKey<N, TY> {
             keylength: N,
             key: [0u8; N],
         }
-    }
-}
-
-/// Access private key value by reference
-impl<const N: usize, const TY: char> AsRef<[u8]> for ECPrivateKey<N, TY> {
-    fn as_ref(&self) -> &[u8] {
-        &self.key
-    }
-}
-
-/// Convert private key to bytes
-impl <const N: usize, const TY: char> ECPrivateKey<N, TY> {
-    pub fn to_bytes(&self) -> [u8; N] {
-        self.key
     }
 }
 
@@ -369,7 +356,7 @@ impl<const P: usize, const TY: char> AsRef<[u8]> for ECPublicKey<P, TY> {
     }
 }
 
-/// Access public key value by reference
+/// Access public key value as array
 impl<const P: usize, const TY: char> From<ECPublicKey<P, TY>> for [u8; P] {
     fn from(p: ECPublicKey<P, TY>) -> Self {
         p.pubkey
