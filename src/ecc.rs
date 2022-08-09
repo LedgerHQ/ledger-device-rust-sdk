@@ -210,7 +210,7 @@ impl<const N: usize, const TY: char> ECPrivateKey<N, TY> {
     /// Fill the key buffer `ECPrivateKey<_,_>.key` with bytes
     /// derived from the seed through BIP32 using the curve secp256k1
     pub fn bip32_fill(mut self, path: &[u32]) -> ECPrivateKey<N, TY> {
-        bip32_derive(CurvesId::Secp256k1, path, &mut self.key);
+        bip32_derive(self.curve, path, &mut self.key);
         self
     }
 
@@ -417,15 +417,36 @@ impl_curve!(Ed25519, 32, 'E');
 
 /// Wrapper for 'os_perso_derive_node_bip32'
 pub fn bip32_derive(curve: CurvesId, path: &[u32], key: &mut [u8]) {
+    if let CurvesId::Ed25519 = curve {
+        // Work around firmware bug where ed25519 key derivation writes 64 bytes
+        bip32_derive_with_temp::<64>(curve, path, key)
+    } else {
+        unsafe {
+            os_perso_derive_node_bip32(
+                curve as u8,
+                path.as_ptr(),
+                path.len() as u32,
+                key.as_mut_ptr(),
+                core::ptr::null_mut(),
+            )
+        };
+    }
+}
+
+// Work around firmware issue where ed25519 os_perso_derive_node_bip32 writes 256 bytes instead of
+// 128
+fn bip32_derive_with_temp<const N: usize>(curve: CurvesId, path: &[u32], key: &mut [u8]) {
+    let mut key_temp: [u8; N] = [0; N];
     unsafe {
         os_perso_derive_node_bip32(
             curve as u8,
             path.as_ptr(),
             path.len() as u32,
-            key.as_mut_ptr(),
+            key_temp.as_mut_ptr(),
             core::ptr::null_mut(),
         )
     };
+    key.copy_from_slice(&key_temp[0..key.len()]);
 }
 
 /// Creates at compile time an array from the ASCII values of a correctly
