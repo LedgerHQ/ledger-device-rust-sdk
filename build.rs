@@ -133,18 +133,25 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let output = Command::new("arm-none-eabi-gcc")
         .arg("-print-sysroot")
-        .output()
-        .expect("failed");
+        .output().ok();
+    let sysroot = output
+        .as_ref().and_then(|o|std::str::from_utf8(&o.stdout).ok())
+        .unwrap_or("").trim();
 
-    let sysroot = std::str::from_utf8(&output.stdout).unwrap().trim();
     let gcc_toolchain = if sysroot.is_empty() {
         String::from("/usr/include/")
     } else {
         format!("{sysroot}/include")
     };
 
-    let mut command = cc::Build::new()
-        .compiler("clang")
+    let mut command = cc::Build::new();
+    if env::var_os("CC").is_none() {
+        command.compiler("clang");
+    } else {
+        // Let cc::Build determine CC from the environment variable
+    }
+
+    command
         .file("./src/c/src.c")
         .file("./src/c/sjlj.s")
         .file(format!("{bolos_sdk}/src/os_io_usb.c"))
@@ -197,8 +204,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .flag("-fno-jump-tables")
         .flag("-fshort-enums")
         .flag("-mno-unaligned-access")
-        .flag("-Wno-unused-command-line-argument")
-        .clone();
+        .flag("-Wno-unused-command-line-argument");
 
     #[cfg(feature = "ccid")]
     {
