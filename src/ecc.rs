@@ -51,7 +51,7 @@ impl From<u32> for CxError {
     fn from(x: u32) -> CxError {
         match x {
             CX_CARRY => CxError::Carry,
-            CX_LOCKED => CxError::Carry,
+            CX_LOCKED => CxError::Locked,
             CX_UNLOCKED => CxError::Unlocked,
             CX_NOT_LOCKED => CxError::NotLocked,
             CX_NOT_UNLOCKED => CxError::NotUnlocked,
@@ -371,6 +371,11 @@ impl<const P: usize, const TY: char> ECPublicKey<P, TY> {
             keylength: P,
             pubkey: [0u8; P],
         }
+    }
+
+    /// Returns the public key as bytes array
+    pub fn to_bytes(&self) -> [u8; P] {
+        self.pubkey
     }
 }
 
