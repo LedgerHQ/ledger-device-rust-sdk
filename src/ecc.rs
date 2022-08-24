@@ -1,6 +1,8 @@
 use crate::bindings::*;
 use core::hint::black_box;
 
+mod stark;
+
 #[repr(u8)]
 #[derive(Copy, Clone)]
 pub enum CurvesId {
