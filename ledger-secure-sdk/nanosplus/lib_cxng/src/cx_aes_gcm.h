@@ -44,14 +44,14 @@ extern const cx_aead_info_t cx_aes128_gcm_info;
 extern const cx_aead_info_t cx_aes192_gcm_info;
 extern const cx_aead_info_t cx_aes256_gcm_info;
 
-cx_err_t cx_aes_gcm_init(cx_aes_gcm_context_t *ctx);
+void cx_aes_gcm_init(cx_aes_gcm_context_t *ctx);
 cx_err_t cx_aes_gcm_set_key(cx_aes_gcm_context_t *ctx, const uint8_t *raw_key, size_t key_len);
 cx_err_t cx_aes_gcm_start(cx_aes_gcm_context_t *ctx, uint32_t mode,
-                          const uint8_t *iv, size_t iv_len,
-                          const uint8_t *aad, size_t aad_len);
-cx_err_t cx_aes_gcm_update(cx_aes_gcm_context_t *ctx, uint8_t *in, size_t len, uint8_t *out);
+                          const uint8_t *iv, size_t iv_len);
+cx_err_t cx_aes_gcm_update_aad(cx_aes_gcm_context_t *ctx, const uint8_t *aad, size_t aad_len);
+cx_err_t cx_aes_gcm_update(cx_aes_gcm_context_t *ctx, uint8_t *in, uint8_t *out, size_t len);
 cx_err_t cx_aes_gcm_finish(cx_aes_gcm_context_t *ctx, uint8_t *tag, size_t tag_len);
-cx_err_t cx_aes_gcm_encrypt_and_tag(cx_aes_gcm_context_t *ctx, uint32_t mode, uint8_t *in, size_t len,
+cx_err_t cx_aes_gcm_encrypt_and_tag(cx_aes_gcm_context_t *ctx, uint8_t *in, size_t len,
                                     const uint8_t *iv, size_t iv_len, const uint8_t *aad, size_t aad_len,
                                     uint8_t *out, uint8_t *tag, size_t tag_len);
 cx_err_t cx_aes_gcm_decrypt_and_auth(cx_aes_gcm_context_t *ctx, uint8_t *in, size_t len,

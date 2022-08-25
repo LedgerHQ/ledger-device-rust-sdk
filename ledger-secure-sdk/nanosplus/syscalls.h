@@ -114,7 +114,7 @@
 #define SYSCALL_os_perso_set_words_ID 0x02000050
 #define SYSCALL_os_perso_finalize_ID 0x00000051
 #define SYSCALL_os_perso_isonboarded_ID 0x0000009f
-#define SYSCALL_os_perso_setonboardingstatus_ID 0x04000094
+#define SYSCALL_os_perso_setonboardingstatus_ID 0x03000094
 #define SYSCALL_os_perso_derive_node_bip32_ID 0x05000053
 #define SYSCALL_os_perso_derive_node_with_seed_key_ID 0x080000a6
 #define SYSCALL_os_perso_derive_eip2333_ID 0x040000a7
@@ -174,6 +174,11 @@
 #define SYSCALL_os_deny_protected_flash_ID 0x00000091
 #define SYSCALL_os_allow_protected_ram_ID 0x00000092
 #define SYSCALL_os_deny_protected_ram_ID 0x00000093
+
+#ifdef HAVE_CUSTOM_CA_SETTINGS
+#define SYSCALL_os_bolos_custom_ca_get_info_ID 0x02000CA0
+#define SYSCALL_os_bolos_custom_ca_revoke_ID 0x00000CA1
+#endif // HAVE_CUSTOM_CA_SETTINGS
 
 #ifndef HAVE_BOLOS_NO_CUSTOMCA
 #define SYSCALL_os_customca_verify_ID 0x03000090

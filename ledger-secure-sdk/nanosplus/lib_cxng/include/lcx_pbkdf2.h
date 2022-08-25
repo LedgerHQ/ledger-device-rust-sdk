@@ -35,9 +35,9 @@
 #include "lcx_hash.h"
 
 /**
- * @brief   Compute PBKDF2 bytes sequence.
+ * @brief   Computes a PBKDF2 bytes sequence.
  * 
- * @details Compute PBKDF2 bytes sequence according to
+ * @details It computes the bytes sequence according to
  *          <a href="https://tools.ietf.org/html/rfc2898"> RFC 2898 </a>.
  *
  * @param[in]  md_type     Message digest algorithm identifier.
@@ -72,11 +72,14 @@ cx_err_t cx_pbkdf2_no_throw(cx_md_t md_type,
                    size_t         outLength);
 
 /**
- * @brief   Compute PBKDF2 bytes sequence.
+ * @brief   Computes a PBKDF2 bytes sequence.
  * 
- * @details Compute PBKDF2 bytes sequence according to
+ * @details It computes the bytes sequence according to
  *          <a href="https://tools.ietf.org/html/rfc2898"> RFC 2898 </a>.
  *          This function throws an exception if the computation doesn't succeed.
+ *
+ * @warning It is recommended to use #cx_pbkdf2_no_throw rather
+ *          than this function.
  *
  * @param[in]  md_type     Message digest algorithm identifier.
  *
@@ -104,9 +107,9 @@ static inline void cx_pbkdf2 ( cx_md_t md_type, const unsigned char * password, 
 }
 
 /**
- * @brief   Compute PBKDF2 bytes sequence with SHA512.
+ * @brief   Computes a PBKDF2 bytes sequence with SHA512.
  * 
- * @details Compute PBKDF2 bytes sequence according to
+ * @details It computes the bytes sequence according to
  *          <a href="https://tools.ietf.org/html/rfc2898">  RFC 2898 </a>
  *          with SHA512 as the underlying hash function.
  *

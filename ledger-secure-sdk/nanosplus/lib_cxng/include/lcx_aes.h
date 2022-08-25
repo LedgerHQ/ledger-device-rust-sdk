@@ -39,7 +39,7 @@
 #include "ox_aes.h"
 
 /**
- * @brief   Initialize an AES Key.
+ * @brief   Initializes an AES Key.
  * 
  * @details Once initialized, the key can be stored in non-volatile memory
  *          and directly used for any AES processing.
@@ -48,7 +48,7 @@
  * 
  * @param[in]  key_len Length of the key: 16, 24 or 32 octets.
  * 
- * @param[out] key     Pointer to the key.
+ * @param[out] key     Pointer to the key structure. This must not be NULL.
  * 
  * @return             Error code:
  *                     - CX_OK on success
@@ -57,17 +57,20 @@
 cx_err_t cx_aes_init_key_no_throw(const uint8_t *rawkey, size_t key_len, cx_aes_key_t *key);
 
 /**
- * @brief   Initialize an AES Key.
+ * @brief   Initializes an AES Key.
  * 
  * @details Once initialized, the key can be stored in non-volatile memory
  *          and directly used for any AES processing.
  *          This function throws an exception if the initialization fails.
  *
+ * @warning It is recommended to use #cx_aes_init_key_no_throw rather
+ *          than this function.
+ *
  * @param[in]  rawkey  Pointer to the supplied key.
  * 
  * @param[in]  key_len Length of the key: 16, 24 or 32 octets.
  * 
- * @param[out] key     Pointer to the key.
+ * @param[out] key     Pointer to the key structure. This must not be NULL.
  * 
  * @return             Length of the key.
  * 
@@ -80,7 +83,7 @@ static inline size_t cx_aes_init_key ( const unsigned char * rawkey, unsigned in
 }
 
 /**
- * @brief   Encrypt, Decrypt, Sign or Verify data with AES algorithm.
+ * @brief   Encrypts, decrypts, signs or verifies data with AES algorithm.
  *
  * @param[in] key     Pointer to the key initialized with #cx_aes_init_key_no_throw.
  * 
@@ -133,10 +136,13 @@ cx_err_t cx_aes_iv_no_throw(const cx_aes_key_t *key,
                             size_t *            out_len);
 
 /**
- * @brief   Encrypt, Decrypt, Sign or Verify data with AES algorithm.
+ * @brief   Encrypts, decrypts, signs or verifies data with AES algorithm.
  * 
- * @details This functions throws an exception if the computation
+ * @details This function throws an exception if the computation
  *          doesn't succeed.
+ *
+ * @warning It is recommended to use #cx_aes_iv_no_throw rather than
+ *          this function.
  *
  * @param[in] key     Pointer to the key initialized with #cx_aes_init_key_no_throw.
  * 
@@ -187,7 +193,7 @@ static inline size_t cx_aes_iv ( const cx_aes_key_t * key, uint32_t mode, unsign
 }
 
 /**
- * @brief   Encrypt, Decrypt, Sign or Verify data with AES algorithm.
+ * @brief   Encrypts, decrypts, signs or verifies data with AES algorithm.
  * 
  * @details Same as #cx_aes_iv_no_throw with initial IV assumed to be sixteen zeros.
  *
@@ -229,11 +235,14 @@ static inline size_t cx_aes_iv ( const cx_aes_key_t * key, uint32_t mode, unsign
 cx_err_t cx_aes_no_throw(const cx_aes_key_t *key, uint32_t mode, const uint8_t *in, size_t in_len, uint8_t *out, size_t *out_len);
 
 /**
- * @brief   Encrypt, Decrypt, Sign or Verify data with AES algorithm.
+ * @brief   Encrypts, decrypts, signs or verifies data with AES algorithm.
  * 
  * @details Same as #cx_aes_iv_no_throw with initial IV assumed to be sixteen zeros.
  *          This function throws an exception if the computation
  *          doesn't succeed.
+ *
+ * @warning It is recommended to use #cx_aes_no_throw rather than this
+ *          function.
  *
  * @param[in] key     Pointer to the key initialized with 
  *                    #cx_aes_init_key_no_throw.
@@ -278,7 +287,7 @@ static inline size_t cx_aes ( const cx_aes_key_t * key, uint32_t mode, const uns
 }
 
 /**
- * @brief   Encrypt a 16-byte block using AES algorithm.
+ * @brief   Encrypts a 16-byte block using AES algorithm.
  *
  * @param[in]  key      Pointer to the AES key.
  * 
@@ -294,7 +303,7 @@ static inline size_t cx_aes ( const cx_aes_key_t * key, uint32_t mode, const uns
 cx_err_t cx_aes_enc_block(const cx_aes_key_t *key, const uint8_t *inblock, uint8_t *outblock);
 
 /**
- * @brief   Decrypt a 16-byte block using AES algorithm.
+ * @brief   Decrypts a 16-byte block using AES algorithm.
  * 
  * @param[in]  key      Pointer to the AES key.
  * 

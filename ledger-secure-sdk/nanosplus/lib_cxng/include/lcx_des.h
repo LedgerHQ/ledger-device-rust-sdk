@@ -21,9 +21,10 @@
  * @brief   DES (Data Encryption Standard).
  *
  * DES is an encryption algorithm designed to encipher and decipher blocks of
- * 64 bits under control of a 64-bit key.
+ * 64 bits under control of a 56-bit key. However, the key is represented with 64 bits.
  * 
- * Triple DES variant supports either a 128-bit or 192-bit key.
+ * Triple DES variant supports either a 128-bit (two 64-bit keys) or 192-bit key
+ * (three 64-bit keys).
  */
 
 #ifdef HAVE_DES
@@ -38,7 +39,7 @@
 #include <stdint.h>
 
 /**
- * @brief   Initialize a DES key.
+ * @brief   Initializes a DES key.
  * 
  * @details Once initialized, the key can be stored in non-volatile memory
  *          and directly used for any DES processing.
@@ -47,7 +48,7 @@
  * 
  * @param[in]  key_len Length of the key: 8, 16 or 24 octets.
  * 
- * @param[out] key     Pointer to the key.
+ * @param[out] key     Pointer to the key structure. This must not be NULL.
  * 
  * @return             Error code:
  *                     - CX_OK on success
@@ -56,18 +57,21 @@
 cx_err_t cx_des_init_key_no_throw(const uint8_t *rawkey, size_t key_len, cx_des_key_t *key);
 
 /**
- * @brief   Initialize a DES key.
+ * @brief   Initializes a DES key.
  * 
  * @details Once initialized, the key can be stored in non-volatile memory
  *          and directly used for any DES processing.
- *          This functions throws an exception if the initialization
+ *          This function throws an exception if the initialization
  *          fails.
+ *
+ * @warning It is recommended to use #cx_des_init_key_no_throw rather
+ *          than this function.
  *
  * @param[in]  rawkey  Pointer to the supplied key.
  * 
  * @param[in]  key_len Length of the key: 8, 16 or 24 octets.
  * 
- * @param[out] key     Pointer to the key.
+ * @param[out] key     Pointer to the key structure. This must not be NULL.
  * 
  * @return             Length of the key.
  * 
@@ -80,7 +84,7 @@ static inline size_t cx_des_init_key ( const unsigned char * rawkey, unsigned in
 }
 
 /**
- * @brief   Encrypt, Decrypt, Sign or Verify data with DES algorithm.
+ * @brief   Encrypts, decrypts, signs or verifies data with DES algorithm.
  *
  * @param[in] key    Pointer to the key initialized with 
  *                   #cx_des_init_key_no_throw.
@@ -131,10 +135,13 @@ cx_err_t cx_des_iv_no_throw(const cx_des_key_t *key,
                    size_t *            out_len);
 
 /**
- * @brief   Encrypt, Decrypt, Sign or Verify data with DES algorithm.
+ * @brief   Encrypts, decrypts, signs or verifies data with DES algorithm.
  * 
  * @details This function throws an exception if the computation
  *          doesn't succeed.
+ *
+ * @warning It is recommended to use #cx_des_iv_no_throw rather
+ *          than this function.
  *
  * @param[in] key    Pointer to the key initialized with 
  *                   #cx_des_init_key_no_throw.
@@ -183,7 +190,7 @@ static inline size_t cx_des_iv ( const cx_des_key_t * key, uint32_t mode, unsign
 }
 
 /**
- * @brief   Encrypt, Decrypt, Sign or Verify data with DES algorithm.
+ * @brief   Encrypts, decrypts, signs or verifies data with DES algorithm.
  *
  * @param[in] key    Pointer to the key initialized with 
  *                   #cx_des_init_key_no_throw.
@@ -223,7 +230,12 @@ static inline size_t cx_des_iv ( const cx_des_key_t * key, uint32_t mode, unsign
 cx_err_t cx_des_no_throw(const cx_des_key_t *key, uint32_t mode, const uint8_t *in, size_t in_len, uint8_t *out, size_t *out_len);
 
 /**
- * @brief   Encrypt, Decrypt, Sign or Verify data with DES algorithm.
+ * @brief   Encrypts, decrypts, signs or verifies data with DES algorithm.
+ *
+ * @details This function throws an exception if the computation fails.
+ *
+ * @warning It is recommended to use #cx_des_no_throw rather than this
+ *          function.
  * 
  * @param[in] key    Pointer to the key initialized with 
  *                   #cx_des_init_key_no_throw.
@@ -268,7 +280,7 @@ static inline size_t cx_des ( const cx_des_key_t * key, uint32_t mode, const uns
 }
 
 /**
- * @brief   Encrypt a 8-byte block using DES/3-DES algorithm.
+ * @brief   Encrypts a 8-byte block using DES/3-DES algorithm.
  * 
  * @param[in]  key      Pointer to the DES key.
  * 
@@ -284,7 +296,7 @@ static inline size_t cx_des ( const cx_des_key_t * key, uint32_t mode, const uns
   void cx_des_enc_block(const cx_des_key_t *key, const uint8_t *inblock, uint8_t *outblock);
 
 /**
- * @brief   Decrypt a 8-byte block using DES/3-DES algorithm.
+ * @brief   Decrypts a 8-byte block using DES/3-DES algorithm.
  * 
  * @param[in]  key      Pointer to the DES key.
  * 

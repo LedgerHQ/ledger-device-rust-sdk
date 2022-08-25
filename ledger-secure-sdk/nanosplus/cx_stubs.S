@@ -37,6 +37,11 @@ CX_TRAMPOLINE _NR_cx_blake2b_get_output_size               cx_blake2b_get_output
 CX_TRAMPOLINE _NR_cx_blake2b_init2_no_throw                cx_blake2b_init2_no_throw
 CX_TRAMPOLINE _NR_cx_blake2b_init_no_throw                 cx_blake2b_init_no_throw
 CX_TRAMPOLINE _NR_cx_blake2b_update                        cx_blake2b_update
+CX_TRAMPOLINE _NR_cx_chacha_cipher                         cx_chacha_cipher
+CX_TRAMPOLINE _NR_cx_chacha_init                           cx_chacha_init
+CX_TRAMPOLINE _NR_cx_chacha_set_key                        cx_chacha_set_key
+CX_TRAMPOLINE _NR_cx_chacha_start                          cx_chacha_start
+CX_TRAMPOLINE _NR_cx_chacha_update                         cx_chacha_update
 CX_TRAMPOLINE _NR_cx_crc16                                 cx_crc16
 CX_TRAMPOLINE _NR_cx_crc16_update                          cx_crc16_update
 CX_TRAMPOLINE _NR_cx_crc32                                 cx_crc32
