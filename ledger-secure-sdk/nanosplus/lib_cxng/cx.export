@@ -25,6 +25,11 @@ cx_blake2b_get_output_size
 cx_blake2b_init2_no_throw
 cx_blake2b_init_no_throw
 cx_blake2b_update
+cx_chacha_cipher
+cx_chacha_init
+cx_chacha_set_key
+cx_chacha_start
+cx_chacha_update
 cx_crc16
 cx_crc16_update
 cx_crc32

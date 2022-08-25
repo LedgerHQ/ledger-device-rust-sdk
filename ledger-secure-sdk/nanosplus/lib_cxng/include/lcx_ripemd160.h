@@ -51,7 +51,7 @@ struct cx_ripemd160_s {
 typedef struct cx_ripemd160_s cx_ripemd160_t;
 
 /**
- * @brief   Initialize a RIPEMD-160 context.
+ * @brief   Initializes a RIPEMD-160 context.
  *
  * @param[out] hash Pointer to the context.
  *                  The context shall be in RAM.
@@ -62,7 +62,7 @@ typedef struct cx_ripemd160_s cx_ripemd160_t;
 cx_err_t cx_ripemd160_init_no_throw(cx_ripemd160_t *hash);
 
 /**
- * @brief   Initialize a RIPEMD-160 context.
+ * @brief   Initializes a RIPEMD-160 context.
  *
  * @param[out] hash Pointer to the context.
  *                  The context shall be in RAM.
@@ -76,7 +76,7 @@ static inline int cx_ripemd160_init ( cx_ripemd160_t * hash )
 }
 
 /**
- * @brief   Compute a one shot Ripemd-160 digest.
+ * @brief   Computes a one shot Ripemd-160 digest.
  *
  * @param[in]  in      Input data.
  * 

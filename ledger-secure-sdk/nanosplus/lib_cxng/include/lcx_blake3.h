@@ -84,7 +84,7 @@ typedef struct {
 } cx_blake3_t;
 
 /**
- * @brief Initialize a blake3 context.
+ * @brief Initializes a blake3 context.
  *
  * @param[in] hash       Pointer to the blake3 context.
  *
@@ -105,7 +105,7 @@ cx_err_t cx_blake3_init(cx_blake3_t *hash, uint8_t mode, const unsigned char *ke
                         const void *context, unsigned int context_len);
 
 /**
- * @brief Digest a message using blake3
+ * @brief Computes the digest of a message using blake3.
  *
  * @param[in]  hash      Pointer to the blake3 context.
  *
@@ -125,7 +125,7 @@ cx_err_t cx_blake3(cx_blake3_t *hash, uint8_t mode, const void *input,
                    size_t input_len, uint8_t *out, size_t out_len);
 
 /**
- * @brief Update the blake3 context.
+ * @brief Adds more data to process to the context.
  *
  * @param[in] hash      Pointer to the blake3 context.
  *
@@ -138,7 +138,7 @@ cx_err_t cx_blake3(cx_blake3_t *hash, uint8_t mode, const void *input,
 cx_err_t cx_blake3_update(cx_blake3_t *hash, const void *input, size_t input_len);
 
 /**
- * @brief Finalize the hash.
+ * @brief Finalizes the hash.
  *
  * @param[in]  hash    Pointer to the blake3 context.
  *

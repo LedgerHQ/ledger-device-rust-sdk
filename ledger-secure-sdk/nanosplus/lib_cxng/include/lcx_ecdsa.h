@@ -39,7 +39,7 @@
 #define cx_ecdsa_init_private_key cx_ecfp_init_private_key_no_throw
 
 /**
- * @brief   Sign a message digest according to ECDSA specification
+ * @brief   Signs a message digest according to ECDSA specification
  *
  * @param[in]  pvkey    Private key.
  *                      Shall be initialized with #cx_ecfp_init_private_key_no_throw.
@@ -53,7 +53,8 @@
  *                      This parameter is mandatory with the flag CX_RND_RFC6979.
  *
  * @param[in]  hash     Digest of the message to be signed.
- *                      The length of *hash* must be shorter than the curve domain size.
+ *                      The length of *hash* must be shorter than the group order size.
+ *                      Otherwise it is truncated.
  *
  * @param[in]  hash_len Length of the digest in octets.
  *
@@ -87,10 +88,13 @@ cx_err_t cx_ecdsa_sign_no_throw(const cx_ecfp_private_key_t *pvkey,
                        uint32_t *                   info);
 
 /**
- * @brief   Sign a message digest according to ECDSA specification.
+ * @brief   Signs a message digest according to ECDSA specification.
  * 
- * @details This functions throws an exception if the signature
+ * @details This function throws an exception if the signature
  *          doesn't succeed.
+ *
+ * @warning It is recommended to use #cx_ecdsa_sign_no_throw rather
+ *          than this function.
  *
  * @param[in]  pvkey    Private key.
  *                      Shall be initialized with #cx_ecfp_init_private_key_no_throw.
@@ -142,9 +146,9 @@ static inline size_t cx_ecdsa_sign ( const cx_ecfp_private_key_t * pvkey, uint32
 
 
 /**
- * @brief   Verify an ECDSA signature according to ECDSA specification.
+ * @brief   Verifies an ECDSA signature according to ECDSA specification.
  * 
- * @param[in] pukey    Private key initialized with #cx_ecfp_init_public_key_no_throw.
+ * @param[in] pukey    Public key initialized with #cx_ecfp_init_public_key_no_throw.
  * 
  * @param[in] hash     Digest of the message to be verified.
  *                     The length of *hash* must be smaller than the group order size.
@@ -165,9 +169,9 @@ bool cx_ecdsa_verify_no_throw(const cx_ecfp_public_key_t *pukey,
                      size_t                      sig_len);
 
 /**
- * @brief   Verify an ECDSA signature according to ECDSA specification.
+ * @brief   Verifies an ECDSA signature according to ECDSA specification.
  * 
- * @param[in] pukey    Private key initialized with #cx_ecfp_init_public_key_no_throw.
+ * @param[in] pukey    Public key initialized with #cx_ecfp_init_public_key_no_throw.
  * 
  * @param[in] mode     ECDSA mode. This parameter is not used.
  * 
@@ -175,7 +179,8 @@ bool cx_ecdsa_verify_no_throw(const cx_ecfp_public_key_t *pukey,
  *                     This parameter is not used.
  * 
  * @param[in] hash     Digest of the message to be verified.
- *                     The length of *hash* must be smaller than the curve domain size.
+ *                     The length of *hash* must be smaller than the group order size.
+ *                     Otherwise it is truncated.
  * 
  * @param[in] hash_len Length of the digest in octets.
  * 

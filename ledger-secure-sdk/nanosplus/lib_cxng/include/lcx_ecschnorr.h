@@ -32,7 +32,7 @@
 #define LCX_ECSCHNORR_H
 
 /**
- * @brief   Sign a digest message according to the given mode.
+ * @brief   Signs a digest message according to the given mode.
  *
  * @param[in]  pvkey   Pointer to the private key initialized with 
  *                     #cx_ecfp_init_private_key_no_throw beforehand.
@@ -43,6 +43,7 @@
  *                       - CX_ECSCHNORR_BSI03111
  *                       - CX_ECSCHNORR_LIBSECP
  *                       - CX_ECSCHNORR_Z
+ *                       - CX_ECSCHNORR_BIP0340
  *
  * @param[in]  hashID  Message digest algorithm identifier.
  *                     This parameter is mandatory when
@@ -54,7 +55,7 @@
  * @param[in]  msg_len Length of input data.
  *
  * @param[out] sig     ECSchnorr signature encoded in TLV: **30 || L || 02 || Lr || r || 02 || Ls || s**.
- *   
+ *                     This parameter holds the auxiliary random data when CX_ECSCHNORR_BIP0340 is used.
  *
  * @param[in]  sig_len Length of the signature.
  *
@@ -79,10 +80,13 @@ cx_err_t cx_ecschnorr_sign_no_throw(const cx_ecfp_private_key_t *pvkey,
                            size_t *                     sig_len);
 
 /**
- * @brief   Sign a digest message according to the given mode.
+ * @brief   Signs a digest message according to the given mode.
  * 
  * @details This function throws an exception if the computation
  *          doesn't succeed.
+ *
+ * @warning It is recommended to use #cx_ecschnorr_sign_no_throw
+ *          rather than this function.
  *
  * @param[in]  pvkey   Pointer to the private key initialized with 
  *                     #cx_ecfp_init_private_key_no_throw beforehand.
@@ -93,6 +97,7 @@ cx_err_t cx_ecschnorr_sign_no_throw(const cx_ecfp_private_key_t *pvkey,
  *                       - CX_ECSCHNORR_BSI03111
  *                       - CX_ECSCHNORR_LIBSECP
  *                       - CX_ECSCHNORR_Z
+ *                       - CX_ECSCHNORR_BIP0340
  *
  * @param[in]  hashID  Message digest algorithm identifier.
  *                     This parameter is mandatory when
@@ -104,7 +109,7 @@ cx_err_t cx_ecschnorr_sign_no_throw(const cx_ecfp_private_key_t *pvkey,
  * @param[in]  msg_len Length of input data.
  *
  * @param[out] sig     ECSchnorr signature encoded in TLV: **30 || L || 02 || Lr || r || 02 || Ls || s**.
- *   
+ *                     This parameter holds the auxiliary random data when CX_ECSCHNORR_BIP0340 is used.
  *
  * @param[in]  sig_len Length of the signature.
  * 
@@ -130,7 +135,7 @@ static inline size_t cx_ecschnorr_sign ( const cx_ecfp_private_key_t * pvkey, ui
 }
 
 /**
- * @brief   Verify a hash message signature according to the given mode.
+ * @brief   Verifies a digest message signature according to the given mode.
  * 
  * @param[in] pukey   Pointer to the public key initialized with 
  *                    #cx_ecfp_init_private_key_no_throw beforehand.

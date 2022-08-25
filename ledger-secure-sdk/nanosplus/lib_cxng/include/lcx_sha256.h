@@ -59,7 +59,7 @@ typedef struct cx_sha256_s cx_sha256_t;
 
 #if defined(HAVE_SHA224)
 /**
- * @brief   Initialize a SHA-224 context.
+ * @brief   Initializes a SHA-224 context.
  *
  * @param[out] hash Pointer to the context.
  *                  The context shall be in RAM.
@@ -69,6 +69,14 @@ typedef struct cx_sha256_s cx_sha256_t;
  */
 cx_err_t cx_sha224_init_no_throw(cx_sha256_t *hash);
 
+/**
+ * @brief   Initializes a SHA-224 context.
+ *
+ * @param[out] hash Pointer to the context.
+ *                  The context shall be in RAM.
+ *
+ * @return          SHA224 identifier.
+ */
 static inline int cx_sha224_init ( cx_sha256_t * hash )
 {
   cx_sha224_init_no_throw(hash);
@@ -77,7 +85,7 @@ static inline int cx_sha224_init ( cx_sha256_t * hash )
 #endif
 
 /**
- * @brief   Initialize a SHA-256 context.
+ * @brief   Initializes a SHA-256 context.
  *
  * @param[out] hash Pointer to the context.
  *                  The context shall be in RAM.
@@ -88,7 +96,7 @@ static inline int cx_sha224_init ( cx_sha256_t * hash )
 cx_err_t cx_sha256_init_no_throw(cx_sha256_t *hash);
 
 /**
- * @brief   Initialize a SHA-256 context.
+ * @brief   Initializes a SHA-256 context.
  *
  * @param[out] hash Pointer to the context.
  *                  The context shall be in RAM.
@@ -102,7 +110,7 @@ static inline int cx_sha256_init ( cx_sha256_t * hash )
 }
 
 /**
- * @brief   Compute a one shot SHA-256 digest.
+ * @brief   Computes a one shot SHA-256 digest.
  *
  * @param[in]  in      Input data.
  *

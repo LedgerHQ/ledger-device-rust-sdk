@@ -63,9 +63,9 @@ typedef struct cx_groestl_s cx_groestl_t;
 size_t cx_groestl_get_output_size(const cx_groestl_t *ctx);
 
 /**
- * @brief   Initialize a GROESTL224 context.
+ * @brief   Initializes a GROESTL context.
  *
- * @param[out] hash Pointer to the context to init.
+ * @param[out] hash Pointer to the context to init.ialize.
  * 
  * @param[in]  size Length of the digest.
  *
@@ -76,12 +76,12 @@ size_t cx_groestl_get_output_size(const cx_groestl_t *ctx);
   cx_err_t cx_groestl_init_no_throw(cx_groestl_t *hash, size_t size);
 
 /**
- * @brief   Initialize a GROESTL224 context.
+ * @brief   Initializes a GROESTL context.
  * 
- * @details This function throws an exception if the
+ * @details Throws an exception if the
  *          initialization fails.
  *
- * @param[out] hash Pointer to the context to init.
+ * @param[out] hash Pointer to the context to initialize.
  * 
  * @param[in]  size Length of the digest.
  *
@@ -95,7 +95,7 @@ static inline void cx_groestl_init ( cx_groestl_t * hash, unsigned int size )
 }
 
 /**
- * @brief   Hash data with Groestl algorithm.
+ * @brief   Hashes data with Groestl algorithm.
  *
  * @param[in]  hash    Pointer to the hash context.
  *                     Shall be in RAM.
@@ -124,7 +124,7 @@ static inline void cx_groestl_init ( cx_groestl_t * hash, unsigned int size )
 cx_err_t cx_groestl(cx_groestl_t *hash, uint32_t mode, const uint8_t *in, size_t len, uint8_t *out, size_t out_len);
 
 /**
- * @brief   Add more data to hash.
+ * @brief   Adds more data to hash.
  *
  * @details A call to this function is equivalent to:
  *          *cx_groestl_no_throw(hash, 0, in, in_len, NULL, 0)*.
@@ -142,7 +142,7 @@ cx_err_t cx_groestl(cx_groestl_t *hash, uint32_t mode, const uint8_t *in, size_t
 cx_err_t cx_groestl_update(cx_groestl_t *ctx, const uint8_t *data, size_t len);
 
 /**
- * @brief   Finalize the hash.
+ * @brief   Finalizes the hash.
  *
  * @details A call to this function is equivalent to:
  *          *cx_groestl_no_throw(hash, CX_LAST, NULL, 0, out, out_len)*.
