@@ -1,5 +1,5 @@
 use crate::bindings::*;
-#[cfg(nanox)]
+#[cfg(target_os = "nanox")]
 use crate::ble;
 use crate::buttons::{get_button_event, ButtonEvent, ButtonsState};
 
@@ -136,7 +136,7 @@ impl Comm {
                 seph::seph_send(&[seph::SephTags::RawAPDU as u8, len[0], len[1]]);
                 seph::seph_send(&self.apdu_buffer[..self.tx]);
             }
-            #[cfg(nanox)]
+            #[cfg(target_os = "nanox")]
             APDU_BLE => {
                 ble::send(&self.apdu_buffer[..self.tx]);
             }
@@ -266,7 +266,7 @@ impl Comm {
                     seph::handle_capdu_event(&mut self.apdu_buffer, &spi_buffer)
                 }
 
-                #[cfg(nanox)]
+                #[cfg(target_os = "nanox")]
                 seph::Events::BleReceive => ble::receive(&mut self.apdu_buffer, &spi_buffer),
 
                 seph::Events::TickerEvent => return Event::Ticker,

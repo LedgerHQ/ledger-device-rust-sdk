@@ -4,7 +4,6 @@ use std::process::Command;
 use std::{env, error::Error, fs::File, io::Read};
 
 fn finalize_nanos_configuration(command: &mut cc::Build, bolos_sdk: &String) -> String {
-    println!("cargo:rustc-cfg=nanos");
     command
         .target("thumbv6m-none-eabi")
         .define("ST31", None)
@@ -25,7 +24,6 @@ fn finalize_nanos_configuration(command: &mut cc::Build, bolos_sdk: &String) -> 
 }
 
 fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &String) -> String {
-    println!("cargo:rustc-cfg=nanox");
     command
         .target("thumbv6m-none-eabi")
         .define("ST33", None)
@@ -86,7 +84,6 @@ fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &String) -> 
 }
 
 fn finalize_nanosplus_configuration(command: &mut cc::Build, bolos_sdk: &String) -> String {
-    println!("cargo:rustc-cfg=nanosplus");
     command
         .target("thumbv8m.main-none-eabi")
         .define("ST33K1M5", None)
