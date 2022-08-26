@@ -229,11 +229,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     makefile.read_to_string(&mut content).unwrap();
     // Extract the defines from the Makefile.conf.cx.
     // They all begin with `HAVE` and are ' ' and '\n' separated.
-    let defines = content
+    let mut defines = content
         .split('\n')
         .filter(|line| !line.starts_with('#')) // Remove lines that are commented
         .flat_map(|line| line.split(' ').filter(|word| word.starts_with("HAVE")))
         .collect::<Vec<&str>>();
+
+    // do not forget NATIVE_LITTLE_ENDIAN
+    let s = String::from("NATIVE_LITTLE_ENDIAN");
+    defines.push(s.as_str());
 
     // Add the defines found in the Makefile.conf.cx to our build command.
     for define in defines {
