@@ -200,7 +200,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         ),
     };
 
-    let cx_makefile = match NanoS {
+    let cx_makefile = match device {
         NanoS => finalize_nanos_configuration(&mut command, &bolos_sdk),
         NanoX => finalize_nanox_configuration(&mut command, &bolos_sdk),
         NanoSPlus => finalize_nanosplus_configuration(&mut command, &bolos_sdk),
