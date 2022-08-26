@@ -36,5 +36,4 @@ pub fn eip2645_derive(path: &[u32], key: &mut [u8]) {
         }
         index += 1;
     }
-    return;
 }
