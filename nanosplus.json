@@ -19,5 +19,7 @@
   },
   "relocation-model": "ropi-rwpi",
   "singlethread": true,
-  "target-pointer-width": "32"
+  "target-pointer-width": "32",
+  "os": "nanosplus",
+  "target-family": [ "bolos" ]
 }
