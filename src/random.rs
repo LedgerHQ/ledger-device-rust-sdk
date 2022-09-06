@@ -81,7 +81,7 @@ impl Random for u32 {
 }
 
 /// [`RngCore`] implementation via the [`rand_bytes`] syscall
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct LedgerRng;
 
 /// Implement [`RngCore`] (for `rand_core@0.6.x`) using ledger syscalls
