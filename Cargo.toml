@@ -11,8 +11,8 @@ cc = "1.0.73"
 testmacro = { git = "https://github.com/yhql/testmacro"} 
 
 [dependencies]
-num-traits = { version = "0.2.14", default-features = false }
-
+num-traits = { version = "0.2.14", default_features = false }
+rand_core = { version = "0.6.3", default_features = false }
 
 [profile.release]
 opt-level = 's' 

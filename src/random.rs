@@ -2,7 +2,9 @@
 
 // use crate::bindings::{cx_rng_u32, cx_rng_u8};
 use core::ops::Range;
+
 use num_traits::{Bounded, PrimInt, Unsigned};
+use rand_core::{CryptoRng, RngCore};
 
 extern "C" {
     pub fn cx_rng_no_throw(buffer: *mut u8, len: u32);
@@ -13,6 +15,7 @@ extern "C" {
 /// # Arguments
 ///
 /// * `out` - Destination array.
+#[inline]
 pub fn rand_bytes(out: &mut [u8]) {
     unsafe {
         cx_rng_no_throw(out.as_mut_ptr(), out.len() as u32);
@@ -64,9 +67,7 @@ where
 impl Random for u8 {
     fn random() -> Self {
         let mut r = [0u8; 1];
-        unsafe {
-            cx_rng_no_throw(r.as_mut_ptr(), 1);
-        }
+        rand_bytes(&mut r);
         r[0]
     }
 }
@@ -74,9 +75,44 @@ impl Random for u8 {
 impl Random for u32 {
     fn random() -> Self {
         let mut r = [0u8; 4];
-        unsafe {
-            cx_rng_no_throw(r.as_mut_ptr(), 4);
-        }
+        rand_bytes(&mut r);
         u32::from_be_bytes(r)
     }
 }
+
+/// [`RngCore`] implementation via the [`rand_bytes`] syscall
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub struct LedgerRng;
+
+/// Implement [`RngCore`] (for `rand_core@0.6.x`) using ledger syscalls
+///
+/// For backwards compatibility with `rand_core@0.5.x` see [rand_compat](https://docs.rs/rand-compat/latest/rand_compat/)
+impl RngCore for LedgerRng {
+    #[inline]
+    fn next_u32(&mut self) -> u32 {
+        let mut b = [0u8; 4];
+        rand_bytes(&mut b);
+        u32::from_be_bytes(b)
+    }
+
+    #[inline]
+    fn next_u64(&mut self) -> u64 {
+        let mut b = [0u8; 8];
+        rand_bytes(&mut b);
+        u64::from_be_bytes(b)
+    }
+
+    #[inline]
+    fn fill_bytes(&mut self, dest: &mut [u8]) {
+        rand_bytes(dest);
+    }
+
+    #[inline]
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand_core::Error> {
+        self.fill_bytes(dest);
+        Ok(())
+    }
+}
+
+/// Mark LedgerRng as safe for cryptographic use
+impl CryptoRng for LedgerRng {}
