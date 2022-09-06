@@ -1,7 +1,7 @@
 extern crate cc;
 use std::path::PathBuf;
 use std::process::Command;
-use std::{env, error::Error, fs::File, io::Read};
+use std::{env, error::Error, fs::File, io::Read, str::FromStr};
 
 fn finalize_nanos_configuration(command: &mut cc::Build, bolos_sdk: &String) -> String {
     command
@@ -107,6 +107,36 @@ fn finalize_nanosplus_configuration(command: &mut cc::Build, bolos_sdk: &String)
     format!("{}/nanosplus/Makefile.conf.cx", bolos_sdk)
 }
 
+#[derive(Copy, Clone, PartialEq, Debug, strum::Display, strum::EnumString)]
+#[strum(serialize_all = "lowercase")]
+enum Device {
+    NanoS,
+    NanoSPlus,
+    NanoX,
+}
+
+impl Device {
+    // Detect the target device for compilation
+    pub fn detect() -> Result<Device, anyhow::Error> {
+        // First try `CARGO_CFG_TARGET_OS`
+        if let Some(s) = env::var_os("CARGO_CFG_TARGET_OS") {
+            if let Some(Ok(d)) = s.to_str().map(Device::from_str) {
+                return Ok(d);
+            }
+        }
+
+        // Then `TARGET`
+        if let Some(s) = env::var_os("TARGET") {
+            if let Some(Ok(d)) = s.to_str().map(Device::from_str) {
+                return Ok(d);
+            }
+        }
+
+        // Otherwise, fail
+        Err(anyhow::anyhow!("invalid target, expected one of `nanos`, `nanox`, `nanosplus`. Run with `-Z build-std=core --target=./<target name>.json`"))
+    }
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let bolos_sdk = "./ledger-secure-sdk".to_string();
 
@@ -182,28 +212,18 @@ fn main() -> Result<(), Box<dyn Error>> {
         .flag("-Wno-unused-command-line-argument")
         .clone();
 
-    enum Device {
-        NanoS,
-        NanoSPlus,
-        NanoX,
-    }
-    use Device::*;
+    // Determine which device we're compiling for
+    let device = Device::detect()?;
 
-    // determine device
-    let device = match env::var_os("CARGO_CFG_TARGET_OS").unwrap().to_str().unwrap() {
-        "nanos" => NanoS,
-        "nanosplus" => NanoSPlus,
-        "nanox" => NanoX,
-        target_name => panic!(
-            "invalid target `{}`, expected one of `nanos`, `nanox`, `nanosplus`. Run with `-Z build-std=core --target=./<target name>.json`",
-            target_name
-        ),
-    };
+    // Export `NANOS_SDK_TARGET` and `NANOS_SDK_ROOT` for consuming crates
+    println!("cargo:rustc-env=TARGET={}", device);
+    let sdk_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+    println!("cargo:rustc-env=ROOT={}", sdk_dir);
 
     let cx_makefile = match device {
-        NanoS => finalize_nanos_configuration(&mut command, &bolos_sdk),
-        NanoX => finalize_nanox_configuration(&mut command, &bolos_sdk),
-        NanoSPlus => finalize_nanosplus_configuration(&mut command, &bolos_sdk),
+        Device::NanoS => finalize_nanos_configuration(&mut command, &bolos_sdk),
+        Device::NanoX => finalize_nanox_configuration(&mut command, &bolos_sdk),
+        Device::NanoSPlus => finalize_nanosplus_configuration(&mut command, &bolos_sdk),
     };
 
     // all 'finalize_...' functions also declare a new 'cfg' variable corresponding
@@ -238,9 +258,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("cargo:rustc-link-search={}", out_dir.display());
     // copy
     let linkerscript = match device {
-        NanoS => "nanos_layout.ld",
-        NanoX => "nanox_layout.ld",
-        NanoSPlus => "nanosplus_layout.ld",
+        Device::NanoS => "nanos_layout.ld",
+        Device::NanoX => "nanox_layout.ld",
+        Device::NanoSPlus => "nanosplus_layout.ld",
     };
     std::fs::copy(linkerscript, out_dir.join(linkerscript))?;
     std::fs::copy("link.ld", out_dir.join("link.ld"))?;

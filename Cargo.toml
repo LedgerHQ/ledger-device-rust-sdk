@@ -4,8 +4,12 @@ version = "0.2.0"
 authors = ["yhql"]
 edition = "2021"
 
+links = "nanos-sdk"
+
 [build-dependencies]
 cc = "1.0.73"
+strum = { version = "0.24.1", features = [ "derive" ] }
+anyhow = "1.0.64"
 
 [dev-dependencies]
 testmacro = { git = "https://github.com/yhql/testmacro"} 
