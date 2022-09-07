@@ -184,11 +184,11 @@ macro_rules! atomic_storage {
     };
 }
 
-#[cfg(nanos)]
+#[cfg(target_os = "nanos")]
 atomic_storage!(64);
-#[cfg(nanox)]
+#[cfg(target_os = "nanox")]
 atomic_storage!(256);
-#[cfg(nanosplus)]
+#[cfg(target_os = "nanosplus")]
 atomic_storage!(512);
 
 pub enum AtomicStorageElem {

@@ -21,5 +21,6 @@
   "relocation-model": "ropi",
   "singlethread": true,
   "target-pointer-width": "32",
-  "target-family": [ "bolos", "nanos" ]
+  "os": "nanos",
+  "target-family": [ "bolos" ]
 }

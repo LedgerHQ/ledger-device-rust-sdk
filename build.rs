@@ -4,7 +4,6 @@ use std::process::Command;
 use std::{env, error::Error, fs::File, io::Read};
 
 fn finalize_nanos_configuration(command: &mut cc::Build, bolos_sdk: &String) -> String {
-    println!("cargo:rustc-cfg=nanos");
     command
         .target("thumbv6m-none-eabi")
         .define("ST31", None)
@@ -25,7 +24,6 @@ fn finalize_nanos_configuration(command: &mut cc::Build, bolos_sdk: &String) -> 
 }
 
 fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &String) -> String {
-    println!("cargo:rustc-cfg=nanox");
     command
         .target("thumbv6m-none-eabi")
         .define("ST33", None)
@@ -87,7 +85,6 @@ fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &String) -> 
 }
 
 fn finalize_nanosplus_configuration(command: &mut cc::Build, bolos_sdk: &String) -> String {
-    println!("cargo:rustc-cfg=nanosplus");
     command
         .target("thumbv8m.main-none-eabi")
         .define("ST33K1M5", None)
@@ -215,16 +212,28 @@ fn main() -> Result<(), Box<dyn Error>> {
         .flag("-Wno-unused-command-line-argument")
         .clone();
 
-    // determine target
-    let target = env::var_os("TARGET");
-    let cx_makefile = match target.clone().unwrap().to_str().unwrap() {
-        "nanos" => finalize_nanos_configuration(&mut command, &bolos_sdk),
-        "nanox" => finalize_nanox_configuration(&mut command, &bolos_sdk),
-        "nanosplus" => finalize_nanosplus_configuration(&mut command, &bolos_sdk),
+    enum Device {
+        NanoS,
+        NanoSPlus,
+        NanoX,
+    }
+    use Device::*;
+
+    // determine device
+    let device = match env::var_os("CARGO_CFG_TARGET_OS").unwrap().to_str().unwrap() {
+        "nanos" => NanoS,
+        "nanosplus" => NanoSPlus,
+        "nanox" => NanoX,
         target_name => panic!(
             "invalid target `{}`, expected one of `nanos`, `nanox`, `nanosplus`. Run with `-Z build-std=core --target=./<target name>.json`",
             target_name
         ),
+    };
+
+    let cx_makefile = match device {
+        NanoS => finalize_nanos_configuration(&mut command, &bolos_sdk),
+        NanoX => finalize_nanox_configuration(&mut command, &bolos_sdk),
+        NanoSPlus => finalize_nanosplus_configuration(&mut command, &bolos_sdk),
     };
 
     // all 'finalize_...' functions also declare a new 'cfg' variable corresponding
@@ -258,11 +267,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     // extend the library search path
     println!("cargo:rustc-link-search={}", out_dir.display());
     // copy
-    let linkerscript = match target.unwrap().to_str().unwrap() {
-        "nanos" => "nanos_layout.ld",
-        "nanox" => "nanox_layout.ld",
-        "nanosplus" => "nanosplus_layout.ld",
-        _ => "",
+    let linkerscript = match device {
+        NanoS => "nanos_layout.ld",
+        NanoX => "nanox_layout.ld",
+        NanoSPlus => "nanosplus_layout.ld",
     };
     std::fs::copy(linkerscript, out_dir.join(linkerscript))?;
     std::fs::copy("link.ld", out_dir.join("link.ld"))?;
