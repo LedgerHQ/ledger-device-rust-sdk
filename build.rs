@@ -80,6 +80,7 @@ fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &String) -> 
         .flag("-ffixed-r9")
         .flag("-fropi")
         .flag("-frwpi");
+    configure_lib_bagl(command, bolos_sdk);
     format!("{}/nanox/Makefile.conf.cx", bolos_sdk)
 }
 
@@ -104,7 +105,36 @@ fn finalize_nanosplus_configuration(command: &mut cc::Build, bolos_sdk: &String)
         .include(format!("{}/nanosplus/lib_cxng/include", bolos_sdk))
         .flag("-fropi")
         .flag("-frwpi");
+    configure_lib_bagl(command, bolos_sdk);
     format!("{}/nanosplus/Makefile.conf.cx", bolos_sdk)
+}
+
+fn configure_lib_bagl(command: &mut cc::Build, bolos_sdk: &String) {
+    if env::var_os("CARGO_FEATURE_LIB_BAGL").is_some() {
+        command
+            .define("HAVE_BAGL", None)
+            // Just include all the fonts for now; we can shrink the X and S+ images later.
+            .define("HAVE_BAGL_FONT_LUCIDA_CONSOLE_8PX", None)
+            .define("HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16_22PX", None)
+            .define("HAVE_BAGL_FONT_OPEN_SANS_REGULAR_8_11PX", None)
+            .define("HAVE_BAGL_FONT_OPEN_SANS_REGULAR_10_13PX", None)
+            .define("HAVE_BAGL_FONT_OPEN_SANS_REGULAR_11_14PX", None)
+            .define("HAVE_BAGL_FONT_OPEN_SANS_REGULAR_13_18PX", None)
+            .define("HAVE_BAGL_FONT_OPEN_SANS_REGULAR_22_30PX", None)
+            .define("HAVE_BAGL_FONT_OPEN_SANS_SEMIBOLD_8_11PX", None)
+            .define("HAVE_BAGL_FONT_OPEN_SANS_EXTRABOLD_11PX", None)
+            .define("HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16PX", None)
+            .define("HAVE_BAGL_FONT_OPEN_SANS_REGULAR_11PX", None)
+            .define("HAVE_BAGL_FONT_OPEN_SANS_SEMIBOLD_10_13PX", None)
+            .define("HAVE_BAGL_FONT_OPEN_SANS_SEMIBOLD_11_16PX", None)
+            .define("HAVE_BAGL_FONT_OPEN_SANS_SEMIBOLD_13_18PX", None)
+            .define("HAVE_BAGL_FONT_SYMBOLS_0", None)
+            .define("HAVE_BAGL_FONT_SYMBOLS_1", None)
+            .include(format!("{}/lib_bagl/src/", bolos_sdk))
+            .file(format!("{}/lib_bagl/src/bagl.c", bolos_sdk))
+            .file(format!("{}/lib_bagl/src/bagl_fonts.c", bolos_sdk))
+            .file(format!("{}/lib_bagl/src/bagl_glyphs.c", bolos_sdk));
+    }
 }
 
 fn main() -> Result<(), Box<dyn Error>> {

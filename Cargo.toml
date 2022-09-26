@@ -21,3 +21,4 @@ lto = true
 [features]
 speculos = []
 pre1_54 = []
+lib_bagl = []
