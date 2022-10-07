@@ -132,6 +132,8 @@ pub fn sdk_test_runner(tests: &[&TestType]) {
         debug_print(name);
         debug_print("\n");
     }
+
+    exit_app(0);
 }
 
 /// This variant of `assert_eq!()` returns an error
