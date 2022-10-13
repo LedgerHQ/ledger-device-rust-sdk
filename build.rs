@@ -177,6 +177,18 @@ fn main() -> Result<(), Box<dyn Error>> {
             "{}/lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_if.c",
             bolos_sdk
         ))
+        .file(format!(
+            "{}/lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_cmd.c",
+            bolos_sdk
+        ))
+        .file(format!(
+            "{}/lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_core.c",
+            bolos_sdk
+        ))
+        .file(format!(
+            "{}/lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_if.c",
+            bolos_sdk
+        ))
         .define("HAVE_LOCAL_APDU_BUFFER", None)
         .define("IO_HID_EP_LENGTH", Some("64"))
         .define("USB_SEGMENT_SIZE", Some("64"))
@@ -197,6 +209,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         ))
         .include(format!(
             "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Class/HID/Inc"
+        ))
+        .include(format!(
+            "{}/lib_stusb/STM32_USB_Device_Library/Class/CCID/inc",
+            bolos_sdk
         ))
         .include(format!(
             "{}/lib_stusb/STM32_USB_Device_Library/Class/CCID/inc",
