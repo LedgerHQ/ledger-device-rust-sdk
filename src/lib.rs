@@ -12,6 +12,7 @@ pub mod bindings;
 pub mod ble;
 
 pub mod buttons;
+pub mod ccid;
 pub mod ecc;
 pub mod io;
 pub mod nvm;
