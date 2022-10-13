@@ -3,6 +3,7 @@ use crate::bindings::*;
 use crate::ble;
 use crate::buttons::{get_button_event, ButtonEvent, ButtonsState};
 
+use crate::ccid; 
 use crate::seph;
 use core::convert::TryFrom;
 use core::ops::{Index, IndexMut};
@@ -136,6 +137,9 @@ impl Comm {
                 let len = (self.tx as u16).to_be_bytes();
                 seph::seph_send(&[seph::SephTags::RawAPDU as u8, len[0], len[1]]);
                 seph::seph_send(&self.apdu_buffer[..self.tx]);
+            }
+            APDU_USB_CCID => {
+                ccid::send(&self.apdu_buffer[..self.tx]);
             }
             #[cfg(target_os = "nanox")]
             APDU_BLE => {
