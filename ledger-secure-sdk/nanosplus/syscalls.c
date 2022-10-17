@@ -1,10 +1,5 @@
 #define SYSCALL_STUB
 
-#if defined(HAVE_BOLOS)
-# include "bolos_privileged_ux.h"
-#endif // HAVE_BOLOS
-
-#include "bolos_target.h"
 #include "exceptions.h"
 #include "lcx_aes.h"
 #include "lcx_des.h"
