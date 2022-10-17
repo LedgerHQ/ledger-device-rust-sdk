@@ -15,6 +15,10 @@
       "ld.lld": [
           "-Tnanosplus_layout.ld",
           "-Tlink.ld"
+      ],
+      "ld": [
+          "-Tnanosplus_layout.ld",
+          "-Tlink.ld"
       ]
   },
   "relocation-model": "ropi-rwpi",
