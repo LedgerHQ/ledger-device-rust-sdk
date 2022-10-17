@@ -2636,16 +2636,16 @@ extern "C" {
         sig_len: size_t,
     ) -> bool;
 }
-extern "C" {
-    pub fn cx_ecdh_no_throw(
-        pvkey: *const cx_ecfp_private_key_t,
-        mode: u32,
-        P: *const u8,
-        P_len: size_t,
-        secret: *mut u8,
-        secret_len: size_t,
-    ) -> cx_err_t;
-}
+// extern "C" {
+//     pub fn cx_ecdh_no_throw(
+//         pvkey: *const cx_ecfp_private_key_t,
+//         mode: u32,
+//         P: *const u8,
+//         P_len: size_t,
+//         secret: *mut u8,
+//         secret_len: size_t,
+//     ) -> cx_err_t;
+// }
 extern "C" {
     pub fn cx_crc16(buffer: *const core::ffi::c_void, len: size_t) -> u16;
 }
