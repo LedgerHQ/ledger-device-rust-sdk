@@ -1,0 +1,15 @@
+[target.nanos]
+runner = "speculos -m nanos"
+
+[target.nanox]
+runner = "speculos -m nanox -k 2.0"
+
+[target.nanosplus]
+runner = "speculos -m nanosp -k 1.0.3"
+
+[unstable]
+build-std = ["core"]
+build-std-features = ["compiler-builtins-mem"]
+
+[build]
+target = "nanosplus.json"

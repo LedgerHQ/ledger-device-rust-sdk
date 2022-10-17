@@ -343,7 +343,7 @@ impl Comm {
     pub fn reply<T: Into<Reply>>(&mut self, reply: T) {
         let sw = reply.into().0;
         // Append status word
-        self.apdu_buffer[self.tx] = ((sw as u16) >> 8) as u8;
+        self.apdu_buffer[self.tx] = (sw >> 8) as u8;
         self.apdu_buffer[self.tx + 1] = sw as u8;
         self.tx += 2;
         // Transmit the response

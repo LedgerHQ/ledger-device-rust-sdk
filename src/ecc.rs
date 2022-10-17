@@ -295,12 +295,12 @@ impl<const N: usize> ECPrivateKey<N, 'W'> {
             x if x <= 64 => CX_SHA512,
             _ => CX_BLAKE2B,
         };
-        self.ecdsa_sign(hash, hash_id, (CX_RND_RFC6979 | CX_LAST) as u32)
+        self.ecdsa_sign(hash, hash_id, CX_RND_RFC6979 | CX_LAST)
     }
 
     /// Sign a message/hash using ECDSA in its original form
     pub fn sign(&self, hash: &[u8]) -> Result<([u8; Self::S], u32), CxError> {
-        self.ecdsa_sign(hash, 0, (CX_RND_TRNG | CX_LAST) as u32)
+        self.ecdsa_sign(hash, 0, CX_RND_TRNG | CX_LAST)
     }
 }
 
