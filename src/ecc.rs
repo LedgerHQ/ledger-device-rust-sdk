@@ -507,7 +507,6 @@ pub const fn make_bip32_path<const N: usize>(bytes: &[u8]) -> [u32; N] {
                     // Hardening
                     b'\'' => {
                         path[j] = acc + 0x80000000;
-                        j += 1;
                         state = Bip32ParserState::Hardened
                     }
                     // Separator for next number
@@ -522,7 +521,10 @@ pub const fn make_bip32_path<const N: usize>(bytes: &[u8]) -> [u32; N] {
             // Previous number has hardening. Next character must be a /
             // separator.
             Bip32ParserState::Hardened => match c {
-                b'/' => state = Bip32ParserState::FirstDigit,
+                b'/' => {
+                    j += 1;
+                    state = Bip32ParserState::FirstDigit
+                }
                 _ => panic!("expected '/' character after hardening"),
             },
         }
@@ -536,7 +538,7 @@ pub const fn make_bip32_path<const N: usize>(bytes: &[u8]) -> [u32; N] {
 
     // Assert we parsed the exact expected number of tokens in the path
     if j != N - 1 {
-        panic!("path is too short");
+        panic!("wrong path length");
     }
 
     path
@@ -705,6 +707,10 @@ mod tests {
         {
             const P: [u32; 4] = make_bip32_path(b"m/1234/5678'/91011/0");
             assert_eq!(P, [1234u32, 5678u32 + 0x80000000u32, 91011u32, 0u32]);
+        }
+        {
+            const P: [u32; 2] = make_bip32_path(b"m/1234/5678'");
+            assert_eq!(P, [1234u32, 5678u32 + 0x80000000u32]);
         }
     }
 }
