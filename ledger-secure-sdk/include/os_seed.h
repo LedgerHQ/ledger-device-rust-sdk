@@ -83,12 +83,12 @@ SYSCALL void os_perso_derive_node_with_seed_key(
     unsigned char *chain PLENGTH(32),
     unsigned char *seed_key PLENGTH(seed_key_length),
     unsigned int seed_key_length);
-#define os_perso_derive_node_bip32_seed_key(mode, curve, path, pathLength,     \
-                                            privateKey, chain, seed_key,       \
-                                            seed_key_length)                   \
-  os_perso_derive_node_with_seed_key(mode, curve, path, pathLength,            \
-                                     privateKey, chain, seed_key,              \
-                                     seed_key_length)
+//#define os_perso_derive_node_bip32_seed_key(mode, curve, path, pathLength,     \
+//                                            privateKey, chain, seed_key,       \
+//                                            seed_key_length)                   \
+//  os_perso_derive_node_with_seed_key(mode, curve, path, pathLength,            \
+//                                     privateKey, chain, seed_key,              \
+//                                     seed_key_length)
 
 SYSCALL void os_perso_derive_eip2333(
     cx_curve_t curve,

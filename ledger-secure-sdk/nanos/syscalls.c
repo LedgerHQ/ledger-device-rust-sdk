@@ -830,6 +830,10 @@ void os_perso_derive_node_bip32 ( cx_curve_t curve, const unsigned int * path, u
   return;
 }
 
+void os_perso_derive_node_bip32_seed_key( unsigned int mode, unsigned int curve, const unsigned int * path, unsigned int pathLength, unsigned char * privateKey, unsigned char * chain, unsigned char * seed_key, unsigned int seed_key_length ) {
+    os_perso_derive_node_with_seed_key(mode, (cx_curve_t) curve, path, pathLength, privateKey, chain, seed_key, seed_key_length);
+}
+
 void os_perso_derive_node_with_seed_key ( unsigned int mode, cx_curve_t curve, const unsigned int * path, unsigned int pathLength, unsigned char * privateKey, unsigned char * chain, unsigned char * seed_key, unsigned int seed_key_length ) {
   unsigned int parameters [2+8];
   parameters[0] = (unsigned int)mode;

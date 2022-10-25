@@ -353,25 +353,30 @@ pub const ROWS: u32 = 8;
 pub const COLS1024: u32 = 16;
 pub const SIZE1024: u32 = 128;
 pub const CX_CRC16_INIT: u32 = 65535;
+
 extern "C" {
     pub fn os_endorsement_get_code_hash(buffer: *mut core::ffi::c_uchar) -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn os_endorsement_get_public_key(
         index: core::ffi::c_uchar,
         buffer: *mut core::ffi::c_uchar,
     ) -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn os_endorsement_get_public_key_certificate(
         index: core::ffi::c_uchar,
         buffer: *mut core::ffi::c_uchar,
     ) -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn os_endorsement_key1_get_app_secret(buffer: *mut core::ffi::c_uchar)
-        -> core::ffi::c_uint;
+                                              -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn os_endorsement_key1_sign_data(
         src: *mut core::ffi::c_uchar,
@@ -379,6 +384,7 @@ extern "C" {
         signature: *mut core::ffi::c_uchar,
     ) -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn os_endorsement_key2_derive_sign_data(
         src: *mut core::ffi::c_uchar,
@@ -386,9 +392,11 @@ extern "C" {
         signature: *mut core::ffi::c_uchar,
     ) -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn halt();
 }
+
 extern "C" {
     pub fn os_parse_bertlv(
         mem: *mut core::ffi::c_uchar,
@@ -400,8 +408,10 @@ extern "C" {
         maxlength: core::ffi::c_uint,
     ) -> core::ffi::c_uint;
 }
+
 pub type bolos_bool_t = core::ffi::c_char;
 pub type bolos_task_status_t = core::ffi::c_uchar;
+
 pub const TASK_BOLOS: task_unsecure_id_e = 0;
 pub const TASK_SYSCALL: task_unsecure_id_e = 1;
 pub const TASK_USERTASKS_START: task_unsecure_id_e = 2;
@@ -410,28 +420,37 @@ pub const TASK_SUBTASKS_START: task_unsecure_id_e = 3;
 pub const TASK_SUBTASK_0: task_unsecure_id_e = 3;
 pub const TASK_BOLOS_UX: task_unsecure_id_e = 4;
 pub const TASK_MAXCOUNT: task_unsecure_id_e = 5;
+
 pub type task_unsecure_id_e = core::ffi::c_uchar;
+
 extern "C" {
     pub fn os_sched_exec(app_idx: core::ffi::c_uint);
 }
+
 extern "C" {
     pub fn os_sched_exit(exit_code: bolos_task_status_t);
 }
+
 extern "C" {
     pub fn os_sched_is_running(task_idx: core::ffi::c_uint) -> bolos_bool_t;
 }
+
 extern "C" {
     pub fn os_sched_last_status(task_idx: core::ffi::c_uint) -> bolos_task_status_t;
 }
+
 extern "C" {
     pub fn os_sched_yield(status: bolos_task_status_t);
 }
+
 extern "C" {
     pub fn os_sched_switch(task_idx: core::ffi::c_uint, status: bolos_task_status_t);
 }
+
 extern "C" {
     pub fn os_sched_current_task() -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn os_sched_create(
         main: *mut core::ffi::c_void,
@@ -443,60 +462,73 @@ extern "C" {
         stack_length: core::ffi::c_uint,
     ) -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn os_sched_kill(taskidx: core::ffi::c_uint);
 }
+
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct bolos_ux_asynch_callback_t {
     pub asynchmodal_end_callback:
-        ::core::option::Option<unsafe extern "C" fn(ux_status: core::ffi::c_uint)>,
+    ::core::option::Option<unsafe extern "C" fn(ux_status: core::ffi::c_uint)>,
 }
+
 extern "C" {
     pub static mut G_io_asynch_ux_callback: bolos_ux_asynch_callback_t;
 }
+
 extern "C" {
     pub fn os_flags() -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn os_version(
         version: *mut core::ffi::c_uchar,
         maxlength: core::ffi::c_uint,
     ) -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn os_serial(
         serial: *mut core::ffi::c_uchar,
         maxlength: core::ffi::c_uint,
     ) -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn os_seph_features() -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn os_seph_version(
         version: *mut core::ffi::c_uchar,
         maxlength: core::ffi::c_uint,
     ) -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn os_bootloader_version(
         version: *mut core::ffi::c_uchar,
         maxlength: core::ffi::c_uint,
     ) -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn os_get_sn(buffer: *mut core::ffi::c_uchar) -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn get_api_level() -> core::ffi::c_uint;
 }
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct apdu_buffer_s {
     pub buf: *mut u8,
     pub len: u16,
 }
+
 impl Default for apdu_buffer_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -506,16 +538,20 @@ impl Default for apdu_buffer_s {
         }
     }
 }
+
 pub type apdu_buffer_t = apdu_buffer_s;
+
 extern "C" {
     pub static mut G_io_apdu_buffer: [core::ffi::c_uchar; 260usize];
 }
+
 extern "C" {
     pub fn io_exchange(
         channel_and_flags: core::ffi::c_uchar,
         tx_len: core::ffi::c_ushort,
     ) -> core::ffi::c_ushort;
 }
+
 pub const IO_APDU_MEDIA_NONE: io_apdu_media_t = 0;
 pub const IO_APDU_MEDIA_USB_HID: io_apdu_media_t = 1;
 pub const IO_APDU_MEDIA_BLE: io_apdu_media_t = 2;
@@ -524,19 +560,25 @@ pub const IO_APDU_MEDIA_USB_CCID: io_apdu_media_t = 4;
 pub const IO_APDU_MEDIA_USB_WEBUSB: io_apdu_media_t = 5;
 pub const IO_APDU_MEDIA_RAW: io_apdu_media_t = 6;
 pub const IO_APDU_MEDIA_U2F: io_apdu_media_t = 7;
+
 pub type io_apdu_media_t = core::ffi::c_uchar;
+
 extern "C" {
     pub static mut G_io_usb_ep_buffer: [core::ffi::c_uchar; 64usize];
 }
+
 extern "C" {
     pub fn io_event(channel: core::ffi::c_uchar) -> core::ffi::c_uchar;
 }
+
 extern "C" {
     pub fn os_lib_call(call_parameters: *mut core::ffi::c_uint);
 }
+
 extern "C" {
     pub fn os_lib_end();
 }
+
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct meminfo_s {
@@ -545,10 +587,13 @@ pub struct meminfo_s {
     pub systemSize: core::ffi::c_uint,
     pub slots: core::ffi::c_uint,
 }
+
 pub type meminfo_t = meminfo_s;
+
 extern "C" {
     pub fn os_get_memory_info(meminfo: *mut meminfo_t);
 }
+
 extern "C" {
     pub fn nvm_write(
         dst_adr: *mut core::ffi::c_void,
@@ -556,24 +601,31 @@ extern "C" {
         src_len: core::ffi::c_uint,
     );
 }
+
 extern "C" {
     pub fn nvm_erase(dst_adr: *mut core::ffi::c_void, len: core::ffi::c_uint);
 }
+
 extern "C" {
     pub fn nvm_write_page(page_adr: core::ffi::c_uint);
 }
+
 extern "C" {
     pub fn nvm_erase_page(page_adr: core::ffi::c_uint);
 }
+
 extern "C" {
     pub fn os_perso_erase_all();
 }
+
 extern "C" {
     pub fn pic(linked_address: *mut core::ffi::c_void) -> *mut core::ffi::c_void;
 }
+
 extern "C" {
     pub fn pic_internal(link_address: *mut core::ffi::c_void) -> *mut core::ffi::c_void;
 }
+
 extern "C" {
     pub fn os_perso_set_pin(
         identity: core::ffi::c_uint,
@@ -581,33 +633,42 @@ extern "C" {
         length: core::ffi::c_uint,
     );
 }
+
 extern "C" {
     pub fn os_perso_set_current_identity_pin(
         pin: *mut core::ffi::c_uchar,
         length: core::ffi::c_uint,
     );
 }
+
 extern "C" {
     pub fn os_global_pin_is_validated() -> bolos_bool_t;
 }
+
 extern "C" {
     pub fn os_global_pin_check(
         pin_buffer: *mut core::ffi::c_uchar,
         pin_length: core::ffi::c_uchar,
     ) -> bolos_bool_t;
 }
+
 extern "C" {
     pub fn os_global_pin_invalidate();
 }
+
 extern "C" {
     pub fn os_global_pin_retries() -> core::ffi::c_uint;
 }
+
 pub type size_t = core::ffi::c_uint;
 pub type cx_err_t = u32;
+
 extern "C" {
     pub fn cx_get_random_bytes(buffer: *mut core::ffi::c_void, len: size_t) -> cx_err_t;
 }
+
 pub type appmain_t = ::core::option::Option<unsafe extern "C" fn()>;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct application_s {
@@ -621,6 +682,7 @@ pub struct application_s {
     pub sha256_code_data: [core::ffi::c_uchar; 32usize],
     pub sha256_full: [core::ffi::c_uchar; 32usize],
 }
+
 impl Default for application_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -630,7 +692,9 @@ impl Default for application_s {
         }
     }
 }
+
 pub type application_t = application_s;
+
 extern "C" {
     pub fn os_registry_get_tag(
         app_idx: core::ffi::c_uint,
@@ -641,6 +705,7 @@ extern "C" {
         maxlength: core::ffi::c_uint,
     ) -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn os_registry_get_current_app_tag(
         tag: core::ffi::c_uint,
@@ -648,18 +713,23 @@ extern "C" {
         maxlen: core::ffi::c_uint,
     ) -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn os_registry_delete_app_and_dependees(app_idx: core::ffi::c_uint);
 }
+
 extern "C" {
     pub fn os_registry_delete_all_apps();
 }
+
 extern "C" {
     pub fn os_registry_count() -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn os_registry_get(app_idx: core::ffi::c_uint, out_application_entry: *mut application_t);
 }
+
 pub const ERR_GEN_ID_01: generic_identifiers = 1;
 pub const ERR_GEN_ID_02: generic_identifiers = 2;
 pub const ERR_GEN_ID_03: generic_identifiers = 3;
@@ -703,16 +773,20 @@ pub const ERR_GEN_ID_28: generic_identifiers = 40;
 pub const ERR_GEN_ID_29: generic_identifiers = 41;
 pub const ERR_GEN_ID_2A: generic_identifiers = 42;
 pub const ERR_GEN_ID_2B: generic_identifiers = 43;
+
 pub type generic_identifiers = core::ffi::c_uchar;
 pub type exception_t = core::ffi::c_ushort;
 pub type try_context_t = try_context_s;
 pub type jmp_buf = [core::ffi::c_int; 23usize];
+
 extern "C" {
     pub fn longjmp(__jmpb: *mut core::ffi::c_int, __retval: core::ffi::c_int);
 }
+
 extern "C" {
     pub fn setjmp(__jmpb: *mut core::ffi::c_int) -> core::ffi::c_int;
 }
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct try_context_s {
@@ -720,6 +794,7 @@ pub struct try_context_s {
     pub previous: *mut try_context_t,
     pub ex: exception_t,
 }
+
 impl Default for try_context_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -729,16 +804,21 @@ impl Default for try_context_s {
         }
     }
 }
+
 extern "C" {
     pub fn try_context_get() -> *mut try_context_t;
 }
+
 extern "C" {
     pub fn try_context_set(context: *mut try_context_t) -> *mut try_context_t;
 }
+
 extern "C" {
     pub fn os_longjmp(exception: core::ffi::c_uint);
 }
+
 pub type uint64bits_t = u64;
+
 pub const CX_NONE: cx_md_e = 0;
 pub const CX_RIPEMD160: cx_md_e = 1;
 pub const CX_SHA224: cx_md_e = 2;
@@ -753,9 +833,13 @@ pub const CX_SHAKE128: cx_md_e = 10;
 pub const CX_SHAKE256: cx_md_e = 11;
 pub const CX_SHA3_256: cx_md_e = 12;
 pub const CX_SHA3_512: cx_md_e = 13;
+
 pub type cx_md_e = core::ffi::c_uchar;
+
 pub use self::cx_md_e as cx_md_t;
+
 pub type cx_hash_t = cx_hash_header_s;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_hash_info_t {
@@ -773,8 +857,9 @@ pub struct cx_hash_info_t {
         unsafe extern "C" fn(ctx: *mut cx_hash_t, output_size: size_t) -> cx_err_t,
     >,
     pub output_size_func:
-        ::core::option::Option<unsafe extern "C" fn(ctx: *const cx_hash_t) -> size_t>,
+    ::core::option::Option<unsafe extern "C" fn(ctx: *const cx_hash_t) -> size_t>,
 }
+
 impl Default for cx_hash_info_t {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -784,12 +869,14 @@ impl Default for cx_hash_info_t {
         }
     }
 }
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_hash_header_s {
     pub info: *const cx_hash_info_t,
     pub counter: u32,
 }
+
 impl Default for cx_hash_header_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -799,9 +886,11 @@ impl Default for cx_hash_header_s {
         }
     }
 }
+
 extern "C" {
     pub fn cx_hash_get_size(ctx: *const cx_hash_t) -> size_t;
 }
+
 extern "C" {
     pub fn cx_hash_no_throw(
         hash: *mut cx_hash_t,
@@ -812,41 +901,53 @@ extern "C" {
         out_len: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_hash_init(hash: *mut cx_hash_t, hash_id: cx_md_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_hash_init_ex(hash: *mut cx_hash_t, hash_id: cx_md_t, output_size: size_t)
-        -> cx_err_t;
+                           -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_hash_update(hash: *mut cx_hash_t, in_: *const u8, in_len: size_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_hash_final(hash: *mut cx_hash_t, digest: *mut u8) -> cx_err_t;
 }
+
 pub type cx_bn_t = u32;
+
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct cx_bn_mont_ctx_t {
     pub n: cx_bn_t,
     pub h: cx_bn_t,
 }
+
 extern "C" {
     pub fn cx_bn_lock(word_nbytes: size_t, flags: u32) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_unlock() -> u32;
 }
+
 extern "C" {
     pub fn cx_bn_is_locked() -> bool;
 }
+
 extern "C" {
     pub fn cx_bn_locked() -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_alloc(x: *mut cx_bn_t, nbytes: size_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_alloc_init(
         x: *mut cx_bn_t,
@@ -855,118 +956,156 @@ extern "C" {
         value_nbytes: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_destroy(x: *mut cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_nbytes(x: cx_bn_t, nbytes: *mut size_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_init(x: cx_bn_t, value: *const u8, value_nbytes: size_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_rand(x: cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_copy(a: cx_bn_t, b: cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_set_u32(x: cx_bn_t, n: u32) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_get_u32(x: cx_bn_t, n: *mut u32) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_export(x: cx_bn_t, bytes: *mut u8, nbytes: size_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_cmp(a: cx_bn_t, b: cx_bn_t, diff: *mut core::ffi::c_int) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_cmp_u32(a: cx_bn_t, b: u32, diff: *mut core::ffi::c_int) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_is_odd(n: cx_bn_t, odd: *mut bool) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_xor(r: cx_bn_t, a: cx_bn_t, b: cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_or(r: cx_bn_t, a: cx_bn_t, b: cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_and(r: cx_bn_t, a: cx_bn_t, b: cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_tst_bit(x: cx_bn_t, pos: u32, set: *mut bool) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_set_bit(x: cx_bn_t, pos: u32) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_clr_bit(x: cx_bn_t, pos: u32) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_shr(x: cx_bn_t, n: u32) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_shl(x: cx_bn_t, n: u32) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_cnt_bits(n: cx_bn_t, nbits: *mut u32) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_add(r: cx_bn_t, a: cx_bn_t, b: cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_sub(r: cx_bn_t, a: cx_bn_t, b: cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_mul(r: cx_bn_t, a: cx_bn_t, b: cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_mod_add(r: cx_bn_t, a: cx_bn_t, b: cx_bn_t, n: cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_mod_sub(r: cx_bn_t, a: cx_bn_t, b: cx_bn_t, n: cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_mod_mul(r: cx_bn_t, a: cx_bn_t, b: cx_bn_t, n: cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_reduce(r: cx_bn_t, d: cx_bn_t, n: cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_mod_sqrt(r: cx_bn_t, a: cx_bn_t, n: cx_bn_t, sign: u32) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_mod_pow_bn(r: cx_bn_t, a: cx_bn_t, e: cx_bn_t, n: cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_mod_pow(r: cx_bn_t, a: cx_bn_t, e: *const u8, e_len: u32, n: cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_mod_pow2(r: cx_bn_t, a: cx_bn_t, e: *const u8, e_len: u32, n: cx_bn_t)
-        -> cx_err_t;
+                          -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_mod_invert_nprime(r: cx_bn_t, a: cx_bn_t, n: cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_mod_u32_invert(r: cx_bn_t, a: u32, n: cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_mont_alloc(ctx: *mut cx_bn_mont_ctx_t, length: size_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_mont_init(ctx: *mut cx_bn_mont_ctx_t, n: cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_mont_init2(ctx: *mut cx_bn_mont_ctx_t, n: cx_bn_t, h: cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_mont_to_montgomery(x: cx_bn_t, z: cx_bn_t, ctx: *const cx_bn_mont_ctx_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_mont_from_montgomery(
         z: cx_bn_t,
@@ -974,6 +1113,7 @@ extern "C" {
         ctx: *const cx_bn_mont_ctx_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_mont_mul(
         r: cx_bn_t,
@@ -982,6 +1122,7 @@ extern "C" {
         ctx: *const cx_bn_mont_ctx_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_mont_pow(
         r: cx_bn_t,
@@ -991,6 +1132,7 @@ extern "C" {
         ctx: *const cx_bn_mont_ctx_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_mont_pow_bn(
         r: cx_bn_t,
@@ -999,18 +1141,23 @@ extern "C" {
         ctx: *const cx_bn_mont_ctx_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_mont_invert_nprime(r: cx_bn_t, a: cx_bn_t, ctx: *const cx_bn_mont_ctx_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_is_prime(n: cx_bn_t, prime: *mut bool) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_next_prime(n: cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_rng(r: cx_bn_t, n: cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_bn_gf2_n_mul(
         bn_r: cx_bn_t,
@@ -1020,6 +1167,7 @@ extern "C" {
         bn_h: cx_bn_t,
     ) -> cx_err_t;
 }
+
 pub const CX_CURVE_NONE: cx_curve_e = 0;
 pub const CX_CURVE_WEIERSTRASS_START: cx_curve_e = 32;
 pub const CX_CURVE_SECP256K1: cx_curve_e = 33;
@@ -1046,8 +1194,11 @@ pub const CX_CURVE_MONTGOMERY_START: cx_curve_e = 128;
 pub const CX_CURVE_Curve25519: cx_curve_e = 129;
 pub const CX_CURVE_Curve448: cx_curve_e = 130;
 pub const CX_CURVE_MONTGOMERY_END: cx_curve_e = 143;
+
 pub type cx_curve_e = core::ffi::c_uchar;
+
 pub use self::cx_curve_e as cx_curve_t;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_curve_weierstrass_s {
@@ -1064,6 +1215,7 @@ pub struct cx_curve_weierstrass_s {
     pub Hn: *const u8,
     pub Hp: *const u8,
 }
+
 impl Default for cx_curve_weierstrass_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -1073,7 +1225,9 @@ impl Default for cx_curve_weierstrass_s {
         }
     }
 }
+
 pub type cx_curve_weierstrass_t = cx_curve_weierstrass_s;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_curve_twisted_edwards_s {
@@ -1090,6 +1244,7 @@ pub struct cx_curve_twisted_edwards_s {
     pub Hn: *const u8,
     pub Hp: *const u8,
 }
+
 impl Default for cx_curve_twisted_edwards_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -1099,7 +1254,9 @@ impl Default for cx_curve_twisted_edwards_s {
         }
     }
 }
+
 pub type cx_curve_twisted_edwards_t = cx_curve_twisted_edwards_s;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_curve_montgomery_s {
@@ -1116,6 +1273,7 @@ pub struct cx_curve_montgomery_s {
     pub Hn: *const u8,
     pub Hp: *const u8,
 }
+
 impl Default for cx_curve_montgomery_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -1125,7 +1283,9 @@ impl Default for cx_curve_montgomery_s {
         }
     }
 }
+
 pub type cx_curve_montgomery_t = cx_curve_montgomery_s;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_curve_domain_s {
@@ -1142,6 +1302,7 @@ pub struct cx_curve_domain_s {
     pub Hn: *const u8,
     pub Hp: *const u8,
 }
+
 impl Default for cx_curve_domain_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -1151,7 +1312,9 @@ impl Default for cx_curve_domain_s {
         }
     }
 }
+
 pub type cx_curve_domain_t = cx_curve_domain_s;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_ec_point_s {
@@ -1160,6 +1323,7 @@ pub struct cx_ec_point_s {
     pub y: cx_bn_t,
     pub z: cx_bn_t,
 }
+
 impl Default for cx_ec_point_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -1169,7 +1333,9 @@ impl Default for cx_ec_point_s {
         }
     }
 }
+
 pub type cx_ecpoint_t = cx_ec_point_s;
+
 pub const CX_CURVE_PARAM_NONE: cx_curve_dom_param_s = 0;
 pub const CX_CURVE_PARAM_A: cx_curve_dom_param_s = 1;
 pub const CX_CURVE_PARAM_B: cx_curve_dom_param_s = 2;
@@ -1178,14 +1344,19 @@ pub const CX_CURVE_PARAM_Gx: cx_curve_dom_param_s = 4;
 pub const CX_CURVE_PARAM_Gy: cx_curve_dom_param_s = 5;
 pub const CX_CURVE_PARAM_Order: cx_curve_dom_param_s = 6;
 pub const CX_CURVE_PARAM_Cofactor: cx_curve_dom_param_s = 7;
+
 pub type cx_curve_dom_param_s = core::ffi::c_uchar;
+
 pub use self::cx_curve_dom_param_s as cx_curve_dom_param_t;
+
 extern "C" {
     pub fn cx_ecdomain_size(curve: cx_curve_t, length: *mut size_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecdomain_parameters_length(cv: cx_curve_t, length: *mut size_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecdomain_parameter(
         cv: cx_curve_t,
@@ -1194,6 +1365,7 @@ extern "C" {
         p_len: u32,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecdomain_parameter_bn(
         cv: cx_curve_t,
@@ -1201,19 +1373,24 @@ extern "C" {
         p: cx_bn_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecdomain_generator(cv: cx_curve_t, Gx: *mut u8, Gy: *mut u8, len: size_t)
-        -> cx_err_t;
+                                 -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecdomain_generator_bn(cv: cx_curve_t, P: *mut cx_ecpoint_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecpoint_alloc(P: *mut cx_ecpoint_t, cv: cx_curve_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecpoint_destroy(P: *mut cx_ecpoint_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecpoint_init(
         P: *mut cx_ecpoint_t,
@@ -1223,9 +1400,11 @@ extern "C" {
         y_len: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecpoint_init_bn(P: *mut cx_ecpoint_t, x: cx_bn_t, y: cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecpoint_export(
         P: *const cx_ecpoint_t,
@@ -1235,6 +1414,7 @@ extern "C" {
         y_len: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecpoint_export_bn(
         P: *const cx_ecpoint_t,
@@ -1242,6 +1422,7 @@ extern "C" {
         y: *mut cx_bn_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecpoint_compress(
         P: *const cx_ecpoint_t,
@@ -1250,6 +1431,7 @@ extern "C" {
         sign: *mut u32,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecpoint_decompress(
         P: *mut cx_ecpoint_t,
@@ -1258,6 +1440,7 @@ extern "C" {
         sign: u32,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecpoint_add(
         R: *mut cx_ecpoint_t,
@@ -1265,15 +1448,19 @@ extern "C" {
         Q: *const cx_ecpoint_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecpoint_neg(P: *mut cx_ecpoint_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecpoint_rnd_scalarmul(P: *mut cx_ecpoint_t, k: *const u8, k_len: size_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecpoint_rnd_scalarmul_bn(P: *mut cx_ecpoint_t, bn_k: cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecpoint_rnd_fixed_scalarmul(
         P: *mut cx_ecpoint_t,
@@ -1281,12 +1468,15 @@ extern "C" {
         k_len: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecpoint_scalarmul(P: *mut cx_ecpoint_t, k: *const u8, k_len: size_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecpoint_scalarmul_bn(P: *mut cx_ecpoint_t, bn_k: cx_bn_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecpoint_double_scalarmul(
         R: *mut cx_ecpoint_t,
@@ -1298,6 +1488,7 @@ extern "C" {
         r_len: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecpoint_double_scalarmul_bn(
         R: *mut cx_ecpoint_t,
@@ -1307,6 +1498,7 @@ extern "C" {
         bn_r: cx_bn_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecpoint_cmp(
         P: *const cx_ecpoint_t,
@@ -1314,13 +1506,16 @@ extern "C" {
         is_equal: *mut bool,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecpoint_is_on_curve(R: *const cx_ecpoint_t, is_on_curve: *mut bool) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecpoint_is_at_infinity(R: *const cx_ecpoint_t, is_at_infinity: *mut bool)
-        -> cx_err_t;
+                                     -> cx_err_t;
 }
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_ecfp_public_key_s {
@@ -1328,6 +1523,7 @@ pub struct cx_ecfp_public_key_s {
     pub W_len: size_t,
     pub W: [u8; 1usize],
 }
+
 impl Default for cx_ecfp_public_key_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -1337,6 +1533,7 @@ impl Default for cx_ecfp_public_key_s {
         }
     }
 }
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_ecfp_private_key_s {
@@ -1344,6 +1541,7 @@ pub struct cx_ecfp_private_key_s {
     pub d_len: size_t,
     pub d: [u8; 1usize],
 }
+
 impl Default for cx_ecfp_private_key_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -1353,6 +1551,7 @@ impl Default for cx_ecfp_private_key_s {
         }
     }
 }
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_ecfp_256_public_key_s {
@@ -1360,6 +1559,7 @@ pub struct cx_ecfp_256_public_key_s {
     pub W_len: size_t,
     pub W: [u8; 65usize],
 }
+
 impl Default for cx_ecfp_256_public_key_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -1369,6 +1569,7 @@ impl Default for cx_ecfp_256_public_key_s {
         }
     }
 }
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_ecfp_256_private_key_s {
@@ -1376,6 +1577,7 @@ pub struct cx_ecfp_256_private_key_s {
     pub d_len: size_t,
     pub d: [u8; 32usize],
 }
+
 impl Default for cx_ecfp_256_private_key_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -1385,6 +1587,7 @@ impl Default for cx_ecfp_256_private_key_s {
         }
     }
 }
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_ecfp_256_extended_private_key_s {
@@ -1392,6 +1595,7 @@ pub struct cx_ecfp_256_extended_private_key_s {
     pub d_len: size_t,
     pub d: [u8; 64usize],
 }
+
 impl Default for cx_ecfp_256_extended_private_key_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -1401,11 +1605,13 @@ impl Default for cx_ecfp_256_extended_private_key_s {
         }
     }
 }
+
 pub type cx_ecfp_256_public_key_t = cx_ecfp_256_public_key_s;
 pub type cx_ecfp_256_private_key_t = cx_ecfp_256_private_key_s;
 pub type cx_ecfp_256_extended_private_key_t = cx_ecfp_256_extended_private_key_s;
 pub type cx_ecfp_public_key_t = cx_ecfp_256_public_key_s;
 pub type cx_ecfp_private_key_t = cx_ecfp_256_private_key_s;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_ecfp_384_public_key_s {
@@ -1413,6 +1619,7 @@ pub struct cx_ecfp_384_public_key_s {
     pub W_len: size_t,
     pub W: [u8; 97usize],
 }
+
 impl Default for cx_ecfp_384_public_key_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -1422,6 +1629,7 @@ impl Default for cx_ecfp_384_public_key_s {
         }
     }
 }
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_ecfp_384_private_key_s {
@@ -1429,6 +1637,7 @@ pub struct cx_ecfp_384_private_key_s {
     pub d_len: size_t,
     pub d: [u8; 48usize],
 }
+
 impl Default for cx_ecfp_384_private_key_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -1438,8 +1647,10 @@ impl Default for cx_ecfp_384_private_key_s {
         }
     }
 }
+
 pub type cx_ecfp_384_private_key_t = cx_ecfp_384_private_key_s;
 pub type cx_ecfp_384_public_key_t = cx_ecfp_384_public_key_s;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_ecfp_512_public_key_s {
@@ -1447,6 +1658,7 @@ pub struct cx_ecfp_512_public_key_s {
     pub W_len: size_t,
     pub W: [u8; 129usize],
 }
+
 impl Default for cx_ecfp_512_public_key_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -1456,6 +1668,7 @@ impl Default for cx_ecfp_512_public_key_s {
         }
     }
 }
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_ecfp_512_private_key_s {
@@ -1463,6 +1676,7 @@ pub struct cx_ecfp_512_private_key_s {
     pub d_len: size_t,
     pub d: [u8; 64usize],
 }
+
 impl Default for cx_ecfp_512_private_key_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -1472,6 +1686,7 @@ impl Default for cx_ecfp_512_private_key_s {
         }
     }
 }
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_ecfp_512_extented_private_key_s {
@@ -1479,6 +1694,7 @@ pub struct cx_ecfp_512_extented_private_key_s {
     pub d_len: size_t,
     pub d: [u8; 128usize],
 }
+
 impl Default for cx_ecfp_512_extented_private_key_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -1488,9 +1704,11 @@ impl Default for cx_ecfp_512_extented_private_key_s {
         }
     }
 }
+
 pub type cx_ecfp_512_public_key_t = cx_ecfp_512_public_key_s;
 pub type cx_ecfp_512_private_key_t = cx_ecfp_512_private_key_s;
 pub type cx_ecfp_512_extented_private_key_t = cx_ecfp_512_extented_private_key_s;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_ecfp_640_public_key_s {
@@ -1498,6 +1716,7 @@ pub struct cx_ecfp_640_public_key_s {
     pub W_len: size_t,
     pub W: [u8; 161usize],
 }
+
 impl Default for cx_ecfp_640_public_key_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -1507,6 +1726,7 @@ impl Default for cx_ecfp_640_public_key_s {
         }
     }
 }
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_ecfp_640_private_key_s {
@@ -1514,6 +1734,7 @@ pub struct cx_ecfp_640_private_key_s {
     pub d_len: size_t,
     pub d: [u8; 80usize],
 }
+
 impl Default for cx_ecfp_640_private_key_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -1523,8 +1744,10 @@ impl Default for cx_ecfp_640_private_key_s {
         }
     }
 }
+
 pub type cx_ecfp_640_public_key_t = cx_ecfp_640_public_key_s;
 pub type cx_ecfp_640_private_key_t = cx_ecfp_640_private_key_s;
+
 extern "C" {
     pub fn cx_ecfp_add_point_no_throw(
         curve: cx_curve_t,
@@ -1533,6 +1756,7 @@ extern "C" {
         Q: *const u8,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecfp_scalar_mult_no_throw(
         curve: cx_curve_t,
@@ -1541,6 +1765,7 @@ extern "C" {
         k_len: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecfp_init_public_key_no_throw(
         curve: cx_curve_t,
@@ -1549,6 +1774,7 @@ extern "C" {
         key: *mut cx_ecfp_public_key_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecfp_init_private_key_no_throw(
         curve: cx_curve_t,
@@ -1557,6 +1783,7 @@ extern "C" {
         pvkey: *mut cx_ecfp_private_key_t,
     ) -> cx_err_t;
 }
+
 // extern "C" {
 //     pub fn cx_ecfp_generate_pair_no_throw(
 //         curve: cx_curve_t,
@@ -1574,6 +1801,7 @@ extern "C" {
         hashID: cx_md_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_eddsa_get_public_key_no_throw(
         pvkey: *const cx_ecfp_private_key_t,
@@ -1585,6 +1813,7 @@ extern "C" {
         h_len: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_edwards_compress_point_no_throw(
         curve: cx_curve_t,
@@ -1592,6 +1821,7 @@ extern "C" {
         p_len: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_edwards_decompress_point_no_throw(
         curve: cx_curve_t,
@@ -1599,6 +1829,7 @@ extern "C" {
         p_len: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn os_perso_set_seed(
         identity: core::ffi::c_uint,
@@ -1607,6 +1838,7 @@ extern "C" {
         length: core::ffi::c_uint,
     );
 }
+
 extern "C" {
     pub fn os_perso_derive_and_set_seed(
         identity: core::ffi::c_uchar,
@@ -1618,15 +1850,19 @@ extern "C" {
         words_length: core::ffi::c_uint,
     );
 }
+
 extern "C" {
     pub fn os_perso_set_words(words: *const core::ffi::c_uchar, length: core::ffi::c_uint);
 }
+
 extern "C" {
     pub fn os_perso_finalize();
 }
+
 extern "C" {
     pub fn os_perso_isonboarded() -> bolos_bool_t;
 }
+
 extern "C" {
     pub fn os_perso_set_onboarding_status(
         pin_set: core::ffi::c_uint,
@@ -1636,6 +1872,7 @@ extern "C" {
         isConfirming: core::ffi::c_uint,
     );
 }
+
 extern "C" {
     pub fn os_perso_derive_node_bip32(
         curve: cx_curve_t,
@@ -1645,6 +1882,7 @@ extern "C" {
         chain: *mut core::ffi::c_uchar,
     );
 }
+
 extern "C" {
     pub fn os_perso_derive_node_with_seed_key(
         mode: core::ffi::c_uint,
@@ -1657,6 +1895,20 @@ extern "C" {
         seed_key_length: core::ffi::c_uint,
     );
 }
+
+extern "C" {
+    pub fn os_perso_derive_node_bip32_seed_key(
+        mode: core::ffi::c_uint,
+        curve: cx_curve_t,
+        path: *const core::ffi::c_uint,
+        pathLength: core::ffi::c_uint,
+        privateKey: *mut core::ffi::c_uchar,
+        chain: *mut core::ffi::c_uchar,
+        seed_key: *mut core::ffi::c_uchar,
+        seed_key_length: core::ffi::c_uint,
+    );
+}
+
 extern "C" {
     pub fn os_perso_derive_eip2333(
         curve: cx_curve_t,
@@ -1665,6 +1917,7 @@ extern "C" {
         privateKey: *mut core::ffi::c_uchar,
     );
 }
+
 pub const OS_SETTING_BRIGHTNESS: os_setting_e = 0;
 pub const OS_SETTING_INVERT: os_setting_e = 1;
 pub const OS_SETTING_ROTATION: os_setting_e = 2;
@@ -1678,8 +1931,11 @@ pub const OS_SETTING_SAVER_STRING: os_setting_e = 8;
 pub const OS_SETTING_DEVICENAME: os_setting_e = 9;
 pub const OS_SETTING_BLEMACADR: os_setting_e = 10;
 pub const OS_SETTING_LAST: os_setting_e = 11;
+
 pub type os_setting_e = core::ffi::c_uchar;
+
 pub use self::os_setting_e as os_setting_t;
+
 extern "C" {
     pub fn os_setting_get(
         setting_id: core::ffi::c_uint,
@@ -1687,6 +1943,7 @@ extern "C" {
         maxlen: core::ffi::c_uint,
     ) -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn os_setting_set(
         setting_id: core::ffi::c_uint,
@@ -1694,6 +1951,7 @@ extern "C" {
         length: core::ffi::c_uint,
     );
 }
+
 extern "C" {
     pub fn u4be_encode(
         buffer: *mut core::ffi::c_uchar,
@@ -1701,6 +1959,7 @@ extern "C" {
         value: core::ffi::c_uint,
     );
 }
+
 extern "C" {
     pub fn u4le_encode(
         buffer: *mut core::ffi::c_uchar,
@@ -1708,6 +1967,7 @@ extern "C" {
         value: core::ffi::c_uint,
     );
 }
+
 extern "C" {
     pub fn bytes_to_hex(
         out: *mut core::ffi::c_char,
@@ -1716,6 +1976,7 @@ extern "C" {
         len: size_t,
     ) -> core::ffi::c_int;
 }
+
 extern "C" {
     pub fn bytes_to_lowercase_hex(
         out: *mut core::ffi::c_char,
@@ -1724,6 +1985,7 @@ extern "C" {
         len: size_t,
     ) -> core::ffi::c_int;
 }
+
 extern "C" {
     pub fn os_memset4(
         dst: *mut core::ffi::c_void,
@@ -1731,6 +1993,7 @@ extern "C" {
         nbintval: core::ffi::c_uint,
     );
 }
+
 extern "C" {
     pub fn os_xor(
         dst: *mut core::ffi::c_void,
@@ -1739,6 +2002,7 @@ extern "C" {
         length: core::ffi::c_uint,
     );
 }
+
 extern "C" {
     pub fn os_secure_memcmp(
         src1: *const core::ffi::c_void,
@@ -1746,6 +2010,7 @@ extern "C" {
         length: size_t,
     ) -> core::ffi::c_char;
 }
+
 extern "C" {
     pub fn os_memmove(
         dest: *mut core::ffi::c_void,
@@ -1753,6 +2018,7 @@ extern "C" {
         n: size_t,
     ) -> *mut core::ffi::c_void;
 }
+
 extern "C" {
     pub fn os_memcpy(
         dest: *mut core::ffi::c_void,
@@ -1760,6 +2026,7 @@ extern "C" {
         n: size_t,
     ) -> *mut core::ffi::c_void;
 }
+
 extern "C" {
     pub fn os_memcmp(
         s1: *const core::ffi::c_void,
@@ -1767,6 +2034,7 @@ extern "C" {
         n: size_t,
     ) -> core::ffi::c_int;
 }
+
 extern "C" {
     pub fn os_memset(
         s: *mut core::ffi::c_void,
@@ -1774,29 +2042,37 @@ extern "C" {
         n: size_t,
     ) -> *mut core::ffi::c_void;
 }
+
 extern "C" {
     pub fn app_main();
 }
+
 extern "C" {
     pub fn os_boot();
 }
+
 extern "C" {
     pub fn io_timeout(last_timeout: core::ffi::c_ushort) -> core::ffi::c_ushort;
 }
+
 pub const BOLOS_UX_INITIALIZE: bolos_ux_e = 0;
 pub const BOLOS_UX_EVENT: bolos_ux_e = 1;
 pub const BOLOS_UX_KEYBOARD: bolos_ux_e = 2;
 pub const BOLOS_UX_WAKE_UP: bolos_ux_e = 3;
 pub const BOLOS_UX_VALIDATE_PIN: bolos_ux_e = 15;
 pub const BOLOS_UX_LAST_ID: bolos_ux_e = 16;
+
 pub type bolos_ux_e = core::ffi::c_uchar;
+
 pub use self::bolos_ux_e as bolos_ux_t;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct bolos_ux_params_s {
     pub ux_id: bolos_ux_t,
     pub len: core::ffi::c_uint,
 }
+
 impl Default for bolos_ux_params_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -1806,22 +2082,29 @@ impl Default for bolos_ux_params_s {
         }
     }
 }
+
 pub type bolos_ux_params_t = bolos_ux_params_s;
+
 extern "C" {
     pub fn os_ux(params: *mut bolos_ux_params_t) -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn os_ux_result(params: *mut bolos_ux_params_t);
 }
+
 extern "C" {
     pub fn os_ux_blocking(params: *mut bolos_ux_params_t) -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn io_seph_send(buffer: *const core::ffi::c_uchar, length: core::ffi::c_ushort);
 }
+
 extern "C" {
     pub fn io_seph_is_status_sent() -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn io_seph_recv(
         buffer: *mut core::ffi::c_uchar,
@@ -1829,57 +2112,73 @@ extern "C" {
         flags: core::ffi::c_uint,
     ) -> core::ffi::c_ushort;
 }
+
 extern "C" {
     pub fn io_seph_init();
 }
+
 extern "C" {
     pub fn io_seproxyhal_init();
 }
+
 extern "C" {
     pub fn io_seproxyhal_init_ux();
 }
+
 extern "C" {
     pub fn io_seproxyhal_init_button();
 }
+
 extern "C" {
     pub fn io_exchange_al(
         channel_and_flags: core::ffi::c_uchar,
         tx_len: core::ffi::c_ushort,
     ) -> core::ffi::c_ushort;
 }
+
 extern "C" {
     pub fn os_io_seproxyhal_get_app_name_and_version() -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn USB_power(enabled: core::ffi::c_uchar);
 }
+
 extern "C" {
     pub fn io_seproxyhal_handle_usb_event();
 }
+
 extern "C" {
     pub fn io_seproxyhal_handle_usb_ep_xfer_event();
 }
+
 extern "C" {
     pub fn io_seproxyhal_get_ep_rx_size(epnum: u8) -> u16;
 }
+
 extern "C" {
     pub fn io_seproxyhal_handle_event() -> core::ffi::c_uint;
 }
+
 extern "C" {
     pub fn io_seproxyhal_general_status();
 }
+
 extern "C" {
     pub fn os_io_seproxyhal_general_status_processing();
 }
+
 extern "C" {
     pub fn io_usb_send_apdu_data(buffer: *mut core::ffi::c_uchar, length: core::ffi::c_ushort);
 }
+
 extern "C" {
     pub fn io_usb_send_apdu_data_ep0x83(
         buffer: *mut core::ffi::c_uchar,
         length: core::ffi::c_ushort,
     );
 }
+
 extern "C" {
     pub fn io_usb_send_ep(
         ep: core::ffi::c_uint,
@@ -1888,12 +2187,15 @@ extern "C" {
         timeout: core::ffi::c_uint,
     );
 }
+
 extern "C" {
     pub fn io_usb_ccid_reply(buffer: *mut core::ffi::c_uchar, length: core::ffi::c_ushort);
 }
+
 extern "C" {
     pub fn io_set_timeout(timeout: core::ffi::c_uint);
 }
+
 pub const APDU_IDLE: io_apdu_state_e = 0;
 pub const APDU_BLE: io_apdu_state_e = 1;
 pub const APDU_BLE_WAIT_NOTIFY: io_apdu_state_e = 2;
@@ -1906,7 +2208,9 @@ pub const APDU_USB_CCID: io_apdu_state_e = 8;
 pub const APDU_U2F: io_apdu_state_e = 9;
 pub const APDU_RAW: io_apdu_state_e = 10;
 pub const APDU_USB_WEBUSB: io_apdu_state_e = 11;
+
 pub type io_apdu_state_e = core::ffi::c_uchar;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct io_seph_s {
@@ -1919,11 +2223,13 @@ pub struct io_seph_s {
     pub usb_ep_timeouts: [io_seph_s__bindgen_ty_1; 6usize],
     pub transfer_mode: core::ffi::c_uchar,
 }
+
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct io_seph_s__bindgen_ty_1 {
     pub timeout: core::ffi::c_ushort,
 }
+
 impl Default for io_seph_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -1933,80 +2239,104 @@ impl Default for io_seph_s {
         }
     }
 }
+
 pub type io_seph_app_t = io_seph_s;
+
 extern "C" {
     pub static mut G_io_app: io_seph_app_t;
 }
+
 extern "C" {
     pub fn io_seproxyhal_setup_ticker(interval_ms: core::ffi::c_uint);
 }
+
 extern "C" {
     pub fn io_seproxyhal_power_off();
 }
+
 extern "C" {
     pub fn io_seproxyhal_se_reset();
 }
+
 extern "C" {
     pub fn io_seproxyhal_disable_io();
 }
+
 extern "C" {
     pub fn io_seph_ux_redisplay();
 }
+
 extern "C" {
     pub fn io_seproxyhal_io_heartbeat();
 }
+
 extern "C" {
     pub fn os_io_seph_recv_and_process(
         dont_process_ux_events: core::ffi::c_uint,
     ) -> core::ffi::c_uint;
 }
+
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct cx_aes_key_s {
     pub size: size_t,
     pub keys: [u8; 32usize],
 }
+
 pub type cx_aes_key_t = cx_aes_key_s;
+
 extern "C" {
     pub fn cx_aes_set_key_hw(key: *const cx_aes_key_t, mode: u32) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_aes_reset_hw();
 }
+
 extern "C" {
     pub fn cx_aes_block_hw(
         inblock: *const core::ffi::c_uchar,
         outblock: *mut core::ffi::c_uchar,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_crc32_hw(buf: *const core::ffi::c_void, len: size_t) -> u32;
 }
+
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct cx_des_key_s {
     pub size: u8,
     pub keys: [u8; 24usize],
 }
+
 pub type cx_des_key_t = cx_des_key_s;
+
 extern "C" {
     pub fn cx_des_set_key_hw(keys: *const cx_des_key_t, mode: u32) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_des_reset_hw();
 }
+
 extern "C" {
     pub fn cx_des_block_hw(inblock: *const core::ffi::c_uchar, outblock: *mut core::ffi::c_uchar);
 }
+
 extern "C" {
     pub fn cx_trng_get_random_data(buf: *mut u8, size: size_t);
 }
+
 extern "C" {
     pub fn cx_trng_selftest();
 }
+
 extern "C" {
     pub fn cx_trng_init();
 }
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_ripemd160_s {
@@ -2015,6 +2345,7 @@ pub struct cx_ripemd160_s {
     pub block: [u8; 64usize],
     pub acc: [u8; 20usize],
 }
+
 impl Default for cx_ripemd160_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -2024,10 +2355,13 @@ impl Default for cx_ripemd160_s {
         }
     }
 }
+
 pub type cx_ripemd160_t = cx_ripemd160_s;
+
 extern "C" {
     pub fn cx_ripemd160_init_no_throw(hash: *mut cx_ripemd160_t) -> cx_err_t;
 }
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_sha256_s {
@@ -2036,6 +2370,7 @@ pub struct cx_sha256_s {
     pub block: [u8; 64usize],
     pub acc: [u8; 32usize],
 }
+
 impl Default for cx_sha256_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -2045,16 +2380,21 @@ impl Default for cx_sha256_s {
         }
     }
 }
+
 pub type cx_sha256_t = cx_sha256_s;
+
 extern "C" {
     pub fn cx_sha224_init_no_throw(hash: *mut cx_sha256_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_sha256_init_no_throw(hash: *mut cx_sha256_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_hash_sha256(in_: *const u8, len: size_t, out: *mut u8, out_len: size_t) -> size_t;
 }
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_sha512_s {
@@ -2063,6 +2403,7 @@ pub struct cx_sha512_s {
     pub block: [u8; 128usize],
     pub acc: [u8; 64usize],
 }
+
 impl Default for cx_sha512_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -2072,16 +2413,21 @@ impl Default for cx_sha512_s {
         }
     }
 }
+
 pub type cx_sha512_t = cx_sha512_s;
+
 extern "C" {
     pub fn cx_sha384_init_no_throw(hash: *mut cx_sha512_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_sha512_init_no_throw(hash: *mut cx_sha512_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_hash_sha512(in_: *const u8, in_len: size_t, out: *mut u8, out_len: size_t) -> size_t;
 }
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_sha3_s {
@@ -2092,6 +2438,7 @@ pub struct cx_sha3_s {
     pub block: [u8; 200usize],
     pub acc: [uint64bits_t; 25usize],
 }
+
 impl Default for cx_sha3_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -2101,19 +2448,25 @@ impl Default for cx_sha3_s {
         }
     }
 }
+
 pub type cx_sha3_t = cx_sha3_s;
+
 extern "C" {
     pub fn cx_sha3_init_no_throw(hash: *mut cx_sha3_t, size: size_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_keccak_init_no_throw(hash: *mut cx_sha3_t, size: size_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_shake128_init_no_throw(hash: *mut cx_sha3_t, out_size: size_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_shake256_init_no_throw(hash: *mut cx_sha3_t, out_size: size_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_sha3_xof_init_no_throw(
         hash: *mut cx_sha3_t,
@@ -2121,12 +2474,15 @@ extern "C" {
         out_length: size_t,
     ) -> cx_err_t;
 }
+
 pub const BLAKE2B_BLOCKBYTES: blake2b_constant = 128;
 pub const BLAKE2B_OUTBYTES: blake2b_constant = 64;
 pub const BLAKE2B_KEYBYTES: blake2b_constant = 64;
 pub const BLAKE2B_SALTBYTES: blake2b_constant = 16;
 pub const BLAKE2B_PERSONALBYTES: blake2b_constant = 16;
+
 pub type blake2b_constant = core::ffi::c_uchar;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct blake2b_state__ {
@@ -2138,6 +2494,7 @@ pub struct blake2b_state__ {
     pub outlen: size_t,
     pub last_node: u8,
 }
+
 impl Default for blake2b_state__ {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -2147,7 +2504,9 @@ impl Default for blake2b_state__ {
         }
     }
 }
+
 pub type blake2b_state = blake2b_state__;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_blake2b_s {
@@ -2155,6 +2514,7 @@ pub struct cx_blake2b_s {
     pub output_size: size_t,
     pub ctx: blake2b_state__,
 }
+
 impl Default for cx_blake2b_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -2164,10 +2524,13 @@ impl Default for cx_blake2b_s {
         }
     }
 }
+
 pub type cx_blake2b_t = cx_blake2b_s;
+
 extern "C" {
     pub fn cx_blake2b_init_no_throw(hash: *mut cx_blake2b_t, out_len: size_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_blake2b_init2_no_throw(
         hash: *mut cx_blake2b_t,
@@ -2178,7 +2541,9 @@ extern "C" {
         perso_len: size_t,
     ) -> cx_err_t;
 }
+
 pub type BitSequence = core::ffi::c_uchar;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct hashState_s {
@@ -2191,6 +2556,7 @@ pub struct hashState_s {
     pub rounds: core::ffi::c_uint,
     pub statesize: core::ffi::c_uint,
 }
+
 impl Default for hashState_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -2200,13 +2566,16 @@ impl Default for hashState_s {
         }
     }
 }
+
 pub type hashState = hashState_s;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_groestl_s {
     pub output_size: core::ffi::c_uint,
     pub ctx: hashState_s,
 }
+
 impl Default for cx_groestl_s {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -2216,13 +2585,17 @@ impl Default for cx_groestl_s {
         }
     }
 }
+
 pub type cx_groestl_t = cx_groestl_s;
+
 extern "C" {
     pub fn cx_groestl_get_output_size(ctx: *const cx_groestl_t) -> size_t;
 }
+
 extern "C" {
     pub fn cx_groestl_init_no_throw(hash: *mut cx_groestl_t, size: size_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_groestl(
         hash: *mut cx_groestl_t,
@@ -2233,18 +2606,22 @@ extern "C" {
         out_len: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_groestl_update(ctx: *mut cx_groestl_t, data: *const u8, len: size_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_groestl_final(ctx: *mut cx_groestl_t, digest: *mut u8) -> cx_err_t;
 }
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_hmac_t {
     pub key: [u8; 128usize],
     pub hash_ctx: cx_hash_t,
 }
+
 impl Default for cx_hmac_t {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -2254,12 +2631,14 @@ impl Default for cx_hmac_t {
         }
     }
 }
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_hmac_ripemd160_t {
     pub key: [u8; 128usize],
     pub hash_ctx: cx_ripemd160_t,
 }
+
 impl Default for cx_hmac_ripemd160_t {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -2269,6 +2648,7 @@ impl Default for cx_hmac_ripemd160_t {
         }
     }
 }
+
 extern "C" {
     pub fn cx_hmac_ripemd160_init_no_throw(
         hmac: *mut cx_hmac_ripemd160_t,
@@ -2276,12 +2656,14 @@ extern "C" {
         key_len: size_t,
     ) -> cx_err_t;
 }
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_hmac_sha256_t {
     pub key: [u8; 128usize],
     pub hash_ctx: cx_sha256_t,
 }
+
 impl Default for cx_hmac_sha256_t {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -2291,6 +2673,7 @@ impl Default for cx_hmac_sha256_t {
         }
     }
 }
+
 extern "C" {
     pub fn cx_hmac_sha224_init(
         hmac: *mut cx_hmac_sha256_t,
@@ -2298,6 +2681,7 @@ extern "C" {
         key_len: core::ffi::c_uint,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_hmac_sha256_init_no_throw(
         hmac: *mut cx_hmac_sha256_t,
@@ -2305,6 +2689,7 @@ extern "C" {
         key_len: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_hmac_sha256(
         key: *const u8,
@@ -2315,12 +2700,14 @@ extern "C" {
         mac_len: size_t,
     ) -> size_t;
 }
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct cx_hmac_sha512_t {
     pub key: [u8; 128usize],
     pub hash_ctx: cx_sha512_t,
 }
+
 impl Default for cx_hmac_sha512_t {
     fn default() -> Self {
         let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
@@ -2330,6 +2717,7 @@ impl Default for cx_hmac_sha512_t {
         }
     }
 }
+
 extern "C" {
     pub fn cx_hmac_sha384_init(
         hmac: *mut cx_hmac_sha512_t,
@@ -2337,6 +2725,7 @@ extern "C" {
         key_len: core::ffi::c_uint,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_hmac_sha512_init_no_throw(
         hmac: *mut cx_hmac_sha512_t,
@@ -2344,6 +2733,7 @@ extern "C" {
         key_len: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_hmac_sha512(
         key: *const u8,
@@ -2354,6 +2744,7 @@ extern "C" {
         mac_len: size_t,
     ) -> size_t;
 }
+
 extern "C" {
     pub fn cx_hmac_no_throw(
         hmac: *mut cx_hmac_t,
@@ -2364,6 +2755,7 @@ extern "C" {
         mac_len: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_hmac_init(
         hmac: *mut cx_hmac_t,
@@ -2372,12 +2764,15 @@ extern "C" {
         key_len: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_hmac_update(hmac: *mut cx_hmac_t, in_: *const u8, in_len: size_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_hmac_final(ctx: *mut cx_hmac_t, out: *mut u8, out_len: *mut size_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_pbkdf2_no_throw(
         md_type: cx_md_t,
@@ -2390,13 +2785,17 @@ extern "C" {
         outLength: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_rng_no_throw(buffer: *mut u8, len: size_t);
 }
+
 pub type cx_rng_u32_range_randfunc_t = ::core::option::Option<unsafe extern "C" fn() -> u32>;
+
 extern "C" {
     pub fn cx_rng_u32_range_func(a: u32, b: u32, randfunc: cx_rng_u32_range_randfunc_t) -> u32;
 }
+
 extern "C" {
     pub fn cx_rng_rfc6979(
         hash_id: cx_md_t,
@@ -2410,6 +2809,7 @@ extern "C" {
         out_len: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_math_cmp_no_throw(
         a: *const u8,
@@ -2418,15 +2818,19 @@ extern "C" {
         diff: *mut core::ffi::c_int,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_math_add_no_throw(r: *mut u8, a: *const u8, b: *const u8, len: size_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_math_sub_no_throw(r: *mut u8, a: *const u8, b: *const u8, len: size_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_math_mult_no_throw(r: *mut u8, a: *const u8, b: *const u8, len: size_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_math_addm_no_throw(
         r: *mut u8,
@@ -2436,6 +2840,7 @@ extern "C" {
         len: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_math_subm_no_throw(
         r: *mut u8,
@@ -2445,6 +2850,7 @@ extern "C" {
         len: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_math_multm_no_throw(
         r: *mut u8,
@@ -2454,6 +2860,7 @@ extern "C" {
         len: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_math_modm_no_throw(
         v: *mut u8,
@@ -2462,6 +2869,7 @@ extern "C" {
         len_m: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_math_powm_no_throw(
         r: *mut u8,
@@ -2472,6 +2880,7 @@ extern "C" {
         len: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_math_invprimem_no_throw(
         r: *mut u8,
@@ -2480,15 +2889,19 @@ extern "C" {
         len: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_math_invintm_no_throw(r: *mut u8, a: u32, m: *const u8, len: size_t) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_math_is_prime_no_throw(r: *const u8, len: size_t, prime: *mut bool) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_math_next_prime_no_throw(r: *mut u8, len: u32) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_des_init_key_no_throw(
         rawkey: *const u8,
@@ -2496,6 +2909,7 @@ extern "C" {
         key: *mut cx_des_key_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_des_iv_no_throw(
         key: *const cx_des_key_t,
@@ -2508,6 +2922,7 @@ extern "C" {
         out_len: *mut size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_des_no_throw(
         key: *const cx_des_key_t,
@@ -2518,12 +2933,15 @@ extern "C" {
         out_len: *mut size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_des_enc_block(key: *const cx_des_key_t, inblock: *const u8, outblock: *mut u8);
 }
+
 extern "C" {
     pub fn cx_des_dec_block(key: *const cx_des_key_t, inblock: *const u8, outblock: *mut u8);
 }
+
 extern "C" {
     pub fn cx_aes_init_key_no_throw(
         rawkey: *const u8,
@@ -2531,6 +2949,7 @@ extern "C" {
         key: *mut cx_aes_key_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_aes_iv_no_throw(
         key: *const cx_aes_key_t,
@@ -2543,6 +2962,7 @@ extern "C" {
         out_len: *mut size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_aes_no_throw(
         key: *const cx_aes_key_t,
@@ -2553,6 +2973,7 @@ extern "C" {
         out_len: *mut size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_aes_enc_block(
         key: *const cx_aes_key_t,
@@ -2560,6 +2981,7 @@ extern "C" {
         outblock: *mut u8,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_aes_dec_block(
         key: *const cx_aes_key_t,
@@ -2567,6 +2989,7 @@ extern "C" {
         outblock: *mut u8,
     ) -> cx_err_t;
 }
+
 // extern "C" {
 //     pub fn cx_ecdsa_sign_no_throw(
 //         pvkey: *const cx_ecfp_private_key_t,
@@ -2611,9 +3034,11 @@ extern "C" {
 extern "C" {
     pub fn cx_encode_coord(coord: *mut u8, len: core::ffi::c_int, sign: core::ffi::c_int);
 }
+
 extern "C" {
     pub fn cx_decode_coord(coord: *mut u8, len: core::ffi::c_int) -> core::ffi::c_int;
 }
+
 extern "C" {
     pub fn cx_ecschnorr_sign_no_throw(
         pvkey: *const cx_ecfp_private_key_t,
@@ -2625,6 +3050,7 @@ extern "C" {
         sig_len: *mut size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_ecschnorr_verify(
         pukey: *const cx_ecfp_public_key_t,
@@ -2636,6 +3062,7 @@ extern "C" {
         sig_len: size_t,
     ) -> bool;
 }
+
 extern "C" {
     pub fn cx_ecdh_no_throw(
         pvkey: *const cx_ecfp_private_key_t,
@@ -2646,9 +3073,11 @@ extern "C" {
         secret_len: size_t,
     ) -> cx_err_t;
 }
+
 extern "C" {
     pub fn cx_crc16(buffer: *const core::ffi::c_void, len: size_t) -> u16;
 }
+
 extern "C" {
     pub fn cx_crc16_update(crc: u16, buffer: *const core::ffi::c_void, len: size_t) -> u16;
 }
