@@ -11,16 +11,16 @@ fn finalize_nanos_configuration(command: &mut cc::Build, bolos_sdk: &String) -> 
         .define("TARGET_ID", Some("0x31100004"))
         .define("BAGL_HEIGHT", Some("32"))
         .define("BAGL_WIDTH", Some("128"))
-        .file(format!("{}/nanos/syscalls.c", bolos_sdk))
-        .file(format!("{}/nanos/cx_stubs.S", bolos_sdk))
+        .file(format!("{bolos_sdk}/nanos/syscalls.c"))
+        .file(format!("{bolos_sdk}/nanos/cx_stubs.S"))
         .file(format!(
             "{}/nanos/lib_cxng/src/cx_exported_functions.c",
             bolos_sdk
         ))
-        .include(format!("{}/nanos/", bolos_sdk))
-        .include(format!("{}/nanos/lib_cxng/include", bolos_sdk))
+        .include(format!("{bolos_sdk}/nanos/"))
+        .include(format!("{bolos_sdk}/nanos/lib_cxng/include"))
         .flag("-fropi");
-    format!("{}/nanos/Makefile.conf.cx", bolos_sdk)
+    format!("{bolos_sdk}/nanos/Makefile.conf.cx")
 }
 
 fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &String) -> String {
@@ -38,7 +38,7 @@ fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &String) -> 
         .define("HAVE_MCU_SERIAL_STORAGE", None)
         .define("HAVE_BLE", None)
         .define("HAVE_BLE_APDU", None)
-        .file(format!("{}/nanox/ledger_protocol.c", bolos_sdk))
+        .file(format!("{bolos_sdk}/nanox/ledger_protocol.c"))
         .file(format!(
             "{}/nanox/lib_blewbxx/core/auto/ble_gap_aci.c",
             bolos_sdk
@@ -63,25 +63,25 @@ fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &String) -> 
             "{}/nanox/lib_blewbxx_impl/src/ledger_ble.c",
             bolos_sdk
         ))
-        .include(format!("{}/nanox/lib_blewbxx/include", bolos_sdk))
-        .include(format!("{}/nanox/lib_blewbxx/core", bolos_sdk))
-        .include(format!("{}/nanox/lib_blewbxx/core/auto", bolos_sdk))
-        .include(format!("{}/nanox/lib_blewbxx/core/template", bolos_sdk))
-        .include(format!("{}/nanox/lib_blewbxx_impl/include", bolos_sdk))
-        .file(format!("{}/nanox/syscalls.c", bolos_sdk))
-        .file(format!("{}/nanox/cx_stubs.S", bolos_sdk))
+        .include(format!("{bolos_sdk}/nanox/lib_blewbxx/include"))
+        .include(format!("{bolos_sdk}/nanox/lib_blewbxx/core"))
+        .include(format!("{bolos_sdk}/nanox/lib_blewbxx/core/auto"))
+        .include(format!("{bolos_sdk}/nanox/lib_blewbxx/core/template"))
+        .include(format!("{bolos_sdk}/nanox/lib_blewbxx_impl/include"))
+        .file(format!("{bolos_sdk}/nanox/syscalls.c"))
+        .file(format!("{bolos_sdk}/nanox/cx_stubs.S"))
         .file(format!(
             "{}/nanox/lib_cxng/src/cx_exported_functions.c",
             bolos_sdk
         ))
-        .include(format!("{}/nanox/", bolos_sdk))
-        .include(format!("{}/nanox/lib_cxng/include", bolos_sdk))
+        .include(format!("{bolos_sdk}/nanox/"))
+        .include(format!("{bolos_sdk}/nanox/lib_cxng/include"))
         .flag("-mno-movt")
         .flag("-ffixed-r9")
         .flag("-fropi")
         .flag("-frwpi");
     configure_lib_bagl(command, bolos_sdk);
-    format!("{}/nanox/Makefile.conf.cx", bolos_sdk)
+    format!("{bolos_sdk}/nanox/Makefile.conf.cx")
 }
 
 fn finalize_nanosplus_configuration(command: &mut cc::Build, bolos_sdk: &String) -> String {
@@ -95,18 +95,18 @@ fn finalize_nanosplus_configuration(command: &mut cc::Build, bolos_sdk: &String)
         .define("HAVE_SE_BUTTON", None)
         .define("HAVE_SE_SCREEN", None)
         .define("HAVE_MCU_SERIAL_STORAGE", None)
-        .file(format!("{}/nanosplus/syscalls.c", bolos_sdk))
-        .file(format!("{}/nanosplus/cx_stubs.S", bolos_sdk))
+        .file(format!("{bolos_sdk}/nanosplus/syscalls.c"))
+        .file(format!("{bolos_sdk}/nanosplus/cx_stubs.S"))
         .file(format!(
             "{}/nanosplus/lib_cxng/src/cx_exported_functions.c",
             bolos_sdk
         ))
-        .include(format!("{}/nanosplus/", bolos_sdk))
-        .include(format!("{}/nanosplus/lib_cxng/include", bolos_sdk))
+        .include(format!("{bolos_sdk}/nanosplus/"))
+        .include(format!("{bolos_sdk}/nanosplus/lib_cxng/include"))
         .flag("-fropi")
         .flag("-frwpi");
     configure_lib_bagl(command, bolos_sdk);
-    format!("{}/nanosplus/Makefile.conf.cx", bolos_sdk)
+    format!("{bolos_sdk}/nanosplus/Makefile.conf.cx")
 }
 
 fn configure_lib_bagl(command: &mut cc::Build, bolos_sdk: &String) {
@@ -130,10 +130,10 @@ fn configure_lib_bagl(command: &mut cc::Build, bolos_sdk: &String) {
             .define("HAVE_BAGL_FONT_OPEN_SANS_SEMIBOLD_13_18PX", None)
             .define("HAVE_BAGL_FONT_SYMBOLS_0", None)
             .define("HAVE_BAGL_FONT_SYMBOLS_1", None)
-            .include(format!("{}/lib_bagl/src/", bolos_sdk))
-            .file(format!("{}/lib_bagl/src/bagl.c", bolos_sdk))
-            .file(format!("{}/lib_bagl/src/bagl_fonts.c", bolos_sdk))
-            .file(format!("{}/lib_bagl/src/bagl_glyphs.c", bolos_sdk));
+            .include(format!("{bolos_sdk}/lib_bagl/src/"))
+            .file(format!("{bolos_sdk}/lib_bagl/src/bagl.c"))
+            .file(format!("{bolos_sdk}/lib_bagl/src/bagl_fonts.c"))
+            .file(format!("{bolos_sdk}/lib_bagl/src/bagl_glyphs.c"));
     }
 }
 
@@ -149,18 +149,18 @@ fn main() -> Result<(), Box<dyn Error>> {
     let gcc_toolchain = if sysroot.is_empty() {
         String::from("/usr/include/")
     } else {
-        format!("{}/include", sysroot)
+        format!("{sysroot}/include")
     };
 
     let mut command = cc::Build::new()
         .compiler("clang")
         .file("./src/c/src.c")
         .file("./src/c/sjlj.s")
-        .file(format!("{}/src/os_io_usb.c", bolos_sdk))
-        .file(format!("{}/src/pic.c", bolos_sdk))
-        .file(format!("{}/src/svc_call.s", bolos_sdk))
-        .file(format!("{}/src/svc_cx_call.s", bolos_sdk))
-        .file(format!("{}/lib_stusb/usbd_conf.c", bolos_sdk))
+        .file(format!("{bolos_sdk}/src/os_io_usb.c"))
+        .file(format!("{bolos_sdk}/src/pic.c"))
+        .file(format!("{bolos_sdk}/src/svc_call.s"))
+        .file(format!("{bolos_sdk}/src/svc_cx_call.s"))
+        .file(format!("{bolos_sdk}/lib_stusb/usbd_conf.c"))
         .file(format!(
             "{}/lib_stusb/STM32_USB_Device_Library/Core/Src/usbd_core.c",
             bolos_sdk
@@ -173,7 +173,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             "{}/lib_stusb/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c",
             bolos_sdk
         ))
-        .file(format!("{}/lib_stusb_impl/usbd_impl.c", bolos_sdk))
+        .file(format!("{bolos_sdk}/lib_stusb_impl/usbd_impl.c"))
         .file(format!(
             "{}/lib_stusb/STM32_USB_Device_Library/Class/HID/Src/usbd_hid.c",
             bolos_sdk
@@ -188,9 +188,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         .define("IO_USB_MAX_ENDPOINTS", Some("6"))
         .define("IO_SEPROXYHAL_BUFFER_SIZE_B", Some("128"))
         .include(gcc_toolchain)
-        .include(format!("{}/include", bolos_sdk))
-        .include(format!("{}/lib_stusb", bolos_sdk))
-        .include(format!("{}/lib_stusb_impl", bolos_sdk))
+        .include(format!("{bolos_sdk}/include"))
+        .include(format!("{bolos_sdk}/lib_stusb"))
+        .include(format!("{bolos_sdk}/lib_stusb_impl"))
         .include(format!(
             "{}/lib_stusb/STM32_USB_Device_Library/Core/Inc",
             bolos_sdk
