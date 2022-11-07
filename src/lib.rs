@@ -228,6 +228,55 @@ impl<T> Pic<T> {
     }
 }
 
+// Needed for `NVMData<T>` to function properly
+extern "C" {
+    // This is a linker script symbol defining the beginning of
+    // the .nvm_data section. Declaring it as a static u32
+    // (as is usually done) will result in a r9-indirect memory
+    // access, as if it were a RAM access.
+    // To force the compiler out of this assumption, we define
+    // it as a function instead, but it is _not_ a function at all
+    fn _nvram_data();
+}
+
+/// The following is a means to correctly access data stored in NVM
+/// through the `#[link_section = ".nvm_data"]` attribute
+pub struct NVMData<T> {
+    data: T,
+}
+
+impl<T> NVMData<T> {
+    pub const fn new(data: T) -> NVMData<T> {
+        NVMData { data }
+    }
+
+    #[cfg(target_os = "nanos")]
+    pub fn get_mut(&mut self) -> &mut T {
+        crate::pic_rs_mut(&mut self.data)
+    }
+
+    /// This will return a mutable access by casting the pointer
+    /// to the correct offset in `.nvm_data` manually.
+    /// This is necessary when using the `rwpi` relocation model,
+    /// because a static mutable will be assumed to be located in
+    /// RAM, and be accessed through the static base (r9)
+    #[cfg(not(target_os = "nanos"))]
+    pub fn get_mut(&mut self) -> &mut T {
+        use core::arch::asm;
+        unsafe {
+            // Compute offset in .nvm_data by taking the reference to
+            // self.data and subtracting r9
+            let addr = &self.data as *const T as u32;
+            let static_base: u32;
+            asm!( "mov {}, r9", out(reg) static_base);
+            let offset = (addr - static_base) as isize;
+            let data_addr = (_nvram_data as *const u8).offset(offset);
+            let pic_addr = crate::bindings::pic(data_addr as *mut c_void) as *mut T;
+            &mut *pic_addr.cast()
+        }
+    }
+}
+
 #[cfg(test)]
 #[no_mangle]
 fn sample_main() {
