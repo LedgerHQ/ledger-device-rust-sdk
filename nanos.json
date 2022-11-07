@@ -16,6 +16,10 @@
       "ld.lld": [
           "-Tnanos_layout.ld",
           "-Tlink.ld"
+      ],
+      "ld": [
+          "-Tnanos_layout.ld",
+          "-Tlink.ld"
       ]
   },
   "relocation-model": "ropi",
