@@ -374,11 +374,6 @@ impl<const P: usize, const TY: char> ECPublicKey<P, TY> {
             pubkey: [0u8; P],
         }
     }
-
-    /// Returns the public key as bytes array
-    pub fn to_bytes(&self) -> [u8; P] {
-        self.pubkey
-    }
 }
 
 /// Access public key value by reference
