@@ -267,7 +267,7 @@ impl<const N: usize> ECPrivateKey<N, 'W'> {
         hash: &[u8],
         hash_id: u8,
         mode: u32,
-    ) -> Result<([u8; Self::S], u32), CxError> {
+    ) -> Result<([u8; Self::S], u32, u32), CxError> {
         let mut sig = [0u8; Self::S];
         let mut sig_len = Self::S as u32;
         let mut info = 0;
@@ -286,14 +286,14 @@ impl<const N: usize> ECPrivateKey<N, 'W'> {
         if len != CX_OK {
             Err(len.into())
         } else {
-            Ok((sig, sig_len))
+            Ok((sig, sig_len, info & CX_ECCINFO_PARITY_ODD))
         }
     }
 
     /// Sign a message/hash using ECDSA with RFC6979, which provides a deterministic nonce rather than
     /// a random one. This nonce is computed using a hash function, hence this function uses an
     /// additional parameter `hash_id` that specifies which one it should use.
-    pub fn deterministic_sign(&self, hash: &[u8]) -> Result<([u8; Self::S], u32), CxError> {
+    pub fn deterministic_sign(&self, hash: &[u8]) -> Result<([u8; Self::S], u32, u32), CxError> {
         let hash_id = match self.keylength {
             x if x <= 32 => CX_SHA256,
             x if x <= 48 => CX_SHA384,
@@ -304,7 +304,7 @@ impl<const N: usize> ECPrivateKey<N, 'W'> {
     }
 
     /// Sign a message/hash using ECDSA in its original form
-    pub fn sign(&self, hash: &[u8]) -> Result<([u8; Self::S], u32), CxError> {
+    pub fn sign(&self, hash: &[u8]) -> Result<([u8; Self::S], u32, u32), CxError> {
         self.ecdsa_sign(hash, 0, CX_RND_TRNG | CX_LAST)
     }
 
