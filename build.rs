@@ -14,8 +14,7 @@ fn finalize_nanos_configuration(command: &mut cc::Build, bolos_sdk: &String) -> 
         .file(format!("{bolos_sdk}/nanos/syscalls.c"))
         .file(format!("{bolos_sdk}/nanos/cx_stubs.S"))
         .file(format!(
-            "{}/nanos/lib_cxng/src/cx_exported_functions.c",
-            bolos_sdk
+            "{bolos_sdk}/nanos/lib_cxng/src/cx_exported_functions.c"
         ))
         .include(format!("{bolos_sdk}/nanos/"))
         .include(format!("{bolos_sdk}/nanos/lib_cxng/include"))
@@ -40,28 +39,22 @@ fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &String) -> 
         .define("HAVE_BLE_APDU", None)
         .file(format!("{bolos_sdk}/nanox/ledger_protocol.c"))
         .file(format!(
-            "{}/nanox/lib_blewbxx/core/auto/ble_gap_aci.c",
-            bolos_sdk
+            "{bolos_sdk}/nanox/lib_blewbxx/core/auto/ble_gap_aci.c"
         ))
         .file(format!(
-            "{}/nanox/lib_blewbxx/core/auto/ble_gatt_aci.c",
-            bolos_sdk
+            "{bolos_sdk}/nanox/lib_blewbxx/core/auto/ble_gatt_aci.c"
         ))
         .file(format!(
-            "{}/nanox/lib_blewbxx/core/auto/ble_hal_aci.c",
-            bolos_sdk
+            "{bolos_sdk}/nanox/lib_blewbxx/core/auto/ble_hal_aci.c"
         ))
         .file(format!(
-            "{}/nanox/lib_blewbxx/core/auto/ble_hci_le.c",
-            bolos_sdk
+            "{bolos_sdk}/nanox/lib_blewbxx/core/auto/ble_hci_le.c"
         ))
         .file(format!(
-            "{}/nanox/lib_blewbxx/core/template/osal.c",
-            bolos_sdk
+            "{bolos_sdk}/nanox/lib_blewbxx/core/template/osal.c"
         ))
         .file(format!(
-            "{}/nanox/lib_blewbxx_impl/src/ledger_ble.c",
-            bolos_sdk
+            "{bolos_sdk}/nanox/lib_blewbxx_impl/src/ledger_ble.c"
         ))
         .include(format!("{bolos_sdk}/nanox/lib_blewbxx/include"))
         .include(format!("{bolos_sdk}/nanox/lib_blewbxx/core"))
@@ -71,8 +64,7 @@ fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &String) -> 
         .file(format!("{bolos_sdk}/nanox/syscalls.c"))
         .file(format!("{bolos_sdk}/nanox/cx_stubs.S"))
         .file(format!(
-            "{}/nanox/lib_cxng/src/cx_exported_functions.c",
-            bolos_sdk
+            "{bolos_sdk}/nanox/lib_cxng/src/cx_exported_functions.c"
         ))
         .include(format!("{bolos_sdk}/nanox/"))
         .include(format!("{bolos_sdk}/nanox/lib_cxng/include"))
@@ -98,8 +90,7 @@ fn finalize_nanosplus_configuration(command: &mut cc::Build, bolos_sdk: &String)
         .file(format!("{bolos_sdk}/nanosplus/syscalls.c"))
         .file(format!("{bolos_sdk}/nanosplus/cx_stubs.S"))
         .file(format!(
-            "{}/nanosplus/lib_cxng/src/cx_exported_functions.c",
-            bolos_sdk
+            "{bolos_sdk}/nanosplus/lib_cxng/src/cx_exported_functions.c"
         ))
         .include(format!("{bolos_sdk}/nanosplus/"))
         .include(format!("{bolos_sdk}/nanosplus/lib_cxng/include"))
@@ -162,21 +153,17 @@ fn main() -> Result<(), Box<dyn Error>> {
         .file(format!("{bolos_sdk}/src/svc_cx_call.s"))
         .file(format!("{bolos_sdk}/lib_stusb/usbd_conf.c"))
         .file(format!(
-            "{}/lib_stusb/STM32_USB_Device_Library/Core/Src/usbd_core.c",
-            bolos_sdk
+            "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Core/Src/usbd_core.c"
         ))
         .file(format!(
-            "{}/lib_stusb/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c",
-            bolos_sdk
+            "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c"
         ))
         .file(format!(
-            "{}/lib_stusb/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c",
-            bolos_sdk
+            "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c"
         ))
         .file(format!("{bolos_sdk}/lib_stusb_impl/usbd_impl.c"))
         .file(format!(
-            "{}/lib_stusb/STM32_USB_Device_Library/Class/HID/Src/usbd_hid.c",
-            bolos_sdk
+            "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Class/HID/Src/usbd_hid.c"
         ))
         .define("HAVE_LOCAL_APDU_BUFFER", None)
         .define("IO_HID_EP_LENGTH", Some("64"))
@@ -192,12 +179,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         .include(format!("{bolos_sdk}/lib_stusb"))
         .include(format!("{bolos_sdk}/lib_stusb_impl"))
         .include(format!(
-            "{}/lib_stusb/STM32_USB_Device_Library/Core/Inc",
-            bolos_sdk
+            "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Core/Inc"
         ))
         .include(format!(
-            "{}/lib_stusb/STM32_USB_Device_Library/Class/HID/Inc",
-            bolos_sdk
+            "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Class/HID/Inc"
         ))
         .debug(true)
         .flag("-Oz")
@@ -225,8 +210,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         "nanosplus" => NanoSPlus,
         "nanox" => NanoX,
         target_name => panic!(
-            "invalid target `{}`, expected one of `nanos`, `nanox`, `nanosplus`. Run with `-Z build-std=core --target=./<target name>.json`",
-            target_name
+            "invalid target `{target_name}`, expected one of `nanos`, `nanox`, `nanosplus`. Run with `-Z build-std=core --target=./<target name>.json`"
         ),
     };
 
