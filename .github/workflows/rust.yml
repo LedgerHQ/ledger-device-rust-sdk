@@ -14,11 +14,10 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build_clippy_fmt:
+  clippy_fmt_test:
     runs-on: ubuntu-latest
 
     strategy:
-      fail-fast: false
       matrix:
         target: ["nanos", "nanox", "nanosplus"]
 
@@ -36,11 +35,6 @@ jobs:
           default: true
           components: rust-src, rustfmt, clippy
       - uses: actions/checkout@v2
-      - name: Cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build 
-          args: -Z build-std=core --target ./${{ matrix.target }}.json
       - name: Cargo clippy
         uses: actions-rs/cargo@v1
         with:
@@ -51,3 +45,12 @@ jobs:
         with:
           command: fmt
           args: --all -- --check
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y qemu-user-static
+          pip install speculos --extra-index-url https://test.pypi.org/simple/
+      - name: Unit tests 
+        uses: actions-rs/cargo@v1
+        with:
+          command: test 
+          args: --target ./${{ matrix.target }}.json --features speculos
