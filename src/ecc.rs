@@ -578,17 +578,17 @@ pub const fn make_bip32_path<const N: usize>(bytes: &[u8]) -> [u32; N] {
 mod tests {
     use super::*;
     use crate::assert_eq_err as assert_eq;
-    use crate::TestType;
+    use crate::testing::TestType;
     use testmacro::test_item as test;
 
     const PATH0: [u32; 5] = make_bip32_path(b"m/44'/535348'/0'/0/0");
     const PATH1: [u32; 5] = make_bip32_path(b"m/44'/535348'/0'/0/1");
 
     fn display_error_code(e: CxError) {
-        let ec = crate::to_hex(e.into());
-        crate::debug_print("\tError code: \x1b[1;33m");
-        crate::debug_print(core::str::from_utf8(&ec).unwrap());
-        crate::debug_print("\x1b[0m\n");
+        let ec = crate::testing::to_hex(e.into());
+        crate::testing::debug_print("\tError code: \x1b[1;33m");
+        crate::testing::debug_print(core::str::from_utf8(&ec).unwrap());
+        crate::testing::debug_print("\x1b[0m\n");
     }
 
     const TEST_HASH: &[u8; 13] = b"test_message1";
