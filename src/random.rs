@@ -116,3 +116,19 @@ impl RngCore for LedgerRng {
 
 /// Mark LedgerRng as safe for cryptographic use
 impl CryptoRng for LedgerRng {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::assert_eq_err as assert_eq;
+    use crate::testing::TestType;
+    use testmacro::test_item as test;
+
+    #[test]
+    fn rng() {
+        // Test that the bindings are not broken by checking a random u128
+        // isn't 0 (has 1/2^128 of happening)
+        let r: [u8; 16] = core::array::from_fn(|_| u8::random());
+        assert_eq!(u128::from_be_bytes(r) != 0, true);
+    }
+}
