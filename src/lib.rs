@@ -19,7 +19,6 @@ pub mod random;
 pub mod screen;
 pub mod seph;
 
-#[cfg(test)]
 pub mod testing;
 
 pub mod usbbindings;
