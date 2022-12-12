@@ -53,6 +53,7 @@ impl From<u32> for SyscallError {
 
 /// Provide a type that will be used for replying
 /// an APDU with either a StatusWord or an SyscallError
+#[derive(Debug)]
 #[repr(transparent)]
 pub struct Reply(pub u16);
 
@@ -96,18 +97,18 @@ pub struct Comm {
 
 impl Default for Comm {
     fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Comm {
+    pub const fn new() -> Self {
         Self {
             apdu_buffer: [0u8; 260],
             rx: 0,
             tx: 0,
             buttons: ButtonsState::new(),
         }
-    }
-}
-
-impl Comm {
-    pub fn new() -> Self {
-        Self::default()
     }
 
     /// Send the currently held APDU
