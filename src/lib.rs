@@ -20,7 +20,7 @@ pub mod screen;
 pub mod seph;
 
 #[cfg(test)]
-mod testing;
+pub mod testing;
 
 pub mod usbbindings;
 
