@@ -1,6 +1,4 @@
-use crate::{pic, pic_rs};
 use core::arch::asm;
-use core::ffi::c_void;
 use core::panic::PanicInfo;
 
 /// Debug 'print' function that uses ARM semihosting
@@ -8,7 +6,7 @@ use core::panic::PanicInfo;
 pub fn debug_print(s: &str) {
     let p = s.as_bytes().as_ptr();
     for i in 0..s.len() {
-        let m = unsafe { p.offset(i as isize) };
+        let m = unsafe { p.add(i) };
         unsafe {
             asm!(
                 "svc #0xab",
@@ -55,6 +53,8 @@ pub struct TestType {
 /// using semihosting. Only reports 'Ok' or 'fail'.
 #[cfg(feature = "speculos")]
 pub fn sdk_test_runner(tests: &[&TestType]) {
+    use crate::{pic, pic_rs};
+    use core::ffi::c_void;
     let mut failures = 0;
     debug_print("--- Tests ---\n");
     for test_ in tests {
