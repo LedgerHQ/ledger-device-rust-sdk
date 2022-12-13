@@ -1,4 +1,5 @@
 use crate::bindings::*;
+use core::hint::black_box;
 
 #[repr(u8)]
 #[derive(Copy, Clone)]
@@ -190,6 +191,7 @@ impl<const N: usize, const TY: char> Drop for ECPrivateKey<N, TY> {
     #[inline(never)]
     fn drop(&mut self) {
         self.key.fill_with(|| 0);
+        self.key = black_box(self.key);
     }
 }
 
