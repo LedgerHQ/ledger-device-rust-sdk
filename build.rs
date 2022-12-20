@@ -166,16 +166,13 @@ fn main() -> Result<(), Box<dyn Error>> {
             "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Class/HID/Src/usbd_hid.c"
         ))
         .file(format!(
-            "{}/lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_cmd.c",
-            bolos_sdk
+            "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_cmd.c"
         ))
         .file(format!(
-            "{}/lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_core.c",
-            bolos_sdk
+            "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_core.c"
         ))
         .file(format!(
-            "{}/lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_if.c",
-            bolos_sdk
+            "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_if.c"
         ))
         .define("HAVE_LOCAL_APDU_BUFFER", None)
         .define("IO_HID_EP_LENGTH", Some("64"))
@@ -199,8 +196,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Class/HID/Inc"
         ))
         .include(format!(
-            "{}/lib_stusb/STM32_USB_Device_Library/Class/CCID/inc",
-            bolos_sdk
+            "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Class/CCID/inc"
         ))
         .debug(true)
         .flag("-Oz")
