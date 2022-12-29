@@ -1,4 +1,5 @@
 use crate::bindings::*;
+use crate::ecc::{CurvesId, Secret};
 
 // C_cx_secp256k1_n - (C_cx_secp256k1_n % C_cx_Stark256_n)
 const STARK_DERIVE_BIAS: [u8; 32] = [
@@ -14,18 +15,16 @@ const C_CX_STARK256_N: [u8; 32] = [
 
 /// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2645.md
 pub fn eip2645_derive(path: &[u32], key: &mut [u8]) {
-    super::bip32_derive(super::CurvesId::Secp256k1, path, key);
-
-    let mut x_key: [u8; 33] = [0u8; 33];
-
-    x_key[..32].clone_from_slice(key);
+    let mut x_key = Secret::<64>::new();
+    // Ignoring 'Result' here because known to be valid
+    let _ = super::bip32_derive(CurvesId::Secp256k1, path, x_key.as_mut());
 
     let mut index = 0;
     let mut cmp = 0;
 
     loop {
-        x_key[32] = index;
-        unsafe { cx_hash_sha256(x_key.as_ptr(), 33, key.as_mut_ptr(), 32) };
+        x_key.as_mut()[32] = index;
+        unsafe { cx_hash_sha256(x_key.as_ref().as_ptr(), 33, key.as_mut_ptr(), 32) };
         unsafe { cx_math_cmp_no_throw(key.as_ptr(), STARK_DERIVE_BIAS.as_ptr(), 32, &mut cmp) };
         if cmp < 0 {
             unsafe { cx_math_modm_no_throw(key.as_mut_ptr(), 32, C_CX_STARK256_N.as_ptr(), 32) };
