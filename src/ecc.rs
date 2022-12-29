@@ -536,6 +536,15 @@ impl SeedDerive for Ed25519 {
     }
 }
 
+impl SeedDerive for Stark256 {
+    type Target = ECPrivateKey<32, 'W'>;
+    fn derive_from_path(path: &[u32]) -> Self::Target {
+        let mut sk = Self::Target::new(CurvesId::Stark256);
+        stark::eip2645_derive(path, &mut sk.key);
+        sk
+    }
+}
+
 /// This macro is used to easily generate zero-sized structures named after a Curve.
 /// Each curve has a method `new()` that takes no arguments and returns the correctly
 /// const-typed `ECPrivateKey`.
@@ -789,8 +798,7 @@ mod tests {
 
     #[test]
     fn ecdsa_stark256() {
-        let mut sk = Stark256::new();
-        sk.set_constant_key();
+        let sk = Stark256::derive_from_path(&PATH0);
         let s = sk
             .deterministic_sign(TEST_HASH)
             .map_err(display_error_code)?;
