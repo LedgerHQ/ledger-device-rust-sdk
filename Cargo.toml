@@ -22,3 +22,4 @@ lto = true
 speculos = []
 pre1_54 = []
 lib_bagl = []
+pending_review_screen = []
