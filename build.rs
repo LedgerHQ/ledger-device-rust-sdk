@@ -159,6 +159,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .file(format!("{}/src/os_io_usb.c", bolos_sdk))
         .file(format!("{}/src/pic.c", bolos_sdk))
         .file(format!("{}/src/checks.c", bolos_sdk))
+        .file(format!("{}/src/os.c", bolos_sdk))
         .file(format!("{}/src/svc_call.s", bolos_sdk))
         .file(format!("{}/src/svc_cx_call.s", bolos_sdk))
         .file(format!("{}/lib_stusb/usbd_conf.c", bolos_sdk))
