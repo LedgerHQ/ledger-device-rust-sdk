@@ -3,7 +3,7 @@ use crate::bindings::*;
 use crate::ble;
 use crate::buttons::{get_button_event, ButtonEvent, ButtonsState};
 
-use crate::ccid; 
+use crate::ccid;
 use crate::seph;
 use core::convert::TryFrom;
 use core::ops::{Index, IndexMut};
