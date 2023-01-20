@@ -26,3 +26,4 @@ lto = true
 speculos = []
 pre1_54 = []
 lib_bagl = []
+ccid = []

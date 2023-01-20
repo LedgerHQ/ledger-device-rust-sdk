@@ -172,6 +172,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .define("HAVE_IO_USB", None)
         .define("HAVE_L4_USBLIB", None)
         .define("HAVE_USB_APDU", None)
+        .define("__IO", Some("volatile"))
         .define("IO_USB_MAX_ENDPOINTS", Some("6"))
         .define("IO_SEPROXYHAL_BUFFER_SIZE_B", Some("128"))
         .include(gcc_toolchain)
@@ -196,6 +197,50 @@ fn main() -> Result<(), Box<dyn Error>> {
         .flag("-mno-unaligned-access")
         .flag("-Wno-unused-command-line-argument")
         .clone();
+
+    #[cfg(feature = "ccid")]
+    {
+        command = command
+            .file(format!(
+                "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_cmd.c"
+            ))
+            .file(format!(
+                "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_core.c"
+            ))
+            .file(format!(
+                "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_if.c"
+            ))
+            .file(format!(
+                "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_cmd.c"
+            ))
+            .file(format!(
+                "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_core.c"
+            ))
+            .file(format!(
+                "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_if.c"
+            ))
+            .file(format!(
+                "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_cmd.c"
+            ))
+            .file(format!(
+                "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_core.c"
+            ))
+            .file(format!(
+                "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_if.c"
+            ))
+            .define("HAVE_USB_CLASS_CCID", None)
+            .define("HAVE_CCID", None)
+            .include(format!(
+                "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Class/CCID/inc"
+            ))
+            .include(format!(
+                "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Class/CCID/inc"
+            ))
+            .include(format!(
+                "{bolos_sdk}/lib_stusb/STM32_USB_Device_Library/Class/CCID/inc"
+            ))
+            .clone();
+    }
 
     enum Device {
         NanoS,
