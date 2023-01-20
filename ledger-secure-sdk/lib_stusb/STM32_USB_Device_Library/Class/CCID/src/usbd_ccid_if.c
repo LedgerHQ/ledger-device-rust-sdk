@@ -105,7 +105,7 @@ void CCID_BulkMessage_In (USBD_HandleTypeDef  *pdev,
       unsigned int remLen = G_io_ccid.UsbMessageLength;
 
       // advance with acknowledged sent chunk
-      if (G_io_ccid.pUsbMessageBuffer == &G_io_ccid.bulk_header) {
+      if (G_io_ccid.pUsbMessageBuffer == (uint8_t *)&G_io_ccid.bulk_header) {
         // first part of the bulk in sent.
         // advance in the data buffer to transmit. (mixed source leap)
         G_io_ccid.pUsbMessageBuffer = G_io_ccid_data_buffer+MIN(CCID_BULK_EPIN_SIZE, G_io_ccid.UsbMessageLength)-CCID_HEADER_SIZE;
