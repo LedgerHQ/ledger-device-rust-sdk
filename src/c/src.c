@@ -4,7 +4,6 @@
 #include "seproxyhal_protocol.h"
 #include "os_id.h"
 #include "os_io_usb.h"
-#include "usbd_ccid_if.h"
 #ifdef HAVE_BLE
   #include "ledger_ble.h"
 #endif
@@ -16,7 +15,11 @@ void os_longjmp(unsigned int exception) {
 }
 
 io_seph_app_t G_io_app;
+
+#ifdef HAVE_CCID
+ #include "usbd_ccid_if.h"
 uint8_t G_io_apdu_buffer[260];
+#endif
 
 int c_main(void) {
   __asm volatile("cpsie i");
@@ -54,7 +57,9 @@ int c_main(void) {
 
         USB_power(0);
         USB_power(1);
+    #ifdef HAVE_CCID
         io_usb_ccid_set_card_inserted(1);
+    #endif
         
     #ifdef HAVE_BLE 
         LEDGER_BLE_init();
