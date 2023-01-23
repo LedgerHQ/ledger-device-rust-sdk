@@ -3,6 +3,7 @@ use crate::bindings::*;
 use crate::ble;
 use crate::buttons::{get_button_event, ButtonEvent, ButtonsState};
 
+#[cfg(feature = "ccid")]
 use crate::ccid;
 use crate::seph;
 use core::convert::TryFrom;
@@ -138,6 +139,7 @@ impl Comm {
                 seph::seph_send(&[seph::SephTags::RawAPDU as u8, len[0], len[1]]);
                 seph::seph_send(&self.apdu_buffer[..self.tx]);
             }
+            #[cfg(feature = "ccid")]
             APDU_USB_CCID => {
                 ccid::send(&self.apdu_buffer[..self.tx]);
             }
