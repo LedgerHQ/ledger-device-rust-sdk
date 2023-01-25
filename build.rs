@@ -133,10 +133,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let output = Command::new("arm-none-eabi-gcc")
         .arg("-print-sysroot")
-        .output().ok();
+        .output()
+        .ok();
     let sysroot = output
-        .as_ref().and_then(|o|std::str::from_utf8(&o.stdout).ok())
-        .unwrap_or("").trim();
+        .as_ref()
+        .and_then(|o| std::str::from_utf8(&o.stdout).ok())
+        .unwrap_or("")
+        .trim();
 
     let gcc_toolchain = if sysroot.is_empty() {
         String::from("/usr/include/")
