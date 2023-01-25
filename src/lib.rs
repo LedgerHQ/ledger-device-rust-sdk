@@ -12,6 +12,8 @@ pub mod bindings;
 pub mod ble;
 
 pub mod buttons;
+#[cfg(feature = "ccid")]
+pub mod ccid;
 pub mod ecc;
 pub mod io;
 pub mod nvm;

@@ -7,8 +7,11 @@ pub struct ButtonsState {
 }
 
 impl ButtonsState {
-    pub fn new() -> ButtonsState {
-        ButtonsState::default()
+    pub const fn new() -> ButtonsState {
+        ButtonsState {
+            button_mask: 0,
+            cmd_buffer: [0; 4],
+        }
     }
 }
 

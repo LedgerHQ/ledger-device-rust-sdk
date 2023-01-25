@@ -3,6 +3,8 @@ use crate::bindings::*;
 use crate::ble;
 use crate::buttons::{get_button_event, ButtonEvent, ButtonsState};
 
+#[cfg(feature = "ccid")]
+use crate::ccid;
 use crate::seph;
 use core::convert::TryFrom;
 use core::ops::{Index, IndexMut};
@@ -53,6 +55,7 @@ impl From<u32> for SyscallError {
 
 /// Provide a type that will be used for replying
 /// an APDU with either a StatusWord or an SyscallError
+#[derive(Debug)]
 #[repr(transparent)]
 pub struct Reply(pub u16);
 
@@ -96,18 +99,18 @@ pub struct Comm {
 
 impl Default for Comm {
     fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Comm {
+    pub const fn new() -> Self {
         Self {
             apdu_buffer: [0u8; 260],
             rx: 0,
             tx: 0,
             buttons: ButtonsState::new(),
         }
-    }
-}
-
-impl Comm {
-    pub fn new() -> Self {
-        Self::default()
     }
 
     /// Send the currently held APDU
@@ -135,6 +138,10 @@ impl Comm {
                 let len = (self.tx as u16).to_be_bytes();
                 seph::seph_send(&[seph::SephTags::RawAPDU as u8, len[0], len[1]]);
                 seph::seph_send(&self.apdu_buffer[..self.tx]);
+            }
+            #[cfg(feature = "ccid")]
+            APDU_USB_CCID => {
+                ccid::send(&self.apdu_buffer[..self.tx]);
             }
             #[cfg(target_os = "nanox")]
             APDU_BLE => {
