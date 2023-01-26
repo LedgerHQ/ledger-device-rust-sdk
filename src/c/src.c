@@ -4,6 +4,7 @@
 #include "seproxyhal_protocol.h"
 #include "os_id.h"
 #include "os_io_usb.h"
+#include "checks.h"
 #ifdef HAVE_BLE
   #include "ledger_ble.h"
 #endif
@@ -64,6 +65,11 @@ int c_main(void) {
     #ifdef HAVE_BLE 
         LEDGER_BLE_init();
     #endif
+
+    #if !defined(HAVE_BOLOS) && defined(HAVE_PENDING_REVIEW_SCREEN)
+        check_audited_app();
+    #endif // !defined(HAVE_BOLOS) && defined(HAVE_PENDING_REVIEW_SCREEN)
+
         sample_main();
       }
       CATCH(EXCEPTION_IO_RESET) {

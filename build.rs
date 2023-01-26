@@ -149,6 +149,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         .file("./src/c/sjlj.s")
         .file(format!("{bolos_sdk}/src/os_io_usb.c"))
         .file(format!("{bolos_sdk}/src/pic.c"))
+        .file(format!("{bolos_sdk}/src/checks.c"))
+        .file(format!("{bolos_sdk}/src/os.c"))
         .file(format!("{bolos_sdk}/src/svc_call.s"))
         .file(format!("{bolos_sdk}/src/svc_cx_call.s"))
         .file(format!("{bolos_sdk}/lib_stusb/usbd_conf.c"))
@@ -264,6 +266,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         NanoX => finalize_nanox_configuration(&mut command, &bolos_sdk),
         NanoSPlus => finalize_nanosplus_configuration(&mut command, &bolos_sdk),
     };
+
+    if env::var_os("CARGO_FEATURE_PENDING_REVIEW_SCREEN").is_some() {
+        command.define("HAVE_PENDING_REVIEW_SCREEN", None);
+    }
 
     // all 'finalize_...' functions also declare a new 'cfg' variable corresponding
     // to the name of the target (as #[cfg(target = "nanox")] does not work, for example)
