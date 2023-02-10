@@ -6,8 +6,8 @@ on:
       master
   pull_request:
   workflow_dispatch:
-    inputs: 
-      name: 
+    inputs:
+      name:
         description: 'Manually triggered'
 
 env:
@@ -49,8 +49,8 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y qemu-user-static
           pip install speculos --extra-index-url https://test.pypi.org/simple/
-      - name: Unit tests 
+      - name: Unit tests
         uses: actions-rs/cargo@v1
         with:
-          command: test 
+          command: test
           args: --target ./${{ matrix.target }}.json --features speculos
