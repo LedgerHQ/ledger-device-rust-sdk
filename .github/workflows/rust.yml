@@ -14,9 +14,48 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  clippy_fmt_test:
+  clippy:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        target: ["nanos", "nanox", "nanosplus"]
+
+    steps:
+      - name: arm-none-eabi-gcc
+        uses: fiam/arm-none-eabi-gcc@v1.0.3
+        with:
+          release: '9-2019-q4'
+      - name: Install toolchains
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+          components: rust-src, clippy
+      - uses: actions/checkout@v2
+      - name: Cargo clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --target ./${{ matrix.target }}.json
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install toolchains
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+          components: rust-src, rustfmt
+      - uses: actions/checkout@v2
+      - name: Cargo fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+  build:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         target: ["nanos", "nanox", "nanosplus"]
@@ -32,23 +71,38 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
-          default: true
-          components: rust-src, rustfmt, clippy
+          override: true
+          components: rust-src
       - uses: actions/checkout@v2
-      - name: Cargo clippy
+      - name: Cargo build
         uses: actions-rs/cargo@v1
         with:
-          command: clippy
-          args: -Z build-std=core --target ./${{ matrix.target }}.json -- -D warnings
-      - name: Cargo fmt
-        uses: actions-rs/cargo@v1
+          command: build
+          args: --target ./${{ matrix.target }}.json
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: ["nanos", "nanox", "nanosplus"]
+
+    steps:
+      - name: arm-none-eabi-gcc
+        uses: fiam/arm-none-eabi-gcc@v1.0.3
         with:
-          command: fmt
-          args: --all -- --check
+          release: '9-2019-q4'
+      - name: Install clang
+        run: sudo apt-get update && sudo apt install -y clang
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+          components: rust-src
       - name: Install dependencies
         run: |
           sudo apt-get update && sudo apt-get install -y qemu-user-static
           pip install speculos --extra-index-url https://test.pypi.org/simple/
+      - uses: actions/checkout@v2
       - name: Unit tests
         uses: actions-rs/cargo@v1
         with:
