@@ -7,7 +7,7 @@
   "emit-debug-gdb-scripts": false,
   "executables": true,
   "frame-pointer": "always",
-  "linker": "rust-lld",
+  "linker": "link_wrap.sh",
   "linker-flavor": "ld.lld",
   "llvm-target": "thumbv6m-none-eabi",
   "panic-strategy": "abort",
@@ -26,5 +26,4 @@
   "target-pointer-width": "32",
   "os": "nanox",
   "target-family": [ "bolos" ]
-
 }

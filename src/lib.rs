@@ -5,6 +5,8 @@
 #![test_runner(testing::sdk_test_runner)]
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
+#![cfg_attr(test, feature(asm_const))]
+#![cfg_attr(test, feature(cfg_version))]
 
 pub mod bindings;
 
@@ -179,4 +181,16 @@ impl<T> NVMData<T> {
 #[no_mangle]
 fn sample_main() {
     test_main();
+}
+
+#[cfg(all(target_family = "bolos", test))]
+mod test {
+    #![cfg_attr(not(version("1.64")), allow(unused))]
+    const RELOC_SIZE: usize = 3500;
+
+    ::core::arch::global_asm! {
+        ".global _reloc_size",
+        ".set _reloc_size, {reloc_size}",
+        reloc_size = const RELOC_SIZE,
+    }
 }

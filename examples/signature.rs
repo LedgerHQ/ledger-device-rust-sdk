@@ -1,5 +1,7 @@
 #![no_std]
 #![no_main]
+#![feature(asm_const)]
+#![feature(cfg_version)]
 
 use core::panic::PanicInfo;
 
@@ -19,4 +21,13 @@ fn sign_message_const(m: &[u8], path: &[u32]) -> Result<([u8; 72], u32, u32), u3
 #[no_mangle]
 fn sample_main() {
     let _signature = sign_message_const(b"Hello world", &PATH).unwrap();
+}
+
+#[cfg_attr(not(version("1.64")), allow(unused))]
+const RELOC_SIZE: usize = 3500;
+
+::core::arch::global_asm! {
+    ".global _reloc_size",
+    ".set _reloc_size, {reloc_size}",
+    reloc_size = const RELOC_SIZE,
 }
