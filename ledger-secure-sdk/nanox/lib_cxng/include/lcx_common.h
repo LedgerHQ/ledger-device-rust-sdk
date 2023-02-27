@@ -34,7 +34,7 @@
 #define ARCH_BIG_ENDIAN
 #endif
 
-#ifdef __UINT64_TYPE__
+#if defined(__UINT64_TYPE__) && !defined(NATIVE_64BITS)
 #define NATIVE_64BITS
 #endif
 
@@ -94,7 +94,7 @@ typedef uint64_t uint64bits_t;
  * | 2:1            | 0000000000000100  | CX_ENCRYPT                    | Encryption                                 | AES/DES               |
  * | 2:1            | 0000000000000010  | CX_VERIFY                     | Signature verification                     | AES/DES               |
  * | 2:1            | 0000000000000000  | CX_DECRYPT                    | Decryption                                 | AES/DES               |
- * | 0              | 0000000000000000  | CX_LAST                       | Last block                                 |                       |
+ * | 0              | 0000000000000001  | CX_LAST                       | Last block                                 |                       |
  */
 #define CX_FLAG
 

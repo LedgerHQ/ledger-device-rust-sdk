@@ -1,8 +1,8 @@
 #pragma once
 
+#include <stddef.h>
 #include "cx_errors.h"
 #include "decorators.h"
-#include <stddef.h>
 
 /* ----------------------------------------------------------------------- */
 /*   -                          RANDOMNESS                               - */

@@ -103,7 +103,18 @@
 #define SYSCALL_cx_ecpoint_x448_ID 0x03000060
 #endif // HAVE_X448
 
+#ifdef HAVE_VSS
+#define SYSCALL_cx_vss_generate_shares_ID 0x0a000001
+#define SYSCALL_cx_vss_combine_shares_ID 0x04000002
+#endif // HAVE_VSS
+
 #define SYSCALL_cx_crc32_hw_ID 0x02000102
+#ifdef HAVE_BLS
+#define SYSCALL_ox_bls12381_sign_ID 0x05000103
+#define SYSCALL_cx_hash_to_field_ID 0x06000104
+#define SYSCALL_cx_bls12381_aggregate_ID 0x05000105
+#define SYSCALL_cx_bls12381_key_gen_ID 0x03000108
+#endif // HAVE_BLS
 
 #define SYSCALL_cx_get_random_bytes_ID 0x02000107
 #define SYSCALL_cx_trng_get_random_data_ID 0x02000106
@@ -120,12 +131,12 @@
 #define SYSCALL_os_perso_derive_eip2333_ID 0x040000a7
 
 #if defined(HAVE_SEED_COOKIE)
-#define SYSCALL_os_perso_seed_cookie_ID 0x020000a8
+#define SYSCALL_os_perso_seed_cookie_ID 0x010000a8
 #endif // HAVE_SEED_COOKIE
 
 #define SYSCALL_os_endorsement_get_code_hash_ID 0x01000055
-#define SYSCALL_os_endorsement_get_public_key_ID 0x02000056
-#define SYSCALL_os_endorsement_get_public_key_certificate_ID 0x02000057
+#define SYSCALL_os_endorsement_get_public_key_ID 0x03000056
+#define SYSCALL_os_endorsement_get_public_key_certificate_ID 0x03000057
 #define SYSCALL_os_endorsement_key1_get_app_secret_ID 0x01000058
 #define SYSCALL_os_endorsement_key1_sign_data_ID 0x03000059
 #define SYSCALL_os_endorsement_key2_derive_sign_data_ID 0x0300005a
@@ -202,11 +213,9 @@
 #define SYSCALL_os_aem_is_pin_validated_ID 0x00000147
 #endif // HAVE_AEM_PIN
 
-#if (defined(HAVE_BOLOS_NOTWIPED_ENDORSEMENT) &&                               \
-     defined(HAVE_ENDORSEMENTS_DISPLAY))
+#if (defined(HAVE_BOLOS_NOTWIPED_ENDORSEMENT) && defined(HAVE_ENDORSEMENTS_DISPLAY))
 #define SYSCALL_os_endorsement_get_metadata_ID 0x02000138
-#endif // (defined(HAVE_BOLOS_NOTWIPED_ENDORSEMENT) &&
-       // defined(HAVE_ENDORSEMENTS_DISPLAY))
+#endif // (defined(HAVE_BOLOS_NOTWIPED_ENDORSEMENT) && defined(HAVE_ENDORSEMENTS_DISPLAY))
 
 #if defined(HAVE_VAULT_RECOVERY_ALGO)
 #define SYSCALL_os_perso_derive_and_prepare_seed_ID 0x02000137

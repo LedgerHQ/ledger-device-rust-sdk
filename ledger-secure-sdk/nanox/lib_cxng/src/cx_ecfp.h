@@ -36,19 +36,19 @@
 
 /* Encoding/Decoding */
 
-size_t cx_ecfp_encode_sig_der(uint8_t *      sig,
-                              size_t         sig_len,
-                              const uint8_t *r,
-                              size_t         r_len,
-                              const uint8_t *s,
-                              size_t         s_len);
-int    cx_ecfp_decode_sig_der(const uint8_t *sig,
-                              size_t         sig_len,
-                              size_t         max_size,
-                              uint8_t **     r,
-                              size_t *       r_len,
-                              uint8_t **     s,
-                              size_t *       s_len);
+size_t cx_ecfp_encode_sig_der(uint8_t *       sig,
+                              size_t          sig_len,
+                              const uint8_t  *r,
+                              size_t          r_len,
+                              const uint8_t  *s,
+                              size_t          s_len);
+int    cx_ecfp_decode_sig_der(const uint8_t  *sig,
+                              size_t          sig_len,
+                              size_t          max_size,
+                              const uint8_t **r,
+                              size_t *        r_len,
+                              const uint8_t **s,
+                              size_t *        s_len);
 
 #endif // CX_ECFP_H
 

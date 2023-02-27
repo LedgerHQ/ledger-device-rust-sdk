@@ -31,6 +31,12 @@
 #include "cx_sha3.h"
 #include "cx_sha256.h"
 #include "cx_sha512.h"
+#include "cx_ripemd160.h"
+#include "cx_blake3.h"
+#include "cx_poly1305.h"
+#include "lcx_chacha.h"
+#include "cx_cipher.h"
+#include "cx_cmac.h"
 
 /** 1K RAM lib */
 union cx_u {
@@ -67,7 +73,15 @@ union cx_u {
 #if defined(HAVE_GROESTL)
   cx_xgroestl_t groestl;
 #endif
+
+#if defined(HAVE_RIPEMD160)
+  cx_ripemd160_t ripemd160;
+#endif // HAVE_RIPEMD160
 #endif
+
+#if defined(HAVE_BLAKE3)
+  cx_blake3_t blake3;
+#endif // HAVE_BLAKE3
 
 #ifdef HAVE_HMAC
   cx_hmac_t hmac;
@@ -84,6 +98,19 @@ union cx_u {
 #ifdef HAVE_RNG_RFC6979
   cx_rnd_rfc6979_ctx_t rfc6979;
 #endif
+
+#ifdef HAVE_POLY1305
+  cx_poly1305_context_t poly1305;
+#endif // HAVE_POLY1305
+
+#ifdef HAVE_CHACHA
+  cx_chacha_context_t chacha;
+#endif // HAVE_CHACHA
+  cx_cipher_context_t cipher;
+
+#ifdef HAVE_CMAC
+  cx_cmac_context_t cmac;
+#endif // HAVE_CMAC
 
 };
 extern union cx_u G_cx;
