@@ -1,4 +1,0 @@
-[alias]
-buildns = "build -Z build-std=core --target=nanos.json"
-buildnx = "build -Z build-std=core --target=nanox.json"
-buildnsp = "build -Z build-std=core --target=nanosplus.json"

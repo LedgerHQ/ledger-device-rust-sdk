@@ -10,5 +10,4 @@ typedef struct meminfo_s {
   unsigned int slots;
 } meminfo_t;
 
-SYSCALL PERMISSION(APPLICATION_FLAG_BOLOS_UX) void os_get_memory_info(
-    meminfo_t *meminfo PLENGTH(sizeof(meminfo_t)));
+SYSCALL PERMISSION(APPLICATION_FLAG_BOLOS_UX) void os_get_memory_info(meminfo_t* meminfo PLENGTH(sizeof(meminfo_t)));

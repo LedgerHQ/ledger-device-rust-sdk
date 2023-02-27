@@ -58,14 +58,14 @@ typedef struct {
 
 
 /**
- * @brief   Initialize a HMAC-RIPEMD160 context.
+ * @brief   Initializes a HMAC-RIPEMD160 context.
  *
  * @param[out] hmac    Pointer to the HMAC context.
  *                     The context shall be in RAM.
  *
  * @param[in]  key     Pointer to the HMAC key value.
  *                     If a key has been set, passing
- *                     NULL pointeur will reinitialize
+ *                     NULL pointer will reinitialize
  *                     the context with the previously set key.
  *
  * @param [in] key_len Length of the key.
@@ -78,17 +78,20 @@ typedef struct {
 cx_err_t cx_hmac_ripemd160_init_no_throw(cx_hmac_ripemd160_t *hmac, const uint8_t *key, size_t key_len);
 
 /**
- * @brief   Initialize a HMAC-RIPEMD160 context.
+ * @brief   Initializes a HMAC-RIPEMD160 context.
  * 
  * @details This function throws an exception if the
  *          initialization fails.
+ *
+ * @warning It is recommended to use #cx_hmac_ripemd160_init_no_throw
+ *          rather than this function.
  *
  * @param[out] hmac    Pointer to the HMAC context.
  *                     The context shall be in RAM.
  *
  * @param[in]  key     Pointer to the HMAC key value.
  *                     If a key has been set, passing
- *                     NULL pointeur will reinitialize
+ *                     NULL pointer will reinitialize
  *                     the context with the previously set key.
  *
  * @param [in] key_len Length of the key.
@@ -119,14 +122,14 @@ typedef struct {
 #ifdef HAVE_SHA224
 
 /**
- * @brief   Initialize a HMAC-SHA224 context.
+ * @brief   Initializes a HMAC-SHA224 context.
  * 
  * @param[out] hmac    Pointer to the HMAC context.
  *                     The context shall be in RAM.
  *
  * @param[in]  key     Pointer to the HMAC key value.
  *                     If a key has been set, passing
- *                     NULL pointeur will reinitialize
+ *                     NULL pointer will reinitialize
  *                     the context with the previously set key.
  *
  * @param [in] key_len Length of the key.
@@ -142,14 +145,14 @@ cx_err_t cx_hmac_sha224_init(cx_hmac_sha256_t *hmac, const uint8_t *key, unsigne
 #ifdef HAVE_SHA256
 
 /**
- * @brief   Initialize a HMAC-SHA256 context.
+ * @brief   Initializes a HMAC-SHA256 context.
  * 
  * @param[out] hmac    Pointer to the HMAC context.
  *                     The context shall be in RAM.
  *
  * @param[in]  key     Pointer to the HMAC key value.
  *                     If a key has been set, passing
- *                     NULL pointeur will reinitialize
+ *                     NULL pointer will reinitialize
  *                     the context with the previously set key.
  *
  * @param [in] key_len Length of the key.
@@ -162,17 +165,20 @@ cx_err_t cx_hmac_sha224_init(cx_hmac_sha256_t *hmac, const uint8_t *key, unsigne
 cx_err_t cx_hmac_sha256_init_no_throw(cx_hmac_sha256_t *hmac, const uint8_t *key, size_t key_len);
 
 /**
- * @brief   Initialize a HMAC-SHA256 context.
+ * @brief   Initializes a HMAC-SHA256 context.
  *
  * @details This function throws an exception if
  *          the initialization fails.
+ *
+ * @warning It is recommended to use #cx_hmac_sha256_init_no_throw
+ *          rather than this function.
  * 
  * @param[out] hmac    Pointer to the HMAC context.
  *                     The context shall be in RAM.
  *
  * @param[in]  key     Pointer to the HMAC key value.
  *                     If a key has been set, passing
- *                     NULL pointeur will reinitialize
+ *                     NULL pointer will reinitialize
  *                     the context with the previously set key.
  *
  * @param [in] key_len Length of the key.
@@ -189,7 +195,7 @@ static inline int cx_hmac_sha256_init ( cx_hmac_sha256_t * hmac, const unsigned 
 }
 
 /**
- * @brief   Compute a HMAC value using SHA256.
+ * @brief   Computes a HMAC value using SHA256.
  *
  * @param[in]  key     HMAC key value.
  *
@@ -225,14 +231,14 @@ typedef struct {
 #ifdef HAVE_SHA384
 
 /**
- * @brief   Initialize a HMAC-SHA384 context.
+ * @brief   Initializes a HMAC-SHA384 context.
  * 
  * @param[out] hmac    Pointer to the context.
  *                     The context shall be in RAM.
  *
  * @param[in]  key     Pointer to the HMAC key value.
  *                     If a key has been set, passing
- *                     NULL pointeur will reinitialize
+ *                     NULL pointer will reinitialize
  *                     the context with the previously set key.
  *
  * @param[in]  key_len Length of the key.
@@ -248,14 +254,14 @@ cx_err_t cx_hmac_sha384_init(cx_hmac_sha512_t *hmac, const uint8_t *key, unsigne
 #ifdef HAVE_SHA512
 
 /**
- * @brief   Initialize a HMAC-SHA512 context.
+ * @brief   Initializes a HMAC-SHA512 context.
  * 
  * @param[out] hmac    Pointer to the context.
  *                     The context shall be in RAM.
  *
  * @param[in]  key     Pointer to the HMAC key value.
  *                     If a key has been set, passing
- *                     NULL pointeur will reinitialize
+ *                     NULL pointer will reinitialize
  *                     the context with the previously set key.
  *
  * @param[in]  key_len Length of the key.
@@ -268,17 +274,20 @@ cx_err_t cx_hmac_sha384_init(cx_hmac_sha512_t *hmac, const uint8_t *key, unsigne
 cx_err_t cx_hmac_sha512_init_no_throw(cx_hmac_sha512_t *hmac, const uint8_t *key, size_t key_len);
 
 /**
- * @brief   Initialize a HMAC-SHA512 context.
+ * @brief   Initializes a HMAC-SHA512 context.
  * 
  * @details This function throws an exception if
  *          if the initialization fails.
+ *
+ * @warning It is recommended to use #cx_hmac_sha512_init_no_throw
+ *          rather than this function.
  *
  * @param[out] hmac    Pointer to the context.
  *                     The context shall be in RAM.
  *
  * @param[in]  key     Pointer to the HMAC key value.
  *                     If a key has been set, passing
- *                     NULL pointeur will reinitialize
+ *                     NULL pointer will reinitialize
  *                     the context with the previously set key.
  *
  * @param[in]  key_len Length of the key.
@@ -295,7 +304,7 @@ static inline int cx_hmac_sha512_init ( cx_hmac_sha512_t * hmac, const unsigned 
 }
 
 /**
- * @brief   Compute a HMAC value using SHA512.
+ * @brief   Computes a HMAC value using SHA512.
  *
  * @param[in]  key     HMAC key value.
  *
@@ -318,7 +327,7 @@ size_t cx_hmac_sha512(const uint8_t *key, size_t key_len, const uint8_t *in, siz
 #endif
 
 /**
- * @brief   Compute a HMAC value according to the specified
+ * @brief   Computes a HMAC value according to the specified
  *          hash function.
  * 
  * @param[in]  hmac    Pointer to the HMAC context.
@@ -351,11 +360,14 @@ size_t cx_hmac_sha512(const uint8_t *key, size_t key_len, const uint8_t *in, siz
 cx_err_t cx_hmac_no_throw(cx_hmac_t *hmac, uint32_t mode, const uint8_t *in, size_t len, uint8_t *mac, size_t mac_len);
 
 /**
- * @brief   Compute a HMAC value according to the specified
+ * @brief   Computes a HMAC value according to the specified
  *          hash function.
  * 
  * @details This function throws an exception
  *          if the computation doesn't succeed.
+ *
+ * @warning It is recommended to use #cx_hmac_no_throw rather than
+ *          this function.
  * 
  * @param[in]  hmac    Pointer to the HMAC context.
  *                     The context shall be initialized with
@@ -384,7 +396,7 @@ cx_err_t cx_hmac_no_throw(cx_hmac_t *hmac, uint32_t mode, const uint8_t *in, siz
  * 
  * @throws             CX_INVALID_PARAMETER
  */
-static inline int cx_hmac ( cx_hmac_t * hmac, int mode, const unsigned char * in, unsigned int len, unsigned char * mac, unsigned int mac_len )
+static inline int cx_hmac ( cx_hmac_t * hmac, uint32_t mode, const unsigned char * in, unsigned int len, unsigned char * mac, unsigned int mac_len )
 {
   CX_THROW(cx_hmac_no_throw(hmac, mode, in, len, mac, mac_len));
 
@@ -411,16 +423,16 @@ static inline int cx_hmac ( cx_hmac_t * hmac, int mode, const unsigned char * in
 }
 
 /**
- * @brief   Initialize a HMAC context.
+ * @brief   Initializes a HMAC context.
  * 
  * @param[out] hmac    Pointer to the context.
  *                     The context shall be in RAM.
  *
- * @param[in]  hash_id The message digest algorithm identifier
+ * @param[in]  hash_id The message digest algorithm identifier.
  *
  * @param[in]  key     Pointer to the HMAC key value.
  *                     If a key has been set, passing
- *                     NULL pointeur will reinitialize
+ *                     NULL pointer will reinitialize
  *                     the context with the previously set key.
  *
  * @param[in]  key_len Length of the key.
@@ -433,7 +445,7 @@ static inline int cx_hmac ( cx_hmac_t * hmac, int mode, const unsigned char * in
 cx_err_t cx_hmac_init(cx_hmac_t *hmac, cx_md_t hash_id, const uint8_t *key, size_t key_len);
 
 /**
- * @brief   Add more data to compute the HMAC.
+ * @brief   Adds more data to compute the HMAC.
  * 
  * @details A call to this function is equivalent to:
  *          *cx_hmac_no_throw(hmac, 0, in, in_len, NULL, 0)*.
@@ -452,12 +464,13 @@ cx_err_t cx_hmac_init(cx_hmac_t *hmac, cx_md_t hash_id, const uint8_t *key, size
 cx_err_t cx_hmac_update(cx_hmac_t *hmac, const uint8_t *in, size_t in_len);
 
 /**
- * @brief   Finalize the HMAC algorithm.
+ * @brief   Finalizes the HMAC algorithm.
  * 
  * @details A call to this function is
  *          equivalent to *cx_hmac_no_throw(hash, CX_LAST, NULL, 0, out, out_len)*.
  *
  * @param[in]  ctx     Pointer to the HMAC context.
+ * 
  * @param[out] out     Computed HMAC value is CX_LAST is set.
  *
  * @param[in]  out_len Length of the output (the most significant bytes).

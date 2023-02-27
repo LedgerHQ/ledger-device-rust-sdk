@@ -38,7 +38,7 @@
 
 #if defined(HAVE_ECDH)
 /**
- * @brief   Compute an ECDH shared secret.
+ * @brief   Computes an ECDH shared secret.
  * 
  * @details Depending on the mode, the shared secret is either the full point or
  *          only the *x* coordinate.
@@ -80,11 +80,13 @@ cx_err_t cx_ecdh_no_throw(const cx_ecfp_private_key_t *pvkey,
                  size_t                       secret_len);
 
 /**
- * @brief   Compute an ECDH shared secret.
+ * @brief   Computes an ECDH shared secret.
  * 
  * @details Depending on the mode, the shared secret is either the full point or
  *          only the *x* coordinate.
  *          This function throws an exception if the computation doesn't succeed.
+ *
+ * @warning It is recommended to use #cx_ecdh_no_throw rather than this function.
  * 
  * @param[in]  pvkey        Private key.
  *                          Shall be initialized with #cx_ecfp_init_private_key_no_throw.
@@ -115,7 +117,7 @@ cx_err_t cx_ecdh_no_throw(const cx_ecfp_private_key_t *pvkey,
  * @throws                  CX_INVALID_PARAMETER_SIZE
  * @throws                  CX_EC_INFINITE_POINT
  */
-static inline int cx_ecdh ( const cx_ecfp_private_key_t * pvkey, int mode, const unsigned char * P, unsigned int P_len, unsigned char * secret, unsigned int secret_len )
+static inline size_t cx_ecdh ( const cx_ecfp_private_key_t * pvkey, uint32_t mode, const unsigned char * P, unsigned int P_len, unsigned char * secret, unsigned int secret_len )
 {
   CX_THROW(cx_ecdh_no_throw(pvkey, mode, P, P_len, secret, secret_len));
 
@@ -133,7 +135,8 @@ static inline int cx_ecdh ( const cx_ecfp_private_key_t * pvkey, int mode, const
 
 #if defined(HAVE_X25519)
 /**
- * @brief   Perform a scalar multiplication on Curve25519 with u-coordinate only.
+ * @brief   Performs a scalar multiplication
+ *          on Curve25519 with u-coordinate only.
  *
  * @details The notation (u, v) is used for Montgomery curves while (x, y)
  *          is used for the birational equivalents (Edwards curves).
@@ -162,7 +165,8 @@ cx_err_t cx_x25519(uint8_t *u, const uint8_t *k, size_t k_len);
 
 #if defined(HAVE_X448)
 /**
- * @brief   Perform a scalar multiplication on Curve448 with u-coordinate only.
+ * @brief   Performs a scalar multiplication
+ *          on Curve448 with u-coordinate only.
  *
  * @details The notation (u, v) is used for Montgomery curves while (x, y)
  *          is used for the birational equivalents (Edwards curves).
