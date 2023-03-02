@@ -24,16 +24,20 @@
 #ifndef OX_H
 #define OX_H
 
-#include <stdbool.h>
-#include <stddef.h>
 #include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
 
 #include "decorators.h"
 #include "ox_aes.h"
-#include "ox_bn.h"
-#include "ox_crc.h"
 #include "ox_des.h"
+#include "ox_bn.h"
+#include "ox_bls.h"
 #include "ox_ec.h"
+#include "ox_crc.h"
 #include "ox_rng.h"
+#if defined(HAVE_VSS)
+#include "ox_vss.h"
+#endif // HAVE_VSS
 
 #endif // OX_H

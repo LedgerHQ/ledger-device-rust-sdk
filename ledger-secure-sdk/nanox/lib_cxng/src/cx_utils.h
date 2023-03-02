@@ -36,6 +36,9 @@ void     cx_swap_buffer32(uint32_t *v, size_t len);
 #define cx_rotr(x, n) (((x) >> (n)) | ((x) << (32 - (n))))
 #define cx_shr(x, n) ((x) >> (n))
 
+#define htole32(value) ((uint32_t) (value))
+
+
 /* ======================================================================= */
 /*                          64 BITS manipulation                           */
 /* ======================================================================= */
@@ -86,3 +89,5 @@ void         cx_swap_buffer64(uint64bits_t *v, int len);
 void cx_memxor(uint8_t *buf1, const uint8_t *buf2, size_t len);
 
 #endif
+
+uint8_t cx_constant_time_eq(const uint8_t *buf1, uint8_t *buf2, size_t len);

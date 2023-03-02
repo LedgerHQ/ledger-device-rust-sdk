@@ -67,7 +67,7 @@ struct cx_blake2b_s {
 typedef struct cx_blake2b_s cx_blake2b_t;
 
 /**
- * @brief   Initialize BLAKE2b message digest context.
+ * @brief   Initializes BLAKE2b message digest context.
  *
  * @param[out] hash    Pointer to the BLAKE2b context to initialize.
  *                     The context shall be in RAM.
@@ -81,10 +81,13 @@ typedef struct cx_blake2b_s cx_blake2b_t;
 cx_err_t cx_blake2b_init_no_throw(cx_blake2b_t *hash, size_t out_len);
 
 /**
- * @brief   Initialize BLAKE2b message digest context.
+ * @brief   Initializes BLAKE2b message digest context.
  * 
  * @details This function throws an exception if the
  *          initialization fails.
+ *
+ * @warning It is recommended to use #cx_blake2b_init_no_throw
+ *          rather than this function.
  *
  * @param[out] hash    Pointer to the BLAKE2b context to initialize.
  *                     The context shall be in RAM.
@@ -102,7 +105,7 @@ static inline int cx_blake2b_init ( cx_blake2b_t * hash, unsigned int out_len )
 }
 
 /**
- * @brief   Initialize BLAKE2b message digest context with
+ * @brief   Initializes BLAKE2b message digest context with
  *          salt and personnalization string.
  * 
  * @param[out] hash     Pointer to the BLAKE2b context to initialize.
@@ -130,11 +133,14 @@ cx_err_t cx_blake2b_init2_no_throw(cx_blake2b_t *hash,
                                     size_t        perso_len);
 
 /**
- * @brief   Initialize BLAKE2b message digest context with
+ * @brief   Initializes BLAKE2b message digest context with
  *          salt and personnalization string.
  * 
  * @details This function throws an exception if the initialization
  *          fails.
+ *
+ * @warning It is recommended to use #cx_blake2b_init2_no_throw
+ *          rather than this function.
  * 
  * @param[out] hash     Pointer to the BLAKE2b context to initialize.
  *                      The context shall be in RAM.

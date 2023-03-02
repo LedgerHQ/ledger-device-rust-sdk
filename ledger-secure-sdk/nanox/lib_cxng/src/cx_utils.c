@@ -165,3 +165,14 @@ void cx_memxor(uint8_t *buf1, const uint8_t *buf2, size_t len) {
     buf1[i] ^= buf2[i];
   }
 }
+
+uint8_t cx_constant_time_eq(const uint8_t *buf1, uint8_t *buf2, size_t len) {
+  uint8_t  diff;
+  size_t   i;
+  uint8_t  is_eq;
+  for (diff = 0, i = 0; i < len; i++) {
+        diff |= buf1[i] ^ buf2[i];
+      }
+  is_eq = ((diff | -diff) >> 7) & 1;
+  return is_eq;
+}

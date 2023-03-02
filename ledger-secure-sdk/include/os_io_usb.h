@@ -1,7 +1,7 @@
 
 /*******************************************************************************
 *   Ledger Nano S - Secure firmware
-*   (c) 2021 Ledger
+*   (c) 2022 Ledger
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -27,10 +27,10 @@
 /* ----------------------------------------------------------------------- */
 /* -                            IO FUNCTIONS                             - */
 /* ----------------------------------------------------------------------- */
-typedef void (*io_send_t)(unsigned char *buffer, unsigned short length);
+typedef void (*io_send_t)(unsigned char* buffer, unsigned short length);
 
-typedef unsigned short (*io_recv_t)(unsigned char *buffer,
-                                    unsigned short maxlenth);
+typedef unsigned short (*io_recv_t)(unsigned char* buffer, unsigned short maxlenth);
+
 
 typedef enum io_usb_hid_receive_status_e {
   IO_USB_APDU_RESET,
@@ -38,14 +38,13 @@ typedef enum io_usb_hid_receive_status_e {
   IO_USB_APDU_RECEIVED,
 } io_usb_hid_receive_status_t;
 
-extern volatile unsigned int G_io_usb_hid_total_length;
+extern volatile unsigned int   G_io_usb_hid_total_length;
 
 void io_usb_hid_init(void);
 
 /**
- * Receive next HID transport packet, returns IO_USB_APDU_RECEIVED when a
- * complete APDU has been received in the G_io_apdu_buffer To be called
- * typically upon USB OUT event
+ * Receive next HID transport packet, returns IO_USB_APDU_RECEIVED when a complete APDU has been received in the G_io_apdu_buffer
+ * To be called typically upon USB OUT event
  */
 io_usb_hid_receive_status_t
 io_usb_hid_receive(io_send_t sndfct, unsigned char *buffer, unsigned short l, apdu_buffer_t * apdu_buffer);
@@ -56,9 +55,8 @@ io_usb_hid_receive(io_send_t sndfct, unsigned char *buffer, unsigned short l, ap
  */
 void io_usb_hid_sent(io_send_t sndfct);
 
-/**
- * Request transmission of an APDU from the G_io_apdu_buffer using the HID
- * transport protocol
+/** 
+ * Request transmission of an APDU from the G_io_apdu_buffer using the HID transport protocol
  */
 void io_usb_hid_send(io_send_t sndfct, unsigned short sndlength, unsigned char * apdu_buffer);
 

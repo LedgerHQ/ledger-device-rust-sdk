@@ -38,7 +38,22 @@ typedef struct {
   uint8_t  tmp[CX_RFC6979_MAX_RLEN];
   cx_md_t hash_id;
   size_t md_len;
-  cx_hmac_t hmac;
+
+  union {
+    #if (!defined(HAVE_SHA512) && !defined(HAVE_SHA384) && !defined(HAVE_SHA256) && !defined(HAVE_SHA224)) || !defined(HAVE_HMAC)
+    #error No hmac defined for rfc6979 support
+    #endif
+
+    cx_hmac_t hmac;
+
+    #if defined(HAVE_SHA512) || defined(HAVE_SHA384)
+    cx_hmac_sha512_t hmac_sha512;
+    #endif
+
+    #if defined(HAVE_SHA256) || defined(HAVE_SHA224)
+    cx_hmac_sha256_t hmac_sha256;
+    #endif
+  };
 } cx_rnd_rfc6979_ctx_t;
 
 cx_err_t cx_rng_rfc6979_init(cx_rnd_rfc6979_ctx_t *rfc_ctx,
