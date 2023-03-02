@@ -50,7 +50,7 @@ struct cx_sha3_s {
 typedef struct cx_sha3_s cx_sha3_t;
 
 /**
- * @brief   Initialize a SHA3 context.
+ * @brief   Initializes a SHA3 context.
  * 
  * @details Supported output sizes in bits:
  *            - 224
@@ -70,7 +70,7 @@ typedef struct cx_sha3_s cx_sha3_t;
 cx_err_t cx_sha3_init_no_throw(cx_sha3_t *hash, size_t size);
 
 /**
- * @brief   Initialize a SHA3 context.
+ * @brief   Initializes a SHA3 context.
  * 
  * @details Supported output sizes in bits:
  *            - 224
@@ -80,6 +80,9 @@ cx_err_t cx_sha3_init_no_throw(cx_sha3_t *hash, size_t size);
  *          
  *          This function throws an exception if the
  *          initialization fails.
+ *
+ * @warning It is recommended to use #cx_sha3_init_no_throw
+ *          rather than this function.
  *
  * @param[out] hash Pointer to the SHA3 context.
  *                  The context shall be in RAM.
@@ -97,7 +100,7 @@ static inline int cx_sha3_init ( cx_sha3_t * hash, size_t size )
 }
 
 /**
- * @brief Initialize a KECCAK context.
+ * @brief Initializes a KECCAK context.
  * 
  * @details Supported output sizes in bits:
  *            - 224
@@ -118,7 +121,7 @@ static inline int cx_sha3_init ( cx_sha3_t * hash, size_t size )
 cx_err_t cx_keccak_init_no_throw(cx_sha3_t *hash, size_t size);
 
 /**
- * @brief Initialize a KECCAK context.
+ * @brief Initializes a KECCAK context.
  * 
  * @details Supported output sizes in bits:
  *            - 224
@@ -128,6 +131,9 @@ cx_err_t cx_keccak_init_no_throw(cx_sha3_t *hash, size_t size);
  *          
  *          This function throws an exception if the
  *          initialization fails.
+ *
+ * @warning It is recommended to use #cx_keccak_init_no_throw
+ *          rather than this function.
  *
  * @param[out] hash  Pointer to the KECCAK context.
  *                   The context shall be in RAM.
@@ -145,7 +151,7 @@ static inline int cx_keccak_init ( cx_sha3_t * hash, size_t size )
 }
 
 /**
- * @brief   Initialize a SHA3-XOF context.
+ * @brief   Initializes a SHA3-XOF context.
  * 
  * @details SHAKE128 is a SHA3-XOF (Extendable Output Function
  *          based on SHA3) with a 128-bit security.
@@ -165,7 +171,7 @@ static inline int cx_keccak_init ( cx_sha3_t * hash, size_t size )
 cx_err_t cx_shake128_init_no_throw(cx_sha3_t *hash, size_t out_size);
 
 /**
- * @brief   Initialize a SHA3-XOF context.
+ * @brief   Initializes a SHA3-XOF context.
  * 
  * @details SHAKE128 is a SHA3-XOF (Extendable Output Function
  *          based on SHA3) with a 128-bit security.
@@ -173,8 +179,11 @@ cx_err_t cx_shake128_init_no_throw(cx_sha3_t *hash, size_t out_size);
  *            - 256
  *            - 512
  *          
- *          This function throws an exception if the computation
+ *          This function throws an exception if the initialization
  *          doesn't succeed.
+ *
+ * @warning It is recommended to use #cx_shake128_init_no_throw
+ *          rather than this function.
  *
  * @param[out] hash      Pointer to the context.
  *                       The context shall be in RAM.
@@ -192,7 +201,7 @@ static inline int cx_shake128_init ( cx_sha3_t * hash, unsigned int out_size )
 }
 
 /**
- * @brief   Initialize a SHA3-XOF context.
+ * @brief   Initializes a SHA3-XOF context.
  * 
  * @details SHAKE256 is a SHA3-XOF (Extendable Output Function
  *          based on SHA3) with a 256-bit security.
@@ -212,7 +221,7 @@ static inline int cx_shake128_init ( cx_sha3_t * hash, unsigned int out_size )
 cx_err_t cx_shake256_init_no_throw(cx_sha3_t *hash, size_t out_size);
 
 /**
- * @brief   Initialize a SHA3-XOF context.
+ * @brief   Initializes a SHA3-XOF context.
  * 
  * @details SHAKE256 is a SHA3-XOF (Extendable Output Function
  *          based on SHA3) with a 256-bit security.
@@ -220,8 +229,11 @@ cx_err_t cx_shake256_init_no_throw(cx_sha3_t *hash, size_t out_size);
  *            - 256
  *            - 512
  *          
- *          This function throws an exception if the computation
+ *          This function throws an exception if the initialization
  *          doesn't succeed.
+ *
+ * @warning It is recommended to use #cx_shake256_init_no_throw
+ *          rather than this function.
  *
  * @param[out] hash      Pointer to the context.
  *                       The context shall be in RAM.
@@ -239,7 +251,7 @@ static inline int cx_shake256_init ( cx_sha3_t * hash, unsigned int out_size )
 }
 
 /**
- * @brief   Initialize a SHA3-XOF context.
+ * @brief   Initializes a SHA3-XOF context.
  * 
  * @details This can be used to initialize either SHAKE128
  *          or SHAKE256.
@@ -261,7 +273,7 @@ static inline int cx_shake256_init ( cx_sha3_t * hash, unsigned int out_size )
 cx_err_t cx_sha3_xof_init_no_throw(cx_sha3_t *hash, size_t size, size_t out_length);
 
 /**
- * @brief   Initialize a SHA3-XOF context.
+ * @brief   Initializes a SHA3-XOF context.
  * 
  * @details This can be used to initialize either SHAKE128
  *          or SHAKE256.
@@ -271,6 +283,9 @@ cx_err_t cx_sha3_xof_init_no_throw(cx_sha3_t *hash, size_t size, size_t out_leng
  *          
  *          This function throws an exception if the computation
  *          doesn't succeed.
+ *
+ * @warning It is recommended to use #cx_sha3_xof_init_no_throw
+ *          rather than this function.
  *
  * @param[out] hash         Pointer to the context.
  *                          The context shall be in RAM.

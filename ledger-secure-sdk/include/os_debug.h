@@ -4,8 +4,8 @@
 #include "decorators.h"
 
 #ifdef DEBUG_OS_STACK_CONSUMPTION
-#define MODE_INITIALIZATION 0x00
-#define MODE_RETRIEVAL 0x01
+#define MODE_INITIALIZATION                   0x00
+#define MODE_RETRIEVAL                        0x01
 /**
  * Debug syscall allowing one to monitor the OS stack usage of other syscalls.
  * This syscall cannot be embedded within the release version of the OS.

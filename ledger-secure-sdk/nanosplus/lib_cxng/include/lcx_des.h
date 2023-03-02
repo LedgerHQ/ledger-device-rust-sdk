@@ -38,6 +38,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/** Simple DES key length in bits */
+#define CX_DES_KEY_LENGTH      64
+
+/** Key length in bits of a triple DES with 2 keys */
+#define CX_3DES_2_KEY_LENGTH  128
+
+/** Key length in bits of a triple DES with 3 keys */
+#define CX_3DES_3_KEY_LENGTH  192
+
 /**
  * @brief   Initializes a DES key.
  * 
@@ -293,7 +302,7 @@ static inline size_t cx_des ( const cx_des_key_t * key, uint32_t mode, const uns
  *                      - CX_INVALID_PARAMETER
  *                      - INVALID_PARAMETER
  */
-  void cx_des_enc_block(const cx_des_key_t *key, const uint8_t *inblock, uint8_t *outblock);
+  cx_err_t cx_des_enc_block(const cx_des_key_t *key, const uint8_t *inblock, uint8_t *outblock);
 
 /**
  * @brief   Decrypts a 8-byte block using DES/3-DES algorithm.
@@ -309,7 +318,7 @@ static inline size_t cx_des ( const cx_des_key_t * key, uint32_t mode, const uns
  *                      - CX_INVALID_PARAMETER
  *                      - INVALID_PARAMETER
  */
-  void cx_des_dec_block(const cx_des_key_t *key, const uint8_t *inblock, uint8_t *outblock);
+  cx_err_t cx_des_dec_block(const cx_des_key_t *key, const uint8_t *inblock, uint8_t *outblock);
 
 #endif // HAVE_DES
 

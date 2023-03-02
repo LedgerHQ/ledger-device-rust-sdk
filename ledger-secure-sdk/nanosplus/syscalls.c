@@ -1,5 +1,10 @@
 #define SYSCALL_STUB
 
+#if defined(HAVE_BOLOS)
+# include "bolos_privileged_ux.h"
+#endif // HAVE_BOLOS
+
+
 #include "exceptions.h"
 #include "lcx_aes.h"
 #include "lcx_des.h"
@@ -10,9 +15,22 @@
 #include "os_memory.h"
 #include "os_registry.h"
 #include "os_ux.h"
+#ifdef HAVE_SE_TOUCH
+#include "os_io.h"
+#endif // HAVE_SE_TOUCH
 #include "ox_ec.h"
 #include "ox_bn.h"
 #include "syscalls.h"
+#if defined(HAVE_LANGUAGE_PACK)
+#include "ux.h"
+#endif //defined(HAVE_LANGUAGE_PACK)
+#ifdef HAVE_NBGL
+#include "nbgl_types.h"
+#include "os_pic.h"
+#endif
+#if defined(HAVE_VSS)
+#include "ox_vss.h"
+#endif // HAVE_VSS
 #include <string.h>
 
 unsigned int SVC_Call(unsigned int syscall_id, void *parameters);
@@ -31,6 +49,102 @@ void halt ( void ) {
   SVC_Call(SYSCALL_halt_ID, parameters);
   return;
 }
+
+#ifdef HAVE_NBGL
+void nbgl_frontDrawRect(nbgl_area_t *area)
+{
+  unsigned int parameters[1];
+  parameters[0] = (unsigned int)area;
+  SVC_Call(SYSCALL_nbgl_front_draw_rect_ID, parameters);
+  return;
+}
+
+void nbgl_frontDrawHorizontalLine(nbgl_area_t *area, uint8_t mask, color_t lineColor)
+{
+  unsigned int parameters[3];
+  parameters[0] = (unsigned int)area;
+  parameters[1] = (unsigned int)mask;
+  parameters[2] = (unsigned int)lineColor;
+  SVC_Call(SYSCALL_nbgl_front_draw_horizontal_line_ID, parameters);
+  return;
+}
+
+void nbgl_frontDrawImage(nbgl_area_t *area, uint8_t *buffer, nbgl_transformation_t transformation, nbgl_color_map_t colorMap)
+{
+  unsigned int parameters[4];
+  parameters[0] = (unsigned int)area;
+  parameters[1] = (unsigned int)PIC(buffer);
+  parameters[2] = (unsigned int)transformation;
+  parameters[3] = (unsigned int)colorMap;
+  SVC_Call(SYSCALL_nbgl_front_draw_img_ID, parameters);
+  return;
+}
+
+void nbgl_frontDrawImageFile(nbgl_area_t *area, uint8_t *buffer,
+                             nbgl_color_map_t colorMap, uint8_t *optional_uzlib_work_buffer)
+{
+  unsigned int parameters[4];
+  parameters[0] = (unsigned int)area;
+  parameters[1] = (unsigned int)PIC(buffer);
+  parameters[2] = (unsigned int)colorMap;
+  parameters[3] = (unsigned int)optional_uzlib_work_buffer;
+  SVC_Call(SYSCALL_nbgl_front_draw_img_file_ID, parameters);
+  return;
+}
+
+void nbgl_frontRefreshArea(nbgl_area_t *area, nbgl_refresh_mode_t mode)
+{
+  unsigned int parameters[2];
+  parameters[0] = (unsigned int)area;
+  parameters[1] = (unsigned int)mode;
+  SVC_Call(SYSCALL_nbgl_front_refresh_area_ID, parameters);
+  return;
+}
+
+void nbgl_sideDrawRect(nbgl_area_t *area)
+{
+  unsigned int parameters[1];
+  parameters[0] = (unsigned int)area;
+  SVC_Call(SYSCALL_nbgl_side_draw_rect_ID, parameters);
+  return;
+}
+
+void nbgl_sideDrawHorizontalLine(nbgl_area_t *area, uint8_t mask, color_t lineColor)
+{
+  unsigned int parameters[3];
+  parameters[0] = (unsigned int)area;
+  parameters[1] = (unsigned int)mask;
+  parameters[2] = (unsigned int)lineColor;
+  SVC_Call(SYSCALL_nbgl_side_draw_horizontal_line_ID, parameters);
+  return;
+}
+
+void nbgl_sideDrawImage(nbgl_area_t *area, uint8_t *buffer, nbgl_transformation_t transformation, nbgl_color_map_t colorMap)
+{
+  unsigned int parameters[4];
+  parameters[0] = (unsigned int)area;
+  parameters[1] = (unsigned int)buffer;
+  parameters[2] = (unsigned int)transformation;
+  parameters[3] = (unsigned int)colorMap;
+  SVC_Call(SYSCALL_nbgl_side_draw_img_ID, parameters);
+  return;
+}
+
+void nbgl_sideRefreshArea(nbgl_area_t *area)
+{
+  unsigned int parameters[1];
+  parameters[0] = (unsigned int)area;
+  SVC_Call(SYSCALL_nbgl_side_refresh_area_ID, parameters);
+  return;
+}
+
+unsigned int nbgl_font_getFont(unsigned int fontId)
+{
+  unsigned int parameters[1];
+  parameters[0] = (unsigned int)fontId;
+  return SVC_Call(SYSCALL_nbgl_get_font_ID, parameters);
+}
+#endif
 
 void nvm_write ( void * dst_adr, void * src_adr, unsigned int src_len ) {
   unsigned int parameters[3];
@@ -725,6 +839,98 @@ cx_err_t cx_ecpoint_x448(const cx_bn_t u, const uint8_t *k, size_t k_len) {
 }
 #endif // HAVE_X448
 
+#ifdef HAVE_BLS
+cx_err_t ox_bls12381_sign(const cx_ecfp_384_private_key_t *key, const uint8_t * message, size_t message_len, uint8_t * signature, size_t signature_len) {
+  unsigned int parameters [5];
+  parameters[0] = (unsigned int)key;
+  parameters[1] = (unsigned int)message;
+  parameters[2] = (unsigned int)message_len;
+  parameters[3] = (unsigned int)signature;
+  parameters[4] = (unsigned int)signature_len;
+  return SVC_cx_call(SYSCALL_ox_bls12381_sign_ID, parameters);
+}
+
+cx_err_t cx_bls12381_key_gen(uint8_t mode,
+                             const uint8_t *secret, size_t secret_len,
+                             const uint8_t *salt, size_t salt_len,
+                             uint8_t *key_info, size_t key_info_len,
+                             cx_ecfp_384_private_key_t *private_key,
+                             uint8_t *public_key,
+                             size_t public_key_len) {
+  unsigned int parameters[10];
+  parameters[0] = (unsigned int)mode;
+  parameters[1] = (unsigned int)secret;
+  parameters[2] = (unsigned int)secret_len;
+  parameters[3] = (unsigned int)salt;
+  parameters[4] = (unsigned int)salt_len;
+  parameters[5] = (unsigned int)key_info;
+  parameters[6] = (unsigned int)key_info_len;
+  parameters[7] = (unsigned int)private_key;
+  parameters[8] = (unsigned int)public_key;
+  parameters[9] = (unsigned int)public_key_len;
+  return SVC_cx_call(SYSCALL_cx_bls12381_key_gen_ID, parameters);
+}
+
+cx_err_t cx_hash_to_field(const uint8_t *msg, size_t msg_len, const uint8_t *dst, size_t dst_len, uint8_t *hash, size_t hash_len) {
+  unsigned int parameters [6];
+  parameters[0] = (unsigned int)msg;
+  parameters[1] = (unsigned int)msg_len;
+  parameters[2] = (unsigned int)dst;
+  parameters[3] = (unsigned int)dst_len;
+  parameters[4] = (unsigned int)hash;
+  parameters[5] = (unsigned int)hash_len;
+  return SVC_cx_call(SYSCALL_cx_hash_to_field_ID, parameters);
+}
+
+cx_err_t cx_bls12381_aggregate(const uint8_t *in, size_t in_len, bool first, uint8_t *aggregated_signature, size_t signature_len) {
+  unsigned int parameters [5];
+  parameters[0] = (unsigned int)in;
+  parameters[1] = (unsigned int)in_len;
+  parameters[2] = (unsigned int)first;
+  parameters[3] = (unsigned int)aggregated_signature;
+  parameters[4] = (unsigned int)signature_len;
+  return SVC_cx_call(SYSCALL_cx_bls12381_aggregate_ID, parameters);
+}
+#endif // HAVE_BLS
+
+#if defined(HAVE_VSS)
+cx_err_t cx_vss_generate_shares(cx_vss_share_t *shares,
+                                cx_vss_commitment_t *commits,
+                                const uint8_t *point,
+                                size_t point_len,
+                                const uint8_t *seed,
+                                size_t seed_len,
+                                const uint8_t *secret,
+                                size_t secret_len,
+                                uint8_t shares_number,
+                                uint8_t threshold) {
+  unsigned int parameters[10];
+  parameters[0] = (unsigned int)shares;
+  parameters[1] = (unsigned int)commits;
+  parameters[2] = (unsigned int)point;
+  parameters[3] = (unsigned int)point_len;
+  parameters[4] = (unsigned int)seed;
+  parameters[5] = (unsigned int)seed_len;
+  parameters[6] = (unsigned int)secret;
+  parameters[7] = (unsigned int)secret_len;
+  parameters[8] = (unsigned int)shares_number;
+  parameters[9] = (unsigned int)threshold;
+  return SVC_cx_call(SYSCALL_cx_vss_generate_shares_ID, parameters);
+}
+
+cx_err_t cx_vss_combine_shares(uint8_t *secret,
+                               size_t secret_len,
+                               cx_vss_share_t *shares,
+                               uint8_t threshold) {
+  unsigned int parameters[4];
+  parameters[0] = (unsigned int)secret;
+  parameters[1] = (unsigned int)secret_len;
+  parameters[2] = (unsigned int)shares;
+  parameters[3] = (unsigned int)threshold;
+  return SVC_cx_call(SYSCALL_cx_vss_combine_shares_ID, parameters);
+}
+#endif // HAVE_VSS
+
 uint32_t cx_crc32_hw ( const void * buf, size_t len ) {
   unsigned int parameters[2];
   parameters[0] = (unsigned int)buf;
@@ -777,16 +983,18 @@ void os_perso_derive_and_set_seed ( unsigned char identity, const char * prefix,
 }
 
 #if defined(HAVE_VAULT_RECOVERY_ALGO)
-void os_perso_derive_and_prepare_seed(const char* words, unsigned int words_length) {
-  unsigned int parameters[2];
+void os_perso_derive_and_prepare_seed(const char* words, unsigned int words_length, uint8_t *vault_recovery_work_buffer) {
+  unsigned int parameters[3];
   parameters[0] = (unsigned int)words;
   parameters[1] = (unsigned int)words_length;
+  parameters[2] = (unsigned int)vault_recovery_work_buffer;
   SVC_Call(SYSCALL_os_perso_derive_and_prepare_seed_ID, parameters);
   return;
 }
 
-void os_perso_derive_and_xor_seed(void) {
+void os_perso_derive_and_xor_seed(uint8_t *vault_recovery_work_buffer) {
   unsigned int parameters[2];
+  parameters[0] = (unsigned int)vault_recovery_work_buffer;
   SVC_Call(SYSCALL_os_perso_derive_and_xor_seed_ID, parameters);
   return;
 }
@@ -864,11 +1072,10 @@ void os_perso_derive_eip2333 ( cx_curve_t curve, const unsigned int * path, unsi
 }
 
 #if defined(HAVE_SEED_COOKIE)
-unsigned int os_perso_seed_cookie ( unsigned char * seed_cookie, unsigned int seed_cookie_length ) {
-  unsigned int parameters[2];
+bolos_bool_t os_perso_seed_cookie ( unsigned char * seed_cookie ) {
+  unsigned int parameters[1];
   parameters[0] = (unsigned int)seed_cookie;
-  parameters[1] = (unsigned int)seed_cookie_length;
-  return (unsigned int) SVC_Call(SYSCALL_os_perso_seed_cookie_ID, parameters);
+  return (bolos_bool_t) SVC_Call(SYSCALL_os_perso_seed_cookie_ID, parameters);
 }
 #endif // HAVE_SEED_COOKIE
 
@@ -879,17 +1086,19 @@ unsigned int os_endorsement_get_code_hash ( unsigned char * buffer ) {
   return (unsigned int) SVC_Call(SYSCALL_os_endorsement_get_code_hash_ID, parameters);
 }
 
-unsigned int os_endorsement_get_public_key ( unsigned char index, unsigned char * buffer ) {
-  unsigned int parameters[2];
+unsigned int os_endorsement_get_public_key ( unsigned char index, unsigned char * buffer, unsigned char * length ) {
+  unsigned int parameters[3];
   parameters[0] = (unsigned int)index;
   parameters[1] = (unsigned int)buffer;
+  parameters[2] = (unsigned int)length;
   return (unsigned int) SVC_Call(SYSCALL_os_endorsement_get_public_key_ID, parameters);
 }
 
-unsigned int os_endorsement_get_public_key_certificate ( unsigned char index, unsigned char * buffer ) {
-  unsigned int parameters[2];
+unsigned int os_endorsement_get_public_key_certificate ( unsigned char index, unsigned char * buffer, unsigned char * length ) {
+  unsigned int parameters[3];
   parameters[0] = (unsigned int)index;
   parameters[1] = (unsigned int)buffer;
+  parameters[2] = (unsigned int)length;
   return (unsigned int) SVC_Call(SYSCALL_os_endorsement_get_public_key_certificate_ID, parameters);
 }
 

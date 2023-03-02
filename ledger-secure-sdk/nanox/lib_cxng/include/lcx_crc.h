@@ -35,7 +35,7 @@
 #define CX_CRC16_INIT 0xFFFF
 
 /**
- * @brief   Compute a 16-bit checksum value.
+ * @brief   Computes a 16-bit checksum value.
  * 
  * @details The 16-bit value is computed according to the CRC16 CCITT definition.
  *
@@ -48,7 +48,7 @@
   uint16_t cx_crc16(const void *buffer, size_t len);
 
 /**
- * @brief   Accumulate more data to CRC.
+ * @brief   Accumulates more data to CRC.
  * 
  * @param[in] crc    CRC value to be updated.
  * 

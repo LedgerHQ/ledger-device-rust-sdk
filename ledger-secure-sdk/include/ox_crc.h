@@ -19,9 +19,8 @@
 /**
  * @file    ox_crc.h
  * @brief   Cyclic Redundancy Check syscall.
- *
- * This file contains the function for calculating a 32-bit cyclic redundancy
- * check.
+ * 
+ * This file contains the function for calculating a 32-bit cyclic redundancy check.
  */
 
 #ifndef OX_CRC_H
@@ -30,14 +29,14 @@
 #include "decorators.h"
 
 /**
- * @brief Calculate a 32-bit cyclic redundancy check.
- *
+ * @brief Calculates a 32-bit cyclic redundancy check.
+ * 
  * @param[in] buf Pointer to the buffer to check.
- *
+ * 
  * @param[in] len Length of the buffer.
- *
+ * 
  * @return        Result of the 32-bit CRC calculation.
- *
+ * 
  */
 SYSCALL uint32_t cx_crc32_hw(const void *buf PLENGTH(len), size_t len);
 

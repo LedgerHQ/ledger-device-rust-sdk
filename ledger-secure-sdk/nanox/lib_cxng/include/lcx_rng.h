@@ -34,7 +34,8 @@
 #include "lcx_hash.h"
 
 /**
- * @brief   Generate a random buffer such that each byte is between 0 and 255.
+ * @brief   Generates a random buffer such that
+ *          each byte is between 0 and 255.
  *
  * @param[out] buffer Buffer to hold the random data.
  * 
@@ -44,7 +45,8 @@
 void cx_rng_no_throw(uint8_t *buffer, size_t len);
 
 /**
- * @brief   Generate a random buffer such that each byte is between 0 and 255.
+ * @brief   Generates a random buffer such that
+ *          each byte is between 0 and 255.
  *
  * @param[out] buffer Buffer to hold the random data.
  * 
@@ -60,7 +62,7 @@ static inline unsigned char *cx_rng(uint8_t *buffer, size_t len)
 }
 
 /**
- * @brief   Output 32 random bits.
+ * @brief   Returns 32 random bits.
  *
  * @return  A 32-bit random number.
  */
@@ -71,7 +73,7 @@ static inline uint32_t cx_rng_u32(void) {
 }
 
 /**
- * @brief   Output 8 random bits.
+ * @brief   Returns 8 random bits.
  * 
  * @return  A 8-bit random number.
  */
@@ -84,7 +86,7 @@ static inline uint8_t cx_rng_u8(void) {
 typedef uint32_t (*cx_rng_u32_range_randfunc_t)(void);
 
 /**
- * @brief   Generate a random 32-bit unsigned integer
+ * @brief   Generates a random 32-bit unsigned integer
  *          with a specified function.
  * 
  * @details The generated number is taken in the range [a;b[
@@ -101,7 +103,7 @@ typedef uint32_t (*cx_rng_u32_range_randfunc_t)(void);
 uint32_t cx_rng_u32_range_func(uint32_t a, uint32_t b, cx_rng_u32_range_randfunc_t randfunc);
 
 /**
- * @brief   Generate a random 32-bit unsigned integer.
+ * @brief   Generates a random 32-bit unsigned integer.
  * 
  * @details The generated number is taken in the range [a;b[
  *          with uniform distribution.
@@ -117,7 +119,7 @@ static inline uint32_t cx_rng_u32_range(uint32_t a, uint32_t b) {
 }
 
 /**
- * @brief   Generate a random buffer according to
+ * @brief   Generates a random buffer according to
  *          <a href="https://tools.ietf.org/html/rfc6979"> RFC6979 </a>.
  * 
  * @param[in]  hash_id  Message digest algorithm identifier.

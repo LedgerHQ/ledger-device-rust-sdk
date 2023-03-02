@@ -11,7 +11,6 @@
 #include "cx_sha256.h"
 #include "cx_hmac.h"
 #include "cx_pbkdf2.h"
-#include "cx_init.h"
 #include "cx_blake2.h"
 #include "cx_eddsa.h"
 #include "cx_ripemd160.h"
@@ -22,21 +21,46 @@
 #include "cx_utils.h"
 #include "cx_ram.h"
 #include "cx_sha3.h"
-#include "cx_ades.h"
 #include "cx_blake2b.h"
 
 unsigned long __attribute((section ("._cx_exported_functions"))) cx_exported_functions[] = {
   [_NR_cx_aes_dec_block] = (unsigned long)cx_aes_dec_block,
   [_NR_cx_aes_enc_block] = (unsigned long)cx_aes_enc_block,
+  [_NR_cx_aes_gcm_check_tag] = (unsigned long)cx_aes_gcm_check_tag,
+  [_NR_cx_aes_gcm_decrypt_and_auth] = (unsigned long)cx_aes_gcm_decrypt_and_auth,
+  [_NR_cx_aes_gcm_encrypt_and_tag] = (unsigned long)cx_aes_gcm_encrypt_and_tag,
+  [_NR_cx_aes_gcm_finish] = (unsigned long)cx_aes_gcm_finish,
+  [_NR_cx_aes_gcm_init] = (unsigned long)cx_aes_gcm_init,
+  [_NR_cx_aes_gcm_set_key] = (unsigned long)cx_aes_gcm_set_key,
+  [_NR_cx_aes_gcm_start] = (unsigned long)cx_aes_gcm_start,
+  [_NR_cx_aes_gcm_update_aad] = (unsigned long)cx_aes_gcm_update_aad,
+  [_NR_cx_aes_gcm_update] = (unsigned long)cx_aes_gcm_update,
   [_NR_cx_aes_init_key_no_throw] = (unsigned long)cx_aes_init_key_no_throw,
   [_NR_cx_aes_iv_no_throw] = (unsigned long)cx_aes_iv_no_throw,
   [_NR_cx_aes_no_throw] = (unsigned long)cx_aes_no_throw,
+  [_NR_cx_aes_siv_encrypt] = (unsigned long)cx_aes_siv_encrypt,
+  [_NR_cx_aes_siv_decrypt] = (unsigned long)cx_aes_siv_decrypt,
+  [_NR_cx_aes_siv_init] = (unsigned long)cx_aes_siv_init,
+  [_NR_cx_aes_siv_set_key] = (unsigned long)cx_aes_siv_set_key,
+  [_NR_cx_aes_siv_start] = (unsigned long)cx_aes_siv_start,
+  [_NR_cx_aes_siv_update_aad] = (unsigned long)cx_aes_siv_update_aad,
+  [_NR_cx_aes_siv_finish] = (unsigned long)cx_aes_siv_finish,
+  [_NR_cx_aes_siv_update] = (unsigned long)cx_aes_siv_update,
   [_NR_cx_blake2b] = (unsigned long)cx_blake2b,
   [_NR_cx_blake2b_final] = (unsigned long)cx_blake2b_final,
   [_NR_cx_blake2b_get_output_size] = (unsigned long)cx_blake2b_get_output_size,
   [_NR_cx_blake2b_init2_no_throw] = (unsigned long)cx_blake2b_init2_no_throw,
   [_NR_cx_blake2b_init_no_throw] = (unsigned long)cx_blake2b_init_no_throw,
   [_NR_cx_blake2b_update] = (unsigned long)cx_blake2b_update,
+  [_NR_cx_cipher_enc_dec] = (unsigned long)cx_cipher_enc_dec,
+  [_NR_cx_cipher_finish] = (unsigned long)cx_cipher_finish,
+  [_NR_cx_cipher_init] = (unsigned long)cx_cipher_init,
+  [_NR_cx_cipher_setiv] = (unsigned long)cx_cipher_setiv,
+  [_NR_cx_cipher_setkey] = (unsigned long)cx_cipher_setkey,
+  [_NR_cx_cipher_setup] = (unsigned long)cx_cipher_setup,
+  [_NR_cx_cipher_set_padding] = (unsigned long)cx_cipher_set_padding,
+  [_NR_cx_cipher_update] = (unsigned long)cx_cipher_update,
+  [_NR_cx_cmac] = (unsigned long)cx_cmac,
   [_NR_cx_crc16] = (unsigned long)cx_crc16,
   [_NR_cx_crc16_update] = (unsigned long)cx_crc16_update,
   [_NR_cx_crc32] = (unsigned long)cx_crc32,
@@ -72,6 +96,7 @@ unsigned long __attribute((section ("._cx_exported_functions"))) cx_exported_fun
   [_NR_cx_hash_init] = (unsigned long)cx_hash_init,
   [_NR_cx_hash_init_ex] = (unsigned long)cx_hash_init_ex,
   [_NR_cx_hash_no_throw] = (unsigned long)cx_hash_no_throw,
+  [_NR_cx_hash_ripemd160] = (unsigned long)cx_hash_ripemd160,
   [_NR_cx_hash_sha256] = (unsigned long)cx_hash_sha256,
   [_NR_cx_hash_sha512] = (unsigned long)cx_hash_sha512,
   [_NR_cx_hash_update] = (unsigned long)cx_hash_update,
@@ -88,7 +113,6 @@ unsigned long __attribute((section ("._cx_exported_functions"))) cx_exported_fun
   [_NR_cx_hmac_sha512] = (unsigned long)cx_hmac_sha512,
   [_NR_cx_hmac_sha512_init_no_throw] = (unsigned long)cx_hmac_sha512_init_no_throw,
   [_NR_cx_hmac_update] = (unsigned long)cx_hmac_update,
-  [_NR_cx_init] = (unsigned long)cx_init,
   [_NR_cx_keccak_init_no_throw] = (unsigned long)cx_keccak_init_no_throw,
   [_NR_cx_math_addm_no_throw] = (unsigned long)cx_math_addm_no_throw,
   [_NR_cx_math_add_no_throw] = (unsigned long)cx_math_add_no_throw,

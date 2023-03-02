@@ -34,9 +34,9 @@
 #define LCX_EDDSA_H
 
 /**
- * @brief   Sign a message digest.
+ * @brief   Signs a message digest.
  * 
- * @details Sign a message digest according to the EDDSA specification
+ * @details The signature is done according to the EDDSA specification
  *          <a href="https://tools.ietf.org/html/rfc8032"> RFC8032 </a>.
  * 
  * @param[in]  pvkey    Private key.
@@ -79,12 +79,15 @@ cx_err_t cx_eddsa_sign_no_throw(const cx_ecfp_private_key_t *pvkey,
                        size_t                       sig_len);
 
 /**
- * @brief   Sign a message digest.
+ * @brief   Signs a message digest.
  * 
- * @details Sign a message digest according to the EDDSA specification
+ * @details The signature is done according to the EDDSA specification
  *          <a href="https://tools.ietf.org/html/rfc8032"> RFC8032 </a>.
  *          This function throws an exception if the computation doesn't
  *          succeed.
+ *
+ * @warning It is recommended to use #cx_eddsa_sign_no_throw rather than
+ *          this function.
  * 
  * @param[in]  pvkey    Private key.
  *                      This shall be initialized with #cx_ecfp_init_private_key_no_throw.
@@ -126,7 +129,7 @@ cx_err_t cx_eddsa_sign_no_throw(const cx_ecfp_private_key_t *pvkey,
  * @throws              CX_INTERNAL_ERROR
  * @throws              CX_INVALID_PARAMETER_VALUE
  */
-static inline int cx_eddsa_sign ( const cx_ecfp_private_key_t * pvkey, int mode, cx_md_t hashID, const unsigned char * hash, unsigned int hash_len, const unsigned char * ctx, unsigned int ctx_len, unsigned char * sig, unsigned int sig_len, unsigned int * info )
+static inline size_t cx_eddsa_sign ( const cx_ecfp_private_key_t * pvkey, int mode, cx_md_t hashID, const unsigned char * hash, unsigned int hash_len, const unsigned char * ctx, unsigned int ctx_len, unsigned char * sig, unsigned int sig_len, unsigned int * info )
 {
   UNUSED(ctx);
   UNUSED(ctx_len);
@@ -142,9 +145,9 @@ static inline int cx_eddsa_sign ( const cx_ecfp_private_key_t * pvkey, int mode,
 }
 
 /**
- * @brief   Verify a signature.
+ * @brief   Verifies a signature.
  * 
- * @details Verify a signature according to the specification
+ * @details The verification is done according to the specification
  *          <a href="https://tools.ietf.org/html/rfc8032"> RFC8032 </a>.
  * 
  * @param[in]  pukey    Public key.
@@ -174,9 +177,9 @@ bool cx_eddsa_verify_no_throw(const cx_ecfp_public_key_t *pukey,
                      size_t                      sig_len);
 
 /**
- * @brief   Verify a signature.
+ * @brief   Verifies a signature.
  * 
- * @details Verify a signature according to the specification
+ * @details The verification is done according to the specification
  *          <a href="https://tools.ietf.org/html/rfc8032"> RFC8032 </a>.
  *          This function throws an exception if the computation doesn't
  *          succeed.
@@ -217,13 +220,13 @@ static inline int cx_eddsa_verify ( const cx_ecfp_public_key_t * pukey, int mode
 
 
 /**
- * @brief   Encode the curve point coordinates.
+ * @brief   Encodes the curve point coordinates.
  *
- * @param[in] coord A pointer to the point coordinates in the form x|y.
+ * @param[in, out] coord A pointer to the point coordinates in the form x|y.
  *
- * @param[in] len   Length of the coordinates.
+ * @param[in]      len   Length of the coordinates.
  *
- * @param[in] sign  Sign of the x-coordinate.
+ * @param[in]      sign  Sign of the x-coordinate.
  *
  */
   void cx_encode_coord(uint8_t * coord,
@@ -231,13 +234,13 @@ static inline int cx_eddsa_verify ( const cx_ecfp_public_key_t * pukey, int mode
                             int sign);
 
 /**
- * @brief   Decode the curve point coordinates.
+ * @brief   Decodes the curve point coordinates.
  *
- * @param[in] coord A pointer to the point encoded coordinates.
+ * @param[in, out] coord A pointer to the point encoded coordinates.
  *
- * @param[in] len   Length of the encoded coordinates.
+ * @param[in]      len   Length of the encoded coordinates.
  *
- * @return Sign of the x-coordinate.
+ * @return               Sign of the x-coordinate.
  */
   int cx_decode_coord(uint8_t * coord,
                         int len);
