@@ -436,3 +436,22 @@ impl IndexMut<usize> for Comm {
         &mut self.apdu_buffer[idx]
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::assert_eq_err as assert_eq;
+    use crate::testing::TestType;
+    use testmacro::test_item as test;
+
+    /// Basic "smoke test" that the casting is done correctly.
+    #[test]
+    fn apdu_metadata() {
+        let c = Comm::new();
+        let m = c.get_apdu_metadata();
+        assert_eq!(m.cla, 0);
+        assert_eq!(m.ins, 0);
+        assert_eq!(m.p1, 0);
+        assert_eq!(m.p2, 0);
+    }
+}
