@@ -105,6 +105,18 @@ impl Default for Comm {
     }
 }
 
+#[derive(Clone, Copy)]
+pub struct ApduMeta {
+    /// Class
+    pub cla: u8,
+    /// Instruction
+    pub ins: u8,
+    /// Parameter 1
+    pub p1: u8,
+    /// Parameter 2
+    pub p2: u8,
+}
+
 impl Comm {
     pub const fn new() -> Self {
         Self {
@@ -220,7 +232,7 @@ impl Comm {
     ///
     /// In this later example, invalid instruction byte error handling is
     /// automatically performed by the `next_event` method itself.
-    pub fn next_event<T: TryFrom<u8>>(&mut self) -> Event<T> {
+    pub fn next_event<T: TryFrom<ApduMeta>>(&mut self) -> Event<T> {
         let mut spi_buffer = [0u8; 128];
 
         unsafe {
@@ -286,7 +298,7 @@ impl Comm {
 
             if unsafe { G_io_app.apdu_state } != APDU_IDLE && unsafe { G_io_app.apdu_length } > 0 {
                 self.rx = unsafe { G_io_app.apdu_length as usize };
-                let res = T::try_from(self.apdu_buffer[1]);
+                let res = T::try_from(*self.get_apdu_metadata());
                 match res {
                     Ok(ins) => {
                         return Event::Command(ins);
@@ -335,7 +347,7 @@ impl Comm {
     ///
     /// In this later example, invalid instruction byte error handling is
     /// automatically performed by the `next_command` method itself.
-    pub fn next_command<T: TryFrom<u8>>(&mut self) -> T {
+    pub fn next_command<T: TryFrom<ApduMeta>>(&mut self) -> T {
         loop {
             if let Event::Command(ins) = self.next_event() {
                 return ins;
@@ -367,19 +379,11 @@ impl Comm {
         self.reply(StatusWords::Ok);
     }
 
-    /// Return APDU Class and Instruction bytes as a tuple
-    pub fn get_cla_ins(&self) -> (u8, u8) {
-        (self.apdu_buffer[0], self.apdu_buffer[1])
-    }
-
-    /// Returns APDU parameter P1
-    pub fn get_p1(&self) -> u8 {
-        self.apdu_buffer[2]
-    }
-
-    /// Returns APDU parameter P2
-    pub fn get_p2(&self) -> u8 {
-        self.apdu_buffer[3]
+    /// Return APDU Metadata
+    pub fn get_apdu_metadata(&self) -> &ApduMeta {
+        assert!(self.apdu_buffer.len() >= 4);
+        let ptr = &self.apdu_buffer[0] as &u8 as *const u8 as *const ApduMeta;
+        unsafe { &*ptr }
     }
 
     pub fn get_data(&self) -> Result<&[u8], StatusWords> {
