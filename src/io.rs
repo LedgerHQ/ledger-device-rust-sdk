@@ -15,8 +15,10 @@ pub enum StatusWords {
     Ok = 0x9000,
     NothingReceived = 0x6982,
     BadCla = 0x6e00,
-    BadLen = 0x6e01,
-    UserCancelled = 0x6e02,
+    BadIns = 0x6e01,
+    BadP1P2 = 0x6e02,
+    BadLen = 0x6e03,
+    UserCancelled = 0x6e04,
     Unknown = 0x6d00,
     Panic = 0xe000,
 }
@@ -291,7 +293,12 @@ impl Comm {
                         // Invalid Ins code. Send automatically an error, mask
                         // the bad instruction to the application and just
                         // discard this event.
-                        self.reply(StatusWords::BadCla);
+                        self.reply(StatusWords::BadIns);
+                        unsafe {
+                            G_io_app.apdu_state = APDU_IDLE;
+                            G_io_app.apdu_media = IO_APDU_MEDIA_NONE;
+                            G_io_app.apdu_length = 0;
+                        }
                     }
                 }
             }
