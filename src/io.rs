@@ -155,6 +155,8 @@ impl Comm {
         self.rx = 0;
         unsafe {
             G_io_app.apdu_state = APDU_IDLE;
+            G_io_app.apdu_media = IO_APDU_MEDIA_NONE;
+            G_io_app.apdu_length = 0;
         }
     }
 
@@ -294,11 +296,6 @@ impl Comm {
                         // the bad instruction to the application and just
                         // discard this event.
                         self.reply(StatusWords::BadIns);
-                        unsafe {
-                            G_io_app.apdu_state = APDU_IDLE;
-                            G_io_app.apdu_media = IO_APDU_MEDIA_NONE;
-                            G_io_app.apdu_length = 0;
-                        }
                     }
                 }
             }
