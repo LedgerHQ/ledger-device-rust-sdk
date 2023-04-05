@@ -76,6 +76,9 @@ void link_pass(
   size_t sec_len,
   struct SectionSrc *sec_src,
   struct SectionDst *sec_dst,
+  int nvram_move_amt,
+  void* nvram_prev,
+  void* envram_prev,
   int dst_ram)
 {
 #ifdef TARGET_NANOS
@@ -139,6 +142,10 @@ void link_pass(
         PRINTLNC("Possible reloc");
         void* old = (void*) buf[word_offset];
         void* new = pic(old);
+        if (old == new && nvram_move_amt != 0 && old >= nvram_prev && old < envram_prev) {
+            // old was patched in the last run, therefore pic is not working
+            new = old + nvram_move_amt;
+        }
         is_changed |= (old != new);
         buf[word_offset] = (uint32_t) new;
       }
@@ -161,6 +168,76 @@ void link_pass(
   /* PRINTLNC("Ending link pass"); */
 }
 
+void link_pass_ram(
+  size_t sec_len,
+  struct SectionSrc *sec_src,
+  struct SectionDst *sec_dst)
+{
+    link_pass(sec_len, sec_src, sec_dst, 0, NULL, NULL, true);
+}
+
+void link_pass_nvram(
+  size_t sec_len,
+  struct SectionSrc *sec_src,
+  struct SectionDst *sec_dst)
+{
+  void* nvram_ptr;
+  void* envram_ptr;
+
+#if defined(ST31)
+  SYMBOL_ABSOLUTE_VALUE(nvram_ptr, _nvram);
+  SYMBOL_ABSOLUTE_VALUE(envram_ptr, _envram);
+#elif defined(ST33) || defined(ST33K1M5)
+  __asm volatile("ldr %0, =_nvram":"=r"(nvram_ptr));
+  __asm volatile("ldr %0, =_envram":"=r"(envram_ptr));
+#else
+#error "invalid architecture"
+#endif
+
+  // Value of _nvram in this run
+  void* nvram_current = pic(nvram_ptr);
+
+  void** nvram_prev_link_ptr;
+  SYMBOL_ABSOLUTE_VALUE(nvram_prev_link_ptr, _nvram_prev_run);
+
+  // Pointer to the location where nvram_prev's value is stored
+  void** nvram_prev_val_ptr = (void**)pic(nvram_prev_link_ptr);
+
+  // Value of _nvram and _envram in previous run
+  // Should be NULL if this is the first time app is being run
+  void* nvram_prev = *nvram_prev_val_ptr;
+  void* envram_prev = nvram_prev + (envram_ptr - nvram_ptr);
+
+  void* link_pass_in_progress_tag = (void*) 0x1;
+  if (nvram_prev == link_pass_in_progress_tag) {
+      // This indicates that the previous link_pass did not complete successfully
+      // Abort the app to avoid unexpected behaviour
+      // The "fix" for this would be reinstalling the app
+      os_sched_exit(1);
+  }
+
+  if (nvram_prev == nvram_current) {
+      // No change in _nvram means that we need not do link_pass again
+      return;
+  }
+
+  // Value (in bytes) of change in _nvram
+  // If the app was moved after the previous run
+  int nvram_move_amt = 0;
+  if (nvram_prev != NULL) {
+      nvram_move_amt = nvram_current - nvram_prev;
+  }
+
+  // Add a tag to indicate we are in the middle of executing the link_pass
+  nvm_write(nvram_prev_val_ptr, &link_pass_in_progress_tag, sizeof(void*));
+
+  link_pass(sec_len, sec_src, sec_dst, nvram_move_amt, nvram_prev, envram_prev, false);
+
+  // After successful completion of link_pass, clear the link_pass_in_progress_tag
+  // And write the proper value of nvram_current
+  nvm_write(nvram_prev_val_ptr, &nvram_current, sizeof(void*));
+}
+
 #ifdef HAVE_CCID
  #include "usbd_ccid_if.h"
 uint8_t G_io_apdu_buffer[260];
@@ -178,7 +255,7 @@ int c_main(void) {
   struct SectionDst* rodata;
   SYMBOL_ABSOLUTE_VALUE(rodata, _rodata);
 
-  link_pass(rodata_len, rodata_src, rodata, 0);
+  link_pass_nvram(rodata_len, rodata_src, rodata);
 
   size_t data_len;
   SYMBOL_ABSOLUTE_VALUE(data_len, _data_len);
@@ -187,7 +264,7 @@ int c_main(void) {
   struct SectionDst* data;
   __asm volatile("mov %[result],r9" : [result] "=r" (data));
 
-  link_pass(data_len, sidata_src, data, 1);
+  link_pass_ram(data_len, sidata_src, data);
 
   size_t bss_len;
   SYMBOL_ABSOLUTE_VALUE(bss_len, _bss_len);
