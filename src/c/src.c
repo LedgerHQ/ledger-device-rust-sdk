@@ -204,7 +204,7 @@ int c_main(void) {
       TRY {
         // below is a 'manual' implementation of `io_seproxyhal_init`
         check_api_level(CX_COMPAT_APILEVEL);
-    #ifdef HAVE_MCU_PROTECT 
+    #ifdef HAVE_MCU_PROTECT
         unsigned char c[4];
         c[0] = SEPROXYHAL_TAG_MCU;
         c[1] = 0;
@@ -232,8 +232,8 @@ int c_main(void) {
     #ifdef HAVE_CCID
         io_usb_ccid_set_card_inserted(1);
     #endif
-        
-    #ifdef HAVE_BLE 
+
+    #ifdef HAVE_BLE
         LEDGER_BLE_init();
     #endif
 
