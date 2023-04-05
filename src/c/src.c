@@ -85,7 +85,6 @@ void link_pass(
 #endif
 
   typedef typeof(*buf) link_addr_t;
-  typedef typeof(*buf) install_addr_t;
 
   Elf32_Rel* relocs;
   SYMBOL_ABSOLUTE_VALUE(relocs, _relocs);
@@ -138,10 +137,10 @@ void link_pass(
       // Assuming no relocations go behind the end address.
       if (word_offset < sizeof(buf) / sizeof(*buf)) {
         PRINTLNC("Possible reloc");
-        link_addr_t old = buf[word_offset];
-        install_addr_t new = pic(old);
+        void* old = (void*) buf[word_offset];
+        void* new = pic(old);
         is_changed |= (old != new);
-        buf[word_offset] = new;
+        buf[word_offset] = (uint32_t) new;
       }
     }
     if (dst_ram) {
