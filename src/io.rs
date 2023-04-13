@@ -106,6 +106,7 @@ impl Default for Comm {
 }
 
 #[derive(Clone, Copy)]
+#[repr(C)]
 pub struct ApduHeader {
     /// Class
     pub cla: u8,
