@@ -106,7 +106,7 @@ impl Default for Comm {
 }
 
 #[derive(Clone, Copy)]
-pub struct ApduMeta {
+pub struct ApduHeader {
     /// Class
     pub cla: u8,
     /// Instruction
@@ -232,7 +232,7 @@ impl Comm {
     ///
     /// In this later example, invalid instruction byte error handling is
     /// automatically performed by the `next_event` method itself.
-    pub fn next_event<T: TryFrom<ApduMeta>>(&mut self) -> Event<T> {
+    pub fn next_event<T: TryFrom<ApduHeader>>(&mut self) -> Event<T> {
         let mut spi_buffer = [0u8; 128];
 
         unsafe {
@@ -347,7 +347,7 @@ impl Comm {
     ///
     /// In this later example, invalid instruction byte error handling is
     /// automatically performed by the `next_command` method itself.
-    pub fn next_command<T: TryFrom<ApduMeta>>(&mut self) -> T {
+    pub fn next_command<T: TryFrom<ApduHeader>>(&mut self) -> T {
         loop {
             if let Event::Command(ins) = self.next_event() {
                 return ins;
@@ -380,9 +380,9 @@ impl Comm {
     }
 
     /// Return APDU Metadata
-    pub fn get_apdu_metadata(&self) -> &ApduMeta {
+    pub fn get_apdu_metadata(&self) -> &ApduHeader {
         assert!(self.apdu_buffer.len() >= 4);
-        let ptr = &self.apdu_buffer[0] as &u8 as *const u8 as *const ApduMeta;
+        let ptr = &self.apdu_buffer[0] as &u8 as *const u8 as *const ApduHeader;
         unsafe { &*ptr }
     }
 
