@@ -9,7 +9,7 @@
   #include "ledger_ble.h"
 #endif
 
-extern void sample_main();
+extern void sample_main(int arg0);
 
 void os_longjmp(unsigned int exception) {
   longjmp(try_context_get()->jmp_buf, exception);
@@ -22,7 +22,7 @@ io_seph_app_t G_io_app;
 uint8_t G_io_apdu_buffer[260];
 #endif
 
-int c_main(void) {
+int c_main(int arg0) {
   __asm volatile("cpsie i");
 
   // formerly known as 'os_boot()'
@@ -70,7 +70,7 @@ int c_main(void) {
         check_audited_app();
     #endif // !defined(HAVE_BOLOS) && defined(HAVE_PENDING_REVIEW_SCREEN)
 
-        sample_main();
+        sample_main(arg0);
       }
       CATCH(EXCEPTION_IO_RESET) {
         continue;
