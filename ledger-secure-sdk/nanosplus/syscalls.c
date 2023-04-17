@@ -4,7 +4,6 @@
 # include "bolos_privileged_ux.h"
 #endif // HAVE_BOLOS
 
-
 #include "exceptions.h"
 #include "lcx_aes.h"
 #include "lcx_des.h"
@@ -26,11 +25,13 @@
 #endif //defined(HAVE_LANGUAGE_PACK)
 #ifdef HAVE_NBGL
 #include "nbgl_types.h"
+#include "nbgl_fonts.h"
 #include "os_pic.h"
 #endif
 #if defined(HAVE_VSS)
 #include "ox_vss.h"
 #endif // HAVE_VSS
+#include "os_seed.h"
 #include <string.h>
 
 unsigned int SVC_Call(unsigned int syscall_id, void *parameters);
@@ -138,11 +139,18 @@ void nbgl_sideRefreshArea(nbgl_area_t *area)
   return;
 }
 
-unsigned int nbgl_font_getFont(unsigned int fontId)
+const nbgl_font_t* nbgl_font_getFont(unsigned int fontId)
 {
   unsigned int parameters[1];
   parameters[0] = (unsigned int)fontId;
-  return SVC_Call(SYSCALL_nbgl_get_font_ID, parameters);
+  return (const nbgl_font_t*)SVC_Call(SYSCALL_nbgl_get_font_ID, parameters);
+}
+
+unsigned int nbgl_screen_reinit(void)
+{
+  unsigned int parameters[1];
+  parameters[0] = 0;
+  return SVC_Call(SYSCALL_nbgl_screen_reinit_ID, parameters);
 }
 #endif
 
@@ -929,6 +937,20 @@ cx_err_t cx_vss_combine_shares(uint8_t *secret,
   parameters[3] = (unsigned int)threshold;
   return SVC_cx_call(SYSCALL_cx_vss_combine_shares_ID, parameters);
 }
+
+cx_err_t cx_vss_verify_commits(cx_vss_commitment_t *commitments,
+                               uint8_t threshold,
+                               cx_vss_commitment_t *share_commitment,
+                               uint32_t share_index,
+                               bool *verified) {
+  unsigned int parameters[5];
+  parameters[0] = (unsigned int)commitments;
+  parameters[1] = (unsigned int)threshold;
+  parameters[2] = (unsigned int)share_commitment;
+  parameters[3] = (unsigned int)share_index;
+  parameters[4] = (unsigned int)verified;
+  return SVC_cx_call(SYSCALL_cx_vss_verify_commits_ID, parameters);
+}
 #endif // HAVE_VSS
 
 uint32_t cx_crc32_hw ( const void * buf, size_t len ) {
@@ -1005,6 +1027,26 @@ unsigned char os_perso_get_seed_algorithm(void) {
   return (unsigned char)SVC_Call(SYSCALL_os_perso_get_seed_algorithm_ID, parameters);
 }
 #endif // HAVE_VAULT_RECOVERY_ALGO
+
+#if defined(HAVE_PROTECT)
+void os_perso_master_seed(uint8_t *master_seed, size_t length, os_action_t action) {
+  unsigned int parameters[3];
+  parameters[0] = (unsigned int)master_seed;
+  parameters[1] = (unsigned int)length;
+  parameters[2] = (unsigned int)action;
+  SVC_Call(SYSCALL_os_perso_master_seed_ID, parameters);
+  return;
+}
+
+void os_perso_protect_state(uint8_t *state, os_action_t action) {
+  unsigned int parameters[2];
+  parameters[0] = (unsigned int)state;
+  parameters[1] = (unsigned int)action;
+  SVC_Call(SYSCALL_os_perso_protect_state_ID, parameters);
+  return;
+}
+
+#endif // HAVE_PROTECT
 
 void os_perso_set_words ( const unsigned char * words, unsigned int length ) {
   unsigned int parameters[2];
@@ -1125,11 +1167,12 @@ unsigned int os_endorsement_key2_derive_sign_data ( unsigned char * src, unsigne
   return (unsigned int) SVC_Call(SYSCALL_os_endorsement_key2_derive_sign_data_ID, parameters);
 }
 
-void os_perso_set_pin ( unsigned int identity, unsigned char * pin, unsigned int length ) {
-  unsigned int parameters[3];
+void os_perso_set_pin ( unsigned int identity, const unsigned char * pin, unsigned int length, bool update_crc ) {
+  unsigned int parameters[4];
   parameters[0] = (unsigned int)identity;
   parameters[1] = (unsigned int)pin;
   parameters[2] = (unsigned int)length;
+  parameters[3] = (unsigned int)update_crc;
   SVC_Call(SYSCALL_os_perso_set_pin_ID, parameters);
   return;
 }
@@ -1140,6 +1183,12 @@ void os_perso_set_current_identity_pin ( unsigned char * pin, unsigned int lengt
   parameters[1] = (unsigned int)length;
   SVC_Call(SYSCALL_os_perso_set_current_identity_pin_ID, parameters);
   return;
+}
+
+bolos_bool_t os_perso_is_pin_set ( void ) {
+  unsigned int parameters[2];
+  parameters[1] = 0;
+  return (bolos_bool_t) SVC_Call(SYSCALL_os_perso_is_pin_set_ID, parameters);
 }
 
 bolos_bool_t os_global_pin_is_validated ( void ) {
@@ -1702,6 +1751,57 @@ unsigned int os_endorsement_get_metadata ( unsigned char index, unsigned char * 
   return (unsigned int) SVC_Call(SYSCALL_os_endorsement_get_metadata_ID, parameters);
 }
 #endif // (defined(HAVE_BOLOS_NOTWIPED_ENDORSEMENT) && defined(HAVE_ENDORSEMENTS_DISPLAY))
+
+#if defined(HAVE_LANGUAGE_PACK)
+const LANGUAGE_PACK *fetch_language_packs(UX_LOC_LANGUAGE_PACK_INFO *packs, unsigned int language, const LANGUAGE_PACK *built_in, unsigned int built_in_length) {
+  unsigned int parameters [4];
+  parameters[0] = (unsigned int)packs;
+  parameters[1] = language;
+  parameters[2] = (unsigned int)built_in;
+  parameters[3] = built_in_length;
+  return (LANGUAGE_PACK *)SVC_Call(SYSCALL_fetch_language_packs_ID, parameters);
+}
+#endif //defined(HAVE_LANGUAGE_PACK)
+
+#if defined(HAVE_BACKGROUND_IMG)
+uint8_t *fetch_background_img(bool allow_candidate) {
+  uint8_t parameters[1] = {(uint8_t) allow_candidate};
+  return (uint8_t *) SVC_Call(SYSCALL_fetch_background_img, parameters);
+}
+
+bolos_err_t delete_background_img(bool force_skip_consent) {
+  uint8_t parameters[1] = {force_skip_consent};
+  return SVC_Call(SYSCALL_delete_background_img, parameters);
+}
+#endif
+
+#ifdef HAVE_SE_TOUCH
+void touch_get_last_info( io_touch_info_t *info ) {
+  unsigned int parameters[1] = {(unsigned int) info};
+  SVC_Call(SYSCALL_touch_get_last_info_ID, parameters);
+}
+
+static void os_configure_standby( bool state ) {
+  unsigned int parameters[1] = {(unsigned int) state};
+  SVC_Call(SYSCALL_os_configure_standby_ID, parameters);
+}
+
+void os_enter_standby(void) {
+  os_configure_standby(true);
+}
+
+void os_leave_standby(void) {
+  os_configure_standby(false);
+}
+
+#ifdef HAVE_TOUCH_DEBUG
+void touch_read_sensitivity(uint8_t *sensi_data) {
+  unsigned int parameters[1] = {(unsigned int) sensi_data};
+  SVC_Call(SYSCALL_touch_read_sensi_ID, parameters);
+}
+#endif
+
+#endif // HAVE_SE_TOUCH
 
 #ifdef HAVE_IO_I2C
 void io_i2c_setmode ( unsigned int speed_and_master, unsigned int address ) {
