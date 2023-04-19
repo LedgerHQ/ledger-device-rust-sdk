@@ -33,43 +33,44 @@ int c_main(int arg0) {
       TRY {
         // below is a 'manual' implementation of `io_seproxyhal_init`
         check_api_level(CX_COMPAT_APILEVEL);
-    #ifdef HAVE_MCU_PROTECT 
-        unsigned char c[4];
-        c[0] = SEPROXYHAL_TAG_MCU;
-        c[1] = 0;
-        c[2] = 1;
-        c[3] = SEPROXYHAL_TAG_MCU_TYPE_PROTECT;
-        io_seproxyhal_spi_send(c, 4);
-    #ifdef HAVE_BLE
-        unsigned int plane = G_io_app.plane_mode;
-    #endif
-    #endif
-        memset(&G_io_app, 0, sizeof(G_io_app));
+        if (arg0 == 0) {
+#ifdef HAVE_MCU_PROTECT 
+          unsigned char c[4];
+          c[0] = SEPROXYHAL_TAG_MCU;
+          c[1] = 0;
+          c[2] = 1;
+          c[3] = SEPROXYHAL_TAG_MCU_TYPE_PROTECT;
+          io_seproxyhal_spi_send(c, 4);
+#ifdef HAVE_BLE
+          unsigned int plane = G_io_app.plane_mode;
+#endif
+#endif
+          memset(&G_io_app, 0, sizeof(G_io_app));
 
-    #ifdef HAVE_BLE
-        G_io_app.plane_mode = plane;
-    #endif
-        G_io_app.apdu_state = APDU_IDLE;
-        G_io_app.apdu_length = 0;
-        G_io_app.apdu_media = IO_APDU_MEDIA_NONE;
+#ifdef HAVE_BLE
+          G_io_app.plane_mode = plane;
+#endif
+          G_io_app.apdu_state = APDU_IDLE;
+          G_io_app.apdu_length = 0;
+          G_io_app.apdu_media = IO_APDU_MEDIA_NONE;
 
-        G_io_app.ms = 0;
-        io_usb_hid_init();
+          G_io_app.ms = 0;
+          io_usb_hid_init();
 
-        USB_power(0);
-        USB_power(1);
-    #ifdef HAVE_CCID
-        io_usb_ccid_set_card_inserted(1);
-    #endif
+          USB_power(0);
+          USB_power(1);
+#ifdef HAVE_CCID
+          io_usb_ccid_set_card_inserted(1);
+#endif
         
-    #ifdef HAVE_BLE 
-        LEDGER_BLE_init();
-    #endif
+#ifdef HAVE_BLE 
+          LEDGER_BLE_init();
+#endif
 
-    #if !defined(HAVE_BOLOS) && defined(HAVE_PENDING_REVIEW_SCREEN)
-        check_audited_app();
-    #endif // !defined(HAVE_BOLOS) && defined(HAVE_PENDING_REVIEW_SCREEN)
-
+#if !defined(HAVE_BOLOS) && defined(HAVE_PENDING_REVIEW_SCREEN)
+          check_audited_app();
+#endif // !defined(HAVE_BOLOS) && defined(HAVE_PENDING_REVIEW_SCREEN)
+        }
         sample_main(arg0);
       }
       CATCH(EXCEPTION_IO_RESET) {
