@@ -60,6 +60,23 @@ pub struct PluginFinalizeParams {
     pub app_data_len: usize,
     pub plugin_internal_ctx: *mut u8,
     pub plugin_internal_ctx_len: usize,
+    pub num_ui_screens: u8,
+    pub need_info: bool
+}
+
+pub struct PluginQueryUiParams {
+    pub title: [u8; 32],
+    pub title_len: usize,
+}
+
+pub struct PluginGetUiParams {
+    pub plugin_internal_ctx: *mut u8,
+    pub plugin_internal_ctx_len: usize,
+    pub ui_screen_idx: usize,
+    pub title: [u8; 32],
+    pub title_len: usize,
+    pub msg: [u8; 64],
+    pub msg_len: usize,
 }
 
 
