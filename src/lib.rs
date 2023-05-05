@@ -28,7 +28,7 @@ pub mod usbbindings;
 pub mod uxapp;
 
 pub mod plugin;
-pub mod debug;
+pub mod string;
 
 use bindings::os_sched_exit;
 
