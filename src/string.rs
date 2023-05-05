@@ -5,6 +5,11 @@ pub enum Value {
     ARR32([u8; 32])
 }
 
+/// Output value as an hex string (utf-8 array of N bytes)
+/// For instance to display an u32 value (4 bytes => 8 hex digits):
+///
+/// let s = core::str::from_utf8(to_utf8<8>(Value::U32(v)));
+/// testing::debug_print(s);
 pub fn to_utf8<const N: usize>(val: Value) -> [u8; N] {
     let mut hex: [u8; N]= [0u8; N];
     let mut i = 0;
@@ -48,6 +53,14 @@ pub fn to_utf8<const N: usize>(val: Value) -> [u8; N] {
     }
 }
 
+/// Output an uint256 as an decimal string
+/// For instance:
+///
+/// let val: [u8; 32] = token amount (felt, 32 bytes);
+/// let mut out: [u8; 100] = [0; 100];
+/// let mut out_len: usize = 0;
+/// uint256_to_integer(&val, &mut out[..], &mut out_len);
+/// testing::debug_print(core::str::from_utf8(&out[..out_len]));
 pub fn uint256_to_integer(value: &[u8; 32], out: &mut [u8], out_len: &mut usize) {
     // Special case when value is 0
     if *value == [0u8; 32] {
@@ -85,13 +98,28 @@ pub fn uint256_to_integer(value: &[u8; 32], out: &mut [u8], out_len: &mut usize)
     return;
 }
 
+/// Output an uint256 as a float string
+/// For instance:
+///
+/// let val: [u8; 32] = token amount (felt, 32 bytes);
+/// let mut out: [u8; 100] = [0; 100];
+/// let mut out_len: usize = 0;
+/// uint256_to_float(&val, &mut out[..], &mut out_len);
+/// testing::debug_print(core::str::from_utf8(&out[..out_len]));
 pub fn uint256_to_float(value: &[u8;32], decimals: usize, out: &mut [u8], out_len: &mut usize ) {
     
     let mut tmp: [u8; 100] = [0; 100];
     let mut len: usize = 0;
-    uint256_to_integer(value, &mut tmp[..], &mut len);
 
+    uint256_to_integer(value, &mut tmp[..], &mut len);
     out.fill(b'0');
+
+    if decimals == 0 {
+        out[0..len].copy_from_slice(&tmp[..len]);
+        *out_len = len;
+        return;
+    }
+
     if len <= decimals {
         out[1] = b'.';
         out[2 + decimals - len..2 + decimals].copy_from_slice(&tmp[..len]);
@@ -99,10 +127,8 @@ pub fn uint256_to_float(value: &[u8;32], decimals: usize, out: &mut [u8], out_le
     }
     else {
         let delta = len - decimals;
-
         let part = &tmp[0..len];
         let (ipart, dpart) = part.split_at(delta);
-
         out[0..delta].copy_from_slice(ipart);
         out[delta] = b'.';
         out[delta + 1..delta + 1 + dpart.len()].copy_from_slice(dpart);
