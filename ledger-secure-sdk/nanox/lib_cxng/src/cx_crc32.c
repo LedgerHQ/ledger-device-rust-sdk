@@ -16,26 +16,14 @@
 *  limitations under the License.
 ********************************************************************************/
 
-#ifndef CX_ADES_H
-#define CX_ADES_H
+#ifdef HAVE_CRC
 
-#ifdef HAVE_AES
-#include "lcx_aes.h"
+#include "cx_crc.h"
+#include "cx_ram.h"
 
-/** HW support */
-cx_err_t cx_aes_set_key_hw(const cx_aes_key_t *keys, uint32_t mode);
-cx_err_t cx_aes_block_hw(const uint8_t *inblock, uint8_t *outblock);
-void cx_aes_reset_hw(void);
+// x^32 + x^26 + x^23 + x^22 + x^16 + x^12 + x^11 + x^10 + x^8 + x^7 + x^5 + x^4 + x^2 + x + 1
+uint32_t cx_crc32(const void *buf, size_t len) {
+  return cx_crc32_hw(buf, len);
+}
 
-#endif
-
-/** HW support */
-#ifdef HAVE_DES
-#include "lcx_des.h"
-
-void cx_des_set_hw_key(const cx_des_key_t *keys, uint32_t mode);
-cx_err_t cx_des_hw_block(const uint8_t *inblock, uint8_t *outblock);
-void cx_des_reset_hw(void);
-#endif
-
-#endif
+#endif // HAVE_CRC
