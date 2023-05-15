@@ -2,7 +2,7 @@
 runner = "speculos -m nanos --display=headless"
 
 [target.nanox]
-runner = "speculos -m nanox -a 1 --display=headless"
+runner = "speculos -m nanox -a 5 --display=headless"
 
 [target.nanosplus]
 runner = "speculos -m nanosp -a 1 --display=headless"
