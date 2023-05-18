@@ -174,7 +174,7 @@ pub struct ECPrivateKey<const N: usize, const TY: char> {
 pub struct ECPublicKey<const S: usize, const TY: char> {
     curve: CurvesId,
     keylength: usize,
-    pubkey: [u8; S],
+    pub pubkey: [u8; S],
 }
 
 /// Create a default (empty/invalid) private key object
