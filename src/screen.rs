@@ -53,7 +53,7 @@ pub fn sdk_bagl_hal_draw_bitmap_within_rect(
             inverted.as_ptr(),
             1,
             bitmap.as_ptr(),
-            (bitmap.len() * 8) as u32,
+            width * height,
         )
     }
 }
