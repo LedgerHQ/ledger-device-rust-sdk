@@ -54,7 +54,7 @@ impl From<FieldElement> for u8 {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub struct CallArray {
+pub struct CallV0 {
     pub to: FieldElement,
     pub entry_point_length: u8,
     pub entry_point: [u8; 32],
@@ -64,14 +64,14 @@ pub struct CallArray {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub struct CallArrayV1 {
+pub struct CallV1 {
     pub to: FieldElement,
     pub selector: FieldElement,
     pub call_data_len: FieldElement,
     pub call_data: [FieldElement; 6]
 }
 
-impl CallArray {
+impl CallV0 {
     pub fn new() -> Self {
         Self {
             to: FieldElement::new(),
@@ -93,7 +93,7 @@ impl CallArray {
     }
 }
 
-impl CallArrayV1 {
+impl CallV1 {
     pub fn new() -> Self {
         Self {
             to: FieldElement::new(),
@@ -118,22 +118,22 @@ impl CallArrayV1 {
 /// NanoS+ = 10 (maybe more ?) 
 const MAX_TX_CALLS: usize = 3;
 
-pub struct CallData {
+pub struct CallDataV0 {
     pub call_array_len: FieldElement,
-    pub calls: [CallArray; MAX_TX_CALLS],
+    pub calls: [CallV0; MAX_TX_CALLS],
     pub calldata_len: FieldElement,
 } 
 
 pub struct CallDataV1 {
     pub call_array_len: FieldElement,
-    pub calls: [CallArrayV1; MAX_TX_CALLS]
+    pub calls: [CallV1; MAX_TX_CALLS]
 }
 
-impl CallData {
+impl CallDataV0 {
     pub fn new() -> Self {
         Self {
             call_array_len: FieldElement::new(),
-            calls: [CallArray::new(); MAX_TX_CALLS],
+            calls: [CallV0::new(); MAX_TX_CALLS],
             calldata_len: FieldElement::new()
         }
     }
@@ -151,7 +151,7 @@ impl CallDataV1 {
     pub fn new() -> Self {
         Self {
             call_array_len: FieldElement::new(),
-            calls: [CallArrayV1::new(); MAX_TX_CALLS],
+            calls: [CallV1::new(); MAX_TX_CALLS],
         }
     }
 
@@ -165,7 +165,7 @@ impl CallDataV1 {
 
 pub struct Transaction {
     pub sender_address: FieldElement,
-    pub calldata: CallData,             
+    pub calldata_v0: CallDataV0,             
     pub calldata_v1: CallDataV1,
     pub max_fee: FieldElement,
     pub nonce: FieldElement,
@@ -177,7 +177,7 @@ impl Transaction {
     pub fn new() -> Self {
         Self {
             sender_address: FieldElement::new(),
-            calldata: CallData::new(),
+            calldata_v0: CallDataV0::new(),
             calldata_v1: CallDataV1::new(),
             max_fee: FieldElement::new(),
             nonce: FieldElement::new(),
@@ -188,7 +188,7 @@ impl Transaction {
 
     pub fn clear(&mut self) {
         self.sender_address.clear();
-        self.calldata.clear();
+        self.calldata_v0.clear();
         self.calldata_v1.clear();
         self.max_fee.clear();
         self.nonce.clear();
