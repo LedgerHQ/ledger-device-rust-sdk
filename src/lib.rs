@@ -30,6 +30,8 @@ pub mod uxapp;
 pub mod plugin;
 pub mod string;
 
+pub mod starknet;
+
 use bindings::os_sched_exit;
 
 use core::{ffi::c_void, panic::PanicInfo};

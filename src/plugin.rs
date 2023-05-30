@@ -81,7 +81,9 @@ pub struct PluginFinalizeParams {
 }
 
 pub struct PluginProvideDataParams {
-    pub core_params: PluginCoreParams
+    pub core_params: PluginCoreParams,
+    pub data: [u8; 128],
+    pub data_len: usize
 }
 
 pub struct PluginQueryUiParams {
