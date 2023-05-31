@@ -1,3 +1,5 @@
+use heapless::{String, Vec};
+
 #[derive(Debug, Copy, Clone)]
 pub struct FieldElement {
     pub value: [u8; 32]
@@ -63,12 +65,11 @@ pub struct CallV0 {
     pub data_len: FieldElement,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct CallV1 {
     pub to: FieldElement,
     pub selector: FieldElement,
-    pub call_data_len: FieldElement,
-    pub call_data: [FieldElement; 6]
+    pub call_data: Vec<FieldElement, 32>
 }
 
 impl CallV0 {
@@ -98,25 +99,21 @@ impl CallV1 {
         Self {
             to: FieldElement::new(),
             selector: FieldElement::new(),
-            call_data_len: FieldElement::new(),
-            call_data: [FieldElement::ZERO; 6]
+            call_data: Vec::new()
         }
     }
 
     pub fn clear(&mut self) {
         self.to.clear();
         self.selector.clear();
-        self.call_data_len.clear();
-        for i in 0..6 {
-            self.call_data[i].clear();
-        }
+        self.call_data.clear();
     }
 }
 
 /// Maximum numbers of calls in a multicall Tx (out of memory)
 /// NanoS = 3
 /// NanoS+ = 10 (maybe more ?) 
-const MAX_TX_CALLS: usize = 3;
+const MAX_TX_CALLS: usize = 10;
 
 pub struct CallDataV0 {
     pub call_array_len: FieldElement,
@@ -126,7 +123,7 @@ pub struct CallDataV0 {
 
 pub struct CallDataV1 {
     pub call_array_len: FieldElement,
-    pub calls: [CallV1; MAX_TX_CALLS]
+    pub calls: Vec<CallV1, MAX_TX_CALLS>
 }
 
 impl CallDataV0 {
@@ -151,15 +148,74 @@ impl CallDataV1 {
     pub fn new() -> Self {
         Self {
             call_array_len: FieldElement::new(),
-            calls: [CallV1::new(); MAX_TX_CALLS],
+            calls: Vec::new()
         }
     }
 
     pub fn clear(&mut self) {
         self.call_array_len.clear();
-        for i in 0..self.calls.len() {
-            self.calls[i].clear();
+        self.calls.clear();
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum AbstractCallData {
+    Felt(FieldElement),
+    Ref(usize),
+    CallRef(usize, usize),
+}
+
+#[derive(Debug, Clone)]
+pub struct AbstractCall {
+    pub to: FieldElement,
+    pub method: String<32>,
+    pub selector: FieldElement,
+    pub call_data: Vec<AbstractCallData, 32>,
+}
+
+impl AbstractCall { 
+    pub fn new() -> Self {
+        Self {
+            to: FieldElement::new(),
+            method: String::new(),
+            selector: FieldElement::new(),
+            call_data: Vec::new()
         }
+    }
+
+    pub fn clear(&mut self) {
+        self.to.clear();
+        self.method.clear();
+        self.selector.clear();
+        self.call_data.clear();
+    }
+}
+
+pub struct TransactionInfo {
+    pub sender_address: FieldElement,
+    pub max_fee: FieldElement,
+    pub nonce: FieldElement,
+    pub version: FieldElement,
+    pub chain_id: FieldElement,
+}
+
+impl TransactionInfo {
+    pub fn new() -> Self {
+        Self {
+            sender_address: FieldElement::new(),
+            max_fee: FieldElement::new(),
+            nonce: FieldElement::new(),
+            version: FieldElement::new(),
+            chain_id: FieldElement::new()
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.sender_address.clear();
+        self.max_fee.clear();
+        self.nonce.clear();
+        self.version.clear();
+        self.chain_id.clear();
     }
 }
 
