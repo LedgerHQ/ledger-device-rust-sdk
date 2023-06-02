@@ -170,7 +170,7 @@ pub struct AbstractCall {
     pub to: FieldElement,
     pub method: String<32>,
     pub selector: FieldElement,
-    pub call_data: Vec<AbstractCallData, 32>,
+    pub calldata: Vec<AbstractCallData, 16>
 }
 
 impl AbstractCall { 
@@ -179,7 +179,7 @@ impl AbstractCall {
             to: FieldElement::new(),
             method: String::new(),
             selector: FieldElement::new(),
-            call_data: Vec::new()
+            calldata: Vec::new()
         }
     }
 
@@ -187,7 +187,33 @@ impl AbstractCall {
         self.to.clear();
         self.method.clear();
         self.selector.clear();
-        self.call_data.clear();
+        self.calldata.clear();
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Call {
+    pub to: FieldElement,
+    pub method: String<32>,
+    pub selector: FieldElement,
+    pub calldata: Vec<FieldElement, 8>
+}
+
+impl Call { 
+    pub fn new() -> Self {
+        Self {
+            to: FieldElement::new(),
+            method: String::new(),
+            selector: FieldElement::new(),
+            calldata: Vec::new()
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.to.clear();
+        self.method.clear();
+        self.selector.clear();
+        self.calldata.clear();
     }
 }
 
@@ -220,35 +246,20 @@ impl TransactionInfo {
 }
 
 pub struct Transaction {
-    pub sender_address: FieldElement,
-    pub calldata_v0: CallDataV0,             
-    pub calldata_v1: CallDataV1,
-    pub max_fee: FieldElement,
-    pub nonce: FieldElement,
-    pub version: FieldElement,
-    pub chain_id: FieldElement
+    pub tx_info: TransactionInfo,
+    pub calldata: Vec<Call, MAX_TX_CALLS>
 }
 
 impl Transaction {
     pub fn new() -> Self {
         Self {
-            sender_address: FieldElement::new(),
-            calldata_v0: CallDataV0::new(),
-            calldata_v1: CallDataV1::new(),
-            max_fee: FieldElement::new(),
-            nonce: FieldElement::new(),
-            version: FieldElement::new(),
-            chain_id: FieldElement::new()
+            tx_info: TransactionInfo::new(),
+            calldata: Vec::new(),
         }
     }
 
     pub fn clear(&mut self) {
-        self.sender_address.clear();
-        self.calldata_v0.clear();
-        self.calldata_v1.clear();
-        self.max_fee.clear();
-        self.nonce.clear();
-        self.version.clear();
-        self.chain_id.clear();
+        self.tx_info.clear();
+        self.calldata.clear();
     }
 }

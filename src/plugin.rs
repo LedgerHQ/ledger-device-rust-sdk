@@ -56,23 +56,27 @@ impl From<PluginResult> for u16 {
 }
 
 pub struct PluginCoreParams {
-    pub app_data: *const u8,
-    pub app_data_len: usize,
     pub plugin_internal_ctx: *mut u8,
     pub plugin_internal_ctx_len: usize,
     pub plugin_result: PluginResult
 }
 
 pub struct PluginCheckParams {
-    pub core_params: PluginCoreParams
+    pub core_params: PluginCoreParams,
+    pub data_in: *const u8,
+    pub data_in_len: usize,
 }
 
 pub struct PluginInitParams {
-    pub core_params: PluginCoreParams
+    pub core_params: PluginCoreParams,
+    pub data_in: *const u8,
+    pub data_in_len: usize,
 }
 
 pub struct PluginFeedParams {
-    pub core_params: PluginCoreParams
+    pub core_params: PluginCoreParams,
+    pub data_in: [*const u8; 5],
+    pub data_out: [*mut u8; 5]
 }
 
 pub struct PluginFinalizeParams {
@@ -80,22 +84,14 @@ pub struct PluginFinalizeParams {
     pub num_ui_screens: u8,
 }
 
-pub struct PluginProvideDataParams {
-    pub core_params: PluginCoreParams,
-    pub data: [u8; 128],
-    pub data_len: usize
-}
-
 pub struct PluginQueryUiParams {
     pub core_params: PluginCoreParams,
-
     pub title: [u8; 32],
     pub title_len: usize,
 }
 
 pub struct PluginGetUiParams {
     pub core_params: PluginCoreParams,
-
     pub ui_screen_idx: usize,
     pub title: [u8; 32],
     pub title_len: usize,
@@ -108,7 +104,6 @@ pub enum PluginParams<'a> {
     Init(&'a mut PluginInitParams),
     Feed(&'a mut PluginFeedParams),
     Finalize(&'a mut PluginFinalizeParams),
-    ProvideData(&'a mut PluginProvideDataParams),
     QueryUi(&'a mut PluginQueryUiParams),
     GetUi(&'a mut PluginGetUiParams)
 }
@@ -139,9 +134,6 @@ pub fn plugin_call(plugin_name: &str, plugin_params: PluginParams, op: PluginInt
         }
         PluginParams::Finalize(p) => {
             arg[2] = p as *mut PluginFinalizeParams as u32;
-        }
-        PluginParams::ProvideData(p) => {
-            arg[2] = p as *mut PluginProvideDataParams as u32;
         }
         PluginParams::QueryUi(p) => {
             arg[2] = p as *mut PluginQueryUiParams as u32;
