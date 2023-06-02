@@ -33,7 +33,7 @@ SECTIONS
 
   ASSERT( (_edata - _data) <= 0, ".data section must be empty" )
 
-   .bss :
+  .bss :
   {
     _bss = .;
     *(.bss*)
@@ -47,6 +47,8 @@ SECTIONS
     _stack = ABSOLUTE(END_STACK) - STACK_SIZE;
     _estack = ABSOLUTE(END_STACK);
   } > SRAM
+
+  .ledger.api_level (INFO): { KEEP(*(.ledger.api_level)) }
 
   .stack_sizes (INFO):
   {
