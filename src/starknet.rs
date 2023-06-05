@@ -73,6 +73,43 @@ impl From<FieldElement> for u8 {
     }
 }
 
+// assumes usize < FieldElement (should be true, especially on the nano)
+impl From<usize> for FieldElement {
+    fn from(num: usize) -> Self {
+        let mut f = FieldElement::new();
+        let size_of_usize = core::mem::size_of::<usize>();
+        let offset = if size_of_usize >= f.value.len() {
+            0
+        } else {
+            f.value.len() - size_of_usize
+        };
+
+        for i in 0..size_of_usize {
+            f.value[offset + i] = (num >> ((size_of_usize - 1 - i) * 8)) as u8;
+        }
+
+        f
+    }
+}
+
+impl From<FieldElement> for usize {
+    fn from(fe: FieldElement) -> usize {
+        let mut value: usize = 0;
+        let size_of_usize = core::mem::size_of::<usize>();
+        let offset = if size_of_usize >= fe.value.len() {
+            0
+        } else {
+            fe.value.len() - size_of_usize
+        };
+
+        for i in 0..size_of_usize {
+            value |= (fe.value[i + offset] as usize) << ((size_of_usize - 1 - i) * 8);
+        }
+
+        value
+    }
+}
+
 #[derive(Debug, Copy, Clone)]
 pub struct CallV0 {
     pub to: FieldElement,
