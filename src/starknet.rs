@@ -1,6 +1,6 @@
 use heapless::{String, Vec};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct FieldElement {
     pub value: [u8; 32]
 }
