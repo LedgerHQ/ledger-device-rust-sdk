@@ -225,7 +225,7 @@ pub struct AbstractCall {
     pub to: FieldElement,
     pub method: String<32>,
     pub selector: FieldElement,
-    pub calldata: Vec<AbstractCallData, 16>
+    pub calldata: Vec<AbstractCallData, 8>
 }
 
 impl AbstractCall { 
@@ -251,7 +251,7 @@ pub struct Call {
     pub to: FieldElement,
     pub method: String<32>,
     pub selector: FieldElement,
-    pub calldata: Vec<FieldElement, 8>
+    pub calldata: Vec<FieldElement, 16>
 }
 
 impl Call { 
