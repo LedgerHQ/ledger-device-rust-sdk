@@ -1,54 +1,97 @@
-pub enum Value {
-    U8(u8),
-    U16(u16),
-    U32(u32),
-    ARR32([u8; 32])
+#[derive(Debug, Copy, Clone)]
+pub struct String<const N: usize> {
+    pub arr: [u8; N],
+    pub capacity: usize,
+    pub len: usize
 }
 
-/// Output value as an hex string (utf-8 array of N bytes)
-/// For instance to display an u32 value (4 bytes => 8 hex digits):
-///
-/// let s = core::str::from_utf8(to_utf8<8>(Value::U32(v)));
-/// testing::debug_print(s);
-pub fn to_utf8<const N: usize>(val: Value) -> [u8; N] {
-    let mut hex: [u8; N]= [0u8; N];
-    let mut i = 0;
-    match val {
-        Value::U8(b) => {
-            for c in b.to_be_bytes().into_iter() {
-                let (c0, c1) = byte_to_hex(c);
-                hex[i] = c0 as u8;
-                hex[i + 1] = c1 as u8;
-                i += 2;        
-            }
-            return hex;
+impl<const N: usize> String<N> {
+    pub fn new() -> Self {
+        Self {
+            arr: [0u8; N],
+            capacity: N,
+            len: 0
         }
-        Value::U16(s) => {
-            for c in s.to_be_bytes().into_iter() {
-                let (c0, c1) = byte_to_hex(c);
-                hex[i] = c0 as u8;
-                hex[i + 1] = c1 as u8;
-                i += 2;        
-            }
-            return hex;
+    }
+
+    pub fn clear(&mut self) {
+        self.arr.fill(0);
+        self.len = 0;
+    }
+
+}
+
+impl From<u8> for String<2> {
+    fn from(val: u8) -> Self {
+        let mut s = String::<2>::new();
+        let mut i: usize = 0;
+        for c in val.to_be_bytes().into_iter() {
+            let (c0, c1) = byte_to_hex(c);
+            s.arr[i] = c0 as u8;
+            s.arr[i + 1] = c1 as u8;
+            s.len += 2;
+            i += 2;        
         }
-        Value::U32(l) => {
-            for c in l.to_be_bytes().into_iter() {
-                let (c0, c1) = byte_to_hex(c);
-                hex[i] = c0 as u8;
-                hex[i + 1] = c1 as u8;
-                i += 2;        
-            }
-            return hex;
+        s
+    }
+}
+
+impl From<u16> for String<4> {
+    fn from(val: u16) -> Self {
+        let mut s = String::<4>::new();
+        let mut i: usize = 0;
+        for c in val.to_be_bytes().into_iter() {
+            let (c0, c1) = byte_to_hex(c);
+            s.arr[i] = c0 as u8;
+            s.arr[i + 1] = c1 as u8;
+            s.len += 2;
+            i += 2;        
         }
-        Value::ARR32(tab) => {
-            for b in tab.into_iter() {
-                let (c0, c1) = byte_to_hex(b);
-                hex[i] = c0 as u8;
-                hex[i + 1] = c1 as u8;
-                i += 2; 
-            }
-            return hex;
+        s
+    }
+}
+
+impl From<u32> for String<8> {
+    fn from(val: u32) -> Self {
+        let mut s = String::<8>::new();
+        let mut i: usize = 0;
+        for c in val.to_be_bytes().into_iter() {
+            let (c0, c1) = byte_to_hex(c);
+            s.arr[i] = c0 as u8;
+            s.arr[i + 1] = c1 as u8;
+            s.len += 2;
+            i += 2;        
+        }
+        s
+    }
+}
+
+impl From<[u8; 32]> for String<64> {
+    fn from(arr: [u8; 32]) -> Self {
+        let mut s = String::<64>::new();
+        let mut i: usize = 0;
+        for c in arr.into_iter() {
+            let (c0, c1) = byte_to_hex(c);
+            s.arr[i] = c0 as u8;
+            s.arr[i + 1] = c1 as u8;
+            s.len += 2;
+            i += 2;        
+        }
+        s
+    }
+}
+
+impl<const N: usize> TryFrom<&str> for String<N> {
+    type Error = &'static str;
+    fn try_from(st: &str) -> Result<Self, Self::Error> {
+        if N >= st.len() {
+            let mut s = String::<N>::new();
+            s.arr[..st.len()].copy_from_slice(st.as_bytes());
+            s.len = st.len();
+            Ok(s)
+        }
+        else {
+            Err("String's capacity overflow!")
         }
     }
 }

@@ -63,14 +63,14 @@ pub struct PluginCoreParams {
 pub struct PluginCheckParams {
     pub core_params: Option<PluginCoreParams>,
     pub data_in: *const u8,
-    pub data_in_len: usize,
+    pub data_out: *mut u8,
     pub result: PluginResult
 }
 
 pub struct PluginInitParams {
     pub core_params: Option<PluginCoreParams>,
     pub data_in: *const u8,
-    pub data_in_len: usize,
+    pub data_out: *mut u8,
     pub result: PluginResult
 }
 
