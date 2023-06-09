@@ -1,3 +1,5 @@
+use core::str::Utf8Error;
+
 #[derive(Debug, Copy, Clone)]
 pub struct String<const N: usize> {
     pub arr: [u8; N],
@@ -17,6 +19,11 @@ impl<const N: usize> String<N> {
     pub fn clear(&mut self) {
         self.arr.fill(0);
         self.len = 0;
+    }
+
+    pub fn print(&self) -> Result<&str, Utf8Error> {
+        let s = core::str::from_utf8(&self.arr[..self.len])?;
+        Ok(s)
     }
 
 }
