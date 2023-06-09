@@ -1,9 +1,9 @@
+use crate::string::String;
 pub enum PluginInteractionType {
     Check,
     Init,
     Feed,
     Finalize,
-    ProvideData,
     QueryUi,
     GetUi,
     Unknown
@@ -15,10 +15,9 @@ impl From<u16> for PluginInteractionType {
             0x0A00 => PluginInteractionType::Check,
             0x0A01 => PluginInteractionType::Init,
             0x0A02 => PluginInteractionType::Feed,
-            0x0A03 => PluginInteractionType::ProvideData,
-            0x0A04 => PluginInteractionType::Finalize,
-            0x0A05 => PluginInteractionType::QueryUi,
-            0x0A06 => PluginInteractionType::GetUi,
+            0x0A03 => PluginInteractionType::Finalize,
+            0x0A04 => PluginInteractionType::QueryUi,
+            0x0A05 => PluginInteractionType::GetUi,
             _ => PluginInteractionType::Unknown
         }
     }
@@ -30,10 +29,9 @@ impl From<PluginInteractionType> for u16 {
             PluginInteractionType::Check => 0x0A00,
             PluginInteractionType::Init => 0x0A01,
             PluginInteractionType::Feed => 0x0A02,
-            PluginInteractionType::ProvideData => 0x0A03,
-            PluginInteractionType::Finalize => 0x0A04,
-            PluginInteractionType::QueryUi => 0x0A05,
-            PluginInteractionType::GetUi => 0x0A06,
+            PluginInteractionType::Finalize => 0x0A03,
+            PluginInteractionType::QueryUi => 0x0A04,
+            PluginInteractionType::GetUi => 0x0A05,
             PluginInteractionType::Unknown => 0x0AFF
         }
     }
@@ -80,33 +78,25 @@ pub struct PluginFeedParams {
     pub data_out: *mut u8,
     pub result: PluginResult
 }
-pub struct PluginProvideDataParams {
-    pub core_params: Option<PluginCoreParams>,
-    pub data_in: *const u8,
-    pub data_out: *mut u8,
-    pub result: PluginResult
-}
 
 pub struct PluginFinalizeParams {
     pub core_params: Option<PluginCoreParams>,
     pub num_ui_screens: u8,
+    pub data_to_display: String<64>,
     pub result: PluginResult
 }
 
 pub struct PluginQueryUiParams {
     pub core_params: Option<PluginCoreParams>,
-    pub title: [u8; 32],
-    pub title_len: usize,
+    pub title: String<32>,
     pub result: PluginResult
 }
 
 pub struct PluginGetUiParams {
     pub core_params: Option<PluginCoreParams>,
     pub ui_screen_idx: usize,
-    pub title: [u8; 32],
-    pub title_len: usize,
-    pub msg: [u8; 64],
-    pub msg_len: usize,
+    pub title: String<32>,
+    pub msg: String<64>,
     pub result: PluginResult
 }
 
@@ -114,7 +104,6 @@ pub enum PluginParams<'a> {
     Check(&'a mut PluginCheckParams),
     Init(&'a mut PluginInitParams),
     Feed(&'a mut PluginFeedParams),
-    ProvideData(&'a mut PluginProvideDataParams),
     Finalize(&'a mut PluginFinalizeParams),
     QueryUi(&'a mut PluginQueryUiParams),
     GetUi(&'a mut PluginGetUiParams)
@@ -143,9 +132,6 @@ pub fn plugin_call(plugin_name: &str, plugin_params: PluginParams, op: PluginInt
         }
         PluginParams::Feed(p) => {
             arg[2] = p as *mut PluginFeedParams as u32;
-        }
-        PluginParams::ProvideData(p) => {
-            arg[2] = p as *mut PluginProvideDataParams as u32;
         }
         PluginParams::Finalize(p) => {
             arg[2] = p as *mut PluginFinalizeParams as u32;
