@@ -10,7 +10,7 @@ pub struct String<const N: usize> {
 impl<const N: usize> String<N> {
     pub fn new() -> Self {
         Self {
-            arr: [0u8; N],
+            arr: [b'0'; N],
             capacity: N,
             len: 0
         }
@@ -103,23 +103,21 @@ impl<const N: usize> TryFrom<&str> for String<N> {
     }
 }
 
-/// Output an uint256 as an decimal string
+/// Output an uint256 as an decimal String
 /// For instance:
 ///
-/// let val: [u8; 32] = token amount (felt, 32 bytes);
-/// let mut out: [u8; 100] = [0; 100];
-/// let mut out_len: usize = 0;
-/// uint256_to_integer(&val, &mut out[..], &mut out_len);
-/// testing::debug_print(core::str::from_utf8(&out[..out_len]));
-pub fn uint256_to_integer(value: &[u8; 32], out: &mut [u8], out_len: &mut usize) {
+/// let val: [u8; 32] = token amount (32 bytes / 256 bits);
+/// let s: String<79> = uint256_to_integer(&val); // max number of decimal digits for Uint256 = 78 (+ 1 spare for '.')
+/// testing::debug_print(s.print().unwrap());
+pub fn uint256_to_integer(value: &[u8; 32]) -> String<79> {
+    
+    let mut s: String<79> = String::new();
+
     // Special case when value is 0
     if *value == [0u8; 32] {
-        if out.len() < 2 {
-            return;
-        }
-        out[0] = b'0';
-        *out_len = 1;
-        return;
+        s.arr[0] = b'0';
+        s.len = 1;
+        return s;
     }
 
     let mut n: [u16; 16] = [0u16; 16];
@@ -127,10 +125,10 @@ pub fn uint256_to_integer(value: &[u8; 32], out: &mut [u8], out_len: &mut usize)
         n[idx] = u16::from_be_bytes([value[2 * idx], value[2 * idx + 1]]);
     }
 
-    let mut pos: usize = out.len();
+    let mut pos: usize = s.capacity;
     while n != [0u16; 16] {
         if pos == 0 {
-            return;
+            return s;
         }
         pos -= 1;
         let mut carry = 0u32;
@@ -140,50 +138,34 @@ pub fn uint256_to_integer(value: &[u8; 32], out: &mut [u8], out_len: &mut usize)
             n[i] = (((carry << 16) | u32::from(n[i])) / 10) as u16;
             carry = rem;
         }
-        out[pos] = u8::try_from(char::from_digit(carry, 10).unwrap()).unwrap(); 
+        s.arr[pos] = u8::try_from(char::from_digit(carry, 10).unwrap()).unwrap(); 
     }
-    out.copy_within(pos.., 0);
-    *out_len = out.len() - pos;
-
-    return;
+    s.arr.copy_within(pos.., 0);
+    s.len = s.capacity - pos;
+    s
 }
 
 /// Output an uint256 as a float string
-/// For instance:
-///
-/// let val: [u8; 32] = token amount (felt, 32 bytes);
-/// let mut out: [u8; 100] = [0; 100];
-/// let mut out_len: usize = 0;
-/// uint256_to_float(&val, &mut out[..], &mut out_len);
-/// testing::debug_print(core::str::from_utf8(&out[..out_len]));
-pub fn uint256_to_float(value: &[u8;32], decimals: usize, out: &mut [u8], out_len: &mut usize ) {
-    
-    let mut tmp: [u8; 100] = [0; 100];
-    let mut len: usize = 0;
+pub fn uint256_to_float(value: &[u8;32], decimals: usize) -> String<79> {
 
-    uint256_to_integer(value, &mut tmp[..], &mut len);
-    out.fill(b'0');
+    let mut s: String<79> = uint256_to_integer(value);
 
-    if decimals == 0 {
-        out[0..len].copy_from_slice(&tmp[..len]);
-        *out_len = len;
-        return;
+    if decimals == 0 || s.arr[0] == b'0' {
+        return s;
     }
 
-    if len <= decimals {
-        out[1] = b'.';
-        out[2 + decimals - len..2 + decimals].copy_from_slice(&tmp[..len]);
-        *out_len = 2 + decimals;
+    if s.len <= decimals {
+        s.arr.copy_within(0..s.len, 2+decimals-s.len);
+        s.arr[0..2+decimals-s.len].fill(b'0');
+        s.arr[1] = b'.';
+        s.len += 2 + decimals - s.len;
     }
     else {
-        let delta = len - decimals;
-        let part = &tmp[0..len];
-        let (ipart, dpart) = part.split_at(delta);
-        out[0..delta].copy_from_slice(ipart);
-        out[delta] = b'.';
-        out[delta + 1..delta + 1 + dpart.len()].copy_from_slice(dpart);
-        *out_len = ipart.len() + dpart.len() + 1;
+        s.arr.copy_within(s.len - decimals..s.len, s.len - decimals + 1);
+        s.arr[s.len - decimals] = b'.';
+        s.len += 1;
     }
+    s
 }
 
 fn byte_to_hex(b: u8) -> (char, char) {

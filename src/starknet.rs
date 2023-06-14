@@ -110,6 +110,13 @@ impl From<FieldElement> for usize {
     }
 }
 
+impl From<&FieldElement> for String<64> {
+    fn from(f: &FieldElement) -> Self {
+        let s: String<64> = f.value.into();
+        s
+    }
+}
+
 /// Maximum numbers of calls in a multicall Tx (out of memory)
 /// NanoS = 3
 /// NanoS+ = 10 (maybe more ?) 
@@ -151,6 +158,20 @@ impl AbstractCall {
     }
 }
 
+impl From<Call> for AbstractCall {
+    fn from(c: Call) -> Self {
+        let mut a: AbstractCall = AbstractCall::new();
+        a.to = c.to;
+        a.selector = c.selector;
+        a.method = c.method;
+        for data in c.calldata {
+            a.calldata[a.calldata_len] = AbstractCallData::Felt(data);
+            a.calldata_len += 1;
+        }
+        a
+    }
+}
+
 #[derive(Debug, Copy, Clone)]
 pub struct Call {
     pub to: FieldElement,
@@ -168,7 +189,6 @@ impl Call {
             selector: FieldElement::new(),
             calldata: [FieldElement::ZERO; 16],
             calldata_len: 0
-
         }
     }
 
@@ -187,6 +207,7 @@ pub struct TransactionInfo {
     pub nonce: FieldElement,
     pub version: FieldElement,
     pub chain_id: FieldElement,
+    pub callarray_len: FieldElement
 }
 
 impl TransactionInfo {
@@ -196,7 +217,8 @@ impl TransactionInfo {
             max_fee: FieldElement::new(),
             nonce: FieldElement::new(),
             version: FieldElement::new(),
-            chain_id: FieldElement::new()
+            chain_id: FieldElement::new(),
+            callarray_len: FieldElement::new()
         }
     }
 
@@ -206,6 +228,7 @@ impl TransactionInfo {
         self.nonce.clear();
         self.version.clear();
         self.chain_id.clear();
+        self.callarray_len.clear();
     }
 }
 
