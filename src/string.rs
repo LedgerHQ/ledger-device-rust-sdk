@@ -21,9 +21,8 @@ impl<const N: usize> String<N> {
         self.len = 0;
     }
 
-    pub fn print(&self) -> Result<&str, Utf8Error> {
-        let s = core::str::from_utf8(&self.arr[..self.len])?;
-        Ok(s)
+    pub fn as_str(&self) -> &str {
+        core::str::from_utf8(&self.arr[..self.len]).unwrap()
     }
 
 }
