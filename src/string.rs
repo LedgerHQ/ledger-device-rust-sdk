@@ -23,6 +23,11 @@ impl<const N: usize> String<N> {
         core::str::from_utf8(&self.arr[..self.len]).unwrap()
     }
 
+    pub fn copy_from(&mut self, s: &String<N>) {
+        self.arr[..s.len].copy_from_slice(&s.arr[..s.len]);
+        self.len = s.len;
+    }
+
 }
 
 impl From<u8> for String<2> {
