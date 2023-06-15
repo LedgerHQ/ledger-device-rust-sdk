@@ -1,5 +1,3 @@
-use core::str::Utf8Error;
-
 #[derive(Debug, Copy, Clone)]
 pub struct String<const N: usize> {
     pub arr: [u8; N],
