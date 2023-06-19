@@ -1787,8 +1787,8 @@ pub const BOLOS_UX_INITIALIZE: bolos_ux_e = 0;
 pub const BOLOS_UX_EVENT: bolos_ux_e = 1;
 pub const BOLOS_UX_KEYBOARD: bolos_ux_e = 2;
 pub const BOLOS_UX_WAKE_UP: bolos_ux_e = 3;
-pub const BOLOS_UX_VALIDATE_PIN: bolos_ux_e = 15;
-pub const BOLOS_UX_LAST_ID: bolos_ux_e = 16;
+pub const BOLOS_UX_VALIDATE_PIN: bolos_ux_e = 5;
+pub const BOLOS_UX_LAST_ID: bolos_ux_e = 8;
 pub type bolos_ux_e = core::ffi::c_uchar;
 pub use self::bolos_ux_e as bolos_ux_t;
 #[repr(C)]
