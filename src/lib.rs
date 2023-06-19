@@ -25,6 +25,7 @@ pub mod seph;
 pub mod testing;
 
 pub mod usbbindings;
+pub mod uxapp;
 
 use bindings::os_sched_exit;
 
