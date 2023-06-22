@@ -5,6 +5,16 @@ pub struct String<const N: usize> {
     pub len: usize
 }
 
+impl<const N: usize> Default for String<N> {
+    fn default() -> Self {
+        Self {
+            arr: [b'0'; N],
+            capacity: N,
+            len: 0
+        }
+    }
+}
+
 impl<const N: usize> String<N> {
     pub fn new() -> Self {
         Self {
