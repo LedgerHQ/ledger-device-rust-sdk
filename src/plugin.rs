@@ -63,7 +63,7 @@ pub struct PluginParam {
 
 use crate::bindings::os_lib_call;
 
-pub fn plugin_call_v2(plugin_name: &str, plugin_params: &mut PluginParam, op: PluginInteractionType) {
+pub fn plugin_call(plugin_name: &str, plugin_params: &mut PluginParam, op: PluginInteractionType) {
 
     let name: &[u8] = plugin_name.as_bytes();
     let mut arg: [u32; 3] = [0x00; 3];
