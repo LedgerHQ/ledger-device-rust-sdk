@@ -53,60 +53,6 @@ impl From<PluginResult> for u16 {
     }
 }
 
-// Deprecated
-pub struct PluginCoreParams {
-    pub plugin_internal_ctx: *mut u8,
-    pub plugin_internal_ctx_len: usize,
-}
-
-// Deprecated
-pub struct PluginCheckParams {
-    pub core_params: Option<PluginCoreParams>,
-    pub data_in: *const u8,
-    pub data_out: *mut u8,
-    pub result: PluginResult
-}
-
-// Deprecated
-pub struct PluginInitParams {
-    pub core_params: Option<PluginCoreParams>,
-    pub data_in: *const u8,
-    pub data_out: *mut u8,
-    pub result: PluginResult
-}
-
-// Deprecated
-pub struct PluginFeedParams {
-    pub core_params: Option<PluginCoreParams>,
-    pub data_in: *const u8,
-    pub data_out: *mut u8,
-    pub result: PluginResult
-}
-
-// Deprecated
-pub struct PluginFinalizeParams {
-    pub core_params: Option<PluginCoreParams>,
-    pub num_ui_screens: u8,
-    pub data_to_display: String<64>,
-    pub result: PluginResult
-}
-
-// Deprecated
-pub struct PluginQueryUiParams {
-    pub core_params: Option<PluginCoreParams>,
-    pub title: String<32>,
-    pub result: PluginResult
-}
-
-// Deprecated
-pub struct PluginGetUiParams {
-    pub core_params: Option<PluginCoreParams>,
-    pub ui_screen_idx: usize,
-    pub title: String<32>,
-    pub msg: String<64>,
-    pub result: PluginResult
-}
-
 pub struct PluginParam {
     pub plugin_internal_ctx: *mut u8,
     pub plugin_internal_ctx_len: usize,
@@ -115,55 +61,7 @@ pub struct PluginParam {
     pub result: PluginResult
 }
 
-// Deprecated
-pub enum PluginParams<'a> {
-    Check(&'a mut PluginCheckParams),
-    Init(&'a mut PluginInitParams),
-    Feed(&'a mut PluginFeedParams),
-    Finalize(&'a mut PluginFinalizeParams),
-    QueryUi(&'a mut PluginQueryUiParams),
-    GetUi(&'a mut PluginGetUiParams)
-}
-
-use crate::bindings::{
-    os_lib_call
-};
-
-// Deprecated
-pub fn plugin_call(plugin_name: &str, plugin_params: PluginParams, op: PluginInteractionType) {
-    
-    let name: &[u8] = plugin_name.as_bytes();
-    let mut arg: [u32; 3] = [0x00; 3];
-    
-    arg[0] = name.as_ptr() as u32;
-
-    let operation: u16 = u16::from(op);
-    arg[1] = operation as u32;
-
-    match plugin_params {
-        PluginParams::Check(p) => {
-            arg[2] = p as *mut PluginCheckParams as u32;
-        }
-        PluginParams::Init(p) => {
-            arg[2] = p as *mut PluginInitParams as u32;
-        }
-        PluginParams::Feed(p) => {
-            arg[2] = p as *mut PluginFeedParams as u32;
-        }
-        PluginParams::Finalize(p) => {
-            arg[2] = p as *mut PluginFinalizeParams as u32;
-        }
-        PluginParams::QueryUi(p) => {
-            arg[2] = p as *mut PluginQueryUiParams as u32;
-        }
-        PluginParams::GetUi(p) => {
-            arg[2] = p as *mut PluginGetUiParams as u32;
-        }
-    }
-    unsafe {
-        os_lib_call(arg.as_mut_ptr());
-    }
-}
+use crate::bindings::os_lib_call;
 
 pub fn plugin_call_v2(plugin_name: &str, plugin_params: &mut PluginParam, op: PluginInteractionType) {
 
