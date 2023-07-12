@@ -2,7 +2,7 @@
 pub struct String<const N: usize> {
     pub arr: [u8; N],
     pub capacity: usize,
-    pub len: usize
+    pub len: usize,
 }
 
 impl<const N: usize> Default for String<N> {
@@ -10,7 +10,7 @@ impl<const N: usize> Default for String<N> {
         Self {
             arr: [b'0'; N],
             capacity: N,
-            len: 0
+            len: 0,
         }
     }
 }
@@ -20,7 +20,7 @@ impl<const N: usize> String<N> {
         Self {
             arr: [b'0'; N],
             capacity: N,
-            len: 0
+            len: 0,
         }
     }
 
@@ -37,7 +37,6 @@ impl<const N: usize> String<N> {
         self.arr[..s.len].copy_from_slice(&s.arr[..s.len]);
         self.len = s.len;
     }
-
 }
 
 impl From<u8> for String<2> {
@@ -49,7 +48,7 @@ impl From<u8> for String<2> {
             s.arr[i] = c0 as u8;
             s.arr[i + 1] = c1 as u8;
             s.len += 2;
-            i += 2;        
+            i += 2;
         }
         s
     }
@@ -64,7 +63,7 @@ impl From<u16> for String<4> {
             s.arr[i] = c0 as u8;
             s.arr[i + 1] = c1 as u8;
             s.len += 2;
-            i += 2;        
+            i += 2;
         }
         s
     }
@@ -79,7 +78,7 @@ impl From<u32> for String<8> {
             s.arr[i] = c0 as u8;
             s.arr[i + 1] = c1 as u8;
             s.len += 2;
-            i += 2;        
+            i += 2;
         }
         s
     }
@@ -94,7 +93,7 @@ impl From<[u8; 32]> for String<64> {
             s.arr[i] = c0 as u8;
             s.arr[i + 1] = c1 as u8;
             s.len += 2;
-            i += 2;        
+            i += 2;
         }
         s
     }
@@ -108,8 +107,7 @@ impl<const N: usize> TryFrom<&str> for String<N> {
             s.arr[..st.len()].copy_from_slice(st.as_bytes());
             s.len = st.len();
             Ok(s)
-        }
-        else {
+        } else {
             Err("String's capacity overflow!")
         }
     }
@@ -122,7 +120,6 @@ impl<const N: usize> TryFrom<&str> for String<N> {
 /// let s: String<79> = uint256_to_integer(&val); // max number of decimal digits for Uint256 = 78 (+ 1 spare for '.')
 /// testing::debug_print(s.print().unwrap());
 pub fn uint256_to_integer(value: &[u8; 32]) -> String<79> {
-    
     let mut s: String<79> = String::new();
 
     // Special case when value is 0
@@ -150,7 +147,7 @@ pub fn uint256_to_integer(value: &[u8; 32]) -> String<79> {
             n[i] = (((carry << 16) | u32::from(n[i])) / 10) as u16;
             carry = rem;
         }
-        s.arr[pos] = u8::try_from(char::from_digit(carry, 10).unwrap()).unwrap(); 
+        s.arr[pos] = u8::try_from(char::from_digit(carry, 10).unwrap()).unwrap();
     }
     s.arr.copy_within(pos.., 0);
     s.len = s.capacity - pos;
@@ -158,8 +155,7 @@ pub fn uint256_to_integer(value: &[u8; 32]) -> String<79> {
 }
 
 /// Output an uint256 as a float string
-pub fn uint256_to_float(value: &[u8;32], decimals: usize) -> String<79> {
-
+pub fn uint256_to_float(value: &[u8; 32], decimals: usize) -> String<79> {
     let mut s: String<79> = uint256_to_integer(value);
 
     if decimals == 0 || s.arr[0] == b'0' {
@@ -167,13 +163,13 @@ pub fn uint256_to_float(value: &[u8;32], decimals: usize) -> String<79> {
     }
 
     if s.len <= decimals {
-        s.arr.copy_within(0..s.len, 2+decimals-s.len);
-        s.arr[0..2+decimals-s.len].fill(b'0');
+        s.arr.copy_within(0..s.len, 2 + decimals - s.len);
+        s.arr[0..2 + decimals - s.len].fill(b'0');
         s.arr[1] = b'.';
         s.len += 2 + decimals - s.len;
-    }
-    else {
-        s.arr.copy_within(s.len - decimals..s.len, s.len - decimals + 1);
+    } else {
+        s.arr
+            .copy_within(s.len - decimals..s.len, s.len - decimals + 1);
         s.arr[s.len - decimals] = b'.';
         s.len += 1;
     }
@@ -183,5 +179,5 @@ pub fn uint256_to_float(value: &[u8;32], decimals: usize) -> String<79> {
 fn byte_to_hex(b: u8) -> (char, char) {
     let c0 = char::from_digit((b >> 4).into(), 16).unwrap();
     let c1 = char::from_digit((b & 0xf).into(), 16).unwrap();
-    (c0,c1)
+    (c0, c1)
 }

@@ -6,7 +6,7 @@ pub enum PluginInteractionType {
     Finalize,
     QueryUi,
     GetUi,
-    Unknown
+    Unknown,
 }
 
 impl From<u16> for PluginInteractionType {
@@ -18,7 +18,7 @@ impl From<u16> for PluginInteractionType {
             0x0A03 => PluginInteractionType::Finalize,
             0x0A04 => PluginInteractionType::QueryUi,
             0x0A05 => PluginInteractionType::GetUi,
-            _ => PluginInteractionType::Unknown
+            _ => PluginInteractionType::Unknown,
         }
     }
 }
@@ -32,7 +32,7 @@ impl From<PluginInteractionType> for u16 {
             PluginInteractionType::Finalize => 0x0A03,
             PluginInteractionType::QueryUi => 0x0A04,
             PluginInteractionType::GetUi => 0x0A05,
-            PluginInteractionType::Unknown => 0x0AFF
+            PluginInteractionType::Unknown => 0x0AFF,
         }
     }
 }
@@ -40,7 +40,7 @@ impl From<PluginInteractionType> for u16 {
 pub enum PluginResult {
     Ok,
     NeedInfo,
-    Err
+    Err,
 }
 
 impl From<PluginResult> for u16 {
@@ -58,16 +58,15 @@ pub struct PluginParam {
     pub plugin_internal_ctx_len: usize,
     pub data_in: *const u8,
     pub data_out: *mut u8,
-    pub result: PluginResult
+    pub result: PluginResult,
 }
 
 use crate::bindings::os_lib_call;
 
 pub fn plugin_call(plugin_name: &str, plugin_params: &mut PluginParam, op: PluginInteractionType) {
-
     let name: &[u8] = plugin_name.as_bytes();
     let mut arg: [u32; 3] = [0x00; 3];
-    
+
     arg[0] = name.as_ptr() as u32;
 
     let operation: u16 = u16::from(op);
