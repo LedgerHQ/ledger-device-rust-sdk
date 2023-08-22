@@ -61,9 +61,16 @@ pub struct PluginParam {
     pub result: PluginResult,
 }
 
-use crate::bindings::os_lib_call;
+//use crate::bindings::os_lib_call;
+extern "C" {
+    pub fn os_lib_call_no_throw(call_parameters: *mut core::ffi::c_uint) -> core::ffi::c_uint;
+}
 
-pub fn plugin_call(plugin_name: &str, plugin_params: &mut PluginParam, op: PluginInteractionType) {
+pub enum PluginCallError {
+    NotFound
+} 
+
+pub fn plugin_call(plugin_name: &str, plugin_params: &mut PluginParam, op: PluginInteractionType) -> Result<(), PluginCallError> {
     let name: &[u8] = plugin_name.as_bytes();
     let mut arg: [u32; 3] = [0x00; 3];
 
@@ -74,7 +81,14 @@ pub fn plugin_call(plugin_name: &str, plugin_params: &mut PluginParam, op: Plugi
 
     arg[2] = plugin_params as *mut PluginParam as u32;
 
+    let mut ret: u32 = 0u32;
     unsafe {
-        os_lib_call(arg.as_mut_ptr());
+        crate::testing::debug_print("Try to call plugin \n");
+        ret = os_lib_call_no_throw(arg.as_mut_ptr());
+        crate::testing::debug_print("Tried \n");
+    }
+    match ret {
+        0 => Ok(()),
+        _ => Err(PluginCallError::NotFound)
     }
 }
