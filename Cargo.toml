@@ -4,22 +4,20 @@ version = "0.2.1"
 authors = ["yhql"]
 edition = "2021"
 
-[build-dependencies]
-cc = "1.0.73"
-
 [dev-dependencies]
 # enable the 'speculos' feature when testing
 # https://github.com/rust-lang/cargo/issues/2911#issuecomment-749580481
-nanos_sdk = { path = ".", features = ["speculos"] } 
+nanos_sdk = { path = ".", features = ["speculos"] }
 
-testmacro = { git = "https://github.com/yhql/testmacro"} 
+testmacro = { git = "https://github.com/yhql/testmacro"}
 
 [dependencies]
+ledger-sdk-sys = { git = "https://github.com/LedgerHQ/secure-sdk-rust" }
 num-traits = { version = "0.2.14", default_features = false }
 rand_core = { version = "0.6.3", default_features = false }
 
 [profile.release]
-opt-level = 's' 
+opt-level = 's'
 lto = true
 
 [features]

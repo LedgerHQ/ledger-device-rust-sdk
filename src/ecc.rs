@@ -1,5 +1,5 @@
-use crate::bindings::*;
 use core::hint::black_box;
+use ledger_sdk_sys::*;
 
 mod stark;
 
@@ -79,55 +79,6 @@ impl From<CxError> for u32 {
     }
 }
 
-extern "C" {
-    pub fn cx_ecfp_generate_pair_no_throw(
-        curve: cx_curve_t,
-        pubkey: *mut ECCKeyRaw,
-        privkey: *const ECCKeyRaw, // This binding is forced to 'const' assuming `keepprivate` will always be set to `true`
-        keepprivate: bool,
-    ) -> cx_err_t;
-    pub fn cx_ecdsa_sign_no_throw(
-        pvkey: *const ECCKeyRaw,
-        mode: u32,
-        hashID: cx_md_t,
-        hash: *const u8,
-        hash_len: size_t,
-        sig: *mut u8,
-        sig_len: *mut size_t,
-        info: *mut u32,
-    ) -> cx_err_t;
-    pub fn cx_ecdsa_verify_no_throw(
-        pukey: *const ECCKeyRaw,
-        hash: *const u8,
-        hash_len: size_t,
-        sig: *const u8,
-        sig_len: size_t,
-    ) -> bool;
-    pub fn cx_eddsa_sign_no_throw(
-        pvkey: *const ECCKeyRaw,
-        hashID: cx_md_t,
-        hash: *const u8,
-        hash_len: size_t,
-        sig: *mut u8,
-        sig_len: size_t,
-    ) -> cx_err_t;
-    pub fn cx_eddsa_verify_no_throw(
-        pukey: *const ECCKeyRaw,
-        hashID: cx_md_t,
-        hash: *const u8,
-        hash_len: size_t,
-        sig: *const u8,
-        sig_len: size_t,
-    ) -> bool;
-    pub fn cx_ecdh_no_throw(
-        pvkey: *const ECCKeyRaw,
-        mode: u32,
-        P: *const u8,
-        P_len: size_t,
-        secret: *mut u8,
-        secret_len: size_t,
-    ) -> cx_err_t;
-}
 
 /// This structure serves the sole purpose of being cast into
 /// from `ECPrivateKey` or `ECPublicKey` when calling bindings
@@ -243,8 +194,9 @@ impl<const N: usize, const TY: char> ECPrivateKey<N, TY> {
         let err = unsafe {
             cx_ecfp_generate_pair_no_throw(
                 self.curve as u8,
-                &mut pubkey as *mut ECPublicKey<{ Self::P }, TY> as *mut ECCKeyRaw,
-                self as *const ECPrivateKey<N, TY> as *const ECCKeyRaw,
+                // Safety: cast awfully dodgy but that's how it's done in the C SDK
+                (&mut pubkey as *mut ECPublicKey<{ Self::P }, TY>).cast(), // as *mut cx_ecfp_256_public_key_s,
+                self as *const ECPrivateKey<N, TY> as *mut cx_ecfp_256_private_key_s,
                 true,
             )
         };
@@ -269,15 +221,16 @@ impl<const N: usize> ECPrivateKey<N, 'W'> {
         mode: u32,
     ) -> Result<([u8; Self::S], u32, u32), CxError> {
         let mut sig = [0u8; Self::S];
-        let mut sig_len = Self::S as u32;
+        let mut sig_len = Self::S;
         let mut info = 0;
         let len = unsafe {
             cx_ecdsa_sign_no_throw(
-                self as *const ECPrivateKey<N, 'W'> as *const ECCKeyRaw,
+                // Safety: cast awfully dodgy but that's how it's done in the C SDK
+                self as *const ECPrivateKey<N, 'W'> as *const cx_ecfp_256_private_key_s,
                 mode,
                 hash_id,
                 hash.as_ptr(),
-                hash.len() as u32,
+                hash.len(),
                 sig.as_mut_ptr(),
                 &mut sig_len,
                 &mut info,
@@ -286,7 +239,7 @@ impl<const N: usize> ECPrivateKey<N, 'W'> {
         if len != CX_OK {
             Err(len.into())
         } else {
-            Ok((sig, sig_len, info & CX_ECCINFO_PARITY_ODD))
+            Ok((sig, sig_len as u32, info & CX_ECCINFO_PARITY_ODD))
         }
     }
 
@@ -315,12 +268,12 @@ impl<const N: usize> ECPrivateKey<N, 'W'> {
         let mut secret = [0u8; N];
         let len = unsafe {
             cx_ecdh_no_throw(
-                self as *const ECPrivateKey<N, 'W'> as *const ECCKeyRaw,
+                self as *const ECPrivateKey<N, 'W'> as *const cx_ecfp_256_private_key_s,
                 CX_ECDH_X,
                 p.as_ptr(),
-                p.len() as u32,
+                p.len(),
                 secret.as_mut_ptr(),
-                N as u32,
+                N,
             )
         };
         if len != CX_OK {
@@ -338,17 +291,17 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
 
     pub fn sign(&self, hash: &[u8]) -> Result<([u8; Self::EP], u32), CxError> {
         let mut sig = [0u8; Self::EP];
-        let sig_len = Self::EP as u32;
+        let sig_len = Self::EP;
         let hash_id = match self.keylength {
             x if x <= 32 => CX_SHA512,
             _ => CX_BLAKE2B,
         };
         let len = unsafe {
             cx_eddsa_sign_no_throw(
-                self as *const ECPrivateKey<N, 'E'> as *const ECCKeyRaw,
+                self as *const ECPrivateKey<N, 'E'> as *const cx_ecfp_256_private_key_s,
                 hash_id,
                 hash.as_ptr(),
-                hash.len() as u32,
+                hash.len(),
                 sig.as_mut_ptr(),
                 sig_len,
             )
@@ -356,7 +309,7 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
         if len != CX_OK {
             Err(len.into())
         } else {
-            Ok((sig, sig_len))
+            Ok((sig, sig_len as u32))
         }
     }
 }
@@ -396,11 +349,11 @@ impl<const P: usize> ECPublicKey<P, 'W'> {
     pub fn verify(&self, signature: (&[u8], u32), hash: &[u8]) -> bool {
         unsafe {
             cx_ecdsa_verify_no_throw(
-                self as *const ECPublicKey<P, 'W'> as *const ECCKeyRaw,
+                self as *const ECPublicKey<P, 'W'> as *const cx_ecfp_256_public_key_s,
                 hash.as_ptr(),
-                hash.len() as u32,
+                hash.len(),
                 signature.0.as_ptr(),
-                signature.1,
+                signature.1 as usize,
             )
         }
     }
@@ -411,12 +364,12 @@ impl<const P: usize> ECPublicKey<P, 'E'> {
     pub fn verify(&self, signature: (&[u8], u32), hash: &[u8], hash_id: u8) -> bool {
         unsafe {
             cx_eddsa_verify_no_throw(
-                self as *const ECPublicKey<P, 'E'> as *const ECCKeyRaw,
+                self as *const ECPublicKey<P, 'E'> as *const cx_ecfp_256_public_key_s,
                 hash_id,
                 hash.as_ptr(),
-                hash.len() as u32,
+                hash.len(),
                 signature.0.as_ptr(),
-                signature.1,
+                signature.1 as usize,
             )
         }
     }
