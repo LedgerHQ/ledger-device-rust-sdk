@@ -128,6 +128,29 @@ fn configure_lib_bagl(command: &mut cc::Build, bolos_sdk: &String) {
     }
 }
 
+fn extract_defines_from_cx_makefile(command: &mut cc::Build, makefile: &String) {
+    let mut makefile = File::open(makefile).unwrap();
+    let mut content = String::new();
+    makefile.read_to_string(&mut content).unwrap();
+    // Extract the defines from the Makefile.conf.cx.
+    // They all begin with `HAVE` and are ' ' and '\n' separated.
+    let mut defines = content
+        .split('\n')
+        .filter(|line| !line.starts_with('#')) // Remove lines that are commented
+        .flat_map(|line| line.split(' ').filter(|word| word.starts_with("HAVE")))
+        .collect::<Vec<&str>>();
+
+    // do not forget NATIVE_LITTLE_ENDIAN
+    let s = String::from("NATIVE_LITTLE_ENDIAN");
+    defines.push(s.as_str());
+
+    // Add the defines found in the Makefile.conf.cx to our build command.
+    for define in defines {
+        // scott could use for_each
+        command.define(define, None);
+    }
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let bolos_sdk = "./ledger-secure-sdk".to_string();
 
@@ -283,27 +306,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // all 'finalize_...' functions also declare a new 'cfg' variable corresponding
     // to the name of the target (as #[cfg(target = "nanox")] does not work, for example)
     // this allows code to easily import things depending on the target
-
-    let mut makefile = File::open(cx_makefile).unwrap();
-    let mut content = String::new();
-    makefile.read_to_string(&mut content).unwrap();
-    // Extract the defines from the Makefile.conf.cx.
-    // They all begin with `HAVE` and are ' ' and '\n' separated.
-    let mut defines = content
-        .split('\n')
-        .filter(|line| !line.starts_with('#')) // Remove lines that are commented
-        .flat_map(|line| line.split(' ').filter(|word| word.starts_with("HAVE")))
-        .collect::<Vec<&str>>();
-
-    // do not forget NATIVE_LITTLE_ENDIAN
-    let s = String::from("NATIVE_LITTLE_ENDIAN");
-    defines.push(s.as_str());
-
-    // Add the defines found in the Makefile.conf.cx to our build command.
-    for define in defines {
-        // scott could use for_each
-        command.define(define, None);
-    }
+    extract_defines_from_cx_makefile(&mut command, &cx_makefile);
 
     command.compile("rust-app");
 

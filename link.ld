@@ -48,8 +48,6 @@ SECTIONS
     _estack = ABSOLUTE(END_STACK);
   } > SRAM
 
-  .ledger.api_level (INFO): { KEEP(*(.ledger.api_level)) }
-
   .stack_sizes (INFO):
   {
     KEEP(*(.stack_sizes));
@@ -63,6 +61,18 @@ SECTIONS
     *(.ARM.exidx* .gnu.linkonce.armexidx.*)
     *(.debug_info)
   }
+
+  ledger.target (INFO): { KEEP(*(ledger.target)) }
+  ledger.target_id (INFO): { KEEP(*(ledger.target_id)) }
+  ledger.target_name (INFO): { KEEP(*(ledger.target_name)) }
+  ledger.app_name (INFO): { KEEP(*(ledger.app_name)) }
+  ledger.app_version (INFO): { KEEP(*(ledger.app_version)) }
+  ledger.api_level (INFO): { KEEP(*(ledger.api_level)) }
+  ledger.sdk_version (INFO): { KEEP(*(ledger.sdk_version)) }
+  ledger.rust_sdk_version (INFO): { KEEP(*(ledger.rust_sdk_version)) }
+  ledger.rust_sdk_name (INFO): { KEEP(*(ledger.rust_sdk_name)) }
+  ledger.sdk_name (INFO): { KEEP(*(ledger.sdk_name)) }
+  ledger.sdk_hash (INFO): { KEEP(*(ledger.sdk_hash)) }
 }
 
 PROVIDE(_nvram = ABSOLUTE(_nvram_start));
