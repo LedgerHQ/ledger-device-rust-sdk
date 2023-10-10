@@ -35,11 +35,11 @@ impl UxEvent {
 
         match self {
             Self::ValidatePIN => Self::block(),
-            _ => BOLOS_UX_OK,
+            _ => unsafe { os_sched_last_status(TASK_BOLOS_UX as u32) as u32 },
         }
     }
 
-    fn block() -> u32 {
+    pub fn block() -> u32 {
         let mut ret = unsafe { os_sched_last_status(TASK_BOLOS_UX as u32) } as u32;
         while ret == BOLOS_UX_IGNORE || ret == BOLOS_UX_CONTINUE {
             if unsafe { os_sched_is_running(TASK_SUBTASKS_START as u32) } != BOLOS_TRUE as i8 {
