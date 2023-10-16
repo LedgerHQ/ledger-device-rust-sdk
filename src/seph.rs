@@ -6,13 +6,6 @@ use ledger_sdk_sys::*;
 use crate::ble;
 
 #[repr(u8)]
-pub enum SephTags {
-    ScreenDisplayStatus = SEPROXYHAL_TAG_SCREEN_DISPLAY_STATUS as u8,
-    GeneralStatus = SEPROXYHAL_TAG_GENERAL_STATUS as u8,
-    RawAPDU = SEPROXYHAL_TAG_RAPDU as u8,
-    Unknown,
-}
-#[repr(u8)]
 pub enum Events {
     USBXFEREvent = SEPROXYHAL_TAG_USB_EP_XFER_EVENT as u8,
     USBEvent = SEPROXYHAL_TAG_USB_EVENT as u8,
@@ -35,16 +28,6 @@ pub enum UsbEp {
     USBEpPrepare = SEPROXYHAL_TAG_USB_EP_PREPARE as u8,
     USBEpPrepareDirIn = SEPROXYHAL_TAG_USB_EP_PREPARE_DIR_IN as u8,
     Unknown,
-}
-
-impl From<u8> for SephTags {
-    fn from(v: u8) -> SephTags {
-        match v as u32 {
-            SEPROXYHAL_TAG_SCREEN_DISPLAY_STATUS => SephTags::ScreenDisplayStatus,
-            SEPROXYHAL_TAG_GENERAL_STATUS => SephTags::GeneralStatus,
-            _ => SephTags::Unknown,
-        }
-    }
 }
 
 impl From<u8> for Events {

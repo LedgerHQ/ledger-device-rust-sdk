@@ -152,7 +152,7 @@ impl Comm {
             },
             APDU_RAW => {
                 let len = (self.tx as u16).to_be_bytes();
-                sys_seph::seph_send(&[seph::SephTags::RawAPDU as u8, len[0], len[1]]);
+                sys_seph::seph_send(&[sys_seph::SephTags::RawAPDU as u8, len[0], len[1]]);
                 sys_seph::seph_send(&self.apdu_buffer[..self.tx]);
             }
             #[cfg(feature = "ccid")]
