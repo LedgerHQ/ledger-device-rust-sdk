@@ -30,6 +30,26 @@ pub fn to_hex(m: u32) -> [u8; 8] {
     hex
 }
 
+pub fn to_dec(mut m: u32) -> [u8; 10] {
+    let mut divisor = 10u32;
+    let mut p = 0;
+    while p < 10 && divisor.pow(p) <= m {
+        p += 1;
+    }
+    divisor = 10u32.pow(p - 1);
+    let mut dec = [0u8; 10];
+    let mut i = 0;
+    while divisor != 0 {
+        let digit = m / divisor;
+        let c = char::from_digit(digit, 10).unwrap();
+        dec[i] = c as u8;
+        i += 1;
+        m %= divisor;
+        divisor /= 10;
+    }
+    dec
+}
+
 #[cfg_attr(test, panic_handler)]
 pub fn test_panic(info: &PanicInfo) -> ! {
     debug_print("Panic! ");

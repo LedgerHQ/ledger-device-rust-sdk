@@ -27,6 +27,9 @@ pub mod testing;
 pub mod usbbindings;
 pub mod uxapp;
 
+pub mod plugin;
+pub mod string;
+
 use bindings::os_sched_exit;
 
 use core::{ffi::c_void, panic::PanicInfo};
@@ -53,14 +56,14 @@ macro_rules! set_panic {
 }
 
 extern "C" {
-    fn c_main();
+    fn c_main(arg0: u32);
 }
 
 #[link_section = ".boot"]
 #[no_mangle]
-pub extern "C" fn _start() -> ! {
+pub extern "C" fn _start(arg0: u32) -> ! {
     // Main is in C until the try_context can be set properly from Rust
-    unsafe { c_main() };
+    unsafe { c_main(arg0) };
     exit_app(1);
 }
 

@@ -157,6 +157,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     command
         .file("./src/c/src.c")
         .file("./src/c/sjlj.s")
+        .file("./src/c/libcall.c")
         .file(format!("{bolos_sdk}/src/os_io_usb.c"))
         .file(format!("{bolos_sdk}/src/pic.c"))
         .file(format!("{bolos_sdk}/src/checks.c"))
