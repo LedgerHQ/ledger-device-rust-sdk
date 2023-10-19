@@ -15,6 +15,7 @@ testmacro = { git = "https://github.com/yhql/testmacro"}
 ledger-sdk-sys = { git = "https://github.com/LedgerHQ/secure-sdk-rust" }
 num-traits = { version = "0.2.14", default_features = false }
 rand_core = { version = "0.6.3", default_features = false }
+zeroize = { version = "1.6.0", default_features = false }
 
 [profile.release]
 opt-level = 's'

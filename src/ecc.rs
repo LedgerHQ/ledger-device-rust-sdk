@@ -1,5 +1,5 @@
-use core::hint::black_box;
 use ledger_sdk_sys::*;
+use zeroize::Zeroize;
 
 mod stark;
 
@@ -143,8 +143,7 @@ impl<const N: usize, const TY: char> Default for ECPrivateKey<N, TY> {
 impl<const N: usize, const TY: char> Drop for ECPrivateKey<N, TY> {
     #[inline(never)]
     fn drop(&mut self) {
-        self.key.fill_with(|| 0);
-        self.key = black_box(self.key);
+        self.key.zeroize();
     }
 }
 
@@ -434,8 +433,7 @@ impl<const N: usize> AsMut<[u8]> for Secret<N> {
 impl<const N: usize> Drop for Secret<N> {
     #[inline(never)]
     fn drop(&mut self) {
-        self.0.fill_with(|| 0);
-        self.0 = black_box(self.0);
+        self.0.zeroize();
     }
 }
 
