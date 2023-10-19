@@ -1,7 +1,8 @@
-use crate::bindings::*;
 #[cfg(target_os = "nanox")]
 use crate::ble;
-use crate::buttons::{get_button_event, ButtonEvent, ButtonsState};
+use ledger_sdk_sys::buttons::{get_button_event, ButtonEvent, ButtonsState};
+use ledger_sdk_sys::seph as sys_seph;
+use ledger_sdk_sys::*;
 
 #[cfg(feature = "ccid")]
 use crate::ccid;
@@ -132,12 +133,12 @@ impl Comm {
     // This is private. Users should call reply to set the satus word and
     // transmit the response.
     fn apdu_send(&mut self) {
-        if !seph::is_status_sent() {
-            seph::send_general_status()
+        if !sys_seph::is_status_sent() {
+            sys_seph::send_general_status()
         }
         let mut spi_buffer = [0u8; 128];
-        while seph::is_status_sent() {
-            seph::seph_recv(&mut spi_buffer, 0);
+        while sys_seph::is_status_sent() {
+            sys_seph::seph_recv(&mut spi_buffer, 0);
             seph::handle_event(&mut self.apdu_buffer, &spi_buffer);
         }
 
@@ -151,8 +152,8 @@ impl Comm {
             },
             APDU_RAW => {
                 let len = (self.tx as u16).to_be_bytes();
-                seph::seph_send(&[seph::SephTags::RawAPDU as u8, len[0], len[1]]);
-                seph::seph_send(&self.apdu_buffer[..self.tx]);
+                sys_seph::seph_send(&[sys_seph::SephTags::RawAPDU as u8, len[0], len[1]]);
+                sys_seph::seph_send(&self.apdu_buffer[..self.tx]);
             }
             #[cfg(feature = "ccid")]
             APDU_USB_CCID => {
@@ -245,12 +246,12 @@ impl Comm {
         loop {
             // Signal end of command stream from SE to MCU
             // And prepare reception
-            if !seph::is_status_sent() {
-                seph::send_general_status();
+            if !sys_seph::is_status_sent() {
+                sys_seph::send_general_status();
             }
 
             // Fetch the next message from the MCU
-            let _rx = seph::seph_recv(&mut spi_buffer, 0);
+            let _rx = sys_seph::seph_recv(&mut spi_buffer, 0);
 
             // message = [ tag, len_hi, len_lo, ... ]
             let tag = spi_buffer[0];

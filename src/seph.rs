@@ -1,18 +1,10 @@
 #![allow(clippy::upper_case_acronyms)]
 
-use crate::bindings::*;
-use crate::usbbindings::*;
+use ledger_sdk_sys::*;
 
 #[cfg(target_os = "nanox")]
 use crate::ble;
 
-#[repr(u8)]
-pub enum SephTags {
-    ScreenDisplayStatus = SEPROXYHAL_TAG_SCREEN_DISPLAY_STATUS as u8,
-    GeneralStatus = SEPROXYHAL_TAG_GENERAL_STATUS as u8,
-    RawAPDU = SEPROXYHAL_TAG_RAPDU as u8,
-    Unknown,
-}
 #[repr(u8)]
 pub enum Events {
     USBXFEREvent = SEPROXYHAL_TAG_USB_EP_XFER_EVENT as u8,
@@ -36,16 +28,6 @@ pub enum UsbEp {
     USBEpPrepare = SEPROXYHAL_TAG_USB_EP_PREPARE as u8,
     USBEpPrepareDirIn = SEPROXYHAL_TAG_USB_EP_PREPARE_DIR_IN as u8,
     Unknown,
-}
-
-impl From<u8> for SephTags {
-    fn from(v: u8) -> SephTags {
-        match v as u32 {
-            SEPROXYHAL_TAG_SCREEN_DISPLAY_STATUS => SephTags::ScreenDisplayStatus,
-            SEPROXYHAL_TAG_GENERAL_STATUS => SephTags::GeneralStatus,
-            _ => SephTags::Unknown,
-        }
-    }
 }
 
 impl From<u8> for Events {
@@ -77,39 +59,6 @@ impl From<u8> for UsbEp {
             SEPROXYHAL_TAG_USB_EP_PREPARE_DIR_IN => UsbEp::USBEpPrepareDirIn,
             _ => UsbEp::Unknown,
         }
-    }
-}
-
-/// Wrapper for 'io_seph_send'
-/// Directly send buffer over the SPI channel to the MCU
-pub fn seph_send(buffer: &[u8]) {
-    unsafe { io_seph_send(buffer.as_ptr(), buffer.len() as u16) };
-}
-
-/// Wrapper for 'io_seph_recv'
-/// Receive the next APDU into 'buffer'
-pub fn seph_recv(buffer: &mut [u8], flags: u32) -> u16 {
-    unsafe { io_seph_recv(buffer.as_mut_ptr(), buffer.len() as u16, flags) }
-}
-
-/// Wrapper for 'io_seph_is_status_sent'
-pub fn is_status_sent() -> bool {
-    let status = unsafe { io_seph_is_status_sent() };
-    status == 1
-}
-
-/// Inform the MCU that the previous event was processed
-pub fn send_general_status() {
-    // XXX: Not sure we need this line to 'avoid troubles' like
-    // in the original SDK
-    //   if io_seproxyhal_spi_is_status_sent() {
-    //     return;
-    //   }
-    if !is_status_sent() {
-        // The two last bytes are supposed to be
-        // SEPROXYHAL_TAG_GENERAL_STATUS_LAST_COMMAND, which is 0u16
-        let status = [SephTags::GeneralStatus as u8, 0, 2, 0, 0];
-        seph_send(&status);
     }
 }
 
@@ -216,7 +165,7 @@ pub fn handle_usb_ep_xfer_event(apdu_buffer: &mut [u8], buffer: &[u8]) {
 }
 
 pub fn handle_capdu_event(apdu_buffer: &mut [u8], buffer: &[u8]) {
-    let mut io_app = unsafe { &mut G_io_app };
+    let io_app = unsafe { &mut G_io_app };
     if io_app.apdu_state == APDU_IDLE {
         let max = (apdu_buffer.len() - 3).min(buffer.len() - 3);
         let size = u16::from_be_bytes([buffer[1], buffer[2]]) as usize;

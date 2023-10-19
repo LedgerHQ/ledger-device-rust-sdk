@@ -1,6 +1,5 @@
 //! Random number generation functions
 
-// use crate::bindings::{cx_rng_u32, cx_rng_u8};
 use core::ops::Range;
 
 use num_traits::{Bounded, PrimInt, Unsigned};

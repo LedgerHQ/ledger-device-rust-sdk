@@ -38,7 +38,7 @@ pub fn test_panic(info: &PanicInfo) -> ! {
     debug_print("\n");
     debug_print(core::str::from_utf8(&to_hex(loc.line())).unwrap());
     debug_print("\n");
-    crate::exit_app(1);
+    ledger_sdk_sys::exit_app(1);
 }
 
 /// Custom type used to implement tests
@@ -53,8 +53,8 @@ pub struct TestType {
 /// using semihosting. Only reports 'Ok' or 'fail'.
 #[cfg(feature = "speculos")]
 pub fn sdk_test_runner(tests: &[&TestType]) {
-    use crate::{pic, pic_rs};
     use core::ffi::c_void;
+    use ledger_sdk_sys::{pic, pic_rs};
     let mut failures = 0;
     debug_print("--- Tests ---\n");
     for test_ in tests {
@@ -89,9 +89,9 @@ pub fn sdk_test_runner(tests: &[&TestType]) {
         debug_print("\n");
     }
     if failures > 0 {
-        crate::exit_app(1);
+        ledger_sdk_sys::exit_app(1);
     }
-    crate::exit_app(0);
+    ledger_sdk_sys::exit_app(0);
 }
 
 /// This variant of `assert_eq!()` returns an error
