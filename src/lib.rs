@@ -6,16 +6,12 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
-pub mod bindings;
-
 #[cfg(target_os = "nanox")]
 pub mod ble;
 
-pub mod buttons;
 #[cfg(feature = "ccid")]
 pub mod ccid;
 pub mod ecc;
-pub mod infos;
 pub mod io;
 pub mod nvm;
 pub mod random;
@@ -24,20 +20,21 @@ pub mod seph;
 
 pub mod testing;
 
-pub mod usbbindings;
 pub mod uxapp;
 
-use bindings::os_sched_exit;
-
-use core::{ffi::c_void, panic::PanicInfo};
+use core::panic::PanicInfo;
 
 /// In case of runtime problems, return an internal error and exit the app
 #[inline]
 pub fn exiting_panic(_info: &PanicInfo) -> ! {
     let mut comm = io::Comm::new();
     comm.reply(io::StatusWords::Panic);
-    exit_app(0);
+    ledger_sdk_sys::exit_app(0);
 }
+
+// re-export exit_app
+pub use ledger_sdk_sys::buttons;
+pub use ledger_sdk_sys::exit_app;
 
 /// Helper macro that sets an external panic handler
 /// as the project's current panic handler
@@ -61,38 +58,7 @@ extern "C" {
 pub extern "C" fn _start() -> ! {
     // Main is in C until the try_context can be set properly from Rust
     unsafe { c_main() };
-    exit_app(1);
-}
-
-/// Wrapper for 'os_sched_exit'
-/// Exit application with status
-pub fn exit_app(status: u8) -> ! {
-    unsafe { os_sched_exit(status) };
-    unreachable!("Did not exit properly");
-}
-
-// The Rust version of Pic()
-// hopefully there are ways to avoid that
-extern "C" {
-    fn pic(link_address: *mut c_void) -> *mut c_void;
-}
-
-/// Performs code address translation for reading data located in the program
-/// and relocated during application installation.
-pub fn pic_rs<T>(x: &T) -> &T {
-    let ptr = unsafe { pic(x as *const T as *mut c_void) as *const T };
-    unsafe { &*ptr }
-}
-
-/// Performs code address translation for reading mutable data located in the
-/// program and relocated during application installation.
-///
-/// Warning: this is for corner cases as it is not directly possible to write
-/// data stored in the code as it resides in Flash memory. This is needed in
-/// particular when using the `nvm` module.
-pub fn pic_rs_mut<T>(x: &mut T) -> &mut T {
-    let ptr = unsafe { pic(x as *mut T as *mut c_void) as *mut T };
-    unsafe { &mut *ptr }
+    ledger_sdk_sys::exit_app(1);
 }
 
 /// Data wrapper to force access through address translation with [`pic_rs`] or
@@ -119,12 +85,12 @@ impl<T> Pic<T> {
 
     /// Returns translated reference to the wrapped data.
     pub fn get_ref(&self) -> &T {
-        pic_rs(&self.data)
+        ledger_sdk_sys::pic_rs(&self.data)
     }
 
     /// Returns translated mutable reference to the wrapped data.
     pub fn get_mut(&mut self) -> &mut T {
-        pic_rs_mut(&mut self.data)
+        ledger_sdk_sys::pic_rs_mut(&mut self.data)
     }
 }
 
@@ -152,7 +118,7 @@ impl<T> NVMData<T> {
 
     #[cfg(target_os = "nanos")]
     pub fn get_mut(&mut self) -> &mut T {
-        crate::pic_rs_mut(&mut self.data)
+        ledger_sdk_sys::pic_rs_mut(&mut self.data)
     }
 
     /// This will return a mutable access by casting the pointer
@@ -171,7 +137,7 @@ impl<T> NVMData<T> {
             asm!( "mov {}, r9", out(reg) static_base);
             let offset = (addr - static_base) as isize;
             let data_addr = (_nvram_data as *const u8).offset(offset);
-            let pic_addr = crate::bindings::pic(data_addr as *mut c_void) as *mut T;
+            let pic_addr = ledger_sdk_sys::pic(data_addr as *mut core::ffi::c_void) as *mut T;
             &mut *pic_addr.cast()
         }
     }
