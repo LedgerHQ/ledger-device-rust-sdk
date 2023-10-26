@@ -79,7 +79,6 @@ impl From<CxError> for u32 {
     }
 }
 
-
 /// This structure serves the sole purpose of being cast into
 /// from `ECPrivateKey` or `ECPublicKey` when calling bindings
 /// to elliptic curve cryptographic bindings
