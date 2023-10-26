@@ -253,67 +253,75 @@ impl Comm {
             // Fetch the next message from the MCU
             let _rx = sys_seph::seph_recv(&mut spi_buffer, 0);
 
-            // message = [ tag, len_hi, len_lo, ... ]
-            let tag = spi_buffer[0];
-            let len = u16::from_be_bytes([spi_buffer[1], spi_buffer[2]]);
-
-            // XXX: check whether this is necessary
-            // if rx < 3 && rx != len+3 {
-            //     unsafe {
-            //        G_io_app.apdu_state = APDU_IDLE;
-            //        G_io_app.apdu_length = 0;
-            //     }
-            //     return None
-            // }
-
-            // Treat all possible events.
-            // If this is a button push, return with the associated event
-            // If this is an APDU, return with the "received command" event
-            // Any other event (usb, xfer, ticker) is silently handled
-            match seph::Events::from(tag) {
-                seph::Events::ButtonPush => {
-                    let button_info = spi_buffer[3] >> 1;
-                    if let Some(btn_evt) = get_button_event(&mut self.buttons, button_info) {
-                        return Event::Button(btn_evt);
-                    }
-                }
-                seph::Events::USBEvent => {
-                    if len == 1 {
-                        seph::handle_usb_event(spi_buffer[3]);
-                    }
-                }
-                seph::Events::USBXFEREvent => {
-                    if len >= 3 {
-                        seph::handle_usb_ep_xfer_event(&mut self.apdu_buffer, &spi_buffer);
-                    }
-                }
-                seph::Events::CAPDUEvent => {
-                    seph::handle_capdu_event(&mut self.apdu_buffer, &spi_buffer)
-                }
-
-                #[cfg(target_os = "nanox")]
-                seph::Events::BleReceive => ble::receive(&mut self.apdu_buffer, &spi_buffer),
-
-                seph::Events::TickerEvent => return Event::Ticker,
-                _ => (),
+            if let Some(value) = self.decode_event(&mut spi_buffer) {
+                return value;
             }
+        }
+    }
 
-            if unsafe { G_io_app.apdu_state } != APDU_IDLE && unsafe { G_io_app.apdu_length } > 0 {
-                self.rx = unsafe { G_io_app.apdu_length as usize };
-                let res = T::try_from(*self.get_apdu_metadata());
-                match res {
-                    Ok(ins) => {
-                        return Event::Command(ins);
-                    }
-                    Err(_) => {
-                        // Invalid Ins code. Send automatically an error, mask
-                        // the bad instruction to the application and just
-                        // discard this event.
-                        self.reply(StatusWords::BadIns);
-                    }
+    pub fn decode_event<T: TryFrom<ApduHeader>>(
+        &mut self,
+        spi_buffer: &mut [u8; 128],
+    ) -> Option<Event<T>> {
+        // message = [ tag, len_hi, len_lo, ... ]
+        let tag = spi_buffer[0];
+        let len = u16::from_be_bytes([spi_buffer[1], spi_buffer[2]]);
+
+        // XXX: check whether this is necessary
+        // if rx < 3 && rx != len+3 {
+        //     unsafe {
+        //        G_io_app.apdu_state = APDU_IDLE;
+        //        G_io_app.apdu_length = 0;
+        //     }
+        //     return None
+        // }
+
+        // Treat all possible events.
+        // If this is a button push, return with the associated event
+        // If this is an APDU, return with the "received command" event
+        // Any other event (usb, xfer, ticker) is silently handled
+        match seph::Events::from(tag) {
+            seph::Events::ButtonPush => {
+                let button_info = spi_buffer[3] >> 1;
+                if let Some(btn_evt) = get_button_event(&mut self.buttons, button_info) {
+                    return Some(Event::Button(btn_evt));
+                }
+            }
+            seph::Events::USBEvent => {
+                if len == 1 {
+                    seph::handle_usb_event(spi_buffer[3]);
+                }
+            }
+            seph::Events::USBXFEREvent => {
+                if len >= 3 {
+                    seph::handle_usb_ep_xfer_event(&mut self.apdu_buffer, spi_buffer);
+                }
+            }
+            seph::Events::CAPDUEvent => seph::handle_capdu_event(&mut self.apdu_buffer, spi_buffer),
+
+            #[cfg(target_os = "nanox")]
+            seph::Events::BleReceive => ble::receive(&mut self.apdu_buffer, spi_buffer),
+
+            seph::Events::TickerEvent => return Some(Event::Ticker),
+            _ => (),
+        }
+
+        if unsafe { G_io_app.apdu_state } != APDU_IDLE && unsafe { G_io_app.apdu_length } > 0 {
+            self.rx = unsafe { G_io_app.apdu_length as usize };
+            let res = T::try_from(*self.get_apdu_metadata());
+            match res {
+                Ok(ins) => {
+                    return Some(Event::Command(ins));
+                }
+                Err(_) => {
+                    // Invalid Ins code. Send automatically an error, mask
+                    // the bad instruction to the application and just
+                    // discard this event.
+                    self.reply(StatusWords::BadIns);
                 }
             }
         }
+        None
     }
 
     /// Wait for the next Command event. Returns the APDU Instruction byte value
