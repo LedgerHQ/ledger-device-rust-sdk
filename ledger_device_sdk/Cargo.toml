@@ -4,6 +4,7 @@ version = "1.0.0"
 authors = ["yhql"]
 edition = "2021"
 license.workspace = true
+description = "Ledger device Rust SDK"
 
 [dev-dependencies]
 # enable the 'speculos' feature when testing
