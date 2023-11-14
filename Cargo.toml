@@ -10,6 +10,6 @@ resolver = "2"
 [workspace.package]
 license = "Apache-2.0" 
 description = "Ledger Device Rust SDK crates"
-repository = "https://github.com/yogh333/ledger-device-rust-sdk.git"
+repository = "https://github.com/LedgerHQ/ledger-device-rust-sdk"
 readme = "README.md"
 authors = ["Ledger"]
