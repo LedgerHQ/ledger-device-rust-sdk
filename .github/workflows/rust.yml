@@ -107,4 +107,4 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --target ./${{ matrix.target }}.json --features speculos
+          args: -p ledger_device_rust_sdk --target ./${{ matrix.target }}.json --features speculos
