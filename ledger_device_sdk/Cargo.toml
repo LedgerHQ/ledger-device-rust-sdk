@@ -1,5 +1,5 @@
 [package]
-name = "ledger_device_rust_sdk"
+name = "ledger_device_sdk"
 version = "0.3.0"
 authors = ["yhql"]
 edition = "2021"
@@ -8,7 +8,7 @@ license.workspace = true
 [dev-dependencies]
 # enable the 'speculos' feature when testing
 # https://github.com/rust-lang/cargo/issues/2911#issuecomment-749580481
-ledger_device_rust_sdk = { path = ".", features = ["speculos"] }
+ledger_device_sdk = { path = ".", features = ["speculos"] }
 
 testmacro = { git = "https://github.com/yhql/testmacro"}
 
