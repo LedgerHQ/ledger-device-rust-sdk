@@ -1,0 +1,13 @@
+[package]
+name = "ledger_secure_sdk_sys"
+version = "1.0.0"
+authors = ["yhql"]
+edition = "2021"
+
+[build-dependencies]
+bindgen = "0.65.1"
+cc = "1.0.73"
+
+[features]
+lib_bagl = []
+ccid = []

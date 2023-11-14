@@ -1,0 +1,15 @@
+[target.nanos]
+runner = "speculos -m nanos --display=headless"
+
+[target.nanox]
+runner = "speculos -m nanox -a 5 --display=headless"
+
+[target.nanosplus]
+runner = "speculos -m nanosp -a 1 --display=headless"
+
+[unstable]
+build-std = ["core"]
+build-std-features = ["compiler-builtins-mem"]
+
+[build]
+target = "nanosplus"

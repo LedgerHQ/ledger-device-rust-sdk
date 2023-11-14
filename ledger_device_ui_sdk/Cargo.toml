@@ -1,0 +1,23 @@
+[package]
+name = "ledger_device_ui_sdk"
+version = "1.0.0"
+authors = ["yhql"]
+edition = "2021"
+license.workspace = true
+
+[dependencies]
+ledger_secure_sdk_sys = { path = "../ledger_secure_sdk_sys" }
+include_gif = { path = "../include_gif" }
+
+[features]
+speculos = []
+
+# This section is not necessary to build the package
+# it is only used to be able to do 
+# `cargo ledger build nanos -- --example gadgets`
+[package.metadata.nanos]
+curve = ["secp256k1"]
+flags = "0"
+icon = "ui_16x16.gif"
+icon_small = "ui_14x14.gif"
+path = [""]

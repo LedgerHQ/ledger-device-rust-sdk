@@ -1,29 +1,15 @@
-[package]
-name = "nanos_sdk"
-version = "0.3.0"
-authors = ["yhql"]
-edition = "2021"
+[workspace]
+members = [
+	"ledger_device_rust_sdk",
+	"ledger_device_ui_sdk",
+	"ledger_secure_sdk_sys",
+	"include_gif"
+]
+resolver = "2"
 
-[dev-dependencies]
-# enable the 'speculos' feature when testing
-# https://github.com/rust-lang/cargo/issues/2911#issuecomment-749580481
-nanos_sdk = { path = ".", features = ["speculos"] }
-
-testmacro = { git = "https://github.com/yhql/testmacro"}
-
-[dependencies]
-ledger-sdk-sys = { git = "https://github.com/LedgerHQ/secure-sdk-rust" }
-num-traits = { version = "0.2.14", default_features = false }
-rand_core = { version = "0.6.3", default_features = false }
-zeroize = { version = "1.6.0", default_features = false }
-
-[profile.release]
-opt-level = 's'
-lto = true
-
-[features]
-speculos = []
-pre1_54 = []
-lib_bagl = []
-ccid = []
-pending_review_screen = []
+[workspace.package]
+license = "Apache-2.0" 
+description = "Ledger Device Rust SDK crates"
+repository = "https://github.com/LedgerHQ/ledger-device-rust-sdk"
+readme = "README.md"
+authors = ["Ledger"]

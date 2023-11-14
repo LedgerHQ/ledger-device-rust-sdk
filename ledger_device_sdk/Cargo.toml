@@ -1,0 +1,30 @@
+[package]
+name = "ledger_device_sdk"
+version = "1.0.0"
+authors = ["yhql"]
+edition = "2021"
+license.workspace = true
+
+[dev-dependencies]
+# enable the 'speculos' feature when testing
+# https://github.com/rust-lang/cargo/issues/2911#issuecomment-749580481
+ledger_device_sdk = { path = ".", features = ["speculos"] }
+
+testmacro = { git = "https://github.com/yhql/testmacro"}
+
+[dependencies]
+ledger_secure_sdk_sys = { path = "../ledger_secure_sdk_sys" }
+num-traits = { version = "0.2.14", default_features = false }
+rand_core = { version = "0.6.3", default_features = false }
+zeroize = { version = "1.6.0", default_features = false }
+
+[profile.release]
+opt-level = 's'
+lto = true
+
+[features]
+speculos = []
+pre1_54 = []
+lib_bagl = []
+ccid = []
+pending_review_screen = []

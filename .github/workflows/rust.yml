@@ -37,7 +37,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --target ./${{ matrix.target }}.json
+          args: -p ledger_device_rust_sdk --target ledger_device_rust_sdk/${{ matrix.target }}.json
   fmt:
     runs-on: ubuntu-latest
     steps:
@@ -52,7 +52,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: fmt
-          args: --all -- --check
+          args: -p ledger_device_rust_sdk --all -- --check
 
   build:
     runs-on: ubuntu-latest
@@ -78,7 +78,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --target ./${{ matrix.target }}.json
+          args: -p ledger_device_rust_sdk --target ledger_device_rust_sdk/${{ matrix.target }}.json
 
   test:
     runs-on: ubuntu-latest
@@ -107,4 +107,4 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --target ./${{ matrix.target }}.json --features speculos
+          args: -p ledger_device_rust_sdk --target ledger_device_rust_sdk/${{ matrix.target }}.json --features speculos
