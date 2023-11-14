@@ -3,6 +3,7 @@ name = "ledger_device_rust_sdk"
 version = "0.3.0"
 authors = ["yhql"]
 edition = "2021"
+license.workspace = true
 
 [dev-dependencies]
 # enable the 'speculos' feature when testing

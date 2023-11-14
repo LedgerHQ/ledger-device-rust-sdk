@@ -7,9 +7,9 @@ fn panic(_: &PanicInfo) -> ! {
     loop {}
 }
 
-use nanos_sdk::buttons::*;
-use nanos_ui::layout::{Layout, Location, StringPlace};
-use nanos_ui::ui;
+use ledger_device_rust_sdk::buttons::*;
+use ledger_device_ui_sdk::layout::{Layout, Location, StringPlace};
+use ledger_device_ui_sdk::ui;
 
 fn wait_any() {
     let mut buttons = ButtonsState::new();
@@ -96,8 +96,8 @@ extern "C" fn sample_main() {
 
     ui::clear_screen();
 
-    use nanos_ui::bagls::RectFull as Rect;
-    use nanos_ui::layout::Draw;
+    use ledger_device_ui_sdk::bagls::RectFull as Rect;
+    use ledger_device_ui_sdk::layout::Draw;
 
     Rect::new()
         .width(10)
@@ -118,16 +118,16 @@ extern "C" fn sample_main() {
 
     ui::clear_screen();
 
-    let checkmark = nanos_ui::bagls::CHECKMARK_ICON.set_x(0).set_y(4);
+    let checkmark = ledger_device_ui_sdk::bagls::CHECKMARK_ICON.set_x(0).set_y(4);
     checkmark.instant_display();
-    nanos_ui::bagls::CROSS_ICON
+    ledger_device_ui_sdk::bagls::CROSS_ICON
         .set_x(20)
         .set_y(4)
         .instant_display();
-    nanos_ui::bagls::COGGLE.set_x(40).set_y(4).instant_display();
+    ledger_device_ui_sdk::bagls::COGGLE.set_x(40).set_y(4).instant_display();
     wait_any();
     checkmark.instant_erase();
     wait_any();
 
-    nanos_sdk::exit_app(0);
+    ledger_device_rust_sdk::exit_app(0);
 }

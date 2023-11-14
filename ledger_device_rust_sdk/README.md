@@ -4,7 +4,6 @@ Crate that allows developing Ledger Nano apps in Rust with a default configurati
 
 Contains:
 
-- low-level pre-generated bindings to the C SDK version 2.0
 - some safe wrappers over common syscalls
 - IO abstractions
 - signature abstractions
