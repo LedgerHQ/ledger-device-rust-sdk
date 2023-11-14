@@ -1,0 +1,22 @@
+[target.nanos]
+runner = "speculos --model nanos"
+
+[target.nanox]
+runner = "speculos -a 1 --model nanox"
+
+[target.nanosplus]
+runner = "speculos -a 1 --model nanosp"
+
+[unstable]
+build-std = ["core"]
+build-std-features = ["compiler-builtins-mem"]
+
+[build]
+target = "nanos"
+
+[alias]
+bns = "build --example gadgets --release --features speculos --target=nanos"
+bnsp = "build --example gadgets --release --features speculos --target=nanosplus"
+rns = "run --example gadgets --release --features speculos --target=nanos"
+rnx = "run --example gadgets --release --features speculos --target=nanox" 
+rnsp = "run --example gadgets --release --features speculos --target=nanosplus"
