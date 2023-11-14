@@ -4,10 +4,11 @@ version = "1.0.0"
 authors = ["yhql"]
 edition = "2021"
 license.workspace = true
+description = "Ledger devices abstractions for displaying text, icons, menus and other common gadgets to the screen"
 
 [dependencies]
-ledger_secure_sdk_sys = { path = "../ledger_secure_sdk_sys" }
-include_gif = { path = "../include_gif" }
+ledger_secure_sdk_sys = "1.0.0"
+include_gif = "1.0.0"
 
 [features]
 speculos = []
