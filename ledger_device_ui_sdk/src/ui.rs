@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 
 use ledger_secure_sdk_sys::{seph, buttons::{get_button_event, ButtonEvent, ButtonsState}};
+use ledger_device_sdk::{io, buttons::ButtonEvent::*};
+
+use crate::bitmaps::Glyph;
 
 use crate::bagls::*;
 
@@ -300,6 +303,189 @@ impl<'a> Menu<'a> {
                 }
                 _ => (),
             }
+        }
+    }
+}
+
+pub enum PageStyle {
+    PictureNormal, // Picture (should be 16x16) with two lines of text (page layout depends on device).
+    PictureBold,   // Icon on top with one line of text on the bottom.
+    BoldNormal,    // One line of bold text and one line of normal text.
+    Normal,        // 2 lines of centered text.
+}
+
+pub struct Page<'a> {
+    style: PageStyle,
+    label: [&'a str; 2],
+    glyph: Option<&'a Glyph<'a>>,
+}
+
+// new_picture_normal
+impl<'a> From<([&'a str; 2], &'a Glyph<'a>)> for Page<'a> {
+    fn from((label, glyph): ([&'a str; 2], &'a Glyph<'a>)) -> Page<'a> {
+        Page::new(PageStyle::PictureNormal, label, Some(glyph))
+    }
+}
+
+// new bold normal or new normal
+impl<'a> From<([&'a str; 2], bool)> for Page<'a> {
+    fn from((label, bold): ([&'a str; 2], bool)) -> Page<'a> {
+        if bold {
+            Page::new(PageStyle::BoldNormal, label, None)
+        }
+        else
+        {
+            Page::new(PageStyle::Normal, label, None)
+        }
+    }
+}
+
+// new picture bold
+impl<'a> From<(&'a str, &'a Glyph<'a>)> for Page<'a> {
+    fn from((label, glyph): (&'a str, &'a Glyph<'a>)) -> Page<'a> {
+        let label = [label, ""];
+        Page::new(PageStyle::PictureBold, label, Some(glyph))
+    }
+}
+
+impl<'a> Page<'a> {
+    pub fn new(style: PageStyle, label: [&'a str; 2], glyph: Option<&'a Glyph<'a>>) -> Self {
+        Page {
+            style,
+            label,
+            glyph,
+        }
+    }
+
+    }
+
+    pub fn place(&self) {
+        clear_screen();
+        match self.style {
+            PageStyle::PictureNormal => {
+                let mut icon_x = 16;
+                let mut icon_y = 8;
+                if cfg!(target_os = "nanos") {
+                    self.label
+                        .place(Location::Middle, Layout::Custom(41), false);
+                } else {
+                    icon_x = 57;
+                    icon_y = 10;
+                    self.label
+                        .place(Location::Custom(28), Layout::Centered, false);
+                }
+                match self.glyph {
+                    Some(glyph) => {
+                        let icon = Icon::from(glyph);
+                        icon.set_x(icon_x).set_y(icon_y).display();
+                    }
+                    None => {}
+                }
+            }
+            PageStyle::PictureBold => {
+                let mut icon_x = 56;
+                let mut icon_y = 2;
+                if cfg!(target_os = "nanos") {
+                    self.label[0].place(Location::Bottom, Layout::Centered, true);
+                } else {
+                    icon_x = 57;
+                    icon_y = 17;
+                    self.label[0].place(Location::Custom(35), Layout::Centered, true);
+                }
+                match self.glyph {
+                    Some(glyph) => {
+                        let icon = Icon::from(glyph);
+                        icon.set_x(icon_x).set_y(icon_y).display();
+                    }
+                    None => {}
+                }
+            }
+            PageStyle::BoldNormal => {
+                let padding = 1;
+                let total_height = OPEN_SANS[0].height as usize
+                    + OPEN_SANS[1].height as usize
+                    + 2 * padding as usize;
+                let mut cur_y = Location::Middle.get_y(total_height);
+                self.label[0].place(Location::Custom(cur_y), Layout::Centered, true);
+                cur_y += OPEN_SANS[0].height as usize + 2 * padding as usize;
+                self.label[1].place(Location::Custom(cur_y), Layout::Centered, false);
+            }
+            PageStyle::Normal => {
+                self.label.place(Location::Middle, Layout::Centered, false);
+            }
+        }
+    }
+}
+
+pub enum EventOrPageIndex {
+    Event(io::Event<io::ApduHeader>),
+    Index(usize)
+}
+
+pub struct MultiPageMenu<'a> {
+    comm : &'a mut io::Comm,
+    pages: &'a [&'a Page<'a>],
+}
+
+impl<'a> MultiPageMenu<'a> {
+    pub fn new(comm: &'a mut io::Comm,  pages: &'a [&'a Page]) -> Self {
+        MultiPageMenu { comm, pages }
+    }
+
+    pub fn show(&mut self) -> EventOrPageIndex {
+        clear_screen();
+        
+        self.pages[0].place();
+
+        LEFT_ARROW.display();
+        RIGHT_ARROW.display();
+
+        crate::screen_util::screen_update();
+
+        let mut index = 0;
+
+        loop {
+            match self.comm.next_event() {
+                io::Event::Button(button) => {
+                    match button {
+                        LeftButtonPress => {
+                            LEFT_S_ARROW.instant_display();
+                        }
+                        RightButtonPress => {
+                            RIGHT_S_ARROW.instant_display();
+                        }
+                        BothButtonsRelease => return EventOrPageIndex::Index(index), 
+                        b => {
+                            match b {
+                                LeftButtonRelease => {
+                                    LEFT_S_ARROW.erase();
+                                    if index as i16 - 1 < 0 {
+                                        index = self.pages.len() - 1;
+                                    } else {
+                                        index = index.saturating_sub(1);
+                                    }
+                                }
+                                RightButtonRelease => {
+                                    RIGHT_S_ARROW.erase();
+                                    if index < self.pages.len() - 1 {
+                                        index += 1;
+                                    } else {
+                                        index = 0;
+                                    }
+                                }
+                                _ => (),
+                            }
+                            clear_screen();
+                            self.pages[index].place();
+                            LEFT_ARROW.display();
+                            RIGHT_ARROW.display();
+                            crate::screen_util::screen_update();
+                        }
+                    }
+                },
+                io::Event::Command(ins) => return EventOrPageIndex::Event(io::Event::Command(ins)),
+                _ => (),
+            };
         }
     }
 }

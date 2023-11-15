@@ -8,6 +8,7 @@ description = "Ledger devices abstractions for displaying text, icons, menus and
 
 [dependencies]
 ledger_secure_sdk_sys = "1.0.0"
+ledger_device_sdk = "1.0.0"
 include_gif = "1.0.0"
 
 [features]

@@ -3,6 +3,7 @@ pub enum Layout {
     LeftAligned,
     RightAligned,
     Centered,
+    Custom(usize),
 }
 
 impl Layout {
@@ -11,6 +12,7 @@ impl Layout {
             Layout::LeftAligned => crate::PADDING,
             Layout::Centered => (crate::SCREEN_WIDTH - width) / 2,
             Layout::RightAligned => crate::SCREEN_WIDTH - crate::PADDING - width,
+            Layout::Custom(x) => *x,
         }
     }
 }
@@ -26,9 +28,9 @@ pub enum Location {
 impl Location {
     pub fn get_y(&self, height: usize) -> usize {
         match self {
-            Location::Top => 0,
+            Location::Top => crate::Y_PADDING,
             Location::Middle => (crate::SCREEN_HEIGHT - height) / 2,
-            Location::Bottom => crate::SCREEN_HEIGHT - height,
+            Location::Bottom => crate::SCREEN_HEIGHT - height - crate::Y_PADDING,
             Location::Custom(y) => *y,
         }
     }
