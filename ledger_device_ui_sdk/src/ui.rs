@@ -10,6 +10,10 @@ use crate::bagls::*;
 use crate::layout;
 use crate::layout::{Draw, Location, StringPlace};
 
+use numtoa::NumToA;
+
+const MAX_CHAR_PER_LINE: usize = 18;
+
 /// Handles communication to filter
 /// out actual events, and converts key
 /// events into presses/releases
@@ -307,6 +311,7 @@ impl<'a> Menu<'a> {
     }
 }
 
+#[derive(Copy, Clone)]
 pub enum PageStyle {
     PictureNormal, // Picture (should be 16x16) with two lines of text (page layout depends on device).
     PictureBold,   // Icon on top with one line of text on the bottom.
@@ -314,10 +319,13 @@ pub enum PageStyle {
     Normal,        // 2 lines of centered text.
 }
 
+#[derive(Copy, Clone)]
 pub struct Page<'a> {
     style: PageStyle,
     label: [&'a str; 2],
     glyph: Option<&'a Glyph<'a>>,
+    chunk_count: u8,
+    chunk_idx: u8,
 }
 
 // new_picture_normal
@@ -350,17 +358,37 @@ impl<'a> From<(&'a str, &'a Glyph<'a>)> for Page<'a> {
 
 impl<'a> Page<'a> {
     pub fn new(style: PageStyle, label: [&'a str; 2], glyph: Option<&'a Glyph<'a>>) -> Self {
+        let chunk_count = 0;
+        let chunk_idx = 0;
         Page {
             style,
             label,
             glyph,
+            chunk_count,
+            chunk_idx,
         }
     }
 
-    }
-
     pub fn place(&self) {
-        clear_screen();
+        let mut label_bytes = [0u8; MAX_CHAR_PER_LINE];
+        let mut label_str: &str = "";
+        // Notes: 
+        // * chunk_count and chunk_idx are only used for multi-page fields
+        //   and are set to 0 by default. MultiFieldReview is the only place where
+        //   these values are set.
+        // * Only pages of style BoldNormal will display the chunk count and index. 
+        if self.chunk_count > 1 {
+            // Convert the chunk count to a string
+            let mut chunk_count_buf = [0u8;3]; 
+            let chunk_count_str = self.chunk_count.numtoa_str(10,&mut chunk_count_buf);  
+            // Convert the chunk index to a string
+            let mut chunk_idx_buf = [0u8;3]; 
+            let chunk_idx_str = self.chunk_idx.numtoa_str(10,&mut chunk_idx_buf); 
+            // Add the chunk count and index to the label
+            concatenate(&[self.label[0], " (", chunk_idx_str, "/", chunk_count_str, ")"], &mut label_bytes);
+            label_str = core::str::from_utf8(&mut label_bytes).unwrap();            
+        }
+
         match self.style {
             PageStyle::PictureNormal => {
                 let mut icon_x = 16;
@@ -406,7 +434,12 @@ impl<'a> Page<'a> {
                     + OPEN_SANS[1].height as usize
                     + 2 * padding as usize;
                 let mut cur_y = Location::Middle.get_y(total_height);
-                self.label[0].place(Location::Custom(cur_y), Layout::Centered, true);
+                if self.chunk_count > 1 {
+                    label_str.place(Location::Custom(cur_y), Layout::Centered, true);
+                }
+                else {
+                    self.label[0].place(Location::Custom(cur_y), Layout::Centered, true);
+                }
                 cur_y += OPEN_SANS[0].height as usize + 2 * padding as usize;
                 self.label[1].place(Location::Custom(cur_y), Layout::Centered, false);
             }
@@ -415,6 +448,22 @@ impl<'a> Page<'a> {
             }
         }
     }
+
+    pub fn place_and_wait(&self) {
+        let mut buttons = ButtonsState::new();
+
+        self.place();
+
+        loop {
+            match get_event(&mut buttons) {
+                Some(ButtonEvent::LeftButtonRelease)
+                | Some(ButtonEvent::RightButtonRelease)
+                | Some(ButtonEvent::BothButtonsRelease) => return,
+                _ => (),
+            }
+        }
+    }
+
 }
 
 pub enum EventOrPageIndex {
@@ -529,7 +578,7 @@ impl<'a> SingleMessage<'a> {
 /// A horizontal scroller that
 /// splits any given message
 /// over several panes in chunks
-/// of CHAR_N characters.
+/// of MAX_CHAR_PER_LINE characters.
 /// Press both buttons to exit.
 pub struct MessageScroller<'a> {
     message: &'a str,
@@ -543,8 +592,7 @@ impl<'a> MessageScroller<'a> {
     pub fn event_loop(&self) {
         clear_screen();
         let mut buttons = ButtonsState::new();
-        const CHAR_N: usize = 16;
-        let page_count = (self.message.len() - 1) / CHAR_N + 1;
+        let page_count = (self.message.len() - 1) / MAX_CHAR_PER_LINE + 1;
         if page_count == 0 {
             return;
         }
@@ -554,8 +602,8 @@ impl<'a> MessageScroller<'a> {
         // A closure to draw common elements of the screen
         // cur_page passed as parameter to prevent borrowing
         let mut draw = |page: usize| {
-            let start = page * CHAR_N;
-            let end = (start + CHAR_N).min(self.message.len());
+            let start = page * MAX_CHAR_PER_LINE;
+            let end = (start + MAX_CHAR_PER_LINE).min(self.message.len());
             let chunk = &self.message[start..end];
             label.erase();
             label.text = &chunk;
@@ -598,6 +646,157 @@ impl<'a> MessageScroller<'a> {
                 }
                 Some(ButtonEvent::BothButtonsRelease) => break,
                 Some(_) | None => (),
+            }
+        }
+    }
+}
+
+pub struct Field<'a> {
+    pub name: &'a str,
+    pub value: &'a str,
+}
+pub struct MultiFieldReview<'a> {
+    fields: &'a [Field<'a>],
+    review_message: &'a[&'a str],
+    review_glyph: Option<&'a Glyph<'a>>,
+    validation_message: &'a str,
+    validation_glyph: Option<&'a Glyph<'a>>,
+    cancel_message: &'a str,
+    cancel_glyph: Option<&'a Glyph<'a>>,
+}
+
+// Function to concatenate multiple strings into a fixed-size array
+fn concatenate(strings: &[&str], output: &mut [u8]) {
+    let mut offset = 0;
+
+    for s in strings {
+        let s_len = s.len();
+        let copy_len = core::cmp::min(s_len, output.len() - offset);
+
+        if copy_len > 0 {
+            output[offset..offset + copy_len].copy_from_slice(&s.as_bytes()[..copy_len]);
+            offset += copy_len;
+        } else {
+            // If the output buffer is full, stop concatenating.
+            break;
+        }
+    }
+}
+
+impl<'a> MultiFieldReview<'a> {
+    pub fn new(fields: &'a [Field<'a>],
+               review_message: &'a [&'a str],
+               review_glyph: Option<&'a Glyph<'a>>,
+               validation_message: &'a str,
+               validation_glyph: Option<&'a Glyph<'a>>,
+               cancel_message: &'a str,
+               cancel_glyph: Option<&'a Glyph<'a>>) -> Self {
+        MultiFieldReview {
+            fields,
+            review_message,
+            review_glyph,
+            validation_message,
+            validation_glyph,
+            cancel_message,
+            cancel_glyph,
+        }
+    }
+
+    pub fn show(&self) -> bool {
+        let mut buttons = ButtonsState::new();
+
+        let first_page = match self.review_message.len() {
+            0 => {
+                Page::new(PageStyle::PictureNormal, ["", ""], self.review_glyph)
+            }
+            1 => {
+                Page::new(PageStyle::PictureBold, [self.review_message[0], ""], self.review_glyph)
+            }
+            _ => {
+                Page::new(PageStyle::PictureNormal, [self.review_message[0], self.review_message[1]], self.review_glyph)
+            }
+        };
+        let validation_page = Page::new(PageStyle::PictureBold, [self.validation_message, ""], self.validation_glyph);
+        let cancel_page = Page::new(PageStyle::PictureBold, [self.cancel_message, ""], self.cancel_glyph);
+        let mut review_pages: [Page; 32] = [Page::new(PageStyle::Normal, ["", ""], None); 32];
+        let mut total_page_count = 0;
+ 
+        // Determine each field page count
+        for field in self.fields {
+            let field_page_count = (field.value.len() - 1) / MAX_CHAR_PER_LINE + 1;
+            // Create pages for each chunk of the field            
+            for i in 0..field_page_count {
+                let start = i * MAX_CHAR_PER_LINE;
+                let end = (start + MAX_CHAR_PER_LINE).min(field.value.len());
+                let chunk = &field.value[start..end];
+                review_pages[total_page_count] = Page::new(PageStyle::BoldNormal, [field.name, chunk], None);
+                review_pages[total_page_count].chunk_count = field_page_count as u8;
+                review_pages[total_page_count].chunk_idx = (i + 1) as u8;
+                total_page_count += 1;
+            }
+        }
+
+        review_pages[total_page_count] = validation_page;
+        total_page_count += 1;
+        review_pages[total_page_count] = cancel_page;
+
+        clear_screen();
+        first_page.place_and_wait();
+        crate::screen_util::screen_update();
+        clear_screen();
+        RIGHT_ARROW.display();
+
+        let mut cur_page = 0;
+        review_pages[cur_page].place();
+
+        loop {
+            match get_event(&mut buttons) {
+                Some(ButtonEvent::LeftButtonPress) => {
+                    if cur_page > 0 {
+                        LEFT_S_ARROW.instant_display();
+                    }
+                }
+                Some(ButtonEvent::RightButtonPress) => {
+                    if cur_page < total_page_count {
+                        RIGHT_S_ARROW.instant_display();
+                    }
+                }
+                Some(b) => {
+                    match b {
+                        ButtonEvent::LeftButtonRelease => {
+                            if cur_page > 0 {
+                                cur_page -= 1;
+                            }
+                        }
+                        ButtonEvent::RightButtonRelease => {
+                            if cur_page < total_page_count {
+                                cur_page += 1;
+                            }
+                        }
+                        ButtonEvent::BothButtonsRelease => 
+                        {
+                            if cur_page == total_page_count {
+                                // Cancel
+                                return false;
+                            }
+                            else if cur_page == total_page_count - 1 {
+                                // Validate
+                                return true;
+                            }
+                        }
+                        _ => (),
+                    }
+                    clear_screen();
+                    review_pages[cur_page].place();
+                    if cur_page > 0 {
+                        LEFT_ARROW.display();
+                    }
+                    if cur_page < total_page_count {
+                        RIGHT_ARROW.display();
+                    }
+                    crate::screen_util::screen_update();
+                }
+                _ => (),
             }
         }
     }
