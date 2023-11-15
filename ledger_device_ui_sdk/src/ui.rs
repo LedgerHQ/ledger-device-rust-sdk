@@ -497,17 +497,10 @@ impl<'a> MultiPageMenu<'a> {
             match self.comm.next_event() {
                 io::Event::Button(button) => {
                     match button {
-                        LeftButtonPress => {
-                            LEFT_S_ARROW.instant_display();
-                        }
-                        RightButtonPress => {
-                            RIGHT_S_ARROW.instant_display();
-                        }
                         BothButtonsRelease => return EventOrPageIndex::Index(index), 
                         b => {
                             match b {
                                 LeftButtonRelease => {
-                                    LEFT_S_ARROW.erase();
                                     if index as i16 - 1 < 0 {
                                         index = self.pages.len() - 1;
                                     } else {
@@ -515,7 +508,6 @@ impl<'a> MultiPageMenu<'a> {
                                     }
                                 }
                                 RightButtonRelease => {
-                                    RIGHT_S_ARROW.erase();
                                     if index < self.pages.len() - 1 {
                                         index += 1;
                                     } else {
@@ -751,16 +743,6 @@ impl<'a> MultiFieldReview<'a> {
 
         loop {
             match get_event(&mut buttons) {
-                Some(ButtonEvent::LeftButtonPress) => {
-                    if cur_page > 0 {
-                        LEFT_S_ARROW.instant_display();
-                    }
-                }
-                Some(ButtonEvent::RightButtonPress) => {
-                    if cur_page < total_page_count {
-                        RIGHT_S_ARROW.instant_display();
-                    }
-                }
                 Some(b) => {
                     match b {
                         ButtonEvent::LeftButtonRelease => {
