@@ -118,13 +118,18 @@ extern "C" fn sample_main() {
 
     ui::clear_screen();
 
-    let checkmark = ledger_device_ui_sdk::bagls::CHECKMARK_ICON.set_x(0).set_y(4);
+    let checkmark = ledger_device_ui_sdk::bagls::CHECKMARK_ICON
+        .set_x(0)
+        .set_y(4);
     checkmark.instant_display();
     ledger_device_ui_sdk::bagls::CROSS_ICON
         .set_x(20)
         .set_y(4)
         .instant_display();
-    ledger_device_ui_sdk::bagls::COGGLE.set_x(40).set_y(4).instant_display();
+    ledger_device_ui_sdk::bagls::COGGLE
+        .set_x(40)
+        .set_y(4)
+        .instant_display();
     wait_any();
     checkmark.instant_erase();
     wait_any();

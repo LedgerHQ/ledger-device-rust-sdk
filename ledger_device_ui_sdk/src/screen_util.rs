@@ -6,15 +6,16 @@ pub fn draw(x_pos: i32, y_pos: i32, w: u32, h: u32, inv: bool, bmp: &[u8]) {
     let inverted = [inv as u32, !inv as u32];
     unsafe {
         ledger_secure_sdk_sys::bagl_hal_draw_bitmap_within_rect(
-            x_pos, 
-            y_pos, 
-            w, 
-            h, 
-            2, 
-            inverted.as_ptr(), 
-            1, 
-            bmp.as_ptr(), 
-            w * h);
+            x_pos,
+            y_pos,
+            w,
+            h,
+            2,
+            inverted.as_ptr(),
+            1,
+            bmp.as_ptr(),
+            w * h,
+        );
     }
 }
 
