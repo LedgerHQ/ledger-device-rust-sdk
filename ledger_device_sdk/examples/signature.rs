@@ -8,7 +8,7 @@ fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
-use ledger_device_rust_sdk::ecc::{make_bip32_path, Secp256r1, SeedDerive};
+use ledger_device_sdk::ecc::{make_bip32_path, Secp256r1, SeedDerive};
 
 const PATH: [u32; 5] = make_bip32_path(b"m/44'/123'/0'/0/0");
 

@@ -7,7 +7,7 @@ fn panic(_: &PanicInfo) -> ! {
     loop {}
 }
 
-use ledger_device_rust_sdk::buttons::*;
+use ledger_device_sdk::buttons::*;
 use ledger_device_ui_sdk::layout::{Layout, Location, StringPlace};
 use ledger_device_ui_sdk::ui;
 
@@ -134,5 +134,5 @@ extern "C" fn sample_main() {
     checkmark.instant_erase();
     wait_any();
 
-    ledger_device_rust_sdk::exit_app(0);
+    ledger_device_sdk::exit_app(0);
 }
