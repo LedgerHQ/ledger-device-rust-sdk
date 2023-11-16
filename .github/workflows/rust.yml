@@ -15,96 +15,66 @@ env:
 
 jobs:
   clippy:
+    name: Run static analysis
     runs-on: ubuntu-latest
-
+    container:
+        image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
     strategy:
       matrix:
         target: ["nanos", "nanox", "nanosplus"]
-
     steps:
-      - name: arm-none-eabi-gcc
-        uses: fiam/arm-none-eabi-gcc@v1.0.3
-        with:
-          release: '9-2019-q4'
-      - name: Install toolchains
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
-          components: rust-src, clippy
-      - uses: actions/checkout@v2
+      - name: Clone
+        uses: actions/checkout@v2
       - name: Cargo clippy
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: -p ledger_device_rust_sdk --target ledger_device_rust_sdk/${{ matrix.target }}.json
-  fmt:
+          args: -p ledger_device_sdk --target ledger_device_sdk/${{ matrix.target }}.json
+  
+  format:
+    name: Check code formatting
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
     steps:
-      - name: Install toolchains
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
-          components: rust-src, rustfmt
-      - uses: actions/checkout@v2
-      - name: Cargo fmt
+      - name: Clone
+        uses: actions/checkout@v2
+      - name: Run cargo fmt
         uses: actions-rs/cargo@v1
         with:
           command: fmt
-          args: -p ledger_device_rust_sdk --all -- --check
+          args: -p ledger_device_sdk --all -- --check
 
   build:
+    name: Build SDK
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
     strategy:
       matrix:
         target: ["nanos", "nanox", "nanosplus"]
-
     steps:
-      - name: arm-none-eabi-gcc
-        uses: fiam/arm-none-eabi-gcc@v1.0.3
-        with:
-          release: '9-2019-q4'
-      - name: Install clang
-        run: sudo apt-get update && sudo apt install -y clang
-      - name: Install toolchains
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
-          components: rust-src
-      - uses: actions/checkout@v2
+      - name: Clone
+        uses: actions/checkout@v2
       - name: Cargo build
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: -p ledger_device_rust_sdk --target ledger_device_rust_sdk/${{ matrix.target }}.json
+          args: -p ledger_device_sdk --target ledger_device_sdk/${{ matrix.target }}.json
 
   test:
+    name: Run unit tests
     runs-on: ubuntu-latest
+    container:
+        image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
     strategy:
       matrix:
         target: ["nanos", "nanox", "nanosplus"]
-
     steps:
-      - name: arm-none-eabi-gcc
-        uses: fiam/arm-none-eabi-gcc@v1.0.3
-        with:
-          release: '9-2019-q4'
-      - name: Install clang
-        run: sudo apt-get update && sudo apt install -y clang
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
-          components: rust-src
-      - name: Install dependencies
-        run: |
-          sudo apt-get update && sudo apt-get install -y qemu-user-static
-          pip install speculos --extra-index-url https://test.pypi.org/simple/
-      - uses: actions/checkout@v2
+      - name: Clone
+        uses: actions/checkout@v2
       - name: Unit tests
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: -p ledger_device_rust_sdk --target ledger_device_rust_sdk/${{ matrix.target }}.json --features speculos
+          args: -p ledger_device_sdk --target ledger_device_sdk/${{ matrix.target }}.json --features speculos
