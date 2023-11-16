@@ -11,9 +11,12 @@ extern "C" {
 impl StringPlace for &str {
     fn compute_width(&self, bold: bool) -> usize {
         let font_choice = bold as usize;
-        self.as_bytes().iter().map(ledger_secure_sdk_sys::pic_rs).fold(0, |acc, c| {
-            acc + OPEN_SANS[font_choice].dims[*c as usize - 0x20] as usize
-        })
+        self.as_bytes()
+            .iter()
+            .map(ledger_secure_sdk_sys::pic_rs)
+            .fold(0, |acc, c| {
+                acc + OPEN_SANS[font_choice].dims[*c as usize - 0x20] as usize
+            })
     }
 
     fn place(&self, loc: Location, layout: Layout, bold: bool) {
@@ -52,7 +55,7 @@ impl StringPlace for [&str] {
 
     fn place(&self, loc: Location, layout: Layout, bold: bool) {
         let c_height = OPEN_SANS[bold as usize].height as usize;
-        let padding = if self.len() > 4 { 0 } else { 2 };
+        let padding = if self.len() > 4 { 0 } else { 1 };
         let total_height = self.len() * (c_height + padding);
         let mut cur_y = loc.get_y(total_height);
         for string in self.iter() {

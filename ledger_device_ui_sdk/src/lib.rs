@@ -18,6 +18,7 @@ pub mod screen_util;
 pub mod ui;
 
 pub const PADDING: usize = 2;
+pub const Y_PADDING: usize = 3;
 pub const SCREEN_WIDTH: usize = 128;
 
 #[cfg(target_os = "nanos")]

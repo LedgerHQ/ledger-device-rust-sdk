@@ -137,7 +137,8 @@ impl<T> NVMData<T> {
             asm!( "mov {}, r9", out(reg) static_base);
             let offset = (addr - static_base) as isize;
             let data_addr = (_nvram_data as *const u8).offset(offset);
-            let pic_addr = ledger_secure_sdk_sys::pic(data_addr as *mut core::ffi::c_void) as *mut T;
+            let pic_addr =
+                ledger_secure_sdk_sys::pic(data_addr as *mut core::ffi::c_void) as *mut T;
             &mut *pic_addr.cast()
         }
     }
