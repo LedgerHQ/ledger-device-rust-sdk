@@ -7,9 +7,9 @@ license.workspace = true
 description = "Ledger devices abstractions for displaying text, icons, menus and other common gadgets to the screen"
 
 [dependencies]
-ledger_secure_sdk_sys = "1.0.0"
-ledger_device_sdk = "1.0.0"
-include_gif = "1.0.0"
+ledger_device_sdk = { git = "https://github.com/LedgerHQ/ledger-device-rust-sdk.git", branch = "add-ui-gadgets" }
+ledger_secure_sdk_sys = { git = "https://github.com/LedgerHQ/ledger-device-rust-sdk.git", branch = "add-ui-gadgets" }
+include_gif = { git = "https://github.com/LedgerHQ/ledger-device-rust-sdk.git", branch = "add-ui-gadgets" }
 numtoa = "0.2.4"
 
 [features]
