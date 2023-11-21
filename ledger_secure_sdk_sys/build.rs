@@ -71,48 +71,212 @@ const CCID_FILES: [&str; 9] = [
     "lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_if.c",
 ];
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Device {
     NanoS,
     NanoSPlus,
     NanoX,
 }
 
+impl Device {
+    fn to_string(&self) -> String {
+        match self {
+            Device::NanoS => "nanos",
+            Device::NanoSPlus => "nanos2",
+            Device::NanoX => "nanox",
+        }
+        .to_string()
+    }
+}
+
+struct SDKInfo {
+    pub bolos_sdk: PathBuf,
+    pub api_level: u32,
+    pub target_id: String,
+    pub target_name: String,
+    pub c_sdk_name: String,
+    pub c_sdk_hash: String,
+    pub c_sdk_version: String,
+}
+
+impl SDKInfo {
+    pub fn new() -> Self {
+        SDKInfo {
+            bolos_sdk: PathBuf::new(),
+            api_level: 0,
+            target_id: String::new(),
+            target_name: String::new(),
+            c_sdk_name: String::new(),
+            c_sdk_hash: String::new(),
+            c_sdk_version: String::new(),
+        }
+    }
+}
+
+fn retrieve_sdk_info(device: &Device, path: String) -> Result<SDKInfo, SDKBuildError> {
+    let mut sdk_info = SDKInfo::new();
+    sdk_info.bolos_sdk = Path::new(&path).to_path_buf();
+    (sdk_info.api_level, sdk_info.c_sdk_name) = retrieve_makefile_infos(&sdk_info.bolos_sdk)?;
+    (sdk_info.target_id, sdk_info.target_name) =
+        retrieve_target_file_infos(&device, &sdk_info.bolos_sdk)?;
+    (sdk_info.c_sdk_hash, sdk_info.c_sdk_version) = retrieve_sdk_git_info(&sdk_info.bolos_sdk);
+    Ok(sdk_info)
+}
+
+fn retrieve_sdk_git_info(bolos_sdk: &Path) -> (String, String) {
+    let c_sdk_hash = match Command::new("git")
+        .arg("-C")
+        .arg(bolos_sdk)
+        .arg("describe")
+        .arg("--always")
+        .arg("--dirty")
+        .arg("--exclude")
+        .arg("*")
+        .arg("--abbrev=40")
+        .output()
+        .ok()
+    {
+        Some(output) => {
+            if output.stdout.is_empty() {
+                "None".to_string()
+            } else {
+                String::from_utf8(output.stdout).unwrap_or("None".to_string())
+            }
+        }
+        None => "None".to_string(),
+    };
+
+    let c_sdk_version = match Command::new("git")
+        .arg("-C")
+        .arg(bolos_sdk)
+        .arg("describe")
+        .arg("--tags")
+        .arg("--exact-match")
+        .arg("--match")
+        .arg("v[0-9]*")
+        .arg("--dirty")
+        .output()
+        .ok()
+    {
+        Some(output) => {
+            if output.stdout.is_empty() {
+                "None".to_string()
+            } else {
+                String::from_utf8(output.stdout).unwrap_or("None".to_string())
+            }
+        }
+        None => "None".to_string(),
+    };
+    (c_sdk_hash, c_sdk_version)
+}
+
+fn retrieve_makefile_infos(bolos_sdk: &Path) -> Result<(u32, String), SDKBuildError> {
+    let makefile_defines =
+        File::open(bolos_sdk.join("Makefile.defines")).expect("Could not find Makefile.defines");
+    let mut api_level: i32 = -1;
+    let mut sdk_name = String::new();
+    for line in BufReader::new(makefile_defines).lines().flatten() {
+        if line.contains("API_LEVEL") {
+            api_level = line.split(":=").collect::<Vec<&str>>()[1]
+                .trim()
+                .parse()
+                .map_err(|_| SDKBuildError::InvalidAPILevel)?;
+        } else if line.contains("SDK_NAME") {
+            sdk_name = line.split(":=").collect::<Vec<&str>>()[1]
+                .trim()
+                .to_string();
+        }
+    }
+
+    if sdk_name.is_empty() || api_level == -1 {
+        return Err(SDKBuildError::CouldNotGetMakefileInfos);
+    } else {
+        return Ok((api_level as u32, sdk_name));
+    }
+}
+
+fn retrieve_target_file_infos(
+    device: &Device,
+    bolos_sdk: &Path,
+) -> Result<(String, String), SDKBuildError> {
+    let prefix = if *device == Device::NanoS {
+        "".to_string()
+    } else {
+        format!("target/{}/", device.to_string())
+    };
+    let target_file_path = bolos_sdk.join(format!("{}include/bolos_target.h", prefix));
+    println!("cargo:warning=Target file path is {:?}", target_file_path);
+    let target_file =
+        File::open(target_file_path).map_err(|_| SDKBuildError::TargetFileNotFound)?;
+    let mut target_id = String::new();
+    let mut target_name = String::new();
+    for line in BufReader::new(target_file).lines().flatten() {
+        if line.contains("TARGET_ID") {
+            let id = line.split(" ").collect::<Vec<&str>>()[2];
+            if id.starts_with("0x") {
+                target_id = id.to_string();
+            }
+        } else if line.contains("TARGET_") {
+            target_name = line.split(" ").collect::<Vec<&str>>()[1].to_string();
+        }
+    }
+    if target_id.is_empty() || target_name.is_empty() {
+        return Err(SDKBuildError::CouldNotGetTargetFileInfos);
+    } else {
+        return Ok((target_id, target_name));
+    }
+}
+
 /// Fetch the appropriate C SDK to build
-fn clone_sdk(device: &Device) -> (PathBuf, u32) {
-    let (repo_url, sdk_branch, api_level) = match device {
-        Device::NanoS => ("https://github.com/LedgerHQ/nanos-secure-sdk", "master", 0),
+fn clone_sdk(device: &Device) -> Result<SDKInfo, SDKBuildError> {
+    let mut sdk_info = SDKInfo::new();
+    let (repo_url, sdk_branch, api_level, name) = match device {
+        Device::NanoS => (
+            "https://github.com/LedgerHQ/nanos-secure-sdk",
+            "master",
+            0,
+            "nanos-secure-sdk",
+        ),
         Device::NanoX => (
             "https://github.com/LedgerHQ/ledger-secure-sdk",
             "API_LEVEL_5",
             5,
+            "ledger-secure-sdk",
         ),
         Device::NanoSPlus => (
             "https://github.com/LedgerHQ/ledger-secure-sdk",
             "API_LEVEL_1",
             1,
+            "ledger-secure-sdk",
         ),
     };
 
     let out_dir = env::var("OUT_DIR").unwrap();
-    let bolos_sdk = Path::new(out_dir.as_str()).join("ledger-secure-sdk");
-    if !bolos_sdk.exists() {
+    sdk_info.bolos_sdk = Path::new(out_dir.as_str()).join("ledger-secure-sdk");
+    if !sdk_info.bolos_sdk.exists() {
         Command::new("git")
             .arg("clone")
             .arg(repo_url)
             .arg("-b")
             .arg(sdk_branch)
-            .arg(bolos_sdk.as_path())
+            .arg(sdk_info.bolos_sdk.as_path())
             .output()
             .ok();
     }
-    (bolos_sdk, api_level)
+    sdk_info.api_level = api_level;
+    (sdk_info.target_id, sdk_info.target_name) =
+        retrieve_target_file_infos(device, &sdk_info.bolos_sdk)?;
+    (sdk_info.c_sdk_hash, sdk_info.c_sdk_version) = retrieve_sdk_git_info(&sdk_info.bolos_sdk);
+    sdk_info.c_sdk_name = name.to_string();
+    Ok(sdk_info)
 }
 
 #[derive(Debug)]
 enum SDKBuildError {
     InvalidAPILevel,
-    CouldNotGetAPILevel,
+    CouldNotGetMakefileInfos,
+    TargetFileNotFound,
+    CouldNotGetTargetFileInfos,
 }
 
 /// Helper function to concatenate all paths in pathlist to bolos_sdk's path
@@ -173,42 +337,37 @@ impl SDKBuilder {
             ),
         };
         self.device = device;
+        // export TARGET into env for 'infos.rs'
+        println!("cargo:rustc-env=TARGET={}", self.device.to_string());
         println!("cargo:warning=Device is {:?}", self.device);
-    }
-
-    /// Manually retrieve API_LEVEL from an SDK in the case of
-    /// path given through the LEDGER_SDK_PATH env variable
-    fn retrieve_api_level(bolos_sdk: &Path) -> Result<u32, SDKBuildError> {
-        let makefile_defines = File::open(bolos_sdk.join("Makefile.defines"))
-            .expect("Could not find Makefile.defines");
-        for line in BufReader::new(makefile_defines).lines().flatten() {
-            if line.contains("API_LEVEL") {
-                return line.split(":=").collect::<Vec<&str>>()[1]
-                    .trim()
-                    .parse()
-                    .map_err(|_| SDKBuildError::InvalidAPILevel);
-            }
-        }
-        Err(SDKBuildError::CouldNotGetAPILevel)
     }
 
     pub fn bolos_sdk(&mut self) -> Result<(), SDKBuildError> {
         println!("cargo:rerun-if-env-changed=LEDGER_SDK_PATH");
-        let (bolos_sdk, api_level) = match env::var("LEDGER_SDK_PATH") {
-            Err(_) => clone_sdk(&self.device),
-            Ok(path) => {
-                let sdkpath = Path::new(&path).to_path_buf();
-                let apilevel = SDKBuilder::retrieve_api_level(&sdkpath)?;
-                (sdkpath, apilevel)
-            }
+        let sdk_info = match env::var("LEDGER_SDK_PATH") {
+            Err(_) => clone_sdk(&self.device)?,
+            Ok(path) => retrieve_sdk_info(&self.device, path)?,
         };
-        self.bolos_sdk = bolos_sdk;
-        self.api_level = api_level;
+        self.bolos_sdk = sdk_info.bolos_sdk;
+        self.api_level = sdk_info.api_level;
 
-        // export API_LEVEL into env for 'infos.rs'
+        // Export SDK infos into env for 'infos.rs'
         println!("cargo:rustc-env=API_LEVEL={}", self.api_level);
+        println!(
+            "cargo:rustc-env=API_LEVEL_STR={}",
+            format!("{}", self.api_level)
+        );
         println!("cargo:warning=API_LEVEL is {}", self.api_level);
-
+        println!("cargo:rustc-env=TARGET_ID={}", sdk_info.target_id);
+        println!("cargo:warning=TARGET_ID is {}", sdk_info.target_id);
+        println!("cargo:rustc-env=TARGET_NAME={}", sdk_info.target_name);
+        println!("cargo:warning=TARGET_NAME is {}", sdk_info.target_name);
+        println!("cargo:rustc-env=C_SDK_NAME={}", sdk_info.c_sdk_name);
+        println!("cargo:warning=C_SDK_NAME is {}", sdk_info.c_sdk_name);
+        println!("cargo:rustc-env=C_SDK_HASH={}", sdk_info.c_sdk_hash);
+        println!("cargo:warning=C_SDK_HASH is {}", sdk_info.c_sdk_hash);
+        println!("cargo:rustc-env=C_SDK_VERSION={}", sdk_info.c_sdk_version);
+        println!("cargo:warning=C_SDK_VERSION is {}", sdk_info.c_sdk_version);
         Ok(())
     }
 
