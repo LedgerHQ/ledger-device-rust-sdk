@@ -106,9 +106,9 @@ impl SDKInfo {
     }
 }
 
-fn retrieve_sdk_info(device: &Device, path: String) -> Result<SDKInfo, SDKBuildError> {
+fn retrieve_sdk_info(device: &Device, path: &Path) -> Result<SDKInfo, SDKBuildError> {
     let mut sdk_info = SDKInfo::new();
-    sdk_info.bolos_sdk = Path::new(&path).to_path_buf();
+    sdk_info.bolos_sdk = path.to_path_buf();
     (sdk_info.api_level, sdk_info.c_sdk_name) = retrieve_makefile_infos(&sdk_info.bolos_sdk)?;
     (sdk_info.target_id, sdk_info.target_name) =
         retrieve_target_file_infos(&device, &sdk_info.bolos_sdk)?;
@@ -235,44 +235,35 @@ fn retrieve_target_file_infos(
 }
 
 /// Fetch the appropriate C SDK to build
-fn clone_sdk(device: &Device) -> Result<SDKInfo, SDKBuildError> {
-    let mut sdk_info = SDKInfo::new();
-    let (repo_url, sdk_branch, api_level) = match device {
+fn clone_sdk(device: &Device) -> PathBuf {
+    let (repo_url, sdk_branch) = match device {
         Device::NanoS => (
             Path::new("https://github.com/LedgerHQ/nanos-secure-sdk"),
             "master",
-            0,
         ),
         Device::NanoX => (
             Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
             "API_LEVEL_5",
-            5,
         ),
         Device::NanoSPlus => (
             Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
             "API_LEVEL_1",
-            1,
         ),
     };
 
     let out_dir = env::var("OUT_DIR").unwrap();
-    sdk_info.bolos_sdk = Path::new(out_dir.as_str()).join("ledger-secure-sdk");
-    if !sdk_info.bolos_sdk.exists() {
+    let bolos_sdk = Path::new(out_dir.as_str()).join("ledger-secure-sdk");
+    if !bolos_sdk.exists() {
         Command::new("git")
             .arg("clone")
             .arg(repo_url.to_str().unwrap())
             .arg("-b")
             .arg(sdk_branch)
-            .arg(sdk_info.bolos_sdk.as_path())
+            .arg(bolos_sdk.as_path())
             .output()
             .ok();
     }
-    sdk_info.api_level = api_level;
-    (sdk_info.target_id, sdk_info.target_name) =
-        retrieve_target_file_infos(device, &sdk_info.bolos_sdk)?;
-    (sdk_info.c_sdk_hash, sdk_info.c_sdk_version) = retrieve_sdk_git_info(&sdk_info.bolos_sdk);
-    sdk_info.c_sdk_name = repo_url.file_name().unwrap().to_str().unwrap().to_string();
-    Ok(sdk_info)
+    bolos_sdk.to_path_buf()
 }
 
 #[derive(Debug)]
@@ -349,10 +340,13 @@ impl SDKBuilder {
 
     pub fn bolos_sdk(&mut self) -> Result<(), SDKBuildError> {
         println!("cargo:rerun-if-env-changed=LEDGER_SDK_PATH");
-        let sdk_info = match env::var("LEDGER_SDK_PATH") {
-            Err(_) => clone_sdk(&self.device)?,
-            Ok(path) => retrieve_sdk_info(&self.device, path)?,
+        let sdk_path = match env::var("LEDGER_SDK_PATH") {
+            Err(_) => clone_sdk(&self.device),
+            Ok(path) => PathBuf::from(path),
         };
+
+        let sdk_info = retrieve_sdk_info(&self.device, &sdk_path)?;
+
         self.bolos_sdk = sdk_info.bolos_sdk;
         self.api_level = sdk_info.api_level;
 
