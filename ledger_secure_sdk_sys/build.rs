@@ -173,7 +173,7 @@ fn retrieve_makefile_infos(bolos_sdk: &Path) -> Result<(u32, String), SDKBuildEr
             if line.contains("API_LEVEL") && api_level.is_none() {
                 api_level = Some(value.parse().map_err(|_| SDKBuildError::InvalidAPILevel)?);
             } else if line.contains("SDK_NAME") && sdk_name.is_none() {
-                sdk_name = Some(value.to_string());
+                sdk_name = Some(value.to_string().replace("\"", ""));
             }
         }
 
