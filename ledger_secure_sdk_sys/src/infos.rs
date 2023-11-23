@@ -17,6 +17,7 @@ macro_rules! const_cstr {
     };
 }
 
+#[cfg(not(target_os = "nanos"))]
 const fn const_parse_api_level(x: &str) -> u8 {
     let a = x.as_bytes();
     let mut res = a[0] - b'0';
@@ -31,10 +32,13 @@ const fn const_parse_api_level(x: &str) -> u8 {
 
 /// Expose the API_LEVEL
 #[used]
+#[cfg(not(target_os = "nanos"))]
 static API_LEVEL: u8 = const_parse_api_level(env!("API_LEVEL"));
 
 // Store metadata in the ELF file
-const_cstr!(ELF_API_LEVEL, "ledger.api_level", env!("API_LEVEL_STR"));
+#[cfg(not(target_os = "nanos"))]
+const_cstr!(ELF_API_LEVEL, "ledger.api_level", env!("API_LEVEL"));
+
 const_cstr!(ELF_TARGET, "ledger.target", env!("TARGET"));
 const_cstr!(ELF_TARGET_ID, "ledger.target_id", env!("TARGET_ID"));
 const_cstr!(ELF_TARGET_NAME, "ledger.target_name", env!("TARGET_NAME"));

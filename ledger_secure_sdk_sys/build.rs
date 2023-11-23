@@ -92,7 +92,7 @@ impl Device {
 #[derive(Default)]
 struct SDKInfo {
     pub bolos_sdk: PathBuf,
-    pub api_level: u32,
+    pub api_level: Option<u32>,
     pub target_id: String,
     pub target_name: String,
     pub c_sdk_name: String,
@@ -163,7 +163,7 @@ fn retrieve_sdk_git_info(bolos_sdk: &Path) -> (String, String) {
     (c_sdk_hash, c_sdk_version)
 }
 
-fn retrieve_makefile_infos(bolos_sdk: &Path) -> Result<(u32, String), SDKBuildError> {
+fn retrieve_makefile_infos(bolos_sdk: &Path) -> Result<(Option<u32>, String), SDKBuildError> {
     let makefile_defines =
         File::open(bolos_sdk.join("Makefile.defines")).expect("Could not find Makefile.defines");
     let mut api_level: Option<u32> = None;
@@ -182,11 +182,8 @@ fn retrieve_makefile_infos(bolos_sdk: &Path) -> Result<(u32, String), SDKBuildEr
             break;
         }
     }
-
-    let api_level = api_level.ok_or(SDKBuildError::InvalidAPILevel)?;
     let sdk_name = sdk_name.ok_or(SDKBuildError::MissingSDKName)?;
-
-    Ok((api_level as u32, sdk_name))
+    Ok((api_level, sdk_name))
 }
 
 fn retrieve_target_file_infos(
@@ -348,15 +345,21 @@ impl SDKBuilder {
         let sdk_info = retrieve_sdk_info(&self.device, &sdk_path)?;
 
         self.bolos_sdk = sdk_info.bolos_sdk;
-        self.api_level = sdk_info.api_level;
 
-        // Export SDK infos into env for 'infos.rs'
-        println!("cargo:rustc-env=API_LEVEL={}", self.api_level);
-        println!(
-            "cargo:rustc-env=API_LEVEL_STR={}",
-            format!("{}", self.api_level)
-        );
-        println!("cargo:warning=API_LEVEL is {}", self.api_level);
+        match sdk_info.api_level {
+            Some(api_level) => {
+                self.api_level = api_level;
+                // Export api level into env for 'infos.rs'
+                println!("cargo:rustc-env=API_LEVEL={}", self.api_level);
+                println!("cargo:warning=API_LEVEL is {}", self.api_level);
+            }
+            None => {
+                if self.device != Device::NanoS {
+                    return Err(SDKBuildError::InvalidAPILevel);
+                }
+            }
+        }
+        // Export other SDK infos into env for 'infos.rs'
         println!("cargo:rustc-env=TARGET_ID={}", sdk_info.target_id);
         println!("cargo:warning=TARGET_ID is {}", sdk_info.target_id);
         println!("cargo:rustc-env=TARGET_NAME={}", sdk_info.target_name);
