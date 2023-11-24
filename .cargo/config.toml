@@ -2,10 +2,10 @@
 runner = "speculos -m nanos --display=headless"
 
 [target.nanox]
-runner = "speculos -m nanox -a 5 --display=headless"
+runner = "speculos -m nanox --display=headless"
 
 [target.nanosplus]
-runner = "speculos -m nanosp -a 1 --display=headless"
+runner = "speculos -m nanosp --display=headless"
 
 [unstable]
 build-std = ["core"]
