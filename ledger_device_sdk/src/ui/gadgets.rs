@@ -2,7 +2,10 @@
 
 use core::str::from_utf8;
 
-use crate::{buttons::ButtonEvent::*, io};
+use crate::{
+    buttons::ButtonEvent::*,
+    io::{self, ApduHeader, Reply},
+};
 use ledger_secure_sdk_sys::{
     buttons::{get_button_event, ButtonEvent, ButtonsState},
     seph,
@@ -491,8 +494,8 @@ impl<'a> Page<'a> {
     }
 }
 
-pub enum EventOrPageIndex {
-    Event(io::Event<io::ApduHeader>),
+pub enum EventOrPageIndex<T> {
+    Event(io::Event<T>),
     Index(usize),
 }
 
@@ -506,7 +509,10 @@ impl<'a> MultiPageMenu<'a> {
         MultiPageMenu { comm, pages }
     }
 
-    pub fn show(&mut self) -> EventOrPageIndex {
+    pub fn show<T: TryFrom<ApduHeader>>(&mut self) -> EventOrPageIndex<T>
+    where
+        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
+    {
         clear_screen();
 
         self.pages[0].place();

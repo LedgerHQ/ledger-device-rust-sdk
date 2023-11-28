@@ -7,7 +7,7 @@ use ledger_secure_sdk_sys::*;
 #[cfg(feature = "ccid")]
 use crate::ccid;
 use crate::seph;
-use core::convert::TryFrom;
+use core::convert::{Infallible, TryFrom};
 use core::ops::{Index, IndexMut};
 
 #[derive(Copy, Clone)]
@@ -71,6 +71,15 @@ impl From<StatusWords> for Reply {
 impl From<SyscallError> for Reply {
     fn from(exc: SyscallError) -> Reply {
         Reply(0x6800 + exc as u16)
+    }
+}
+
+// Needed because some methods use `TryFrom<ApduHeader>::Error`, and for `ApduHeader` we have
+// `Error` as `Infallible`. Since we need to convert such error in a status word (`Reply`) we need
+// to implement this trait here.
+impl From<Infallible> for Reply {
+    fn from(value: Infallible) -> Self {
+        Reply(0x9000)
     }
 }
 
@@ -176,30 +185,13 @@ impl Comm {
 
     /// Wait and return next button press event or APDU command.
     ///
-    /// `T` can be an integer (usually automatically infered), which matches the
-    /// Instruction byte of the APDU. In a more complex form, `T` can be any
-    /// type which implements `TryFrom<u8>`. In particular, it is recommended to
-    /// use an enumeration to enforce the compiler checking all possible
-    /// commands are handled. Also, this method will automatically respond with
-    /// an error status word if the Instruction byte is invalid (i.e. `try_from`
-    /// failed).
+    /// `T` can be any type built from a [`ApduHeader`] using the [`TryFrom<ApduHeader>`] trait.
+    /// The conversion can embed complex parsing logic, including checks on CLA, INS, P1 and P2
+    /// bytes, and may return an error with a status word for invalid APDUs.
+    ///
+    /// In particular, it is recommended to use an enumeration for the possible INS values.
     ///
     /// # Examples
-    ///
-    /// Simple use case with `T` infered as an `i32`:
-    ///
-    /// ```
-    /// loop {
-    ///     match comm.next_event() {
-    ///         Event::Button(button) => { ... }
-    ///         Event::Command(0xa4) => { ... }
-    ///         Event::Command(0xb0) => { ... }
-    ///         _ => { comm.reply(StatusWords::BadCLA) }
-    ///     }
-    /// }
-    /// ```
-    ///
-    /// More complex example with an enumeration:
     ///
     /// ```
     /// enum Instruction {
@@ -207,22 +199,18 @@ impl Comm {
     ///     ReadBinary
     /// }
     ///
-    /// impl TryFrom<u8> for Instruction {
-    ///     type Error = ();
+    /// impl TryFrom<ApduHeader> for Instruction {
+    ///     type Error = StatusWords;
     ///
-    ///     fn try_from(v: u8) -> Result<Self, Self::Error> {
-    ///         match v {
+    ///     fn try_from(h: ApduHeader) -> Result<Self, Self::Error> {
+    ///         match h.ins {
     ///             0xa4 => Ok(Self::Select),
     ///             0xb0 => Ok(Self::ReadBinary)
-    ///             _ => Err(())
+    ///             _ => Err(StatusWords::BadIns)
     ///         }
     ///     }
     /// }
-    /// ```
     ///
-    /// Which can be used as the following:
-    ///
-    /// ```
     /// loop {
     ///     match comm.next_event() {
     ///         Event::Button(button) => { ... }
@@ -231,10 +219,11 @@ impl Comm {
     ///     }
     /// }
     /// ```
-    ///
-    /// In this later example, invalid instruction byte error handling is
-    /// automatically performed by the `next_event` method itself.
-    pub fn next_event<T: TryFrom<ApduHeader>>(&mut self) -> Event<T> {
+    pub fn next_event<T>(&mut self) -> Event<T>
+    where
+        T: TryFrom<ApduHeader>,
+        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
+    {
         let mut spi_buffer = [0u8; 128];
 
         unsafe {
@@ -259,10 +248,11 @@ impl Comm {
         }
     }
 
-    pub fn decode_event<T: TryFrom<ApduHeader>>(
-        &mut self,
-        spi_buffer: &mut [u8; 128],
-    ) -> Option<Event<T>> {
+    pub fn decode_event<T>(&mut self, spi_buffer: &mut [u8; 128]) -> Option<Event<T>>
+    where
+        T: TryFrom<ApduHeader>,
+        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
+    {
         // message = [ tag, len_hi, len_lo, ... ]
         let tag = spi_buffer[0];
         let len = u16::from_be_bytes([spi_buffer[1], spi_buffer[2]]);
@@ -308,45 +298,54 @@ impl Comm {
 
         if unsafe { G_io_app.apdu_state } != APDU_IDLE && unsafe { G_io_app.apdu_length } > 0 {
             self.rx = unsafe { G_io_app.apdu_length as usize };
+
+            // Reject incomplete APDUs
+            if self.rx < 4 {
+                self.reply(StatusWords::BadLen);
+                return None;
+            }
+
             let res = T::try_from(*self.get_apdu_metadata());
             match res {
                 Ok(ins) => {
                     return Some(Event::Command(ins));
                 }
-                Err(_) => {
+                Err(sw) => {
                     // Invalid Ins code. Send automatically an error, mask
                     // the bad instruction to the application and just
                     // discard this event.
-                    self.reply(StatusWords::BadIns);
+                    self.reply(sw);
                 }
             }
         }
         None
     }
 
-    /// Wait for the next Command event. Returns the APDU Instruction byte value
-    /// for easy instruction matching. Discards received button events.
+    /// Wait for the next Command event. Discards received button events.
     ///
-    /// Like `next_event`, `T` can be an integer, an enumeration, or any type
-    /// which implements `TryFrom<u8>`.
+    /// Like `next_event`, `T` can be any type, an enumeration, or any type
+    /// which implements `TryFrom<ApduHeader>`.
     ///
     /// # Examples
     ///
-    /// Simple use case with `T` infered as an `i32`:
-    ///
     /// ```
-    /// loop {
-    ///     match comm.next_command() {
-    ///         0xa4 => { ... }
-    ///         0xb0 => { ... }
-    ///         _ => { ... }
+    /// enum Instruction {
+    ///     Select,
+    ///     ReadBinary
+    /// }
+    ///
+    /// impl TryFrom<ApduHeader> for Instruction {
+    ///     type Error = StatusWords;
+    ///
+    ///     fn try_from(h: ApduHeader) -> Result<Self, Self::Error> {
+    ///         match h.ins {
+    ///             0xa4 => Ok(Self::Select),
+    ///             0xb0 => Ok(Self::ReadBinary)
+    ///             _ => Err(StatusWords::BadIns)
+    ///         }
     ///     }
     /// }
-    /// ```
     ///
-    /// Other example with an enumeration:
-    ///
-    /// ```
     /// loop {
     ///     match comm.next_command() {
     ///         Instruction::Select => { ... }
@@ -354,10 +353,11 @@ impl Comm {
     ///     }
     /// }
     /// ```
-    ///
-    /// In this later example, invalid instruction byte error handling is
-    /// automatically performed by the `next_command` method itself.
-    pub fn next_command<T: TryFrom<ApduHeader>>(&mut self) -> T {
+    pub fn next_command<T>(&mut self) -> T
+    where
+        T: TryFrom<ApduHeader>,
+        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
+    {
         loop {
             if let Event::Command(ins) = self.next_event() {
                 return ins;
