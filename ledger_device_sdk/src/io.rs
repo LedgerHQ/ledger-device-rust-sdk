@@ -305,6 +305,12 @@ impl Comm {
                 return None;
             }
 
+            // Check for data length by using `get_data`
+            if let Err(sw) = self.get_data() {
+                self.reply(sw);
+                return None;
+            }
+
             let res = T::try_from(*self.get_apdu_metadata());
             match res {
                 Ok(ins) => {
