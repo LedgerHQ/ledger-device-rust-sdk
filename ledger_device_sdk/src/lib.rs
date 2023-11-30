@@ -21,6 +21,7 @@ pub mod seph;
 pub mod testing;
 
 pub mod uxapp;
+pub mod ui;
 
 use core::panic::PanicInfo;
 
