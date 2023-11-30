@@ -67,7 +67,7 @@ pub fn clear_screen() {
 /// and wait for button action
 pub fn popup(message: &str) {
     clear_screen();
-    SingleMessage::new(&message).show_and_wait();
+    SingleMessage::new(message).show_and_wait();
 }
 
 /// Display a single screen with a message,
@@ -194,10 +194,10 @@ impl<'a> MessageValidator<'a> {
         let draw = |page: usize| {
             clear_screen();
             if page == page_count - 2 {
-                draw_icon_and_text(CHECKMARK_ICON, &self.confirm);
+                draw_icon_and_text(CHECKMARK_ICON, self.confirm);
                 RIGHT_ARROW.display();
             } else if page == page_count - 1 {
-                draw_icon_and_text(CROSS_ICON, &self.cancel);
+                draw_icon_and_text(CROSS_ICON, self.cancel);
             } else {
                 self.message[page].place(Location::Middle, Layout::Centered, false);
                 RIGHT_ARROW.display();
@@ -221,9 +221,7 @@ impl<'a> MessageValidator<'a> {
                 }
                 Some(ButtonEvent::LeftButtonRelease) => {
                     LEFT_S_ARROW.erase();
-                    if cur_page > 0 {
-                        cur_page -= 1;
-                    }
+                    cur_page = cur_page.saturating_sub(1);
                     draw(cur_page);
                 }
                 Some(ButtonEvent::RightButtonRelease) => {
@@ -388,12 +386,9 @@ impl<'a> Page<'a> {
                     self.label
                         .place(Location::Custom(28), Layout::Centered, false);
                 }
-                match self.glyph {
-                    Some(glyph) => {
-                        let icon = Icon::from(glyph);
-                        icon.set_x(icon_x).set_y(icon_y).display();
-                    }
-                    None => {}
+                if let Some(glyph) = self.glyph {
+                    let icon = Icon::from(glyph);
+                    icon.set_x(icon_x).set_y(icon_y).display();
                 }
             }
             PageStyle::PictureBold => {
@@ -406,12 +401,9 @@ impl<'a> Page<'a> {
                     icon_y = 17;
                     self.label[0].place(Location::Custom(35), Layout::Centered, true);
                 }
-                match self.glyph {
-                    Some(glyph) => {
-                        let icon = Icon::from(glyph);
-                        icon.set_x(icon_x).set_y(icon_y).display();
-                    }
-                    None => {}
+                if let Some(glyph) = self.glyph {
+                    let icon = Icon::from(glyph);
+                    icon.set_x(icon_x).set_y(icon_y).display();
                 }
             }
             PageStyle::BoldNormal => {
@@ -446,7 +438,7 @@ impl<'a> Page<'a> {
                         ],
                         &mut label_bytes,
                     );
-                    from_utf8(&mut label_bytes)
+                    from_utf8(&label_bytes)
                         .unwrap()
                         .trim_matches(char::from(0))
                         .place(Location::Custom(cur_y), Layout::Centered, true);
@@ -464,13 +456,13 @@ impl<'a> Page<'a> {
                 else {
                     let mut indices = [(0, 0); 3];
                     let len = self.label[1].len();
-                    for i in 0..3 {
+                    for (i, indice) in indices.iter_mut().enumerate() {
                         let start = (i * MAX_CHAR_PER_LINE).min(len);
                         if start >= len {
                             break; // Break if we reach the end of the string
                         }
                         let end = (start + MAX_CHAR_PER_LINE).min(len);
-                        indices[i] = (start, end);
+                        *indice = (start, end);
                         (&self.label[1][start..end]).place(
                             Location::Custom(cur_y),
                             Layout::Centered,
@@ -629,7 +621,7 @@ impl<'a> MessageScroller<'a> {
             let end = (start + MAX_CHAR_PER_LINE).min(self.message.len());
             let chunk = &self.message[start..end];
             label.erase();
-            label.text = &chunk;
+            label.text = chunk;
             LEFT_ARROW.erase();
             RIGHT_ARROW.erase();
             if page > 0 {
@@ -653,9 +645,7 @@ impl<'a> MessageScroller<'a> {
                 }
                 Some(ButtonEvent::LeftButtonRelease) => {
                     LEFT_S_ARROW.erase();
-                    if cur_page > 0 {
-                        cur_page -= 1;
-                    }
+                    cur_page = cur_page.saturating_sub(1);
                     // We need to draw anyway to clear button press arrow
                     draw(cur_page);
                 }
@@ -803,45 +793,40 @@ impl<'a> MultiFieldReview<'a> {
         review_pages[cur_page].place();
 
         loop {
-            match get_event(&mut buttons) {
-                Some(b) => {
-                    match b {
-                        ButtonEvent::LeftButtonRelease => {
-                            if cur_page > 0 {
-                                cur_page -= 1;
-                            }
-                            refresh = true;
-                        }
-                        ButtonEvent::RightButtonRelease => {
-                            if cur_page < total_page_count {
-                                cur_page += 1;
-                            }
-                            refresh = true;
-                        }
-                        ButtonEvent::BothButtonsRelease => {
-                            if cur_page == total_page_count {
-                                // Cancel
-                                return false;
-                            } else if cur_page == total_page_count - 1 {
-                                // Validate
-                                return true;
-                            }
-                        }
-                        _ => refresh = false,
+            if let Some(b) = get_event(&mut buttons) {
+                match b {
+                    ButtonEvent::LeftButtonRelease => {
+                        cur_page = cur_page.saturating_sub(1);
+                        refresh = true;
                     }
-                    if refresh {
-                        clear_screen();
-                        review_pages[cur_page].place();
-                        if cur_page > 0 {
-                            LEFT_ARROW.display();
-                        }
+                    ButtonEvent::RightButtonRelease => {
                         if cur_page < total_page_count {
-                            RIGHT_ARROW.display();
+                            cur_page += 1;
                         }
-                        crate::ui::screen_util::screen_update();
+                        refresh = true;
                     }
+                    ButtonEvent::BothButtonsRelease => {
+                        if cur_page == total_page_count {
+                            // Cancel
+                            return false;
+                        } else if cur_page == total_page_count - 1 {
+                            // Validate
+                            return true;
+                        }
+                    }
+                    _ => refresh = false,
                 }
-                _ => (),
+                if refresh {
+                    clear_screen();
+                    review_pages[cur_page].place();
+                    if cur_page > 0 {
+                        LEFT_ARROW.display();
+                    }
+                    if cur_page < total_page_count {
+                        RIGHT_ARROW.display();
+                    }
+                    crate::ui::screen_util::screen_update();
+                }
             }
         }
     }

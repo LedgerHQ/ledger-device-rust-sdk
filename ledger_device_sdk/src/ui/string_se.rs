@@ -21,7 +21,7 @@ impl StringPlace for &str {
 
     fn place(&self, loc: Location, layout: Layout, bold: bool) {
         let total_width = self.compute_width(bold);
-        let mut cur_x = layout.get_x(total_width as usize) as i32;
+        let mut cur_x = layout.get_x(total_width) as i32;
 
         let font_choice = bold as usize;
         for c in self.as_bytes().iter().map(ledger_secure_sdk_sys::pic_rs) {

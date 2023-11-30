@@ -51,7 +51,7 @@ impl UxEvent {
     pub fn block() -> u32 {
         let mut ret = unsafe { os_sched_last_status(TASK_BOLOS_UX as u32) } as u32;
         while ret == BOLOS_UX_IGNORE || ret == BOLOS_UX_CONTINUE {
-            if unsafe { os_sched_is_running(TASK_SUBTASKS_START as u32) as u8 } != BOLOS_TRUE as u8
+            if unsafe { os_sched_is_running(TASK_SUBTASKS_START as u32) } != BOLOS_TRUE as u8
             {
                 let mut spi_buffer = [0u8; 128];
                 sys_seph::send_general_status();
@@ -69,7 +69,7 @@ impl UxEvent {
         let mut ret = unsafe { os_sched_last_status(TASK_BOLOS_UX as u32) } as u32;
         let mut event = None;
         while ret == BOLOS_UX_IGNORE || ret == BOLOS_UX_CONTINUE {
-            if unsafe { os_sched_is_running(TASK_SUBTASKS_START as u32) as u8 } != BOLOS_TRUE as u8
+            if unsafe { os_sched_is_running(TASK_SUBTASKS_START as u32) } != BOLOS_TRUE as u8
             {
                 let mut spi_buffer = [0u8; 128];
                 seph::send_general_status();
