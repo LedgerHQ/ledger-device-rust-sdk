@@ -14,7 +14,7 @@ use ledger_device_sdk::ui::layout::{Layout, Location, StringPlace};
 fn wait_any() {
     let mut buttons = ButtonsState::new();
     loop {
-        match ui::get_event(&mut buttons) {
+        match gadgets::get_event(&mut buttons) {
             Some(ButtonEvent::LeftButtonRelease)
             | Some(ButtonEvent::RightButtonRelease)
             | Some(ButtonEvent::BothButtonsRelease) => return,
@@ -126,7 +126,7 @@ extern "C" fn sample_main() {
         .set_x(20)
         .set_y(4)
         .instant_display();
-    ledger_device_sdk::ui::bagls::COGGLE
+    ledger_device_sdk::ui::bagls::COGGLE_ICON
         .set_x(40)
         .set_y(4)
         .instant_display();
