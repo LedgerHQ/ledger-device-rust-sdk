@@ -28,7 +28,6 @@ int c_main(void) {
     BEGIN_TRY {
       TRY {
         // below is a 'manual' implementation of `io_seproxyhal_init`
-        // check_api_level(CX_COMPAT_APILEVEL);
     #ifdef HAVE_MCU_PROTECT
         unsigned char c[4];
         c[0] = SEPROXYHAL_TAG_MCU;

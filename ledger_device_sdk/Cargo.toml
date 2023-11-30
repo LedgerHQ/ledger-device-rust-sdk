@@ -14,10 +14,8 @@ ledger_device_sdk = { path = ".", features = ["speculos"] }
 testmacro = { git = "https://github.com/yhql/testmacro"}
 
 [dependencies]
-#ledger_secure_sdk_sys = "1.0.1"
-ledger_secure_sdk_sys = {path = "../ledger_secure_sdk_sys"}
-#include_gif = "1.0.1"
-include_gif = {path = "../include_gif"}
+ledger_secure_sdk_sys = {path = "../ledger_secure_sdk_sys", version = "1.0.2"}
+include_gif = {path = "../include_gif", version = "1.0.1"}
 num-traits = { version = "0.2.14", default_features = false }
 rand_core = { version = "0.6.3", default_features = false }
 zeroize = { version = "1.6.0", default_features = false }

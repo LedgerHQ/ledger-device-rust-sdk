@@ -1,6 +1,6 @@
 [package]
 name = "ledger_secure_sdk_sys"
-version = "1.0.1"
+version = "1.0.2"
 authors = ["yhql"]
 edition = "2021"
 license.workspace = true
