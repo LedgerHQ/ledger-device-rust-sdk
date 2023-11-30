@@ -8,8 +8,8 @@ fn panic(_: &PanicInfo) -> ! {
 }
 
 use ledger_device_sdk::buttons::*;
-use ledger_device_sdk::ui::layout::{Layout, Location, StringPlace};
 use ledger_device_sdk::ui::gadgets;
+use ledger_device_sdk::ui::layout::{Layout, Location, StringPlace};
 
 fn wait_any() {
     let mut buttons = ButtonsState::new();

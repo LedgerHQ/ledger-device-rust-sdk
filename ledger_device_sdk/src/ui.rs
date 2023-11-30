@@ -12,8 +12,8 @@ pub mod bitmaps;
 pub mod fonts;
 pub mod layout;
 
-pub mod screen_util;
 pub mod gadgets;
+pub mod screen_util;
 
 pub const PADDING: usize = 2;
 pub const Y_PADDING: usize = 3;

@@ -12,7 +12,11 @@ pub fn include_gif(input: TokenStream) -> TokenStream {
     let mut decoder = gif::DecodeOptions::new();
     decoder.set_color_output(gif::ColorOutput::Indexed);
 
-    let path = format!("{}/{}", std::env::var("CARGO_MANIFEST_DIR").unwrap(), filename.value());
+    let path = format!(
+        "{}/{}",
+        std::env::var("CARGO_MANIFEST_DIR").unwrap(),
+        filename.value()
+    );
     let file = File::open(path).unwrap();
     let mut decoder = decoder.read_info(file).unwrap();
 
