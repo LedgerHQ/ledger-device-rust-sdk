@@ -1,6 +1,6 @@
 [package]
 name = "include_gif"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 license.workspace = true
 description = "procedural macro that packs a gif image into a byte representation"
