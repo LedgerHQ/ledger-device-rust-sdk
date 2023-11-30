@@ -83,9 +83,9 @@ impl std::fmt::Display for Device {
         match self {
             Device::NanoS => write!(f, "nanos"),
             Device::NanoSPlus => write!(f, "nanos2"),
-            Device::NanoX => write!(f, "nanox")
+            Device::NanoX => write!(f, "nanox"),
         }
-     }
+    }
 }
 
 #[derive(Default)]
@@ -173,7 +173,7 @@ fn retrieve_makefile_infos(bolos_sdk: &Path) -> Result<(Option<u32>, String), SD
                 api_level = Some(value.parse().map_err(|_| SDKBuildError::InvalidAPILevel)?);
             } else if line.contains("SDK_NAME") && sdk_name.is_none() {
                 sdk_name = Some(value.to_string().replace('\"', ""));
-            }  
+            }
         }
 
         if api_level.is_some() && sdk_name.is_some() {
