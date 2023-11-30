@@ -379,7 +379,7 @@ impl<'a> SendToDisplay for Label<'a> {
         };
         let x = match self.layout {
             Layout::RightAligned => self.layout.get_x(self.text.len() * 7),
-            Layout::Custom(x) => x as usize,
+            Layout::Custom(x) => x,
             _ => 0,
         };
         let y = self.loc.get_y(self.dims.1 as usize) as i16;
@@ -388,10 +388,10 @@ impl<'a> SendToDisplay for Label<'a> {
             _ => self.text.len() * 6,
         };
         let alignment = match self.layout {
-            Layout::LeftAligned => 0 as u16,
+            Layout::LeftAligned => 0_u16,
             Layout::Centered => BAGL_FONT_ALIGNMENT_CENTER as u16,
             Layout::RightAligned => BAGL_FONT_ALIGNMENT_CENTER as u16,
-            Layout::Custom(_) => 0 as u16,
+            Layout::Custom(_) => 0_u16,
         };
         let baglcomp = BaglComponent {
             type_: BaglTypes::LabelLine as u8,

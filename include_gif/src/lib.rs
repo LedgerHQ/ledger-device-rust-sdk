@@ -1,10 +1,8 @@
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
-use std;
 use std::fs::File;
 use std::io::Write;
-use syn;
 
 #[proc_macro]
 pub fn include_gif(input: TokenStream) -> TokenStream {

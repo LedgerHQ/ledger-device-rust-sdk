@@ -78,15 +78,14 @@ enum Device {
     NanoX,
 }
 
-impl Device {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for Device {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Device::NanoS => "nanos",
-            Device::NanoSPlus => "nanos2",
-            Device::NanoX => "nanox",
+            Device::NanoS => write!(f, "nanos"),
+            Device::NanoSPlus => write!(f, "nanos2"),
+            Device::NanoX => write!(f, "nanox")
         }
-        .to_string()
-    }
+     }
 }
 
 #[derive(Default)]
@@ -111,7 +110,7 @@ fn retrieve_sdk_info(device: &Device, path: &Path) -> Result<SDKInfo, SDKBuildEr
     sdk_info.bolos_sdk = path.to_path_buf();
     (sdk_info.api_level, sdk_info.c_sdk_name) = retrieve_makefile_infos(&sdk_info.bolos_sdk)?;
     (sdk_info.target_id, sdk_info.target_name) =
-        retrieve_target_file_infos(&device, &sdk_info.bolos_sdk)?;
+        retrieve_target_file_infos(device, &sdk_info.bolos_sdk)?;
     (sdk_info.c_sdk_hash, sdk_info.c_sdk_version) = retrieve_sdk_git_info(&sdk_info.bolos_sdk);
     Ok(sdk_info)
 }
@@ -173,8 +172,8 @@ fn retrieve_makefile_infos(bolos_sdk: &Path) -> Result<(Option<u32>, String), SD
             if line.contains("API_LEVEL") && api_level.is_none() {
                 api_level = Some(value.parse().map_err(|_| SDKBuildError::InvalidAPILevel)?);
             } else if line.contains("SDK_NAME") && sdk_name.is_none() {
-                sdk_name = Some(value.to_string().replace("\"", ""));
-            }
+                sdk_name = Some(value.to_string().replace('\"', ""));
+            }  
         }
 
         if api_level.is_some() && sdk_name.is_some() {
@@ -193,7 +192,7 @@ fn retrieve_target_file_infos(
     let prefix = if *device == Device::NanoS {
         "".to_string()
     } else {
-        format!("target/{}/", device.to_string())
+        format!("target/{}/", device)
     };
     let target_file_path = bolos_sdk.join(format!("{}include/bolos_target.h", prefix));
     let target_file =
@@ -260,7 +259,7 @@ fn clone_sdk(device: &Device) -> PathBuf {
             .output()
             .ok();
     }
-    bolos_sdk.to_path_buf()
+    bolos_sdk
 }
 
 #[derive(Debug)]
@@ -331,7 +330,7 @@ impl SDKBuilder {
         };
         self.device = device;
         // export TARGET into env for 'infos.rs'
-        println!("cargo:rustc-env=TARGET={}", self.device.to_string());
+        println!("cargo:rustc-env=TARGET={}", self.device);
         println!("cargo:warning=Device is {:?}", self.device);
     }
 
