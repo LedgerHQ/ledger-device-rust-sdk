@@ -1,5 +1,5 @@
-use crate::bagls::*;
-use crate::layout::*;
+use crate::ui::bagls::*;
+use crate::ui::layout::*;
 
 impl StringPlace for &str {
     // unused when using MCU display

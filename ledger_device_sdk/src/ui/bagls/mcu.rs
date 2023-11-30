@@ -1,5 +1,5 @@
 use super::Icon;
-use crate::layout::{Draw, Layout, Location};
+use crate::ui::layout::{Draw, Layout, Location};
 use ledger_secure_sdk_sys;
 use ledger_secure_sdk_sys::seph::SephTags;
 
@@ -379,12 +379,19 @@ impl<'a> SendToDisplay for Label<'a> {
         };
         let x = match self.layout {
             Layout::RightAligned => self.layout.get_x(self.text.len() * 7),
+            Layout::Custom(x) => x as usize,
             _ => 0,
         };
         let y = self.loc.get_y(self.dims.1 as usize) as i16;
         let width = match self.layout {
-            Layout::Centered => crate::SCREEN_WIDTH,
+            Layout::Centered => crate::ui::SCREEN_WIDTH,
             _ => self.text.len() * 6,
+        };
+        let alignment = match self.layout {
+            Layout::LeftAligned => 0 as u16,
+            Layout::Centered => BAGL_FONT_ALIGNMENT_CENTER as u16,
+            Layout::RightAligned => BAGL_FONT_ALIGNMENT_CENTER as u16,
+            Layout::Custom(_) => 0 as u16,
         };
         let baglcomp = BaglComponent {
             type_: BaglTypes::LabelLine as u8,
@@ -398,7 +405,7 @@ impl<'a> SendToDisplay for Label<'a> {
             fill: 0,
             fgcolor: 0xffffffu32,
             bgcolor: 0,
-            font_id: font_id as u16 | BAGL_FONT_ALIGNMENT_CENTER as u16,
+            font_id: font_id as u16 | alignment,
             icon_id: 0,
         };
 

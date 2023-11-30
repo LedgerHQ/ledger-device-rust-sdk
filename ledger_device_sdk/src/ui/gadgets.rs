@@ -1,11 +1,23 @@
 #![allow(dead_code)]
 
-use ledger_secure_sdk_sys::{seph, buttons::{get_button_event, ButtonEvent, ButtonsState}};
+use core::str::from_utf8;
 
-use crate::ui::bagls::*;
+use crate::{buttons::ButtonEvent::*, io};
+use ledger_secure_sdk_sys::{
+    buttons::{get_button_event, ButtonEvent, ButtonsState},
+    seph,
+};
+
+use crate::ui::bitmaps::Glyph;
+
+use crate::ui::{bagls::*, fonts::OPEN_SANS};
 
 use crate::ui::layout;
 use crate::ui::layout::{Draw, Location, StringPlace};
+
+use numtoa::NumToA;
+
+const MAX_CHAR_PER_LINE: usize = 17;
 
 /// Handles communication to filter
 /// out actual events, and converts key
@@ -32,7 +44,6 @@ pub fn get_event(buttons: &mut ButtonsState) -> Option<ButtonEvent> {
 pub fn clear_screen() {
     #[cfg(not(target_os = "nanos"))]
     {
-
         #[cfg(not(feature = "speculos"))]
         unsafe {
             ledger_secure_sdk_sys::screen_clear();
@@ -42,8 +53,8 @@ pub fn clear_screen() {
         {
             // Speculos does not emulate the screen_clear syscall yet
             RectFull::new()
-                .width(crate::SCREEN_WIDTH as u32)
-                .height(crate::SCREEN_HEIGHT as u32)
+                .width(crate::ui::SCREEN_WIDTH as u32)
+                .height(crate::ui::SCREEN_HEIGHT as u32)
                 .erase();
         }
     }
@@ -87,7 +98,7 @@ impl<'a> Validator<'a> {
             UP_ARROW.display();
             DOWN_ARROW.display();
 
-            crate::screen_util::screen_update();
+            crate::ui::screen_util::screen_update();
         };
         redraw(&lines);
 
@@ -142,7 +153,7 @@ pub struct MessageValidator<'a> {
     cancel: &'a [&'a str],
 }
 
-use crate::layout::*;
+use crate::ui::layout::*;
 
 impl<'a> MessageValidator<'a> {
     pub const fn new(
@@ -194,7 +205,7 @@ impl<'a> MessageValidator<'a> {
             if page > 0 {
                 LEFT_ARROW.display();
             }
-            crate::screen_util::screen_update();
+            crate::ui::screen_util::screen_update();
         };
 
         draw(cur_page);
@@ -260,7 +271,7 @@ impl<'a> Menu<'a> {
         UP_ARROW.display();
         DOWN_ARROW.display();
 
-        crate::screen_util::screen_update();
+        crate::ui::screen_util::screen_update();
 
         let mut index = 0;
 
@@ -296,10 +307,257 @@ impl<'a> Menu<'a> {
                     }
                     items[index - chunk].bold = true;
                     items.place(Location::Middle, Layout::Centered, false);
-                    crate::screen_util::screen_update();
+                    crate::ui::screen_util::screen_update();
                 }
                 _ => (),
             }
+        }
+    }
+}
+
+#[derive(Copy, Clone, PartialEq)]
+pub enum PageStyle {
+    PictureNormal, // Picture (should be 16x16) with two lines of text (page layout depends on device).
+    PictureBold,   // Icon on top with one line of text on the bottom.
+    BoldNormal,    // One line of bold text and one line of normal text.
+    Normal,        // 2 lines of centered text.
+}
+
+#[derive(Copy, Clone)]
+pub struct Page<'a> {
+    style: PageStyle,
+    label: [&'a str; 2],
+    glyph: Option<&'a Glyph<'a>>,
+    chunk_count: u8,
+    chunk_idx: u8,
+}
+
+// new_picture_normal
+impl<'a> From<([&'a str; 2], &'a Glyph<'a>)> for Page<'a> {
+    fn from((label, glyph): ([&'a str; 2], &'a Glyph<'a>)) -> Page<'a> {
+        Page::new(PageStyle::PictureNormal, [label[0], label[1]], Some(glyph))
+    }
+}
+
+// new bold normal or new normal
+impl<'a> From<([&'a str; 2], bool)> for Page<'a> {
+    fn from((label, bold): ([&'a str; 2], bool)) -> Page<'a> {
+        if bold {
+            Page::new(PageStyle::BoldNormal, [label[0], label[1]], None)
+        } else {
+            Page::new(PageStyle::Normal, [label[0], label[1]], None)
+        }
+    }
+}
+
+// new picture bold
+impl<'a> From<(&'a str, &'a Glyph<'a>)> for Page<'a> {
+    fn from((label, glyph): (&'a str, &'a Glyph<'a>)) -> Page<'a> {
+        let label = [label, ""];
+        Page::new(PageStyle::PictureBold, label, Some(glyph))
+    }
+}
+
+impl<'a> Page<'a> {
+    pub fn new(style: PageStyle, label: [&'a str; 2], glyph: Option<&'a Glyph<'a>>) -> Self {
+        let chunk_count = 0;
+        let chunk_idx = 0;
+        Page {
+            style,
+            label,
+            glyph,
+            chunk_count,
+            chunk_idx,
+        }
+    }
+
+    pub fn place(&self) {
+        match self.style {
+            PageStyle::Normal => {
+                self.label.place(Location::Middle, Layout::Centered, false);
+            }
+            PageStyle::PictureNormal => {
+                let mut icon_x = 16;
+                let mut icon_y = 8;
+                if cfg!(target_os = "nanos") {
+                    self.label
+                        .place(Location::Middle, Layout::Custom(41), false);
+                } else {
+                    icon_x = 57;
+                    icon_y = 10;
+                    self.label
+                        .place(Location::Custom(28), Layout::Centered, false);
+                }
+                match self.glyph {
+                    Some(glyph) => {
+                        let icon = Icon::from(glyph);
+                        icon.set_x(icon_x).set_y(icon_y).display();
+                    }
+                    None => {}
+                }
+            }
+            PageStyle::PictureBold => {
+                let mut icon_x = 56;
+                let mut icon_y = 2;
+                if cfg!(target_os = "nanos") {
+                    self.label[0].place(Location::Bottom, Layout::Centered, true);
+                } else {
+                    icon_x = 57;
+                    icon_y = 17;
+                    self.label[0].place(Location::Custom(35), Layout::Centered, true);
+                }
+                match self.glyph {
+                    Some(glyph) => {
+                        let icon = Icon::from(glyph);
+                        icon.set_x(icon_x).set_y(icon_y).display();
+                    }
+                    None => {}
+                }
+            }
+            PageStyle::BoldNormal => {
+                let padding = 1;
+                let mut max_text_lines = 3;
+                if cfg!(target_os = "nanos") {
+                    max_text_lines = 1;
+                }
+                let total_height = (OPEN_SANS[0].height * max_text_lines) as usize
+                    + OPEN_SANS[1].height as usize
+                    + 2 * padding as usize;
+                let mut cur_y = Location::Middle.get_y(total_height);
+
+                // Display the chunk count and index if needed
+                if self.chunk_count > 1 {
+                    let mut label_bytes = [0u8; MAX_CHAR_PER_LINE];
+                    // Convert the chunk count to a string
+                    let mut chunk_count_buf = [0u8; 3];
+                    let chunk_count_str = self.chunk_count.numtoa_str(10, &mut chunk_count_buf);
+                    // Convert the chunk index to a string
+                    let mut chunk_idx_buf = [0u8; 3];
+                    let chunk_idx_str = self.chunk_idx.numtoa_str(10, &mut chunk_idx_buf);
+                    // Add the chunk count and index to the label
+                    concatenate(
+                        &[
+                            self.label[0],
+                            " (",
+                            chunk_idx_str,
+                            "/",
+                            chunk_count_str,
+                            ")",
+                        ],
+                        &mut label_bytes,
+                    );
+                    from_utf8(&mut label_bytes)
+                        .unwrap()
+                        .trim_matches(char::from(0))
+                        .place(Location::Custom(cur_y), Layout::Centered, true);
+                } else {
+                    self.label[0].place(Location::Custom(cur_y), Layout::Centered, true);
+                }
+                cur_y += OPEN_SANS[0].height as usize + 2 * padding as usize;
+
+                // If the device is a Nano S, display the second label as
+                // a single line of text
+                if cfg!(target_os = "nanos") {
+                    self.label[1].place(Location::Custom(cur_y), Layout::Centered, false);
+                }
+                // Otherwise, display the second label as up to 3 lines of text
+                else {
+                    let mut indices = [(0, 0); 3];
+                    let len = self.label[1].len();
+                    for i in 0..3 {
+                        let start = (i * MAX_CHAR_PER_LINE).min(len);
+                        if start >= len {
+                            break; // Break if we reach the end of the string
+                        }
+                        let end = (start + MAX_CHAR_PER_LINE).min(len);
+                        indices[i] = (start, end);
+                        (&self.label[1][start..end]).place(
+                            Location::Custom(cur_y),
+                            Layout::Centered,
+                            false,
+                        );
+                        cur_y += OPEN_SANS[0].height as usize + 2 * padding as usize;
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn place_and_wait(&self) {
+        let mut buttons = ButtonsState::new();
+
+        self.place();
+
+        loop {
+            match get_event(&mut buttons) {
+                Some(ButtonEvent::LeftButtonRelease)
+                | Some(ButtonEvent::RightButtonRelease)
+                | Some(ButtonEvent::BothButtonsRelease) => return,
+                _ => (),
+            }
+        }
+    }
+}
+
+pub enum EventOrPageIndex {
+    Event(io::Event<io::ApduHeader>),
+    Index(usize),
+}
+
+pub struct MultiPageMenu<'a> {
+    comm: &'a mut io::Comm,
+    pages: &'a [&'a Page<'a>],
+}
+
+impl<'a> MultiPageMenu<'a> {
+    pub fn new(comm: &'a mut io::Comm, pages: &'a [&'a Page]) -> Self {
+        MultiPageMenu { comm, pages }
+    }
+
+    pub fn show(&mut self) -> EventOrPageIndex {
+        clear_screen();
+
+        self.pages[0].place();
+
+        LEFT_ARROW.display();
+        RIGHT_ARROW.display();
+
+        crate::ui::screen_util::screen_update();
+
+        let mut index = 0;
+
+        loop {
+            match self.comm.next_event() {
+                io::Event::Button(button) => match button {
+                    BothButtonsRelease => return EventOrPageIndex::Index(index),
+                    b => {
+                        match b {
+                            LeftButtonRelease => {
+                                if index as i16 - 1 < 0 {
+                                    index = self.pages.len() - 1;
+                                } else {
+                                    index = index.saturating_sub(1);
+                                }
+                            }
+                            RightButtonRelease => {
+                                if index < self.pages.len() - 1 {
+                                    index += 1;
+                                } else {
+                                    index = 0;
+                                }
+                            }
+                            _ => (),
+                        }
+                        clear_screen();
+                        self.pages[index].place();
+                        LEFT_ARROW.display();
+                        RIGHT_ARROW.display();
+                        crate::ui::screen_util::screen_update();
+                    }
+                },
+                io::Event::Command(ins) => return EventOrPageIndex::Event(io::Event::Command(ins)),
+                _ => (),
+            };
         }
     }
 }
@@ -343,7 +601,7 @@ impl<'a> SingleMessage<'a> {
 /// A horizontal scroller that
 /// splits any given message
 /// over several panes in chunks
-/// of CHAR_N characters.
+/// of MAX_CHAR_PER_LINE characters.
 /// Press both buttons to exit.
 pub struct MessageScroller<'a> {
     message: &'a str,
@@ -357,8 +615,7 @@ impl<'a> MessageScroller<'a> {
     pub fn event_loop(&self) {
         clear_screen();
         let mut buttons = ButtonsState::new();
-        const CHAR_N: usize = 16;
-        let page_count = (self.message.len() - 1) / CHAR_N + 1;
+        let page_count = (self.message.len() - 1) / MAX_CHAR_PER_LINE + 1;
         if page_count == 0 {
             return;
         }
@@ -368,8 +625,8 @@ impl<'a> MessageScroller<'a> {
         // A closure to draw common elements of the screen
         // cur_page passed as parameter to prevent borrowing
         let mut draw = |page: usize| {
-            let start = page * CHAR_N;
-            let end = (start + CHAR_N).min(self.message.len());
+            let start = page * MAX_CHAR_PER_LINE;
+            let end = (start + MAX_CHAR_PER_LINE).min(self.message.len());
             let chunk = &self.message[start..end];
             label.erase();
             label.text = &chunk;
@@ -412,6 +669,179 @@ impl<'a> MessageScroller<'a> {
                 }
                 Some(ButtonEvent::BothButtonsRelease) => break,
                 Some(_) | None => (),
+            }
+        }
+    }
+}
+
+pub struct Field<'a> {
+    pub name: &'a str,
+    pub value: &'a str,
+}
+pub struct MultiFieldReview<'a> {
+    fields: &'a [Field<'a>],
+    review_message: &'a [&'a str],
+    review_glyph: Option<&'a Glyph<'a>>,
+    validation_message: &'a str,
+    validation_glyph: Option<&'a Glyph<'a>>,
+    cancel_message: &'a str,
+    cancel_glyph: Option<&'a Glyph<'a>>,
+}
+
+// Function to concatenate multiple strings into a fixed-size array
+fn concatenate(strings: &[&str], output: &mut [u8]) {
+    let mut offset = 0;
+
+    for s in strings {
+        let s_len = s.len();
+        let copy_len = core::cmp::min(s_len, output.len() - offset);
+
+        if copy_len > 0 {
+            output[offset..offset + copy_len].copy_from_slice(&s.as_bytes()[..copy_len]);
+            offset += copy_len;
+        } else {
+            // If the output buffer is full, stop concatenating.
+            break;
+        }
+    }
+}
+
+const MAX_REVIEW_PAGES: usize = 48;
+
+impl<'a> MultiFieldReview<'a> {
+    pub fn new(
+        fields: &'a [Field<'a>],
+        review_message: &'a [&'a str],
+        review_glyph: Option<&'a Glyph<'a>>,
+        validation_message: &'a str,
+        validation_glyph: Option<&'a Glyph<'a>>,
+        cancel_message: &'a str,
+        cancel_glyph: Option<&'a Glyph<'a>>,
+    ) -> Self {
+        MultiFieldReview {
+            fields,
+            review_message,
+            review_glyph,
+            validation_message,
+            validation_glyph,
+            cancel_message,
+            cancel_glyph,
+        }
+    }
+
+    pub fn show(&self) -> bool {
+        let mut buttons = ButtonsState::new();
+
+        let first_page = match self.review_message.len() {
+            0 => Page::new(PageStyle::PictureNormal, ["", ""], self.review_glyph),
+            1 => Page::new(
+                PageStyle::PictureBold,
+                [self.review_message[0], ""],
+                self.review_glyph,
+            ),
+            _ => Page::new(
+                PageStyle::PictureNormal,
+                [self.review_message[0], self.review_message[1]],
+                self.review_glyph,
+            ),
+        };
+
+        let validation_page = Page::new(
+            PageStyle::PictureBold,
+            [self.validation_message, ""],
+            self.validation_glyph,
+        );
+        let cancel_page = Page::new(
+            PageStyle::PictureBold,
+            [self.cancel_message, ""],
+            self.cancel_glyph,
+        );
+        let mut review_pages: [Page; MAX_REVIEW_PAGES] =
+            [Page::new(PageStyle::Normal, ["", ""], None); MAX_REVIEW_PAGES];
+        let mut total_page_count = 0;
+
+        let mut max_chars_per_page = MAX_CHAR_PER_LINE * 3;
+        if cfg!(target_os = "nanos") {
+            max_chars_per_page = MAX_CHAR_PER_LINE;
+        }
+
+        // Determine each field page count
+        for field in self.fields {
+            let field_page_count = (field.value.len() - 1) / max_chars_per_page + 1;
+            // Create pages for each chunk of the field
+            for i in 0..field_page_count {
+                let start = i * max_chars_per_page;
+                let end = (start + max_chars_per_page).min(field.value.len());
+                let chunk = &field.value[start..end];
+
+                review_pages[total_page_count] =
+                    Page::new(PageStyle::BoldNormal, [field.name, chunk], None);
+                review_pages[total_page_count].chunk_count = field_page_count as u8;
+                review_pages[total_page_count].chunk_idx = (i + 1) as u8;
+                // Check if we have reached the maximum number of pages
+                // We need to keep 2 pages for the validation and cancel pages
+                total_page_count = if total_page_count < MAX_REVIEW_PAGES - 2 {
+                    total_page_count + 1
+                } else {
+                    break;
+                };
+            }
+        }
+
+        review_pages[total_page_count] = validation_page;
+        total_page_count += 1;
+        review_pages[total_page_count] = cancel_page;
+
+        clear_screen();
+        first_page.place_and_wait();
+        crate::ui::screen_util::screen_update();
+        clear_screen();
+        RIGHT_ARROW.display();
+
+        let mut cur_page = 0;
+        let mut refresh: bool = true;
+        review_pages[cur_page].place();
+
+        loop {
+            match get_event(&mut buttons) {
+                Some(b) => {
+                    match b {
+                        ButtonEvent::LeftButtonRelease => {
+                            if cur_page > 0 {
+                                cur_page -= 1;
+                            }
+                            refresh = true;
+                        }
+                        ButtonEvent::RightButtonRelease => {
+                            if cur_page < total_page_count {
+                                cur_page += 1;
+                            }
+                            refresh = true;
+                        }
+                        ButtonEvent::BothButtonsRelease => {
+                            if cur_page == total_page_count {
+                                // Cancel
+                                return false;
+                            } else if cur_page == total_page_count - 1 {
+                                // Validate
+                                return true;
+                            }
+                        }
+                        _ => refresh = false,
+                    }
+                    if refresh {
+                        clear_screen();
+                        review_pages[cur_page].place();
+                        if cur_page > 0 {
+                            LEFT_ARROW.display();
+                        }
+                        if cur_page < total_page_count {
+                            RIGHT_ARROW.display();
+                        }
+                        crate::ui::screen_util::screen_update();
+                    }
+                }
+                _ => (),
             }
         }
     }

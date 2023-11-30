@@ -11,9 +11,12 @@ extern "C" {
 impl StringPlace for &str {
     fn compute_width(&self, bold: bool) -> usize {
         let font_choice = bold as usize;
-        self.as_bytes().iter().map(ledger_secure_sdk_sys::pic_rs).fold(0, |acc, c| {
-            acc + OPEN_SANS[font_choice].dims[*c as usize - 0x20] as usize
-        })
+        self.as_bytes()
+            .iter()
+            .map(ledger_secure_sdk_sys::pic_rs)
+            .fold(0, |acc, c| {
+                acc + OPEN_SANS[font_choice].dims[*c as usize - 0x20] as usize
+            })
     }
 
     fn place(&self, loc: Location, layout: Layout, bold: bool) {
@@ -52,7 +55,7 @@ impl StringPlace for [&str] {
 
     fn place(&self, loc: Location, layout: Layout, bold: bool) {
         let c_height = OPEN_SANS[bold as usize].height as usize;
-        let padding = if self.len() > 4 { 0 } else { 2 };
+        let padding = if self.len() > 4 { 0 } else { 1 };
         let total_height = self.len() * (c_height + padding);
         let mut cur_y = loc.get_y(total_height);
         for string in self.iter() {
@@ -62,7 +65,7 @@ impl StringPlace for [&str] {
     }
 }
 
-use crate::bagls::se::Label;
+use crate::ui::bagls::se::Label;
 
 impl<'a> StringPlace for Label<'a> {
     fn compute_width(&self, _bold: bool) -> usize {
@@ -82,7 +85,7 @@ impl<'a> StringPlace for [Label<'a>] {
 
     fn place(&self, _loc: Location, layout: Layout, bold: bool) {
         let c_height = OPEN_SANS[bold as usize].height as usize;
-        let padding = ((crate::SCREEN_HEIGHT / self.len()) - c_height) / 2;
+        let padding = ((crate::ui::SCREEN_HEIGHT / self.len()) - c_height) / 2;
         let mut cur_y = padding;
         for label in self.iter() {
             label.place(Location::Custom(cur_y), layout, label.bold);

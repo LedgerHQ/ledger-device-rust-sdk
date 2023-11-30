@@ -63,17 +63,17 @@ impl Draw for Label<'_> {
                 total_width as u32,
                 c_height as u32,
                 false,
-                &crate::bitmaps::BLANK,
+                &crate::ui::bitmaps::BLANK,
             )
         }
     }
 }
 
-use crate::bagls::RectFull;
+use crate::ui::bagls::RectFull;
 
 impl Draw for RectFull {
     fn display(&self) {
-        unsafe { 
+        unsafe {
             ledger_secure_sdk_sys::bagl_hal_draw_rect(
                 1,
                 self.pos.0,
@@ -96,7 +96,6 @@ impl Draw for RectFull {
         }
     }
 }
-
 
 use core::ffi::c_void;
 
@@ -140,7 +139,7 @@ impl<'a> Draw for Icon<'a> {
             icon.width,
             icon.height,
             icon.inverted,
-            &crate::bitmaps::BLANK,
+            &crate::ui::bitmaps::BLANK,
         );
     }
 }
