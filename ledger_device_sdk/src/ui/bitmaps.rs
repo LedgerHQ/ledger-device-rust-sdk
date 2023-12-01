@@ -1,4 +1,4 @@
-use crate::screen_util::draw;
+use crate::ui::screen_util::draw;
 use ledger_secure_sdk_sys;
 
 pub struct Glyph<'a> {
@@ -32,7 +32,7 @@ impl<'a> Glyph<'a> {
         }
     }
     pub fn draw(&self, x: i32, y: i32) {
-        draw(x, y, self.width, self.height, self.inverted, &self.bitmap);
+        draw(x, y, self.width, self.height, self.inverted, self.bitmap);
     }
 }
 

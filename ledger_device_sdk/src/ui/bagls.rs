@@ -39,7 +39,7 @@ impl RectFull {
 }
 
 const fn middle_y(glyph: &Glyph) -> i16 {
-    ((crate::SCREEN_HEIGHT as u32 - glyph.height) / 2) as i16
+    ((crate::ui::SCREEN_HEIGHT as u32 - glyph.height) / 2) as i16
 }
 
 pub struct Icon<'a> {
@@ -97,10 +97,10 @@ impl<'a> Icon<'a> {
     }
 }
 
-use crate::bitmaps;
+use crate::ui::bitmaps;
 
 pub const OUTER_PADDING: usize = 2;
-pub const SCREENW: i16 = (crate::SCREEN_WIDTH - OUTER_PADDING) as i16;
+pub const SCREENW: i16 = (crate::ui::SCREEN_WIDTH - OUTER_PADDING) as i16;
 
 pub const DOWN_ARROW: Icon =
     Icon::from(&bitmaps::DOWN_ARROW).set_x(SCREENW - bitmaps::DOWN_ARROW.width as i16);

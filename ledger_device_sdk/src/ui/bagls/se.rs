@@ -1,6 +1,6 @@
 use super::Icon;
-use crate::fonts::OPEN_SANS;
-use crate::layout::*;
+use crate::ui::fonts::OPEN_SANS;
+use crate::ui::layout::*;
 use ledger_secure_sdk_sys;
 
 pub struct Label<'a> {
@@ -63,13 +63,13 @@ impl Draw for Label<'_> {
                 total_width as u32,
                 c_height as u32,
                 false,
-                &crate::bitmaps::BLANK,
+                &crate::ui::bitmaps::BLANK,
             )
         }
     }
 }
 
-use crate::bagls::RectFull;
+use crate::ui::bagls::RectFull;
 
 impl Draw for RectFull {
     fn display(&self) {
@@ -139,7 +139,7 @@ impl<'a> Draw for Icon<'a> {
             icon.width,
             icon.height,
             icon.inverted,
-            &crate::bitmaps::BLANK,
+            &crate::ui::bitmaps::BLANK,
         );
     }
 }

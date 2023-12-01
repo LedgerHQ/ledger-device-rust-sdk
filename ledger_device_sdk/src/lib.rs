@@ -5,6 +5,7 @@
 #![test_runner(testing::sdk_test_runner)]
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
+#![feature(cfg_version)]
 
 #[cfg(target_os = "nanox")]
 pub mod ble;
@@ -20,6 +21,7 @@ pub mod seph;
 
 pub mod testing;
 
+pub mod ui;
 pub mod uxapp;
 
 use core::panic::PanicInfo;

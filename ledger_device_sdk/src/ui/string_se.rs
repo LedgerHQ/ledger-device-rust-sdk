@@ -1,6 +1,6 @@
-use crate::fonts::OPEN_SANS;
-use crate::layout::*;
-use crate::screen_util::{draw, screen_update};
+use crate::ui::fonts::OPEN_SANS;
+use crate::ui::layout::*;
+use crate::ui::screen_util::{draw, screen_update};
 use core::ffi::c_void;
 use ledger_secure_sdk_sys;
 
@@ -21,7 +21,7 @@ impl StringPlace for &str {
 
     fn place(&self, loc: Location, layout: Layout, bold: bool) {
         let total_width = self.compute_width(bold);
-        let mut cur_x = layout.get_x(total_width as usize) as i32;
+        let mut cur_x = layout.get_x(total_width) as i32;
 
         let font_choice = bold as usize;
         for c in self.as_bytes().iter().map(ledger_secure_sdk_sys::pic_rs) {
@@ -65,7 +65,7 @@ impl StringPlace for [&str] {
     }
 }
 
-use crate::bagls::se::Label;
+use crate::ui::bagls::se::Label;
 
 impl<'a> StringPlace for Label<'a> {
     fn compute_width(&self, _bold: bool) -> usize {
@@ -85,7 +85,7 @@ impl<'a> StringPlace for [Label<'a>] {
 
     fn place(&self, _loc: Location, layout: Layout, bold: bool) {
         let c_height = OPEN_SANS[bold as usize].height as usize;
-        let padding = ((crate::SCREEN_HEIGHT / self.len()) - c_height) / 2;
+        let padding = ((crate::ui::SCREEN_HEIGHT / self.len()) - c_height) / 2;
         let mut cur_y = padding;
         for label in self.iter() {
             label.place(Location::Custom(cur_y), layout, label.bold);

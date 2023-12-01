@@ -5,7 +5,7 @@ const fn make_c_string<const N: usize>(s: &str) -> [u8; N] {
         result[i] = s.as_bytes()[i];
         i += 1;
     }
-    result[i] = '\n' as u8;
+    result[i] = b'\n';
     result
 }
 

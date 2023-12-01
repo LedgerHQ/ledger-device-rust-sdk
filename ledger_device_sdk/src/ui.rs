@@ -1,5 +1,3 @@
-#![no_std]
-#![feature(cfg_version)]
 #![cfg_attr(not(version("1.63")), feature(array_from_fn))]
 
 pub mod bagls;
@@ -14,8 +12,8 @@ pub mod bitmaps;
 pub mod fonts;
 pub mod layout;
 
+pub mod gadgets;
 pub mod screen_util;
-pub mod ui;
 
 pub const PADDING: usize = 2;
 pub const Y_PADDING: usize = 3;

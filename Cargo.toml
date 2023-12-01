@@ -1,7 +1,6 @@
 [workspace]
 members = [
 	"ledger_device_sdk",
-	"ledger_device_ui_sdk",
 	"ledger_secure_sdk_sys",
 	"include_gif"
 ]

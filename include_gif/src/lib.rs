@@ -1,17 +1,21 @@
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
-use std;
 use std::fs::File;
 use std::io::Write;
-use syn;
 
 #[proc_macro]
 pub fn include_gif(input: TokenStream) -> TokenStream {
     let filename = syn::parse_macro_input!(input as syn::LitStr);
     let mut decoder = gif::DecodeOptions::new();
     decoder.set_color_output(gif::ColorOutput::Indexed);
-    let file = File::open(filename.value()).unwrap();
+
+    let path = format!(
+        "{}/{}",
+        std::env::var("CARGO_MANIFEST_DIR").unwrap(),
+        filename.value()
+    );
+    let file = File::open(path).unwrap();
     let mut decoder = decoder.read_info(file).unwrap();
 
     let frame = decoder.read_next_frame().unwrap().unwrap().clone();

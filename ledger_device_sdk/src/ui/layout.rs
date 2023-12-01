@@ -9,9 +9,9 @@ pub enum Layout {
 impl Layout {
     pub fn get_x(&self, width: usize) -> usize {
         match self {
-            Layout::LeftAligned => crate::PADDING,
-            Layout::Centered => (crate::SCREEN_WIDTH - width) / 2,
-            Layout::RightAligned => crate::SCREEN_WIDTH - crate::PADDING - width,
+            Layout::LeftAligned => crate::ui::PADDING,
+            Layout::Centered => (crate::ui::SCREEN_WIDTH - width) / 2,
+            Layout::RightAligned => crate::ui::SCREEN_WIDTH - crate::ui::PADDING - width,
             Layout::Custom(x) => *x,
         }
     }
@@ -28,9 +28,9 @@ pub enum Location {
 impl Location {
     pub fn get_y(&self, height: usize) -> usize {
         match self {
-            Location::Top => crate::Y_PADDING,
-            Location::Middle => (crate::SCREEN_HEIGHT - height) / 2,
-            Location::Bottom => crate::SCREEN_HEIGHT - height - crate::Y_PADDING,
+            Location::Top => crate::ui::Y_PADDING,
+            Location::Middle => (crate::ui::SCREEN_HEIGHT - height) / 2,
+            Location::Bottom => crate::ui::SCREEN_HEIGHT - height - crate::ui::Y_PADDING,
             Location::Custom(y) => *y,
         }
     }
@@ -58,11 +58,11 @@ pub trait Draw {
     /// Display right away (updates screen)
     fn instant_display(&self) {
         self.display();
-        crate::screen_util::screen_update();
+        crate::ui::screen_util::screen_update();
     }
     fn instant_erase(&self) {
         self.erase();
-        crate::screen_util::screen_update();
+        crate::ui::screen_util::screen_update();
     }
     fn display(&self);
     fn erase(&self);
