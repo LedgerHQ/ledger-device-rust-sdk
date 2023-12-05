@@ -29,7 +29,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: -p ledger_device_sdk --target ledger_device_sdk/${{ matrix.target }}.json
+          args: --target ${{ matrix.target }}
   
   format:
     name: Check code formatting
@@ -43,7 +43,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: fmt
-          args: -p ledger_device_sdk --all -- --check
+          args: --all --check
 
   build:
     name: Build SDK
@@ -60,10 +60,10 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: -p ledger_device_sdk --target ledger_device_sdk/${{ matrix.target }}.json
+          args: -p ledger_device_sdk --target ${{ matrix.target }}
 
   test:
-    name: Run unit tests
+    name: Run unit and integration tests
     runs-on: ubuntu-latest
     container:
         image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
@@ -77,4 +77,4 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: -p ledger_device_sdk --target ledger_device_sdk/${{ matrix.target }}.json --features speculos
+          args: -p ledger_device_sdk --target ${{ matrix.target }} --features speculos
