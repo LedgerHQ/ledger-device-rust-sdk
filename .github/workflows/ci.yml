@@ -1,4 +1,4 @@
-name: Rust
+name: Run cargo clippy, cargo fmt, build and Unit+Integration tests
 
 on:
   push:
