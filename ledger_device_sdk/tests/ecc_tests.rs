@@ -20,11 +20,7 @@ extern "C" fn sample_main() {
 }
 
 /// Integration tests: ECC module
-use ledger_device_sdk::ecc::{
-    make_bip32_path, BrainpoolP256R1, BrainpoolP256T1, BrainpoolP320R1, BrainpoolP320T1,
-    BrainpoolP384R1, BrainpoolP384T1, BrainpoolP512R1, BrainpoolP512T1, Ed25519, Secp256k1,
-    Secp256r1, Secp384r1, SeedDerive, Stark256,
-};
+use ledger_device_sdk::ecc::{make_bip32_path, Secp256k1, Secp256r1, SeedDerive, Stark256};
 
 const PATH: [u32; 5] = make_bip32_path(b"m/44'/123'/0'/0/0");
 
