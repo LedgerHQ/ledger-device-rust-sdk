@@ -1,6 +1,7 @@
 use ledger_secure_sdk_sys::seph as sys_seph;
 use ledger_secure_sdk_sys::*;
 
+use crate::io::Reply;
 use crate::io::{ApduHeader, Comm, Event};
 
 pub use ledger_secure_sdk_sys::BOLOS_UX_CANCEL;
@@ -66,7 +67,11 @@ impl UxEvent {
         ret
     }
 
-    pub fn block_and_get_event<T: TryFrom<ApduHeader>>(comm: &mut Comm) -> (u32, Option<Event<T>>) {
+    pub fn block_and_get_event<T>(comm: &mut Comm) -> (u32, Option<Event<T>>)
+    where
+        T: TryFrom<ApduHeader>,
+        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
+    {
         let mut ret = unsafe { os_sched_last_status(TASK_BOLOS_UX as u32) } as u32;
         let mut event = None;
         while ret == BOLOS_UX_IGNORE || ret == BOLOS_UX_CONTINUE {
