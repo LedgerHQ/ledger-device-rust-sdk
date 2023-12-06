@@ -7,6 +7,9 @@ runner = "speculos -m nanox --display=headless"
 [target.nanosplus]
 runner = "speculos -m nanosp --display=headless"
 
+[target.stax]
+runner = "speculos -a 13 --model stax"
+
 [unstable]
 build-std = ["core"]
 build-std-features = ["compiler-builtins-mem"]

@@ -29,3 +29,8 @@
 #define HAVE_BAGL
 #define HAVE_SE_SCREEN
 #endif
+
+#if defined(TARGET_STAX)
+#define HAVE_NBGL
+#define NBGL_USE_CASE
+#endif
