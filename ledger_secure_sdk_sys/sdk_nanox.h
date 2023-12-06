@@ -20,3 +20,8 @@
 
 #define HAVE_BLE
 #define HAVE_BLE_APDU
+
+#if defined(TARGET_STAX)
+#define HAVE_NBGL
+#define NBGL_USE_CASE
+#endif

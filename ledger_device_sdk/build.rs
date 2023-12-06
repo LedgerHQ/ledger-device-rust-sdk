@@ -6,6 +6,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         NanoS,
         NanoSPlus,
         NanoX,
+        Stax,
     }
     use Device::*;
 
@@ -14,8 +15,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         "nanos" => NanoS,
         "nanosplus" => NanoSPlus,
         "nanox" => NanoX,
+        "stax" => Stax,
         target_name => panic!(
-            "invalid target `{target_name}`, expected one of `nanos`, `nanox`, `nanosplus`. Run with `-Z build-std=core --target=./<target name>.json`"
+            "invalid target `{target_name}`, expected one of `nanos`, `nanox`, `nanosplus` or `stax`. Run with `-Z build-std=core --target=./<target name>.json`"
         ),
     };
 
@@ -30,7 +32,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let linkerscript = match device {
         NanoS => "nanos_layout.ld",
         NanoX => "nanox_layout.ld",
-        NanoSPlus => "nanosplus_layout.ld",
+        NanoSPlus | Stax => "nanosplus_layout.ld",
     };
     std::fs::copy(linkerscript, out_dir.join(linkerscript))?;
     std::fs::copy("link.ld", out_dir.join("link.ld"))?;
