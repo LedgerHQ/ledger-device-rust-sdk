@@ -64,7 +64,7 @@ jobs:
         run: |
           # Extract package name from the tag name
           TAG_NAME="${{ github.ref }}"
-          PACKAGE_NAME=$(echo "$TAG_NAME" | cut -d'-' -f1)
+          PACKAGE_NAME=$(echo "$TAG_NAME" | cut -d'/' -f3 | cut -d'-' -f1)
 
           PACKAGE_NAMES=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[].name' | tr '\n' ' ')
 
