@@ -1,4 +1,4 @@
-name: Rust
+name: Run cargo clippy, cargo fmt, build and Unit+Integration tests
 
 on:
   push:
@@ -24,12 +24,12 @@ jobs:
         target: ["nanos", "nanox", "nanosplus"]
     steps:
       - name: Clone
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Cargo clippy
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: -p ledger_device_sdk --target ledger_device_sdk/${{ matrix.target }}.json
+          args: --target ${{ matrix.target }}
   
   format:
     name: Check code formatting
@@ -38,12 +38,12 @@ jobs:
       image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
     steps:
       - name: Clone
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Run cargo fmt
         uses: actions-rs/cargo@v1
         with:
           command: fmt
-          args: -p ledger_device_sdk --all -- --check
+          args: --all --check
 
   build:
     name: Build SDK
@@ -55,15 +55,15 @@ jobs:
         target: ["nanos", "nanox", "nanosplus"]
     steps:
       - name: Clone
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Cargo build
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: -p ledger_device_sdk --target ledger_device_sdk/${{ matrix.target }}.json
+          args: -p ledger_device_sdk --target ${{ matrix.target }}
 
   test:
-    name: Run unit tests
+    name: Run unit and integration tests
     runs-on: ubuntu-latest
     container:
         image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
@@ -72,9 +72,9 @@ jobs:
         target: ["nanos", "nanox", "nanosplus"]
     steps:
       - name: Clone
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Unit tests
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: -p ledger_device_sdk --target ledger_device_sdk/${{ matrix.target }}.json --features speculos
+          args: -p ledger_device_sdk --target ${{ matrix.target }} --features speculos

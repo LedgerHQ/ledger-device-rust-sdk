@@ -1,0 +1,105 @@
+name: Publish to Crates.io
+
+on:
+  push:
+    tags:
+      - '*-v*.*.*'  # Match tags like 'package1-v1.2.3'
+  workflow_dispatch:  # Allow manual workflow dispatch
+
+jobs:
+  test-dry-run:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'  # Only run this job for manual triggers
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set Up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+
+      - name: Retrieve Package Names from workspace root
+        id: get-root-packages
+        run: |
+          # Retrieve package names from the workspace root
+          PACKAGE_NAMES=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[].name' | tr '\n' ' ')
+
+          # Set the package names as an output
+          echo "Package names from root Cargo.toml: $PACKAGE_NAMES"
+          echo "::set-output name=package-names::$PACKAGE_NAMES"
+        shell: bash
+        working-directory: ${{ github.workspace }}
+
+      - name: Test Dry-Run Publish for Each Package
+        run: |
+          # Iterate through package names retrieved
+          PACKAGE_NAMES="${{ steps.get-root-packages.outputs.package-names }}"
+          for PACKAGE_NAME in $PACKAGE_NAMES; do
+            # Test a dry-run publish for each package within the workspace
+            cargo publish --dry-run --no-verify --token ${{ secrets.CARGO_REGISTRY_TOKEN }} --package "$PACKAGE_NAME"
+          done
+        env:
+          CARGO_TERM_COLOR: always
+        working-directory: ${{ github.workspace }}
+
+  build-and-publish:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'  # Only run this job for tag pushes
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set Up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+
+      - name: Determine Package to Publish
+        id: determine-package
+        run: |
+          # Extract package name from the tag name
+          TAG_NAME="${{ github.ref }}"
+          PACKAGE_NAME=$(echo "$TAG_NAME" | cut -d'-' -f1)
+
+          PACKAGE_NAMES=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[].name' | tr '\n' ' ')
+
+          # Check if the extracted package name is a valid package in the workspace root Cargo.toml
+          if [[ ! " $PACKAGE_NAMES " =~ " $PACKAGE_NAME " ]]; then
+            echo "Invalid package name: $PACKAGE_NAME"
+            exit 1
+          fi
+          echo "Package to publish: $PACKAGE_NAME"
+          echo "::set-output name=package::$PACKAGE_NAME"
+        shell: bash
+        working-directory: ${{ github.workspace }}
+
+      - name: Check Package Version
+        id: check-version
+        run: |
+          PACKAGE_NAME="${{ steps.determine-package.outputs.package }}"
+          TAG_VERSION=$(echo "${{ github.ref }}" | cut -d 'v' -f 2)
+          MANIFEST_VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r --arg PACKAGE_NAME "$PACKAGE_NAME" '.packages[] | select(.name == $PACKAGE_NAME) | .version')
+
+          if [ "$TAG_VERSION" != "$MANIFEST_VERSION" ]; then
+            echo "Package version in manifest does not match tag version."
+            exit 1
+          else
+            echo "Package version in manifest matches tag version."
+          fi
+        shell: bash
+        working-directory: ${{ github.workspace }}
+
+      - name: Build and Publish
+        run: |
+          PACKAGE_NAME="${{ steps.determine-package.outputs.package }}"
+
+          # Publish the specified package within the workspace to crates.io
+          cargo publish --no-verify --token ${{ secrets.CARGO_REGISTRY_TOKEN }} --package "$PACKAGE_NAME"
+        env:
+          CARGO_TERM_COLOR: always
+        working-directory: ${{ github.workspace }}
