@@ -22,6 +22,7 @@ jobs:
     strategy:
       matrix:
         target: ["nanos", "nanox", "nanosplus"]
+        package: [include_gif, testmacro, ledger_secure_sdk_sys, ledger_device_sdk]
     steps:
       - name: Clone
         uses: actions/checkout@v4
@@ -29,7 +30,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --target ${{ matrix.target }}
+          args: -p ${{ matrix.package }} --target ${{ matrix.target }}
   
   clippy-cargo-ledger:
     name: Run static analysis for cargo-ledger
@@ -37,6 +38,8 @@ jobs:
     container:
         image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
     steps:
+      - name: Clone
+        uses: actions/checkout@v4
       - name: Cargo clippy for cargo-ledger
         uses: actions-rs/cargo@v1
         with:
