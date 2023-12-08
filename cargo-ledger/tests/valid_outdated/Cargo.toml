@@ -1,0 +1,16 @@
+[package]
+name = "test"
+version = "0.0.0"
+
+[[bin]]
+name = "test"
+path = ""
+
+[package.metadata.nanos]
+api_level = "1"
+name = "TestApp"
+curve = ["secp256k1"]
+flags = "0"
+icon = "nanos.gif"
+icon_small = "nanox.gif"
+path = ["'44/123"]
