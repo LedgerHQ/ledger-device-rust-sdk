@@ -7,18 +7,19 @@ use std::process::Command;
 #[derive(Default, Debug)]
 pub struct LedgerAppInfos {
     pub api_level: String,
-    pub target_id : Option<String>,
+    pub target_id: Option<String>,
     pub size: u64,
 }
 
-fn get_string_from_offset(vector: &Vec<u8>,offset: &usize) -> String {
+fn get_string_from_offset(vector: &[u8], offset: &usize) -> String {
     // Find the end of the string (search for a line feed character)
     let end_index = vector[*offset..]
         .iter()
-        .position(|&x| x == '\n' as u8)
+        .position(|&x| x == b'\n')
         .map(|pos| *offset + pos)
         .unwrap_or(*offset); // Use the start offset if the delimiter position is not found
-    String::from_utf8(vector[*offset..end_index].to_vec()).expect("Invalid UTF-8")
+    String::from_utf8(vector[*offset..end_index].to_vec())
+        .expect("Invalid UTF-8")
 }
 
 pub fn retrieve_infos(
@@ -33,22 +34,22 @@ pub fn retrieve_infos(
     // in various `.ledger.<field_name>` (rust SDK <= 1.0.0) or
     // `ledger.<field_name> (rust SDK > 1.0.0) section of the binary.
     for section in elf.section_headers.iter() {
-        if let Some(Ok(name)) =
-            elf.shdr_strtab.get(section.sh_name)
-        {
-            if name == "ledger.api_level"
-            {
+        if let Some(Ok(name)) = elf.shdr_strtab.get(section.sh_name) {
+            if name == "ledger.api_level" {
                 // For rust SDK > 1.0.0, the API level is stored as a string (like C SDK)
-                infos.api_level = get_string_from_offset(&buffer, &(section.sh_offset as usize));
-            }
-            else if name == ".ledger.api_level"
-            {
+                infos.api_level = get_string_from_offset(
+                    &buffer,
+                    &(section.sh_offset as usize),
+                );
+            } else if name == ".ledger.api_level" {
                 // For rust SDK <= 1.0.0, the API level is stored as a byte
-                infos.api_level = buffer[section.sh_offset as usize].to_string();
-            }
-            else if name == "ledger.target_id"
-            {
-                infos.target_id = Some(get_string_from_offset(&buffer, &(section.sh_offset as usize)));
+                infos.api_level =
+                    buffer[section.sh_offset as usize].to_string();
+            } else if name == "ledger.target_id" {
+                infos.target_id = Some(get_string_from_offset(
+                    &buffer,
+                    &(section.sh_offset as usize),
+                ));
             }
         }
     }
