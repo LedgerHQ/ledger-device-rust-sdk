@@ -31,6 +31,19 @@ jobs:
           command: clippy
           args: --target ${{ matrix.target }}
   
+  clippy-cargo-ledger:
+    name: Run static analysis for cargo-ledger
+    runs-on: ubuntu-latest
+    container:
+        image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
+    steps:
+      - name: Cargo clippy for cargo-ledger
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -p cargo-ledger --no-deps
+          toolchain: "+1.72.0"
+
   format:
     name: Check code formatting
     runs-on: ubuntu-latest
@@ -61,6 +74,21 @@ jobs:
         with:
           command: build
           args: -p ledger_device_sdk --target ${{ matrix.target }}
+
+  build-cargo-ledger:
+    name: Build SDK
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
+    steps:
+      - name: Clone
+        uses: actions/checkout@v4
+      - name: Cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: -p cargo-ledger
+          toolchain: "+1.72.0"
 
   test:
     name: Run unit and integration tests
