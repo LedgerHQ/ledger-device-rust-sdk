@@ -7,21 +7,34 @@ SECTIONS
 
     *(.boot*)
     *(.text*)
-    *(.rodata*) 
+    *(.rodata*)
+
+    _etext = .;
+
+    /* Writable area starts here */
+    . = ALIGN(PAGE_SIZE);
+    _nvram_data = .;
+
+    /* This section is relocatable data produced by clang */
+    /* It is forced into the `.text` section so speculos can
+    map it properly (speculos only maps `.text` instead of all
+    CODE sections) */
+    _sdatarelro = .;
+    *(.data.rel.ro*)
+    _edatarelro = .;
 
     . = ALIGN(PAGE_SIZE);
-    _etext = .;
-  } > FLASH
+    _sgot = .;
+    *(.got*)
+    _egot = .;
 
-  .nvm_data : ALIGN(PAGE_SIZE)
-  {
-    _nvram_data = .;
+    . = ALIGN(PAGE_SIZE);
     *(.nvm_data*)
     . = ALIGN(PAGE_SIZE);
     _envram_data = .;
     _install_parameters = .;
     _nvram_end = .;
-  } > FLASH 
+  } > FLASH
 
   .data : ALIGN(4)
   {

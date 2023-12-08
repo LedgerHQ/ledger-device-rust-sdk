@@ -22,7 +22,7 @@
           "-Tlink.ld"
       ]
   },
-  "relocation-model": "ropi",
+  "relocation-model": "pic",
   "singlethread": true,
   "target-pointer-width": "32",
   "os": "nanos",

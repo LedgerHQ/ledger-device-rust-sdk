@@ -5,6 +5,8 @@
 #include "os_id.h"
 #include "os_io_usb.h"
 #include "checks.h"
+#include "os_pic.h"
+#include "os_nvm.h"
 #ifdef HAVE_BLE
   #include "ledger_ble.h"
 #endif
@@ -12,6 +14,79 @@
 extern void sample_main();
 
 io_seph_app_t G_io_app;
+
+extern unsigned int _bss;
+extern unsigned int _sdatarelro;
+extern unsigned int _edatarelro;
+extern unsigned int _sgot;
+extern unsigned int _egot;
+extern unsigned int _text;
+
+#if defined(TARGET_NANOS)
+#define NVM_PAGE_SIZE 64
+#elif defined(TARGET_NANOX)
+#define NVM_PAGE_SIZE 256
+#elif defined(TARGET_NANOS2)
+#define NVM_PAGE_SIZE 512
+#endif
+#define NVM_PAGE_SIZE_INT  NVM_PAGE_SIZE / 4
+
+uint32_t read_r9() {
+  uint32_t reg;
+  __asm volatile ("mov %0, r9" : "=r" (reg));
+  return reg;
+}
+
+// These assume that the code and data sections have distinctive bit patterns in
+// at the top, so that they can be easily told apart from lengths
+#define IS_TEXT(x) (((x & 0xfff00000) == ((uint32_t)(&_text) & 0xfff00000)))
+#define IS_BSS(x) (((x & 0xffff0000) == ((uint32_t)(&_bss) & 0xffff0000)))
+
+void relocate(void) {
+    uint32_t nvm_page_buffer[NVM_PAGE_SIZE_INT];
+    uint32_t _real_text = (uint32_t)pic_internal(&_text);
+    int _text_offset = _real_text - (uint32_t)(&_text);
+
+    uint32_t _real_bss = read_r9();
+    int _bss_offset = _real_bss - (uint32_t)(&_bss);
+
+    uint32_t * end = pic(&_egot);
+    uint32_t * p = pic(&_sgot);
+    while (p < end) {
+      size_t length = MIN(NVM_PAGE_SIZE_INT, (end-p));
+      size_t i = 0;
+      for (i; i < length; i++) {
+        if IS_BSS(p[i]) {
+          nvm_page_buffer[i] = p[i] + _bss_offset;
+        } else if IS_TEXT(p[i]) {
+          nvm_page_buffer[i] = p[i] + _text_offset;
+        } else {
+          nvm_page_buffer[i] = p[i];
+        }
+      }
+      // no need to pad the page_buffer with 0 or original data
+      // nvm_write() will handle that on its own
+      nvm_write(p, nvm_page_buffer, length*4);
+      p += NVM_PAGE_SIZE_INT;
+    }
+
+    end = pic(&_edatarelro);
+    p = pic(&_sdatarelro);
+    while (p < end) {
+      size_t length = MIN(NVM_PAGE_SIZE_INT, (end-p));
+      for (size_t i = 0; i < length; i++) {
+        if IS_BSS(p[i]) {
+          nvm_page_buffer[i] = p[i] + _bss_offset;
+        } else if IS_TEXT(p[i]) {
+          nvm_page_buffer[i] = p[i] + _text_offset;
+        } else {
+          nvm_page_buffer[i] = p[i];
+        }
+      }
+      nvm_write(p, nvm_page_buffer, length*4);
+      p += NVM_PAGE_SIZE_INT;
+    }
+}
 
 #ifdef HAVE_CCID
  #include "usbd_ccid_if.h"
@@ -23,6 +98,10 @@ int c_main(void) {
 
   // formerly known as 'os_boot()'
   try_context_set(NULL);
+
+  // TODO: add a way to detect when the app was moved in flash (uninstall of another app)
+  // with some marker in nvm data that would conditionally trigger `relocate()`
+  relocate();
 
   for(;;) {
     BEGIN_TRY {

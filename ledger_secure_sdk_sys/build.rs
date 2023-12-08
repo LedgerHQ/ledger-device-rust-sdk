@@ -330,6 +330,7 @@ impl SDKBuilder {
     }
 
     pub fn bolos_sdk(&mut self) -> Result<(), SDKBuildError> {
+        println!("cargo:rerun-if-changed=src/c/src.c");
         println!("cargo:rerun-if-env-changed=LEDGER_SDK_PATH");
         let sdk_path = match env::var("LEDGER_SDK_PATH") {
             Err(_) => clone_sdk(&self.device),
@@ -412,13 +413,9 @@ impl SDKBuilder {
                     .join("lib_stusb/STM32_USB_Device_Library/Class/HID/Inc"),
             )
             .debug(true)
-            .flag("-Oz")
-            .flag("-fomit-frame-pointer")
+            .opt_level_str("z")
+            .force_frame_pointer(false)
             .flag("-fno-common")
-            .flag("-fdata-sections")
-            .flag("-ffunction-sections")
-            .flag("-mthumb")
-            .flag("-fno-jump-tables")
             .flag("-fshort-enums")
             .flag("-mno-unaligned-access")
             .flag("-Wno-unused-command-line-argument")
@@ -551,7 +548,8 @@ fn finalize_nanos_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
         .define("BAGL_HEIGHT", Some("32"))
         .define("BAGL_WIDTH", Some("128"))
         .include(bolos_sdk.join("target/nanos/include"))
-        .flag("-fropi");
+        .flag("-fropi")
+        .flag("-ffixed-r9");
 }
 
 fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
@@ -580,9 +578,11 @@ fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
         .include(bolos_sdk.join("lib_blewbxx_impl/include"))
         .include(bolos_sdk.join("target/nanox/include"))
         .flag("-mno-movt")
-        .flag("-ffixed-r9")
+        // compile the SDK in ropi/rwpi still because relocation symbols
+        // from -fPIC are not passed to rust during link it seems
         .flag("-fropi")
-        .flag("-frwpi");
+        .flag("-frwpi")
+        .flag("-ffixed-r9");
     configure_lib_bagl(command, bolos_sdk);
 }
 
@@ -599,7 +599,8 @@ fn finalize_nanosplus_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
         .define("BAGL_WIDTH", Some("128"))
         .include(bolos_sdk.join("target/nanos2/include"))
         .flag("-fropi")
-        .flag("-frwpi");
+        .flag("-frwpi")
+        .flag("-ffixed-r9");
     configure_lib_bagl(command, bolos_sdk);
 }
 
