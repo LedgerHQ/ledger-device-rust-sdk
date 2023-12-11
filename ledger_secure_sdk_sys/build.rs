@@ -350,6 +350,7 @@ impl SDKBuilder {
                 self.api_level = api_level;
                 // Export api level into env for 'infos.rs'
                 println!("cargo:rustc-env=API_LEVEL={}", self.api_level);
+                println!("cargo:rustc-cfg=api_level=\"{}\"", self.api_level);
                 println!("cargo:warning=API_LEVEL is {}", self.api_level);
             }
             None => {
@@ -494,6 +495,7 @@ impl SDKBuilder {
         for header in headers.iter().map(|p| p.to_str().unwrap()) {
             bindings = bindings.header(header);
         }
+
         bindings = bindings.header("sdk.h");
 
         match self.device {

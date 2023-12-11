@@ -33,4 +33,9 @@ pub fn pic_rs_mut<T>(x: &mut T) -> &mut T {
     unsafe { &mut *ptr }
 }
 
+#[cfg(api_level = "1")]
+pub fn toto() -> Option<u8> {
+    Some(4)
+}
+
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
