@@ -1,6 +1,6 @@
 [package]
 name = "cargo-ledger"
-version = "1.2.0"
+version = "1.2.1"
 authors = ["yhql"]
 description = "Build and sideload Ledger Nano apps"
 categories = ["development-tools::cargo-plugins"]

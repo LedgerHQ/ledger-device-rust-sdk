@@ -3,7 +3,7 @@ name: Publish to Crates.io
 on:
   push:
     tags:
-      - '*-v*.*.*'  # Match tags like 'package1-v1.2.3'
+      - '*@*.*.*'  # Match tags like 'package1@1.2.3'
   workflow_dispatch:  # Allow manual workflow dispatch
 
 jobs:
@@ -64,7 +64,7 @@ jobs:
         run: |
           # Extract package name from the tag name
           TAG_NAME="${{ github.ref }}"
-          PACKAGE_NAME=$(echo "$TAG_NAME" | cut -d'/' -f3 | cut -d'-' -f1)
+          PACKAGE_NAME=$(echo "$TAG_NAME" | cut -d'/' -f3 | cut -d'@' -f1)
 
           PACKAGE_NAMES=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[].name' | tr '\n' ' ')
 
@@ -82,7 +82,7 @@ jobs:
         id: check-version
         run: |
           PACKAGE_NAME="${{ steps.determine-package.outputs.package }}"
-          TAG_VERSION=$(echo "${{ github.ref }}" | rev | cut -d 'v' -f 1 | rev)
+          TAG_VERSION=$(echo "${{ github.ref }}" | cut -d'@' -f2)
           MANIFEST_VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r --arg PACKAGE_NAME "$PACKAGE_NAME" '.packages[] | select(.name == $PACKAGE_NAME) | .version')
 
           if [ "$TAG_VERSION" != "$MANIFEST_VERSION" ]; then
