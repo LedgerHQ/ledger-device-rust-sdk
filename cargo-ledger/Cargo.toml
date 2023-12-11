@@ -1,0 +1,18 @@
+[package]
+name = "cargo-ledger"
+version = "1.2.0"
+authors = ["yhql"]
+description = "Build and sideload Ledger Nano apps"
+categories = ["development-tools::cargo-plugins"]
+repository = "https://github.com/LedgerHQ/cargo-ledger"
+readme = "README.md"
+license = "Apache-2.0"
+edition = "2018"
+
+[dependencies]
+cargo_metadata = "0.11.0"
+clap = { version = "4.1.8", features = ["derive"] }
+goblin = "0.2.3"
+serde = "1.0"
+serde_derive = "1.0"
+serde_json = "1.0"

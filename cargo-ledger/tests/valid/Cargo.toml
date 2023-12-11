@@ -1,0 +1,22 @@
+[package]
+name = "test"
+version = "0.0.0"
+
+[[bin]]
+name = "test"
+path = ""
+
+[package.metadata.ledger]
+name = "TestApp"
+curve = ["secp256k1"]
+flags = "0x38"
+path = ["'44/123"]
+
+[package.metadata.ledger.nanos]
+icon = "./assets/nanos.gif"
+
+[package.metadata.ledger.nanox]
+icon = "./assets/nanox.gif"
+
+[package.metadata.ledger.nanosplus]
+icon = "./assets/nanosplus.gif"
