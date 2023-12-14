@@ -350,7 +350,6 @@ impl SDKBuilder {
                 self.api_level = api_level;
                 // Export api level into env for 'infos.rs'
                 println!("cargo:rustc-env=API_LEVEL={}", self.api_level);
-                println!("cargo:rustc-cfg=api_level=\"{}\"", self.api_level);
                 println!("cargo:warning=API_LEVEL is {}", self.api_level);
             }
             None => {
@@ -474,14 +473,15 @@ impl SDKBuilder {
         let headers = str2path(
             &self.bolos_sdk,
             &[
-                "lib_cxng/include/libcxng.h",
-                "include/os.h",
+                "lib_cxng/include/libcxng.h", /* cxlib */
+                "include/os.h",               /* syscalls */
                 "include/os_screen.h",
                 "include/syscalls.h",
                 "include/os_io_seproxyhal.h",
                 "include/os_ux.h",
-                "include/ox.h",
+                "include/ox.h", /* crypto-related syscalls */
                 "lib_stusb/STM32_USB_Device_Library/Core/Inc/usbd_def.h",
+                "include/os_io_usb.h",
             ],
         );
 

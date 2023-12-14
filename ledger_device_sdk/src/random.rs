@@ -5,10 +5,6 @@ use core::ops::Range;
 use num_traits::{Bounded, PrimInt, Unsigned};
 use rand_core::{CryptoRng, RngCore};
 
-extern "C" {
-    pub fn cx_rng_no_throw(buffer: *mut u8, len: u32);
-}
-
 /// Fills a byte array with random bytes.
 ///
 /// # Arguments
@@ -17,7 +13,7 @@ extern "C" {
 #[inline]
 pub fn rand_bytes(out: &mut [u8]) {
     unsafe {
-        cx_rng_no_throw(out.as_mut_ptr(), out.len() as u32);
+        ledger_secure_sdk_sys::cx_rng_no_throw(out.as_mut_ptr(), out.len());
     }
 }
 
