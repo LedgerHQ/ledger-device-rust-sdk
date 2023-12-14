@@ -4,14 +4,14 @@ use core::str::from_utf8;
 
 use crate::{
     buttons::ButtonEvent::*,
-    io::{self, ApduHeader, Reply},
+    io::{self, ApduHeader, Comm, Event, Reply},
 };
 use ledger_secure_sdk_sys::{
     buttons::{get_button_event, ButtonEvent, ButtonsState},
     seph,
 };
 
-use crate::ui::bitmaps::Glyph;
+use crate::ui::bitmaps::{Glyph, WARNING};
 
 use crate::ui::{bagls::*, fonts::OPEN_SANS};
 
@@ -64,6 +64,51 @@ pub fn clear_screen() {
 
     #[cfg(target_os = "nanos")]
     BLANK.paint();
+}
+
+/// Display a developer mode / pending review popup, cleared with user interaction.
+///
+/// This method must be called by an application at the very beginning until it has been reviewed
+/// and approved by Ledger.
+///
+/// # Arguments
+///
+/// * `comm` - Communication manager used to get device events.
+///
+/// # Examples
+///
+/// Following is an application example main function calling the pending review popup at the very
+/// beginning, before doing any other application logic.
+///
+/// ```
+/// #[no_mangle]
+/// extern "C" fn sample_main() {
+///     let mut comm = Comm::new();
+///     ledger_device_sdk::ui::gadgets::display_pending_review(&mut comm);
+///     ...
+/// }
+/// `
+pub fn display_pending_review(comm: &mut Comm) {
+    clear_screen();
+
+    // Add icon and text to match the C SDK equivalent.
+    if cfg!(target_os = "nanos") {
+        "Pending".place(Location::Custom(2), Layout::Centered, true);
+        "Ledger review".place(Location::Custom(14), Layout::Centered, true);
+    } else {
+        WARNING.draw(57, 10);
+        "Pending".place(Location::Custom(28), Layout::Centered, true);
+        "Ledger review".place(Location::Custom(42), Layout::Centered, true);
+    }
+
+    crate::ui::screen_util::screen_update();
+
+    // Process events until a double button press release.
+    loop {
+        if let Event::Button(BothButtonsRelease) = comm.next_event::<ApduHeader>() {
+            break;
+        }
+    }
 }
 
 /// Shorthand to display a single message
