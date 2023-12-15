@@ -73,6 +73,42 @@ pub fn popup(message: &str) {
     SingleMessage::new(message).show_and_wait();
 }
 
+/// Display a developer mode / pending review popup, cleared with user interaction.
+///
+/// This method must be called by an application at the very beginning until it has been reviewed
+/// and approved by Ledger.
+///
+/// # Arguments
+///
+/// * `comm` - Communication manager used to get device events.
+///
+/// # Examples
+///
+/// Following is an application example main function calling the pending review popup at the very
+/// beginning, before doing any other application logic.
+///
+/// ```
+/// #[no_mangle]
+/// extern "C" fn sample_main() {
+///     let mut comm = Comm::new();
+///     ledger_device_sdk::ui::gadgets::display_pending_review(&mut comm);
+///     ...
+/// }
+/// ```
+pub fn display_pending_review(comm: &mut io::Comm) {
+    clear_screen();
+    "Pending Review".place(Location::Middle, Layout::Centered, false);
+    crate::ui::screen_util::screen_update();
+
+    loop {
+        if let io::Event::Button(LeftButtonRelease | RightButtonRelease | BothButtonsRelease) =
+            comm.next_event::<ApduHeader>()
+        {
+            break;
+        }
+    }
+}
+
 /// Display a single screen with a message,
 /// and exit the function with 'true'
 /// if the user validated 'message'

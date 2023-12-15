@@ -78,7 +78,7 @@ impl From<SyscallError> for Reply {
 // `Error` as `Infallible`. Since we need to convert such error in a status word (`Reply`) we need
 // to implement this trait here.
 impl From<Infallible> for Reply {
-    fn from(value: Infallible) -> Self {
+    fn from(_value: Infallible) -> Self {
         Reply(0x9000)
     }
 }
