@@ -542,11 +542,7 @@ fn main() {
 fn finalize_nanos_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
     let defines = header2define("sdk_nanos.h");
     for (define, value) in defines {
-        let val = match &value {
-            Some(s) => Some(s.as_str()),
-            None => None,
-        };
-        command.define(define.as_str(), val);
+        command.define(define.as_str(), value.as_deref());
     }
 
     command
@@ -561,11 +557,7 @@ fn finalize_nanos_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
 fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
     let defines = header2define("sdk_nanox.h");
     for (define, value) in defines {
-        let val = match &value {
-            Some(s) => Some(s.as_str()),
-            None => None,
-        };
-        command.define(define.as_str(), val);
+        command.define(define.as_str(), value.as_deref());
     }
 
     command
@@ -597,11 +589,7 @@ fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
 fn finalize_nanosplus_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
     let defines = header2define("sdk_nanosp.h");
     for (define, value) in defines {
-        let val = match &value {
-            Some(s) => Some(s.as_str()),
-            None => None,
-        };
-        command.define(define.as_str(), val);
+        command.define(define.as_str(), value.as_deref());
     }
 
     command
