@@ -83,14 +83,6 @@ impl From<Infallible> for Reply {
     }
 }
 
-/*extern "C" {
-    pub fn io_usb_hid_send(
-        sndfct: unsafe extern "C" fn(*mut u8, u16),
-        sndlength: u16,
-        apdu_buffer: *const u8,
-    );
-}*/
-
 /// Possible events returned by [`Comm::next_event`]
 #[derive(Eq, PartialEq)]
 pub enum Event<T> {

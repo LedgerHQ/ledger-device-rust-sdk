@@ -3,37 +3,9 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs::File, io::BufRead, io::BufReader, io::Read};
 
-// Definitions common to both `cc` and `bindgen`
-const DEFINES: [(&str, Option<&str>); 11] = [
-    ("HAVE_LOCAL_APDU_BUFFER", None),
-    ("IO_HID_EP_LENGTH", Some("64")),
-    ("USB_SEGMENT_SIZE", Some("64")),
-    ("OS_IO_SEPROXYHAL", None),
-    ("HAVE_IO_USB", None),
-    ("HAVE_L4_USBLIB", None),
-    ("HAVE_USB_APDU", None),
-    ("__IO", Some("volatile")),
-    ("IO_USB_MAX_ENDPOINTS", Some("6")),
-    ("IO_SEPROXYHAL_BUFFER_SIZE_B", Some("128")),
-    ("main", Some("_start")),
-];
-
-// Feature-specific definitions
-const DEFINES_BLE: [(&str, Option<&str>); 2] = [("HAVE_BLE", None), ("HAVE_BLE_APDU", None)];
-
 #[cfg(feature = "ccid")]
 const DEFINES_CCID: [(&str, Option<&str>); 2] =
     [("HAVE_USB_CLASS_CCID", None), ("HAVE_CCID", None)];
-
-const DEFINES_OPTIONAL: [(&str, Option<&str>); 7] = [
-    ("HAVE_SEPROXYHAL_MCU", None),
-    ("HAVE_MCU_PROTECT", None),
-    ("HAVE_MCU_SEPROXYHAL", None),
-    ("HAVE_MCU_SERIAL_STORAGE", None),
-    ("HAVE_SE_BUTTON", None),
-    ("HAVE_BAGL", None),
-    ("HAVE_SE_SCREEN", None),
-];
 
 const AUX_C_FILES: [&str; 2] = ["./src/c/src.c", "./src/c/sjlj.s"];
 
@@ -279,6 +251,29 @@ fn str2path(bolos_sdk: &Path, pathlist: &[&str]) -> Vec<PathBuf> {
         .collect::<Vec<PathBuf>>()
 }
 
+/// Get all #define from a header file
+fn header2define(headername: &str) -> Vec<(String, Option<String>)> {
+    let mut headerfile = File::open(headername).unwrap();
+    let mut header = String::new();
+    headerfile.read_to_string(&mut header).unwrap();
+
+    header
+        .lines()
+        .filter_map(|line| {
+            if line.trim_start().starts_with("#define") {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                match parts.len() {
+                    2 => Some((parts[1].to_string(), None)),
+                    3 => Some((parts[1].to_string(), Some(parts[2].to_string()))),
+                    _ => None,
+                }
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
 struct SDKBuilder {
     bolos_sdk: PathBuf,
     api_level: u32,
@@ -402,10 +397,6 @@ impl SDKBuilder {
             .files(str2path(&self.bolos_sdk, &SDK_C_FILES))
             .files(str2path(&self.bolos_sdk, &SDK_USB_FILES));
 
-        for (define, value) in DEFINES {
-            command.define(define, value);
-        }
-
         command = command
             .include(&self.gcc_toolchain)
             .include(self.bolos_sdk.join("include"))
@@ -485,18 +476,26 @@ impl SDKBuilder {
             ],
         );
 
-        let mut bindings = bindgen::Builder::default()
+        let mut bindings = bindgen::builder()
             .clang_args(&args)
             .prepend_enum_name(false)
             .generate_comments(false)
             .derive_default(true)
             .use_core();
 
+        // Target specific files
+        let (include_path, header) = match self.device {
+            Device::NanoS => ("nanos", "sdk_nanos.h"),
+            Device::NanoX => ("nanox", "sdk_nanox.h"),
+            Device::NanoSPlus => ("nanos2", "sdk_nanosp.h"),
+        };
+        bindings = bindings.clang_arg(format!("-I{bsdk}/target/{include_path}/include/"));
+        bindings = bindings.header(header);
+
+        // SDK headers to bind against
         for header in headers.iter().map(|p| p.to_str().unwrap()) {
             bindings = bindings.header(header);
         }
-
-        bindings = bindings.header("sdk.h");
 
         match self.device {
             Device::NanoS => {
@@ -509,35 +508,6 @@ impl SDKBuilder {
                         .to_str()
                         .unwrap(),
                 )
-            }
-            _ => (),
-        }
-        for (define, value) in DEFINES.iter().chain(DEFINES_BLE.iter()) {
-            let flag = match value {
-                Some(v) => format!("-D{define}={v}"),
-                _ => format!("-D{define}"),
-            };
-            bindings = bindings.clang_arg(flag);
-        }
-
-        // Add in target main include path
-        let include_path = match self.device {
-            Device::NanoS => "nanos",
-            Device::NanoX => "nanox",
-            Device::NanoSPlus => "nanos2",
-        };
-        bindings = bindings.clang_arg(format!("-I{bsdk}/target/{include_path}/include/"));
-
-        // Add in optional definitions tied to a specific device
-        match self.device {
-            Device::NanoX | Device::NanoSPlus => {
-                for (define, value) in DEFINES_OPTIONAL {
-                    let flag = match value {
-                        Some(v) => format!("-D{define}={v}"),
-                        _ => format!("-D{define}"),
-                    };
-                    bindings = bindings.clang_arg(flag);
-                }
             }
             _ => (),
         }
@@ -570,6 +540,15 @@ fn main() {
 }
 
 fn finalize_nanos_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
+    let defines = header2define("sdk_nanos.h");
+    for (define, value) in defines {
+        let val = match &value {
+            Some(s) => Some(s.as_str()),
+            None => None,
+        };
+        command.define(define.as_str(), val);
+    }
+
     command
         .target("thumbv6m-none-eabi")
         .define("ST31", None)
@@ -580,12 +559,15 @@ fn finalize_nanos_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
 }
 
 fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
-    for (define, value) in DEFINES_BLE {
-        command.define(define, value);
+    let defines = header2define("sdk_nanox.h");
+    for (define, value) in defines {
+        let val = match &value {
+            Some(s) => Some(s.as_str()),
+            None => None,
+        };
+        command.define(define.as_str(), val);
     }
-    for (define, value) in DEFINES_OPTIONAL {
-        command.define(define, value);
-    }
+
     command
         .target("thumbv6m-none-eabi")
         .define("ST33", None)
@@ -613,9 +595,15 @@ fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
 }
 
 fn finalize_nanosplus_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
-    for (define, value) in DEFINES_OPTIONAL {
-        command.define(define, value);
+    let defines = header2define("sdk_nanosp.h");
+    for (define, value) in defines {
+        let val = match &value {
+            Some(s) => Some(s.as_str()),
+            None => None,
+        };
+        command.define(define.as_str(), val);
     }
+
     command
         .target("thumbv8m.main-none-eabi")
         .define("ST33K1M5", None)
