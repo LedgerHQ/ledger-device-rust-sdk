@@ -112,7 +112,7 @@ pub struct Comm {
     /// Expected value for the APDU CLA byte.
     /// If defined, [`Comm`] will automatically reply with [`StatusWords::BadCla`] when an APDU
     /// with wrong CLA byte is received. If set to [`None`], all CLA are accepted.
-    /// Can be set using [`Comm::expect_cla`] method.
+    /// Can be set using [`Comm::set_expected_cla`] method.
     pub expected_cla: Option<u8>,
 }
 
@@ -159,9 +159,9 @@ impl Comm {
     /// This method can be used when building an instance of [`Comm`]:
     ///
     /// ```
-    /// let mut comm = Comm::new().expect_cla(0xe0);
+    /// let mut comm = Comm::new().set_expected_cla(0xe0);
     /// ```
-    pub fn expect_cla(mut self, cla: u8) -> Self {
+    pub fn set_expected_cla(mut self, cla: u8) -> Self {
         self.expected_cla = Some(cla);
         self
     }
