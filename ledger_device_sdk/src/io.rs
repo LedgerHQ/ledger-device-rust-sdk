@@ -94,11 +94,18 @@ pub enum Event<T> {
     Ticker,
 }
 
+/// Manages the communication of the device: receives events such as button presses, incoming
+/// APDU requests, and provides methods to build and transmit APDU responses.
 pub struct Comm {
     pub apdu_buffer: [u8; 260],
     pub rx: usize,
     pub tx: usize,
     buttons: ButtonsState,
+    /// Expected value for the APDU CLA byte.
+    /// If defined, [`Comm`] will automatically reply with [`StatusWords::BadCla`] when an APDU
+    /// with wrong CLA byte is received. If set to [`None`], all CLA are accepted.
+    /// Can be set using [`Comm::set_expected_cla`] method.
+    pub expected_cla: Option<u8>,
 }
 
 impl Default for Comm {
@@ -121,13 +128,34 @@ pub struct ApduHeader {
 }
 
 impl Comm {
+    /// Creates a new [`Comm`] instance, which accepts any CLA APDU by default.
     pub const fn new() -> Self {
         Self {
             apdu_buffer: [0u8; 260],
             rx: 0,
             tx: 0,
             buttons: ButtonsState::new(),
+            expected_cla: None,
         }
+    }
+
+    /// Defines [`Comm::expected_cla`] in order to reply automatically [`StatusWords::BadCla`] when
+    /// an incoming APDU has a CLA byte different from the given value.
+    ///
+    /// # Arguments
+    ///
+    /// * `cla` - Expected value for APDUs CLA byte.
+    ///
+    /// # Examples
+    ///
+    /// This method can be used when building an instance of [`Comm`]:
+    ///
+    /// ```
+    /// let mut comm = Comm::new().set_expected_cla(0xe0);
+    /// ```
+    pub fn set_expected_cla(mut self, cla: u8) -> Self {
+        self.expected_cla = Some(cla);
+        self
     }
 
     /// Send the currently held APDU
@@ -301,6 +329,14 @@ impl Comm {
             if let Err(sw) = self.get_data() {
                 self.reply(sw);
                 return None;
+            }
+
+            // If CLA filtering is enabled, automatically reject APDUs with wrong CLA
+            if let Some(cla) = self.expected_cla {
+                if self.apdu_buffer[0] != cla {
+                    self.reply(StatusWords::BadCla);
+                    return None;
+                }
             }
 
             let res = T::try_from(*self.get_apdu_metadata());
