@@ -78,17 +78,9 @@ impl From<SyscallError> for Reply {
 // `Error` as `Infallible`. Since we need to convert such error in a status word (`Reply`) we need
 // to implement this trait here.
 impl From<Infallible> for Reply {
-    fn from(value: Infallible) -> Self {
+    fn from(_value: Infallible) -> Self {
         Reply(0x9000)
     }
-}
-
-extern "C" {
-    pub fn io_usb_hid_send(
-        sndfct: unsafe extern "C" fn(*mut u8, u16),
-        sndlength: u16,
-        apdu_buffer: *const u8,
-    );
 }
 
 /// Possible events returned by [`Comm::next_event`]
@@ -181,10 +173,10 @@ impl Comm {
 
         match unsafe { G_io_app.apdu_state } {
             APDU_USB_HID => unsafe {
-                io_usb_hid_send(
-                    io_usb_send_apdu_data,
+                ledger_secure_sdk_sys::io_usb_hid_send(
+                    Some(io_usb_send_apdu_data),
                     self.tx as u16,
-                    self.apdu_buffer.as_ptr(),
+                    self.apdu_buffer.as_mut_ptr(),
                 );
             },
             APDU_RAW => {

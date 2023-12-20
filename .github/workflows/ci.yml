@@ -26,6 +26,11 @@ jobs:
     steps:
       - name: Clone
         uses: actions/checkout@v4
+      - name: Cargo update
+        uses: actions-rs/cargo@v1
+        with:
+          command: update
+          args: -p home@0.5.9 --precise 0.5.5
       - name: Cargo clippy
         uses: actions-rs/cargo@v1
         with:
@@ -72,6 +77,11 @@ jobs:
     steps:
       - name: Clone
         uses: actions/checkout@v4
+      - name: Cargo update
+        uses: actions-rs/cargo@v1
+        with:
+          command: update
+          args: -p home@0.5.9 --precise 0.5.5
       - name: Cargo build
         uses: actions-rs/cargo@v1
         with:
@@ -86,6 +96,11 @@ jobs:
     steps:
       - name: Clone
         uses: actions/checkout@v4
+      - name: Cargo update
+        uses: actions-rs/cargo@v1
+        with:
+          command: update
+          args: -p home@0.5.9 --precise 0.5.5
       - name: Cargo build
         uses: actions-rs/cargo@v1
         with:
@@ -104,6 +119,11 @@ jobs:
     steps:
       - name: Clone
         uses: actions/checkout@v4
+      - name: Cargo update
+        uses: actions-rs/cargo@v1
+        with:
+          command: update
+          args: -p home@0.5.9 --precise 0.5.5
       - name: Unit tests
         uses: actions-rs/cargo@v1
         with:
