@@ -312,6 +312,111 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
     }
 }
 
+#[repr(C)]
+pub struct BLSPrivateKey {
+    curve: CurvesId,
+    keylength: usize,
+    key: [u8; 32],
+}
+
+#[repr(C)]
+pub struct BLSPublicKey {
+    curve: CurvesId,
+    keylength: usize,
+    pub pubkey: [u8; 48],
+}
+
+/// BLS Curves-specific implementation
+impl BLSPrivateKey {
+    pub const PK_SIZE: usize = 48;
+    pub const SK_SIZE: usize = 32;
+    pub const SIG_SIZE: usize = 96;
+
+    pub fn derive_from_path(path: &[u32]) -> Self
+    where
+        [(); Self::SK_SIZE]:,
+    {
+        let mut tmp = Secret::<{ Self::SK_SIZE }>::new();
+        // Ignoring 'Result' here because known to be valid
+        let _ = eip2333_derive(path, tmp.as_mut());
+        let mut sk = Self {
+            curve: CurvesId::Bls12381G1,
+            keylength: Self::SK_SIZE,
+            key: [0u8; Self::SK_SIZE],
+        };
+        let keylen = sk.key.len();
+        sk.key.copy_from_slice(&tmp.0[..keylen]);
+        sk
+    }
+
+    /// Retrieve the public key corresponding to the private key (`self`)
+    pub fn public_key(&self) -> Result<BLSPublicKey, CxError>
+    where
+        [(); Self::PK_SIZE]:,
+    {
+        let mut pubkey = BLSPublicKey {
+            curve: self.curve,
+            keylength: Self::PK_SIZE,
+            pubkey: [0u8; Self::PK_SIZE],
+        };
+        let err = unsafe {
+            cx_ecfp_generate_pair2_no_throw(
+                self.curve as u8,
+                // Safety: cast awfully dodgy but that's how it's done in the C SDK
+                (&mut pubkey as *mut BLSPublicKey).cast(), // as *mut cx_ecfp_256_public_key_s,
+                self as *const BLSPrivateKey as *mut cx_ecfp_256_private_key_s,
+                true,
+                CX_SHA256,
+            )
+        };
+        if err != 0 {
+            Err(err.into())
+        } else {
+            Ok(pubkey)
+        }
+    }
+
+    pub fn hash_to_field(&self, msg: &[u8], dst: &[u8]) -> Result<[u8; 192], CxError> {
+        let mut hash = [0u8; 192];
+        let result = unsafe {
+            cx_hash_to_field(
+                msg.as_ptr(),
+                msg.len(),
+                dst.as_ptr(),
+                dst.len(),
+                hash.as_mut_ptr(),
+                hash.len(),
+            )
+        };
+        if result != CX_OK {
+            Err(result.into())
+        } else {
+            Ok(hash)
+        }
+    }
+
+    // Note the input hash shall be the output from hash_to_field
+    pub fn sign(&self, hash: &[u8]) -> Result<([u8; Self::SIG_SIZE], u32), CxError> {
+        let mut sig = [0u8; Self::SIG_SIZE];
+        let sig_len = Self::SIG_SIZE;
+
+        let result = unsafe {
+            ox_bls12381_sign(
+                self as *const BLSPrivateKey as *const cx_ecfp_384_private_key_t,
+                hash.as_ptr(),
+                hash.len(),
+                sig.as_mut_ptr(),
+                sig_len,
+            )
+        };
+        if result != CX_OK {
+            Err(result.into())
+        } else {
+            Ok((sig, sig_len as u32))
+        }
+    }
+}
+
 /// General implementation for a public key.
 impl<const P: usize, const TY: char> ECPublicKey<P, TY> {
     /// Size of a signature relative to the public key's size
@@ -398,6 +503,19 @@ pub fn bip32_derive(curve: CurvesId, path: &[u32], key: &mut [u8]) -> Result<(),
             path.len() as u32,
             key.as_mut_ptr(),
             core::ptr::null_mut(),
+        )
+    };
+    Ok(())
+}
+
+/// Wrapper for 'os_perso_derive_eip2333'
+pub fn eip2333_derive(path: &[u32], key: &mut [u8]) -> Result<(), CxError> {
+    unsafe {
+        os_perso_derive_eip2333(
+            CurvesId::Bls12381G1 as u8,
+            path.as_ptr(),
+            path.len() as u32,
+            key.as_mut_ptr(),
         )
     };
     Ok(())
