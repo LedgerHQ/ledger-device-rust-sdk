@@ -313,6 +313,14 @@ impl Comm {
             seph::Events::BleReceive => ble::receive(&mut self.apdu_buffer, spi_buffer),
 
             seph::Events::TickerEvent => return Some(Event::Ticker),
+
+            #[cfg(target_os = "stax")]
+            seph::Events::ScreenTouch => {
+                unsafe {
+                    ux_process_finger_event(spi_buffer.as_mut_ptr());
+                }
+            }
+
             _ => (),
         }
 
