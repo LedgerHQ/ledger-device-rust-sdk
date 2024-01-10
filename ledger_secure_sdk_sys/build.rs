@@ -330,8 +330,8 @@ impl SDKBuilder {
     }
 
     pub fn bolos_sdk(&mut self) -> Result<(), SDKBuildError> {
-        println!("cargo:rerun-if-env-changed=LEDGER_C_SDK_PATH");
-        let sdk_path = match env::var("LEDGER_C_SDK_PATH") {
+        println!("cargo:rerun-if-env-changed=LEDGER_SDK_PATH");
+        let sdk_path = match env::var("LEDGER_SDK_PATH") {
             Err(_) => clone_sdk(&self.device),
             Ok(path) => PathBuf::from(path),
         };

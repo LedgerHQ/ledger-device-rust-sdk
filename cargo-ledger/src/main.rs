@@ -194,33 +194,38 @@ fn build_app(
 ) {
     let exe_path = match use_prebuilt {
         None => {
-            let mut cargo_cmd = Command::new("cargo")
-                .args([
-                    "build",
-                    "--release",
-                    format!("--target={}", device.as_ref()).as_str(),
-                    "--message-format=json-diagnostic-rendered-ansi",
-                ])
-                .args(&remaining_args)
-                .stdout(Stdio::piped());
-
             let c_sdk_path = match device {
                 Device::Nanos => std::env::var("NANOS_SDK"),
                 Device::Nanosplus => std::env::var("NANOSP_SDK"),
                 Device::Nanox => std::env::var("NANOX_SDK"),
             };
 
-            match c_sdk_path {
-                Ok(path) => {
-                    cargo_cmd = cargo_cmd
-                        .arg(format!("--config env.LEDGER_C_SDK_PATH={}", path))
-                }
+            let mut args: Vec<String> = vec![];
+            args.push(String::from("build"));
+            args.push(String::from("--release"));
+            args.push(format!("--target={}", device.as_ref()));
+            args.push(String::from(
+                "--message-format=json-diagnostic-rendered-ansi",
+            ));
+
+            match std::env::var("LEDGER_SDK_PATH") {
+                Ok(_) => (),
                 Err(_) => {
-                    println!("No C SDK, it will be cloned while building the Rust SDK")
+                    if let Ok(path) = c_sdk_path {
+                        args.push(format!(
+                            "--config env.LEDGER_SDK_PATH={}",
+                            path
+                        ))
+                    }
                 }
             }
 
-            let mut cargo_cmd = cargo_cmd.spawn().unwrap();
+            let mut cargo_cmd = Command::new("cargo")
+                .args(args)
+                .args(&remaining_args)
+                .stdout(Stdio::piped())
+                .spawn()
+                .unwrap();
 
             let mut exe_path = PathBuf::new();
             let out = cargo_cmd.stdout.take().unwrap();
