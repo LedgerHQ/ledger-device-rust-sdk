@@ -4,23 +4,17 @@
 // Force boot section to be embedded in
 use ledger_device_sdk as _;
 
-use ledger_device_sdk::nbgl::{home, Home};
+use ledger_device_sdk::nbgl::Home;
 use ledger_device_sdk::uxapp::UxEvent;
+use ledger_device_sdk::io::*;
 use ledger_secure_sdk_sys::seph;
 use ledger_secure_sdk_sys::*;
+use const_zero::const_zero;
+
+use include_gif::include_gif;
 
 #[no_mangle]
-pub static G_ux_params: bolos_ux_params_t = bolos_ux_params_t {
-    ux_id: 0,
-    len: 0,
-    u: bolos_ux_params_s__bindgen_ty_1 {
-        pairing_request: bolos_ux_params_s__bindgen_ty_1__bindgen_ty_1 {
-            type_: 0,
-            pairing_info_len: 0,
-            pairing_info: [0; 16],
-        },
-    },
-};
+pub static mut G_ux_params: bolos_ux_params_t = unsafe { const_zero!(bolos_ux_params_t) };
 
 #[panic_handler]
 fn panic(_: &core::panic::PanicInfo) -> ! {
@@ -106,45 +100,51 @@ fn wait_any() {
     }
 }
 
+pub enum Instruction {
+    GetVersion,
+    GetAppName,
+}
+
+impl TryFrom<ApduHeader> for Instruction {
+    type Error = StatusWords;
+    
+    fn try_from(value: ApduHeader) -> Result<Self, Self::Error> {
+        match value.ins {
+            3 => Ok(Instruction::GetVersion),
+            4 => Ok(Instruction::GetAppName),
+            _ => Err(StatusWords::NothingReceived),
+        }
+    }
+}
+
 #[no_mangle]
 extern "C" fn sample_main() {
     unsafe {
         nbgl_refreshReset();
     }
 
-    // works
-    home(&BTC_BMP);
-    wait_any();
+    let mut comm = Comm::new();
 
-    // does not work
+    let icon = nbgl_icon_details_t {
+        width: 64,
+        height: 64,
+        bpp: 2,
+        isFile: true,
+        bitmap: BTC_BMP.as_ptr(),
+    };
+    
+    let mut myHome = Home::new(Some(&mut comm))
+    .app_name("Stax Sample\0")
+    .icon(&icon);
 
-    // let icon = nbgl_icon_details_t {
-    //     width: 64,
-    //     height: 64,
-    //     bpp: 2,
-    //     isFile: true,
-    //     bitmap: BTC_BMP.as_ptr(),
-    // };
-
-    // Home::new()
-    //     .app_name("Bitcoin\0")
-    //     .icon(&icon)
-    //     .top_right_cb(|| {
-    //         let icon2 = nbgl_icon_details_t {
-    //             width: 64,
-    //             height: 64,
-    //             bpp: 2,
-    //             isFile: true,
-    //             bitmap: BTC_BMP.as_ptr(),
-    //         };
-    //         unsafe { nbgl_refreshReset(); }
-    //         Home::new().icon(&icon2).app_name("Ethereum\0").show();
-    //         wait_any();
-    //     })
-    //     .quit_cb(|| exit_app(12))
-    //     .show();
-
-    // wait_any();
+    myHome.show();
+    
+    loop {
+        match myHome.get_events::<Instruction>() {
+            Event::Command(ins) => (),
+            _ => (),
+        };
+    }
 
     exit_app(0);
 }
