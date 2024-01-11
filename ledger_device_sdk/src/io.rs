@@ -315,11 +315,9 @@ impl Comm {
             seph::Events::TickerEvent => return Some(Event::Ticker),
 
             #[cfg(target_os = "stax")]
-            seph::Events::ScreenTouch => {
-                unsafe {
-                    ux_process_finger_event(spi_buffer.as_mut_ptr());
-                }
-            }
+            seph::Events::ScreenTouch => unsafe {
+                ux_process_finger_event(spi_buffer.as_mut_ptr());
+            },
 
             _ => (),
         }
