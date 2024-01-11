@@ -4,12 +4,12 @@
 // Force boot section to be embedded in
 use ledger_device_sdk as _;
 
+use const_zero::const_zero;
+use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::Home;
 use ledger_device_sdk::uxapp::UxEvent;
-use ledger_device_sdk::io::*;
 use ledger_secure_sdk_sys::seph;
 use ledger_secure_sdk_sys::*;
-use const_zero::const_zero;
 
 use include_gif::include_gif;
 
@@ -66,40 +66,6 @@ extern "C" fn io_seproxyhal_play_tune(tune_index: u8) {
     }
 }
 
-// Special handler for finger events, that are an 8 byte packet
-pub fn get_touch_event() -> Option<()> {
-    if !seph::is_status_sent() {
-        seph::send_general_status();
-    }
-
-    let mut buf = [0u8; 8];
-    while seph::is_status_sent() {
-        seph::seph_recv(&mut buf, 0);
-
-        match buf[0] as u32 {
-            SEPROXYHAL_TAG_FINGER_EVENT => {
-                unsafe {
-                    ux_process_finger_event(buf.as_mut_ptr());
-                }
-                // return Some(());
-            }
-            // SEPROXYHAL_TAG_TICKER_EVENT => unsafe {
-            //     ledger_sdk_sys::ux_process_default_event();
-            // }
-            _ => (),
-        }
-    }
-    None
-}
-
-fn wait_any() {
-    loop {
-        if get_touch_event().is_some() {
-            return;
-        }
-    }
-}
-
 pub enum Instruction {
     GetVersion,
     GetAppName,
@@ -107,7 +73,7 @@ pub enum Instruction {
 
 impl TryFrom<ApduHeader> for Instruction {
     type Error = StatusWords;
-    
+
     fn try_from(value: ApduHeader) -> Result<Self, Self::Error> {
         match value.ins {
             3 => Ok(Instruction::GetVersion),
@@ -125,20 +91,13 @@ extern "C" fn sample_main() {
 
     let mut comm = Comm::new();
 
-    let icon = nbgl_icon_details_t {
-        width: 64,
-        height: 64,
-        bpp: 2,
-        isFile: true,
-        bitmap: BTC_BMP.as_ptr(),
-    };
-    
     let mut myHome = Home::new(Some(&mut comm))
-    .app_name("Stax Sample\0")
-    .icon(&icon);
+        .app_name("Stax Sample\0")
+        .info_contents(env!("CARGO_PKG_VERSION"), env!("CARGO_PKG_AUTHORS"))
+        .icon(&BTC_BMP);
 
     myHome.show();
-    
+
     loop {
         match myHome.get_events::<Instruction>() {
             Event::Command(ins) => (),
