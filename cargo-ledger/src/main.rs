@@ -213,7 +213,7 @@ fn build_app(
                 Err(_) => match c_sdk_path {
                     Ok(path) => args
                         .push(format!("--config env.LEDGER_SDK_PATH={}", path)),
-                    Err(_) => println!("C SDK will habe to be cloned"),
+                    Err(_) => println!("C SDK will have to be cloned"),
                 },
             }
 
