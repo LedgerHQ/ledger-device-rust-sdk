@@ -210,14 +210,11 @@ fn build_app(
 
             match std::env::var("LEDGER_SDK_PATH") {
                 Ok(_) => (),
-                Err(_) => {
-                    if let Ok(path) = c_sdk_path {
-                        args.push(format!(
-                            "--config env.LEDGER_SDK_PATH={}",
-                            path
-                        ))
-                    }
-                }
+                Err(_) => match c_sdk_path {
+                    Ok(path) => args
+                        .push(format!("--config env.LEDGER_SDK_PATH={}", path)),
+                    Err(_) => println!("C SDK will habe to be cloned"),
+                },
             }
 
             let mut cargo_cmd = Command::new("cargo")
