@@ -194,13 +194,31 @@ fn build_app(
 ) {
     let exe_path = match use_prebuilt {
         None => {
+            let c_sdk_path = match device {
+                Device::Nanos => std::env::var("NANOS_SDK"),
+                Device::Nanosplus => std::env::var("NANOSP_SDK"),
+                Device::Nanox => std::env::var("NANOX_SDK"),
+            };
+
+            let mut args: Vec<String> = vec![];
+            args.push(String::from("build"));
+            args.push(String::from("--release"));
+            args.push(format!("--target={}", device.as_ref()));
+            args.push(String::from(
+                "--message-format=json-diagnostic-rendered-ansi",
+            ));
+
+            match std::env::var("LEDGER_SDK_PATH") {
+                Ok(_) => (),
+                Err(_) => match c_sdk_path {
+                    Ok(path) => args
+                        .push(format!("--config env.LEDGER_SDK_PATH={}", path)),
+                    Err(_) => println!("C SDK will have to be cloned"),
+                },
+            }
+
             let mut cargo_cmd = Command::new("cargo")
-                .args([
-                    "build",
-                    "--release",
-                    format!("--target={}", device.as_ref()).as_str(),
-                    "--message-format=json-diagnostic-rendered-ansi",
-                ])
+                .args(args)
                 .args(&remaining_args)
                 .stdout(Stdio::piped())
                 .spawn()

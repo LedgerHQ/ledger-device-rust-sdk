@@ -215,7 +215,7 @@ fn clone_sdk(device: &Device) -> PathBuf {
         ),
         Device::NanoSPlus => (
             Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_1",
+            "API_LEVEL_5",
         ),
     };
 
