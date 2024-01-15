@@ -211,8 +211,10 @@ fn build_app(
             match std::env::var("LEDGER_SDK_PATH") {
                 Ok(_) => (),
                 Err(_) => match c_sdk_path {
-                    Ok(path) => args
-                        .push(format!("--config env.LEDGER_SDK_PATH={}", path)),
+                    Ok(path) => args.push(format!(
+                        "--config=env.LEDGER_SDK_PATH=\"{}\"",
+                        path
+                    )),
                     Err(_) => println!("C SDK will have to be cloned"),
                 },
             }
