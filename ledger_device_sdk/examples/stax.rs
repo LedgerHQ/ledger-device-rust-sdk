@@ -6,12 +6,9 @@ use ledger_device_sdk as _;
 
 use const_zero::const_zero;
 use ledger_device_sdk::io::*;
-use ledger_device_sdk::nbgl::Home;
-use ledger_device_sdk::uxapp::UxEvent;
-use ledger_secure_sdk_sys::seph;
+use ledger_device_sdk::nbgl::{NbglUI, Field};
 use ledger_secure_sdk_sys::*;
-
-use include_gif::include_gif;
+use ledger_device_sdk::testing::debug_print;
 
 #[no_mangle]
 pub static mut G_ux_params: bolos_ux_params_t = unsafe { const_zero!(bolos_ux_params_t) };
@@ -91,21 +88,47 @@ extern "C" fn sample_main() {
 
     let mut comm = Comm::new();
 
-    let mut myHome = Home::new(Some(&mut comm))
+    let mut nbgl_ui = NbglUI::new(Some(&mut comm))
         .app_name("Stax Sample\0")
         .info_contents(env!("CARGO_PKG_VERSION"), env!("CARGO_PKG_AUTHORS"))
         .icon(&BTC_BMP);
 
-    myHome.show();
+    // let myStaticReview = StaticReview::new(Some(&comm));
+
+    // myStaticReview.show_and_wait_validation();
+
+    // myNBGL.show_home();
+
+    let fields = [
+        Field {
+            name: "Field 1\0",
+            value: "Value 1\0",
+        },
+        Field {
+            name: "Field 2\0",
+            value: "Value 2\0",
+        },
+        Field {
+            name: "Field 3\0",
+            value: "Value 3\0",
+        },
+    ];
+    
+
+    if nbgl_ui.show_review_and_wait_validation(&fields) {
+        debug_print("Validation result: true\n");
+    } else {
+        debug_print("Validation result: false\n");
+    }
 
     loop {
-        match myHome.get_events::<Instruction>() {
-            Event::Command(ins) => (),
+        match nbgl_ui.get_events::<Instruction>() {
+            Event::Command(_) => (),
             _ => (),
         };
     }
 
-    exit_app(0);
+    // exit_app(0);
 }
 
 const BTC_BMP: [u8; 573] = [
