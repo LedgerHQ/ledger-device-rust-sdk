@@ -89,7 +89,10 @@ pub enum Event<T> {
     /// APDU event
     Command(T),
     /// Button press or release event
+    #[cfg(not(target_os = "stax"))]
     Button(ButtonEvent),
+    #[cfg(target_os = "stax")]
+    TouchEvent,
     /// Ticker
     Ticker,
 }
@@ -291,6 +294,7 @@ impl Comm {
         // If this is an APDU, return with the "received command" event
         // Any other event (usb, xfer, ticker) is silently handled
         match seph::Events::from(tag) {
+            #[cfg(not(target_os = "stax"))]
             seph::Events::ButtonPush => {
                 let button_info = spi_buffer[3] >> 1;
                 if let Some(btn_evt) = get_button_event(&mut self.buttons, button_info) {
@@ -312,11 +316,18 @@ impl Comm {
             #[cfg(target_os = "nanox")]
             seph::Events::BleReceive => ble::receive(&mut self.apdu_buffer, spi_buffer),
 
-            seph::Events::TickerEvent => return Some(Event::Ticker),
+            seph::Events::TickerEvent => {
+                #[cfg(target_os = "stax")]
+                unsafe {
+                    ux_process_ticker_event();
+                }
+                return Some(Event::Ticker);
+            },
 
             #[cfg(target_os = "stax")]
             seph::Events::ScreenTouch => unsafe {
                 ux_process_finger_event(spi_buffer.as_mut_ptr());
+                return Some(Event::TouchEvent);
             },
 
             _ => (),
