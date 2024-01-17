@@ -1,7 +1,3 @@
-#![allow(dead_code)]
-
-use core::str::from_utf8;
-
 use crate::{
     buttons::ButtonEvent::*,
     io::{self, ApduHeader, Comm, Event, Reply},
@@ -92,10 +88,14 @@ pub fn display_pending_review(comm: &mut Comm) {
     clear_screen();
 
     // Add icon and text to match the C SDK equivalent.
-    if cfg!(target_os = "nanos") {
+    #[cfg(target_os = "nanos")]
+    {
         "Pending".place(Location::Custom(2), Layout::Centered, true);
         "Ledger review".place(Location::Custom(14), Layout::Centered, true);
-    } else {
+    }
+
+    #[cfg(not(target_os = "nanos"))]
+    {
         WARNING.draw(57, 10);
         "Pending".place(Location::Custom(28), Layout::Centered, true);
         "Ledger review".place(Location::Custom(42), Layout::Centered, true);
@@ -361,21 +361,20 @@ impl<'a> Menu<'a> {
     }
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Default)]
 pub enum PageStyle {
+    #[default]
     PictureNormal, // Picture (should be 16x16) with two lines of text (page layout depends on device).
-    PictureBold,   // Icon on top with one line of text on the bottom.
-    BoldNormal,    // One line of bold text and one line of normal text.
-    Normal,        // 2 lines of centered text.
+    PictureBold, // Icon on top with one line of text on the bottom.
+    BoldNormal,  // One line of bold text and one line of normal text.
+    Normal,      // 2 lines of centered text.
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 pub struct Page<'a> {
     style: PageStyle,
     label: [&'a str; 2],
     glyph: Option<&'a Glyph<'a>>,
-    chunk_count: u8,
-    chunk_idx: u8,
 }
 
 // new_picture_normal
@@ -405,15 +404,11 @@ impl<'a> From<(&'a str, &'a Glyph<'a>)> for Page<'a> {
 }
 
 impl<'a> Page<'a> {
-    pub fn new(style: PageStyle, label: [&'a str; 2], glyph: Option<&'a Glyph<'a>>) -> Self {
-        let chunk_count = 0;
-        let chunk_idx = 0;
+    pub const fn new(style: PageStyle, label: [&'a str; 2], glyph: Option<&'a Glyph<'a>>) -> Self {
         Page {
             style,
             label,
             glyph,
-            chunk_count,
-            chunk_idx,
         }
     }
 
@@ -465,34 +460,7 @@ impl<'a> Page<'a> {
                     + 2 * padding as usize;
                 let mut cur_y = Location::Middle.get_y(total_height);
 
-                // Display the chunk count and index if needed
-                if self.chunk_count > 1 {
-                    let mut label_bytes = [0u8; MAX_CHAR_PER_LINE];
-                    // Convert the chunk count to a string
-                    let mut chunk_count_buf = [0u8; 3];
-                    let chunk_count_str = self.chunk_count.numtoa_str(10, &mut chunk_count_buf);
-                    // Convert the chunk index to a string
-                    let mut chunk_idx_buf = [0u8; 3];
-                    let chunk_idx_str = self.chunk_idx.numtoa_str(10, &mut chunk_idx_buf);
-                    // Add the chunk count and index to the label
-                    concatenate(
-                        &[
-                            self.label[0],
-                            " (",
-                            chunk_idx_str,
-                            "/",
-                            chunk_count_str,
-                            ")",
-                        ],
-                        &mut label_bytes,
-                    );
-                    from_utf8(&label_bytes)
-                        .unwrap()
-                        .trim_matches(char::from(0))
-                        .place(Location::Custom(cur_y), Layout::Centered, true);
-                } else {
-                    self.label[0].place(Location::Custom(cur_y), Layout::Centered, true);
-                }
+                self.label[0].place(Location::Custom(cur_y), Layout::Centered, true);
                 cur_y += OPEN_SANS[0].height as usize + 2 * padding as usize;
 
                 // If the device is a Nano S, display the second label as
@@ -719,6 +687,98 @@ pub struct Field<'a> {
     pub name: &'a str,
     pub value: &'a str,
 }
+
+impl<'a> Field<'a> {
+    pub fn event_loop(&self, incoming_direction: ButtonEvent) -> ButtonEvent {
+        let mut buttons = ButtonsState::new();
+        let chunk_max_lines = layout::MAX_LINES - 1;
+        let page_count = 1 + self.value.len() / (chunk_max_lines * MAX_CHAR_PER_LINE);
+
+        let mut cur_page = match incoming_direction {
+            ButtonEvent::LeftButtonRelease => page_count - 1,
+            ButtonEvent::RightButtonRelease => 0,
+            _ => 0,
+        };
+
+        // A closure to draw common elements of the screen
+        // cur_page passed as parameter to prevent borrowing
+        let draw = |page: usize| {
+            clear_screen();
+            let mut chunks = [Label::default(); layout::MAX_LINES];
+            for (i, chunk) in self
+                .value
+                .as_bytes()
+                .chunks(MAX_CHAR_PER_LINE)
+                .skip(page * chunk_max_lines)
+                .take(chunk_max_lines)
+                .enumerate()
+            {
+                chunks[1 + i] = Label::from(core::str::from_utf8(chunk).unwrap_or(""));
+            }
+
+            let mut header_buf = [b' '; MAX_CHAR_PER_LINE + 4];
+
+            if page == 0 && MAX_CHAR_PER_LINE * chunk_max_lines > self.value.len() {
+                // There is a single page. Do not display counter `( x / n )`
+                header_buf[..self.name.len()].copy_from_slice(self.name.as_bytes());
+            } else {
+                let mut buf_page = [0u8; 3];
+                let mut buf_count = [0u8; 3];
+                let page_str = (page + 1).numtoa_str(10, &mut buf_page);
+                let count_str = page_count.numtoa_str(10, &mut buf_count);
+
+                concatenate(
+                    &[&self.name, " (", &page_str, "/", &count_str, ")"],
+                    &mut header_buf,
+                );
+            }
+            let header = core::str::from_utf8(&header_buf)
+                .unwrap_or("")
+                .trim_end_matches(' ');
+            chunks[0] = Label::from(header).bold();
+
+            LEFT_ARROW.display();
+            RIGHT_ARROW.display();
+
+            chunks.place(Location::Middle, Layout::Centered, false);
+
+            crate::ui::screen_util::screen_update();
+        };
+
+        draw(cur_page);
+
+        loop {
+            match get_event(&mut buttons) {
+                Some(ButtonEvent::LeftButtonPress) => {
+                    LEFT_S_ARROW.instant_display();
+                }
+                Some(ButtonEvent::RightButtonPress) => {
+                    RIGHT_S_ARROW.instant_display();
+                }
+                Some(ButtonEvent::LeftButtonRelease) => {
+                    LEFT_S_ARROW.erase();
+                    if cur_page == 0 {
+                        return ButtonEvent::LeftButtonRelease;
+                    }
+                    cur_page = cur_page.saturating_sub(1);
+                    draw(cur_page);
+                }
+                Some(ButtonEvent::RightButtonRelease) => {
+                    RIGHT_S_ARROW.erase();
+                    if cur_page + 1 == page_count {
+                        return ButtonEvent::RightButtonRelease;
+                    }
+                    if cur_page + 1 < page_count {
+                        cur_page += 1;
+                    }
+                    draw(cur_page);
+                }
+                Some(_) | None => (),
+            }
+        }
+    }
+}
+
 pub struct MultiFieldReview<'a> {
     fields: &'a [Field<'a>],
     review_message: &'a [&'a str],
@@ -747,8 +807,6 @@ fn concatenate(strings: &[&str], output: &mut [u8]) {
     }
 }
 
-const MAX_REVIEW_PAGES: usize = 48;
-
 impl<'a> MultiFieldReview<'a> {
     pub fn new(
         fields: &'a [Field<'a>],
@@ -771,8 +829,6 @@ impl<'a> MultiFieldReview<'a> {
     }
 
     pub fn show(&self) -> bool {
-        let mut buttons = ButtonsState::new();
-
         let first_page = match self.review_message.len() {
             0 => Page::new(PageStyle::PictureNormal, ["", ""], self.review_glyph),
             1 => Page::new(
@@ -787,6 +843,10 @@ impl<'a> MultiFieldReview<'a> {
             ),
         };
 
+        clear_screen();
+        first_page.place_and_wait();
+        crate::ui::screen_util::screen_update();
+
         let validation_page = Page::new(
             PageStyle::PictureBold,
             [self.validation_message, ""],
@@ -797,86 +857,61 @@ impl<'a> MultiFieldReview<'a> {
             [self.cancel_message, ""],
             self.cancel_glyph,
         );
-        let mut review_pages: [Page; MAX_REVIEW_PAGES] =
-            [Page::new(PageStyle::Normal, ["", ""], None); MAX_REVIEW_PAGES];
-        let mut total_page_count = 0;
 
-        let mut max_chars_per_page = MAX_CHAR_PER_LINE * 3;
-        if cfg!(target_os = "nanos") {
-            max_chars_per_page = MAX_CHAR_PER_LINE;
-        }
-
-        // Determine each field page count
-        for field in self.fields {
-            let field_page_count = (field.value.len() - 1) / max_chars_per_page + 1;
-            // Create pages for each chunk of the field
-            for i in 0..field_page_count {
-                let start = i * max_chars_per_page;
-                let end = (start + max_chars_per_page).min(field.value.len());
-                let chunk = &field.value[start..end];
-
-                review_pages[total_page_count] =
-                    Page::new(PageStyle::BoldNormal, [field.name, chunk], None);
-                review_pages[total_page_count].chunk_count = field_page_count as u8;
-                review_pages[total_page_count].chunk_idx = (i + 1) as u8;
-                // Check if we have reached the maximum number of pages
-                // We need to keep 2 pages for the validation and cancel pages
-                total_page_count = if total_page_count < MAX_REVIEW_PAGES - 2 {
-                    total_page_count + 1
-                } else {
-                    break;
-                };
-            }
-        }
-
-        review_pages[total_page_count] = validation_page;
-        total_page_count += 1;
-        review_pages[total_page_count] = cancel_page;
-
-        clear_screen();
-        first_page.place_and_wait();
-        crate::ui::screen_util::screen_update();
-        clear_screen();
-        RIGHT_ARROW.display();
-
-        let mut cur_page = 0;
-        let mut refresh: bool = true;
-        review_pages[cur_page].place();
+        let mut cur_page = 0usize;
+        let mut direction = ButtonEvent::RightButtonRelease;
 
         loop {
-            if let Some(b) = get_event(&mut buttons) {
-                match b {
-                    ButtonEvent::LeftButtonRelease => {
-                        cur_page = cur_page.saturating_sub(1);
-                        refresh = true;
+            match cur_page {
+                cancel if cancel == self.fields.len() => {
+                    let mut buttons = ButtonsState::new();
+                    clear_screen();
+                    cancel_page.place();
+                    loop {
+                        match get_event(&mut buttons) {
+                            Some(ButtonEvent::LeftButtonRelease) => {
+                                cur_page = cur_page.saturating_sub(1);
+                                break;
+                            }
+                            Some(ButtonEvent::RightButtonRelease) => {
+                                cur_page += 1;
+                                break;
+                            }
+                            Some(ButtonEvent::BothButtonsRelease) => return false,
+                            _ => (),
+                        }
                     }
-                    ButtonEvent::RightButtonRelease => {
-                        if cur_page < total_page_count {
+                }
+                validation if validation == self.fields.len() + 1 => {
+                    let mut buttons = ButtonsState::new();
+                    clear_screen();
+                    validation_page.place();
+                    loop {
+                        match get_event(&mut buttons) {
+                            Some(ButtonEvent::LeftButtonRelease) => {
+                                cur_page = cur_page.saturating_sub(1);
+                                break;
+                            }
+                            Some(ButtonEvent::BothButtonsRelease) => return true,
+                            _ => (),
+                        }
+                    }
+                }
+                _ => {
+                    direction = self.fields[cur_page].event_loop(direction);
+                    match direction {
+                        ButtonEvent::LeftButtonRelease => {
+                            if cur_page == 0 {
+                                direction = ButtonEvent::RightButtonRelease;
+                            } else {
+                                cur_page -= 1;
+                            }
+                        }
+                        ButtonEvent::RightButtonRelease => {
                             cur_page += 1;
                         }
-                        refresh = true;
+                        _ => (),
                     }
-                    ButtonEvent::BothButtonsRelease => {
-                        if cur_page == total_page_count {
-                            // Cancel
-                            return false;
-                        } else if cur_page == total_page_count - 1 {
-                            // Validate
-                            return true;
-                        }
-                    }
-                    _ => refresh = false,
-                }
-                if refresh {
-                    clear_screen();
-                    review_pages[cur_page].place();
-                    if cur_page > 0 {
-                        LEFT_ARROW.display();
-                    }
-                    if cur_page < total_page_count {
-                        RIGHT_ARROW.display();
-                    }
-                    crate::ui::screen_util::screen_update();
                 }
             }
         }

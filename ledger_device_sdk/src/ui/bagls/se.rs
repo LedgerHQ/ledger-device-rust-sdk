@@ -3,11 +3,23 @@ use crate::ui::fonts::OPEN_SANS;
 use crate::ui::layout::*;
 use ledger_secure_sdk_sys;
 
+#[derive(Clone, Copy)]
 pub struct Label<'a> {
     pub text: &'a str,
     pub bold: bool,
     pub loc: Location,
     layout: Layout,
+}
+
+impl Default for Label<'_> {
+    fn default() -> Self {
+        Label {
+            text: "",
+            bold: false,
+            loc: Location::Middle,
+            layout: Layout::Centered,
+        }
+    }
 }
 
 impl<'a> From<&'a str> for Label<'a> {

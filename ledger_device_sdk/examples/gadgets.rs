@@ -4,7 +4,7 @@
 use core::panic::PanicInfo;
 #[panic_handler]
 fn panic(_: &PanicInfo) -> ! {
-    loop {}
+    ledger_device_sdk::exit_app(1);
 }
 
 use ledger_device_sdk::buttons::*;

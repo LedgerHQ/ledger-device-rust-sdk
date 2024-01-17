@@ -134,12 +134,25 @@ pub enum Font {
     Symbols1,
 }
 
+#[derive(Clone, Copy)]
 pub struct Label<'a> {
     pub loc: Location,
     pub layout: Layout,
     pub dims: (u16, u16),
     pub bold: bool,
     pub text: &'a str,
+}
+
+impl Default for Label<'_> {
+    fn default() -> Self {
+        Label {
+            text: "",
+            bold: false,
+            dims: (128, 11),
+            loc: Location::Middle,
+            layout: Layout::Centered,
+        }
+    }
 }
 
 impl<'a> Label<'a> {
