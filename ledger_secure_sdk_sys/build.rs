@@ -2,6 +2,7 @@ extern crate cc;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs::File, io::BufRead, io::BufReader, io::Read};
+use glob::glob;
 
 #[cfg(feature = "ccid")]
 const DEFINES_CCID: [(&str, Option<&str>); 2] =
@@ -493,6 +494,7 @@ impl SDKBuilder {
             Device::NanoS => ("nanos", "sdk_nanos.h"),
             Device::NanoX => ("nanox", "sdk_nanox.h"),
             Device::NanoSPlus => ("nanos2", "sdk_nanosp.h"),
+            Device::Stax => ("stax", "sdk_stax.h")
         };
         bindings = bindings.clang_arg(format!("-I{bsdk}/target/{include_path}/include/"));
         bindings = bindings.header(header);
@@ -515,6 +517,11 @@ impl SDKBuilder {
                 )
             }
             Device::Stax => {
+                bindings = bindings.clang_args([
+                    format!("-I{bsdk}/lib_nbgl/include/").as_str(),
+                    format!("-I{bsdk}/lib_ux_stax/").as_str(),
+                    "-I./src/c/",
+                ]);
                 bindings = bindings
                     .header(
                         self.bolos_sdk
@@ -647,6 +654,11 @@ fn configure_lib_bagl(command: &mut cc::Build, bolos_sdk: &Path) {
 }
 
 fn finalize_stax_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
+    let defines = header2define("sdk_stax.h");
+    for (define, value) in defines {
+        command.define(define.as_str(), value.as_deref());
+    }
+    
     command
         .target("thumbv8m.main-none-eabi")
         .define("ST33K1M5", None)
