@@ -42,7 +42,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: "app_elf_binaries"
-          path: ./build/*
+          path: app-boilerplate/build/*
           if-no-files-found: error
   
   ragger_tests:
