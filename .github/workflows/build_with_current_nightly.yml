@@ -31,7 +31,7 @@ jobs:
 
       - name: Build
         run: |
-          BUILD_DEVICE_NAME="$(echo ${{ matrix.device }}"
+          BUILD_DEVICE_NAME="$(echo ${{ matrix.device }})"
           BIN_DIR_NAME="$(echo ${{ matrix.device }} | sed 's/nanosplus/nanos2/')"
           cd app-boilerplate
           cargo ledger build ${{ matrix.device }}
