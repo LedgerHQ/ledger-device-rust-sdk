@@ -1,0 +1,35 @@
+name: Build with last nightly everyday @ 4PM
+
+on:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    - cron:  '00 12 * * *'
+    
+jobs:
+  build_with_last_nightly:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
+    strategy:
+      matrix:
+        target: ["nanos", "nanox", "nanosplus"]
+    steps:
+      - name: update nightly toolchain
+        run: |
+          rustup update nightly
+          rustup default nightly
+          rustup component add rust-src --toolchain nightly
+          cargo ledger setup
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          repository: LedgerHQ/app-boilerplate-rust
+          path: app-boilerplate
+
+      - name: Build
+        run: |
+          cd app-boilerplate
+          cargo ledger build ${{ matrix.target }}
