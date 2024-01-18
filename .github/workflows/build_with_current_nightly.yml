@@ -1,0 +1,54 @@
+name: Build and Test with last nightly everyday @12PM
+
+on:
+  workflow_dispatch:
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    - cron:  '0 12 * * *'
+    
+jobs:
+  build_with_last_nightly:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
+    strategy:
+      matrix:
+        device: ["nanos", "nanox", "nanosplus"]
+    steps:
+      - name: update nightly toolchain
+        run: |
+          rustup update nightly
+          rustup default nightly
+          rustup component add rust-src --toolchain nightly
+          cargo ledger setup
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          repository: LedgerHQ/app-boilerplate-rust
+          path: app-boilerplate
+
+      - name: Build
+        run: |
+          BUILD_DEVICE_NAME="$(echo ${{ matrix.device }})"
+          BIN_DIR_NAME="$(echo ${{ matrix.device }} | sed 's/nanosplus/nanos2/')"
+          cd app-boilerplate
+          cargo ledger build ${{ matrix.device }}
+          mkdir -p build/${BIN_DIR_NAME}/bin
+          mv ./target/${BUILD_DEVICE_NAME}/release/app-boilerplate-rust ./build/${BIN_DIR_NAME}/bin/app.elf
+      
+      - name: Upload binary artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: "app_elf_binaries"
+          path: app-boilerplate/build/*
+          if-no-files-found: error
+  
+  ragger_tests:
+    name: Run ragger tests using the reusable workflow
+    needs: build_with_last_nightly
+    uses: LedgerHQ/ledger-app-workflows/.github/workflows/reusable_ragger_tests.yml@v1
+    with:
+      app_repository: LedgerHQ/app-boilerplate-rust
+      app_branch_name: "main"
+      download_app_binaries_artifact: "app_elf_binaries"
