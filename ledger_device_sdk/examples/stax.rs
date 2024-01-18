@@ -6,62 +6,9 @@ use ledger_device_sdk as _;
 
 use const_zero::const_zero;
 use ledger_device_sdk::io::*;
-use ledger_device_sdk::nbgl::{NbglUI, Field};
-use ledger_secure_sdk_sys::*;
+use ledger_device_sdk::nbgl::{Field, NbglHome, NbglReview};
 use ledger_device_sdk::testing::debug_print;
-
-#[no_mangle]
-pub static mut G_ux_params: bolos_ux_params_t = unsafe { const_zero!(bolos_ux_params_t) };
-
-#[panic_handler]
-fn panic(_: &core::panic::PanicInfo) -> ! {
-    exit_app(1);
-}
-
-enum TuneIndex {
-    Reserved,
-    Boot,
-    Charging,
-    LedgerMoment,
-    Error,
-    Neutral,
-    Lock,
-    Success,
-    LookAtMe,
-    TapCasual,
-    TapNext,
-}
-
-impl TryFrom<u8> for TuneIndex {
-    type Error = ();
-    fn try_from(index: u8) -> Result<TuneIndex, ()> {
-        Ok(match index {
-            TUNE_RESERVED => TuneIndex::Reserved,
-            TUNE_BOOT => TuneIndex::Boot,
-            TUNE_CHARGING => TuneIndex::Charging,
-            TUNE_LEDGER_MOMENT => TuneIndex::LedgerMoment,
-            TUNE_ERROR => TuneIndex::Error,
-            TUNE_NEUTRAL => TuneIndex::Neutral,
-            TUNE_LOCK => TuneIndex::Lock,
-            TUNE_SUCCESS => TuneIndex::Success,
-            TUNE_LOOK_AT_ME => TuneIndex::LookAtMe,
-            TUNE_TAP_CASUAL => TuneIndex::TapCasual,
-            TUNE_TAP_NEXT => TuneIndex::TapNext,
-            _ => return Err(()),
-        })
-    }
-}
-
-// this is a mock that does nothing yet, but should become a direct translation
-// of the C original. This was done to avoid compiling `os_io_seproxyhal.c` which
-// includes many other things
-#[no_mangle]
-extern "C" fn io_seproxyhal_play_tune(tune_index: u8) {
-    let index = TuneIndex::try_from(tune_index);
-    if index.is_err() {
-        return;
-    }
-}
+use ledger_secure_sdk_sys::*;
 
 pub enum Instruction {
     GetVersion,
@@ -88,45 +35,64 @@ extern "C" fn sample_main() {
 
     let mut comm = Comm::new();
 
-    let mut nbgl_ui = NbglUI::new(Some(&mut comm))
-        .app_name("Stax Sample\0")
-        .info_contents(env!("CARGO_PKG_VERSION"), env!("CARGO_PKG_AUTHORS"))
-        .icon(&BTC_BMP);
-
-    // let myStaticReview = StaticReview::new(Some(&comm));
-
-    // myStaticReview.show_and_wait_validation();
-
-    // myNBGL.show_home();
-
-    let fields = [
-        Field {
-            name: "Field 1\0",
-            value: "Value 1\0",
-        },
-        Field {
-            name: "Field 2\0",
-            value: "Value 2\0",
-        },
-        Field {
-            name: "Field 3\0",
-            value: "Value 3\0",
-        },
-    ];
-    
-
-    if nbgl_ui.show_review_and_wait_validation(&fields) {
-        debug_print("Validation result: true\n");
-    } else {
-        debug_print("Validation result: false\n");
-    }
-
     loop {
-        match nbgl_ui.get_events::<Instruction>() {
-            Event::Command(_) => (),
+        match NbglHome::new(&mut comm)
+            .app_name("Stax Sample\0")
+            .info_contents(env!("CARGO_PKG_VERSION"), env!("CARGO_PKG_AUTHORS"))
+            .icon(&BTC_BMP)
+            .show_home::<Instruction>()
+        {
+            Event::Command(_) => {
+                let fields = [
+                    Field {
+                        name: "Field 1\0",
+                        value: "Value 1\0",
+                    },
+                    Field {
+                        name: "Field 2\0",
+                        value: "Value 2\0",
+                    },
+                    Field {
+                        name: "Field 3\0",
+                        value: "Value 3\0",
+                    },
+                ];
+                if NbglReview::new(&mut comm).review_transaction(&fields) {
+                    debug_print("Validation result: true\n");
+                } else {
+                    debug_print("Validation result: false\n");
+                }
+            }
             _ => (),
         };
     }
+
+    // let fields = [
+    //     Field {
+    //         name: "Field 1\0",
+    //         value: "Value 1\0",
+    //     },
+    //     Field {
+    //         name: "Field 2\0",
+    //         value: "Value 2\0",
+    //     },
+    //     Field {
+    //         name: "Field 3\0",
+    //         value: "Value 3\0",
+    //     },
+    // ];
+
+    // if nbgl_ui.verify_address("1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2\0") {
+    //     debug_print("Address verified\n");
+    // } else {
+    //     debug_print("Address not verified\n");
+    // }
+
+    // if nbgl_ui.review_transaction(&fields) {
+    //     debug_print("Validation result: true\n");
+    // } else {
+    //     debug_print("Validation result: false\n");
+    // }
 
     // exit_app(0);
 }
