@@ -26,11 +26,6 @@ jobs:
     steps:
       - name: Clone
         uses: actions/checkout@v4
-      - name: Cargo update
-        uses: actions-rs/cargo@v1
-        with:
-          command: update
-          args: -p home@0.5.9 --precise 0.5.5
       - name: Cargo clippy
         uses: actions-rs/cargo@v1
         with:
@@ -50,7 +45,7 @@ jobs:
         with:
           command: clippy
           args: -p cargo-ledger --no-deps
-          toolchain: "+1.72.0"
+          toolchain: "+1.75.0"
 
   format:
     name: Check code formatting
@@ -77,11 +72,6 @@ jobs:
     steps:
       - name: Clone
         uses: actions/checkout@v4
-      - name: Cargo update
-        uses: actions-rs/cargo@v1
-        with:
-          command: update
-          args: -p home@0.5.9 --precise 0.5.5
       - name: Cargo build
         uses: actions-rs/cargo@v1
         with:
@@ -96,17 +86,12 @@ jobs:
     steps:
       - name: Clone
         uses: actions/checkout@v4
-      - name: Cargo update
-        uses: actions-rs/cargo@v1
-        with:
-          command: update
-          args: -p home@0.5.9 --precise 0.5.5
       - name: Cargo build
         uses: actions-rs/cargo@v1
         with:
           command: build
           args: -p cargo-ledger
-          toolchain: "+1.72.0"
+          toolchain: "+1.75.0"
 
   test:
     name: Run unit and integration tests
@@ -119,11 +104,6 @@ jobs:
     steps:
       - name: Clone
         uses: actions/checkout@v4
-      - name: Cargo update
-        uses: actions-rs/cargo@v1
-        with:
-          command: update
-          args: -p home@0.5.9 --precise 0.5.5
       - name: Unit tests
         uses: actions-rs/cargo@v1
         with:
