@@ -477,7 +477,7 @@ impl SDKBuilder {
         );
 
         let mut bindings = bindgen::builder()
-            .clang_args(&args)
+            .clang_args(args)
             .prepend_enum_name(false)
             .generate_comments(false)
             .derive_default(true)
