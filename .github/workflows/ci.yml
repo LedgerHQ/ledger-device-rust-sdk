@@ -31,6 +31,7 @@ jobs:
         with:
           command: clippy
           args: -p ${{ matrix.package }} --target ${{ matrix.target }}
+          toolchain: $RUST_NIGHTLY
   
   clippy-cargo-ledger:
     name: Run static analysis for cargo-ledger
@@ -45,7 +46,7 @@ jobs:
         with:
           command: clippy
           args: -p cargo-ledger --no-deps
-          toolchain: "+1.75.0"
+          toolchain: $RUST_STABLE
 
   format:
     name: Check code formatting
@@ -60,6 +61,7 @@ jobs:
         with:
           command: fmt
           args: --all --check
+          toolchain: $RUST_NIGHTLY
 
   build:
     name: Build SDK
@@ -77,6 +79,7 @@ jobs:
         with:
           command: build
           args: -p ledger_device_sdk --target ${{ matrix.target }}
+          toolchain: $RUST_NIGHTLY
 
   build-cargo-ledger:
     name: Build SDK
@@ -91,7 +94,7 @@ jobs:
         with:
           command: build
           args: -p cargo-ledger
-          toolchain: "+1.75.0"
+          toolchain: $RUST_STABLE
 
   test:
     name: Run unit and integration tests
@@ -109,3 +112,4 @@ jobs:
         with:
           command: test
           args: -p ledger_device_sdk --target ${{ matrix.target }} --features speculos
+          toolchain: $RUST_NIGHTLY
