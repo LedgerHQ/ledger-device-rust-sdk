@@ -28,15 +28,11 @@ jobs:
       - name: Print Environment variables
         run: 
           echo "The value of RUST_NIGHTLY is $RUST_NIGHTLY"
-          echo "The value of BOLOS_SDK is $BOLOS_SDK"
       - name: Clone
         uses: actions/checkout@v4
       - name: Cargo clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -p ${{ matrix.package }} --target ${{ matrix.target }}
-          toolchain: "$RUST_NIGHTLY"
+        run: |
+          cargo +$RUST_NIGHTLY clippy -p ${{ matrix.package }} --target ${{ matrix.target }}
   
   clippy-cargo-ledger:
     name: Run static analysis for cargo-ledger
@@ -48,11 +44,8 @@ jobs:
       - name: Clone
         uses: actions/checkout@v4
       - name: Cargo clippy for cargo-ledger
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -p cargo-ledger --no-deps
-          toolchain: "$RUST_STABLE"
+        run: |
+          cargo +$RUST_STABLE clippy -p cargo-ledger --no-deps
 
   format:
     name: Check code formatting
@@ -64,11 +57,8 @@ jobs:
       - name: Clone
         uses: actions/checkout@v4
       - name: Run cargo fmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all --check
-          toolchain: "$RUST_NIGHTLY"
+        run: |
+          cargo +$RUST_NIGHTLY fmt --all --check
 
   build:
     name: Build SDK
@@ -83,11 +73,8 @@ jobs:
       - name: Clone
         uses: actions/checkout@v4
       - name: Cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: -p ledger_device_sdk --target ${{ matrix.target }}
-          toolchain: "$RUST_NIGHTLY"
+        run: |
+          cargo +$RUST_NIGHTLY build -p ledger_device_sdk --target ${{ matrix.target }}
 
   build-cargo-ledger:
     name: Build SDK
@@ -99,11 +86,8 @@ jobs:
       - name: Clone
         uses: actions/checkout@v4
       - name: Cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: -p cargo-ledger
-          toolchain: "$RUST_STABLE"
+        run: |
+          cargo +$RUST_STABLE build -p cargo-ledger
 
   test:
     name: Run unit and integration tests
@@ -118,8 +102,5 @@ jobs:
       - name: Clone
         uses: actions/checkout@v4
       - name: Unit tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: -p ledger_device_sdk --target ${{ matrix.target }} --features speculos
-          toolchain: "$RUST_NIGHTLY"
+        run: |
+          cargo +$RUST_NIGHTLY test -p ledger_device_sdk --target ${{ matrix.target }} --features speculos
