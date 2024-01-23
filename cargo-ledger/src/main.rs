@@ -205,7 +205,7 @@ fn build_app(
             match std::env::var("RUST_NIGHTLY") {
                 Ok(version) => {
                     println!("Use Rust nightly toolchain: {}", version);
-                    args.push(version.to_string())
+                    args.push(format!("+{}", version))
                 }
                 Err(_) => {
                     let rustup_cmd =
