@@ -210,7 +210,7 @@ fn build_app(
                 Err(_) => {
                     let rustup_cmd =
                         Command::new("rustup").arg("default").output().unwrap();
-                    print!(
+                    println!(
                         "Use Rust default toolchain: {}",
                         from_utf8(rustup_cmd.stdout.as_slice()).unwrap()
                     );
