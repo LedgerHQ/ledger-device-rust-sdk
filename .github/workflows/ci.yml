@@ -18,8 +18,7 @@ jobs:
     name: Run static analysis
     runs-on: ubuntu-latest
     container:
-#        image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
-        image: jcaporossi/ledger-app-builder:full
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
     strategy:
       matrix:
         target: ["nanos", "nanox", "nanosplus"]
@@ -38,8 +37,7 @@ jobs:
     name: Run static analysis for cargo-ledger
     runs-on: ubuntu-latest
     container:
-#        image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
-        image: jcaporossi/ledger-app-builder:full
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
     steps:
       - name: Clone
         uses: actions/checkout@v4
@@ -51,8 +49,7 @@ jobs:
     name: Check code formatting
     runs-on: ubuntu-latest
     container:
-#      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
-      image: jcaporossi/ledger-app-builder:full
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
     steps:
       - name: Clone
         uses: actions/checkout@v4
@@ -64,8 +61,7 @@ jobs:
     name: Build SDK
     runs-on: ubuntu-latest
     container:
-#      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
-      image: jcaporossi/ledger-app-builder:full
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
     strategy:
       matrix:
         target: ["nanos", "nanox", "nanosplus"]
@@ -80,8 +76,7 @@ jobs:
     name: Build SDK
     runs-on: ubuntu-latest
     container:
-#      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
-      image: jcaporossi/ledger-app-builder:full
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
     steps:
       - name: Clone
         uses: actions/checkout@v4
@@ -93,8 +88,7 @@ jobs:
     name: Run unit and integration tests
     runs-on: ubuntu-latest
     container:
-#        image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
-        image: jcaporossi/ledger-app-builder:full
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
     strategy:
       matrix:
         target: ["nanos", "nanox", "nanosplus"]
