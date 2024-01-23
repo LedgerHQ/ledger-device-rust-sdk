@@ -24,6 +24,10 @@ jobs:
         target: ["nanos", "nanox", "nanosplus"]
         package: [include_gif, testmacro, ledger_secure_sdk_sys, ledger_device_sdk]
     steps:
+      - name: Print Environment variables
+        run: 
+          echo "The value of RUST_NIGHTLY is $RUST_NIGHTLY"
+          echo "The value of BOLOS_SDK is $BOLOS_SDK"
       - name: Clone
         uses: actions/checkout@v4
       - name: Cargo clippy
