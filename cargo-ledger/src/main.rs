@@ -3,6 +3,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 use std::process::Stdio;
+use std::str::from_utf8;
 
 use cargo_metadata::{Message, Package};
 use clap::{Parser, Subcommand, ValueEnum};
@@ -201,6 +202,20 @@ fn build_app(
             };
 
             let mut args: Vec<String> = vec![];
+            match std::env::var("RUST_NIGHTLY") {
+                Ok(version) => {
+                    println!("Use Rust nightly toolchain: {}", version);
+                    args.push(version.to_string())
+                }
+                Err(_) => {
+                    let rustup_cmd =
+                        Command::new("rustup").arg("default").output().unwrap();
+                    print!(
+                        "Use Rust default toolchain: {}",
+                        from_utf8(rustup_cmd.stdout.as_slice()).unwrap()
+                    );
+                }
+            }
             args.push(String::from("build"));
             args.push(String::from("--release"));
             args.push(format!("--target={}", device.as_ref()));
