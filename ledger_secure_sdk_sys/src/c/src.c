@@ -11,11 +11,16 @@
   #include "ledger_ble.h"
 #endif
 
+void *pic_internal(void *link_address);
+
 extern void sample_main();
 
 io_seph_app_t G_io_app;
 
 extern unsigned int _bss;
+extern unsigned int _data;
+extern unsigned int _edata;
+extern unsigned int _sidata;
 extern unsigned int _sdatarelro;
 extern unsigned int _edatarelro;
 extern unsigned int _sgot;
@@ -39,23 +44,21 @@ uint32_t read_r9() {
 
 // These assume that the code and data sections have distinctive bit patterns in
 // at the top, so that they can be easily told apart from lengths
-#define IS_TEXT(x) (((x & 0xfff00000) == ((uint32_t)(&_text) & 0xfff00000)))
+#define IS_TEXT(x) (((x & 0xff000000) == ((uint32_t)(&_text) & 0xff000000)))
 #define IS_BSS(x) (((x & 0xffff0000) == ((uint32_t)(&_bss) & 0xffff0000)))
 
-void relocate(void) {
+void relocate(uint32_t _real_bss) {
     uint32_t nvm_page_buffer[NVM_PAGE_SIZE_INT];
     uint32_t _real_text = (uint32_t)pic_internal(&_text);
     int _text_offset = _real_text - (uint32_t)(&_text);
+    int _bss_offset = _real_bss - (uint32_t)(&_data);
 
-    uint32_t _real_bss = read_r9();
-    int _bss_offset = _real_bss - (uint32_t)(&_bss);
-
-    uint32_t * end = pic(&_egot);
-    uint32_t * p = pic(&_sgot);
+    uint32_t * end = (uint32_t*)pic_internal(&_egot);
+    uint32_t * p = (uint32_t*)pic_internal(&_sgot);
     while (p < end) {
-      size_t length = MIN(NVM_PAGE_SIZE_INT, (end-p));
+      size_t length = MIN(NVM_PAGE_SIZE_INT, end-p);
       size_t i = 0;
-      for (i; i < length; i++) {
+      for (;i < length; i++) {
         if IS_BSS(p[i]) {
           nvm_page_buffer[i] = p[i] + _bss_offset;
         } else if IS_TEXT(p[i]) {
@@ -70,10 +73,10 @@ void relocate(void) {
       p += NVM_PAGE_SIZE_INT;
     }
 
-    end = pic(&_edatarelro);
-    p = pic(&_sdatarelro);
+    end = (uint32_t*)&_edatarelro;
+    p = (uint32_t*)&_sdatarelro;
     while (p < end) {
-      size_t length = MIN(NVM_PAGE_SIZE_INT, (end-p));
+      size_t length = MIN(NVM_PAGE_SIZE_INT, end-p);
       for (size_t i = 0; i < length; i++) {
         if IS_BSS(p[i]) {
           nvm_page_buffer[i] = p[i] + _bss_offset;
@@ -96,12 +99,34 @@ uint8_t G_io_apdu_buffer[260];
 int c_main(void) {
   __asm volatile("cpsie i");
 
+  // point r9 to .got section
+
+  // save ram address for future usage
+  // volatile uint32_t _ram_addr = read_r9();
+  __asm volatile ("mov r8, r9");
+
+  // Use asm to fetch got's link address and
+  // apply pic_internal manually before setting
+  // r9 to it
+  __asm volatile ("ldr r0, =_sgot");
+  __asm volatile ("bl pic_internal");
+  __asm volatile ("mov r9, r0");
+  __asm volatile ("mov r0, r8");
+  __asm volatile ("bl relocate");
+
   // formerly known as 'os_boot()'
   try_context_set(NULL);
 
   // TODO: add a way to detect when the app was moved in flash (uninstall of another app)
   // with some marker in nvm data that would conditionally trigger `relocate()`
-  relocate();
+
+  // copy .data section
+  uint32_t * src = (uint32_t*)&_sidata;
+  uint32_t * dst = (uint32_t*)&_data;
+  uint32_t * end = (uint32_t*)&_edata;
+  while (dst < end) {
+    *dst++ = *src++;
+  }
 
   for(;;) {
     BEGIN_TRY {

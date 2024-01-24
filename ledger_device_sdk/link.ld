@@ -1,50 +1,64 @@
+PHDRS
+{
+  headers PT_PHDR FILEHDR PHDRS ;
+  text PT_LOAD FLAGS(7); /* RWE */
+  text1 PT_LOAD FLAGS(5); /* R_E */
+  data PT_LOAD FLAGS(6); /* RW_ */
+  bss PT_LOAD FLAGS(6); /* RW_ */
+}
+
 SECTIONS
 {
   .text :
   {
-    _text = .;
     _nvram_start = .;
-
+    _text = .;
     *(.boot*)
     *(.text*)
     *(.rodata*)
-
     _etext = .;
+  } > FLASH :text
 
+  .datarelro :
+  {
     /* Writable area starts here */
     . = ALIGN(PAGE_SIZE);
     _nvram_data = .;
 
     /* This section is relocatable data produced by clang */
-    /* It is forced into the `.text` section so speculos can
-    map it properly (speculos only maps `.text` instead of all
-    CODE sections) */
     _sdatarelro = .;
     *(.data.rel.ro*)
     _edatarelro = .;
+  } > FLASH :text
 
+  .got :
+  {
     . = ALIGN(PAGE_SIZE);
     _sgot = .;
-    *(.got*)
+    *(.got .got*)
     _egot = .;
+  } > FLASH :text
 
-    . = ALIGN(PAGE_SIZE);
+  .nvm_data : ALIGN(PAGE_SIZE)
+  {
+    _snvm_data = .;
     *(.nvm_data*)
-    . = ALIGN(PAGE_SIZE);
+    _envm_data = .;
+  } > FLASH :text
+
+  .data :
+  {
+    _data = .;
+    *(.data .data.*)
+    _edata = .;
+  } > SRAM AT> FLASH :data
+
+  .install :
+  {
     _envram_data = .;
     _install_parameters = .;
     _nvram_end = .;
-  } > FLASH
-
-  .data : ALIGN(4)
-  {
-    _data = .;
-    *(vtable)
-    *(.data*)
-    _edata = .;
-  } > SRAM
-
-  ASSERT( (_edata - _data) <= 0, ".data section must be empty" )
+  } > FLASH :text1
 
   .bss :
   {
@@ -59,7 +73,9 @@ SECTIONS
     . = _stack_validation + STACK_SIZE;
     _stack = ABSOLUTE(END_STACK) - STACK_SIZE;
     _estack = ABSOLUTE(END_STACK);
-  } > SRAM
+  } > SRAM :bss
+
+  _sidata = LOADADDR(.data);
 
   .stack_sizes (INFO):
   {

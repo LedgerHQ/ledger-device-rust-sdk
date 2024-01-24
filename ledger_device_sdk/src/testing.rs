@@ -57,35 +57,17 @@ pub fn sdk_test_runner(tests: &[&TestType]) {
     use ledger_secure_sdk_sys::{pic, pic_rs};
     let mut failures = 0;
     debug_print("--- Tests ---\n");
-    for test_ in tests {
-        // (ノಠ益ಠ)ノ彡ꓛIꓒ
-        let test = pic_rs(*test_);
-        let modname;
-        let name;
-        unsafe {
-            let t = pic(test.modname.as_ptr() as *mut c_void) as *const u8;
-            let t = core::ptr::slice_from_raw_parts(t, test.modname.len());
-            let t: &[u8] = core::mem::transmute(t);
-            modname = core::str::from_utf8_unchecked(t);
-
-            let t = pic(test.name.as_ptr() as *mut c_void) as *const u8;
-            let t = core::ptr::slice_from_raw_parts(t, test.name.len());
-            let t: &[u8] = core::mem::transmute(t);
-            name = core::str::from_utf8_unchecked(t);
-        }
-        let fp = unsafe { pic(test.f as *mut c_void) };
-        let fp: fn() -> Result<(), ()> = unsafe { core::mem::transmute(fp) };
-        let res = fp();
-        match res {
+    for test in tests {
+        match (test.f)() {
             Ok(()) => debug_print("\x1b[1;32m   ok   \x1b[0m"),
             Err(()) => {
                 failures += 1;
                 debug_print("\x1b[1;31m  fail  \x1b[0m")
             }
         }
-        debug_print(modname);
+        debug_print(test.modname);
         debug_print("::");
-        debug_print(name);
+        debug_print(test.name);
         debug_print("\n");
     }
     if failures > 0 {

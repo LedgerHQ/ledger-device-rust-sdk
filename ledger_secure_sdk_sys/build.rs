@@ -7,11 +7,10 @@ use std::{env, fs::File, io::BufRead, io::BufReader, io::Read};
 const DEFINES_CCID: [(&str, Option<&str>); 2] =
     [("HAVE_USB_CLASS_CCID", None), ("HAVE_CCID", None)];
 
-const AUX_C_FILES: [&str; 2] = ["./src/c/src.c", "./src/c/sjlj.s"];
+const AUX_C_FILES: [&str; 3] = ["./src/c/src.c", "./src/c/sjlj.s", "./src/c/pic.s"];
 
-const SDK_C_FILES: [&str; 9] = [
+const SDK_C_FILES: [&str; 8] = [
     "src/os_io_usb.c",
-    "src/pic.c",
     "src/checks.c",
     "lib_cxng/src/cx_exported_functions.c",
     "src/cx_stubs.S",
@@ -389,7 +388,7 @@ impl SDKBuilder {
     pub fn build_c_sdk(&self) {
         let mut command = cc::Build::new();
         if env::var_os("CC").is_none() {
-            command.compiler("clang");
+            command.compiler("arm-none-eabi-gcc");
         } else {
             // Let cc::Build determine CC from the environment variable
         }
@@ -413,12 +412,18 @@ impl SDKBuilder {
                     .join("lib_stusb/STM32_USB_Device_Library/Class/HID/Inc"),
             )
             .debug(true)
+            .pic(true)
+            .flag("-msingle-pic-base")
+            .flag("-mno-pic-data-is-text-relative")
+            .flag("-mpic-register=r9")
             .opt_level_str("z")
             .force_frame_pointer(false)
             .flag("-fno-common")
             .flag("-fshort-enums")
             .flag("-mno-unaligned-access")
-            .flag("-Wno-unused-command-line-argument")
+            .flag("-Wno-unknown-pragmas")
+            .flag("-DPIC(x)=x")
+            .flag("-Dpic(x)=x")
             .clone();
 
         // #[cfg(feature = "ccid")]
@@ -474,7 +479,7 @@ impl SDKBuilder {
         );
 
         let mut bindings = bindgen::builder()
-            .clang_args(&args)
+            .clang_args(args)
             .prepend_enum_name(false)
             .generate_comments(false)
             .derive_default(true)
@@ -547,9 +552,7 @@ fn finalize_nanos_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
         .define("ST31", None)
         .define("BAGL_HEIGHT", Some("32"))
         .define("BAGL_WIDTH", Some("128"))
-        .include(bolos_sdk.join("target/nanos/include"))
-        .flag("-fropi")
-        .flag("-ffixed-r9");
+        .include(bolos_sdk.join("target/nanos/include"));
 }
 
 fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
@@ -577,12 +580,7 @@ fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
         .include(bolos_sdk.join("lib_blewbxx/core/template"))
         .include(bolos_sdk.join("lib_blewbxx_impl/include"))
         .include(bolos_sdk.join("target/nanox/include"))
-        .flag("-mno-movt")
-        // compile the SDK in ropi/rwpi still because relocation symbols
-        // from -fPIC are not passed to rust during link it seems
-        .flag("-fropi")
-        .flag("-frwpi")
-        .flag("-ffixed-r9");
+        .flag("-mno-movt");
     configure_lib_bagl(command, bolos_sdk);
 }
 
@@ -597,10 +595,7 @@ fn finalize_nanosplus_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
         .define("ST33K1M5", None)
         .define("BAGL_HEIGHT", Some("64"))
         .define("BAGL_WIDTH", Some("128"))
-        .include(bolos_sdk.join("target/nanos2/include"))
-        .flag("-fropi")
-        .flag("-frwpi")
-        .flag("-ffixed-r9");
+        .include(bolos_sdk.join("target/nanos2/include"));
     configure_lib_bagl(command, bolos_sdk);
 }
 

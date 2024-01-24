@@ -1,22 +1,13 @@
 use crate::ui::fonts::OPEN_SANS;
 use crate::ui::layout::*;
 use crate::ui::screen_util::{draw, screen_update};
-use core::ffi::c_void;
-use ledger_secure_sdk_sys;
-
-extern "C" {
-    fn pic(link_address: *mut c_void) -> *mut c_void;
-}
 
 impl StringPlace for &str {
     fn compute_width(&self, bold: bool) -> usize {
         let font_choice = bold as usize;
-        self.as_bytes()
-            .iter()
-            .map(ledger_secure_sdk_sys::pic_rs)
-            .fold(0, |acc, c| {
-                acc + OPEN_SANS[font_choice].dims[*c as usize - 0x20] as usize
-            })
+        self.as_bytes().iter().fold(0, |acc, c| {
+            acc + OPEN_SANS[font_choice].dims[*c as usize - 0x20] as usize
+        })
     }
 
     fn place(&self, loc: Location, layout: Layout, bold: bool) {
@@ -24,13 +15,8 @@ impl StringPlace for &str {
         let mut cur_x = layout.get_x(total_width) as i32;
 
         let font_choice = bold as usize;
-        for c in self.as_bytes().iter().map(ledger_secure_sdk_sys::pic_rs) {
+        for c in self.as_bytes().iter() {
             let offset_c = *c as usize - 0x20;
-            let character = unsafe {
-                let tmp = pic(OPEN_SANS[font_choice].chars.0[offset_c].as_ptr() as *mut c_void)
-                    as *const u8;
-                core::slice::from_raw_parts(tmp, OPEN_SANS[font_choice].chars.0[offset_c].len())
-            };
             let c_width = OPEN_SANS[font_choice].dims[offset_c];
             let c_height = OPEN_SANS[font_choice].height as usize;
             let y = loc.get_y(c_height);
@@ -40,7 +26,7 @@ impl StringPlace for &str {
                 c_width as u32,
                 c_height as u32,
                 false,
-                character,
+                OPEN_SANS[font_choice].chars.0[offset_c],
             );
             cur_x += c_width as i32;
         }
