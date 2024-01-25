@@ -40,7 +40,7 @@ impl Location {
 pub const MAX_LINES: usize = 2;
 
 #[cfg(not(target_os = "nanos"))]
-pub const MAX_LINES: usize = 3;
+pub const MAX_LINES: usize = 4;
 
 pub trait Place {
     fn place_pad(&self, loc: Location, layout: Layout, padding: i32);
