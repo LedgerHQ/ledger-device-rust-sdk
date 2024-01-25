@@ -1,0 +1,86 @@
+name: Build all Rust apps
+
+on:
+    workflow_dispatch:
+        inputs:
+            sdk_branch:
+                type: string
+                required: false
+                default: ''
+    pull_request: 
+
+
+jobs:    
+    test-build:
+        name: Build for all targets
+        strategy:
+            fail-fast: false
+            matrix:
+                include: 
+                    - repo: 'app-mobilecoin'
+                      branch: 'develop'
+                      build_path: './fw'
+                      device: nanosplus
+                    - repo: 'app-radix-babylon'
+                      branch: 'develop'
+                      build_path: './'
+                      device: nanos nanox nanosplus
+                    - repo: 'app-boilerplate-rust'
+                      branch: 'main'
+                      build_path: './'
+                      device: nanos nanox nanosplus
+
+        runs-on: ubuntu-latest
+        container:
+            image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
+        steps:
+            - name: Clone SDK
+              uses: actions/checkout@v4
+              with:
+                path: sdk
+              
+            - name: Clone App
+              uses: actions/checkout@v4
+              with:
+                repository: LedgerHQ/${{ matrix.repo }}
+                submodules: true
+                ref: ${{ matrix.branch }}
+                path: ${{ matrix.repo }}-${{ matrix.branch }}
+
+            - name: Patch Cargo.toml
+              continue-on-error: false
+              run: |
+                cd ${{ matrix.repo }}-${{ matrix.branch }}/${{ matrix.build_path }}
+                # Patch ledger_device_sdk
+                if grep -Fxq "[patch.crates-io.ledger_device_sdk]" Cargo.toml; then
+                    echo "The patch already exists in the file."
+                    exit 1
+                else
+                    echo "" >> Cargo.toml 
+                    echo "[patch.crates-io.ledger_device_sdk]" >> Cargo.toml
+                    path=\"$GITHUB_WORKSPACE/sdk/ledger_device_sdk\"
+                    echo "path=$path" >> Cargo.toml
+                    echo "Patch added to Cargo.toml"
+                fi
+                # Patch ledger_secure_sdk_sys
+                if grep -Fxq "[patch.crates-io.ledger_secure_sdk_sys]" Cargo.toml; then
+                    echo "The patch already exists in the file."
+                    exit 1
+                else
+                    echo "" >> Cargo.toml 
+                    echo "[patch.crates-io.ledger_secure_sdk_sys]" >> Cargo.toml
+                    path=\"$GITHUB_WORKSPACE/sdk/ledger_secure_sdk_sys\"
+                    echo "path=$path" >> Cargo.toml
+                    echo "Patch added to Cargo.toml"
+                fi
+                
+            - name: Build
+              run: |
+                cd ${{ matrix.repo }}-${{ matrix.branch }}/${{ matrix.build_path }}
+                for device in ${{ matrix.device }}; do
+                    # Required as patch has a different version from what is locked in Cargo.lock
+                    cargo +$RUST_NIGHTLY update ledger_device_sdk
+                    cargo +$RUST_NIGHTLY update ledger_secure_sdk_sys
+                    echo "Build for "$device
+                    cargo ledger build $device
+                done
