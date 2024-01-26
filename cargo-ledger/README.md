@@ -14,13 +14,13 @@ This program requires:
 Install this repo with:
 
 ```
-cargo install --git https://github.com/LedgerHQ/cargo-ledger
+cargo install --git https://github.com/LedgerHQ/ledger-device-rust-sdk cargo-ledger 
 ```
 
 or download it manually and install with:
 
 ```
-cargo install --path .
+cargo install --path cargo-ledger
 ```
 
 Note that `cargo`'s dependency resolver may behave differently when installing, and you may end up with errors.
