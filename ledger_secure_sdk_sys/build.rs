@@ -438,9 +438,6 @@ impl SDKBuilder {
             Device::NanoSPlus => finalize_nanosplus_configuration(&mut command, &self.bolos_sdk),
         };
 
-        if env::var_os("CARGO_FEATURE_PENDING_REVIEW_SCREEN").is_some() {
-            command.define("HAVE_PENDING_REVIEW_SCREEN", None);
-        }
         // Add the defines found in the Makefile.conf.cx to our build command.
         for define in self.cxdefines.iter() {
             command.define(define, None);
