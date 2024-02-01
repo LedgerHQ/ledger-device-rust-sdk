@@ -14,3 +14,7 @@ description = "Ledger Device Rust SDK crates"
 repository = "https://github.com/LedgerHQ/ledger-device-rust-sdk"
 readme = "README.md"
 authors = ["Ledger"]
+
+[profile.release]
+opt-level = 's'
+lto = true
