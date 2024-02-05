@@ -1,6 +1,6 @@
 [package]
 name = "ledger_device_sdk"
-version = "1.4.3"
+version = "1.5.0"
 authors = ["yhql", "yogh333"]
 edition = "2021"
 license.workspace = true
@@ -15,7 +15,7 @@ ledger_device_sdk = { path = ".", features = ["speculos"] }
 testmacro = { path = "../testmacro", version = "0.1.0"}
 
 [dependencies]
-ledger_secure_sdk_sys = {path = "../ledger_secure_sdk_sys", version = "1.1.0"}
+ledger_secure_sdk_sys = {path = "../ledger_secure_sdk_sys", version = "1.2.0"}
 include_gif = {path = "../include_gif", version = "1.0.1"}
 num-traits = { version = "0.2.14", default_features = false }
 rand_core = { version = "0.6.3", default_features = false }

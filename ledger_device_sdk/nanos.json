@@ -8,19 +8,21 @@
   "executables": true,
   "features": "+strict-align",
   "frame-pointer": "always",
-  "linker": "rust-lld",
+  "linker": "link_wrap.sh",
   "linker-flavor": "ld.lld",
   "llvm-target": "thumbv6m-none-eabi",
   "panic-strategy": "abort",
   "pre-link-args": {
-      "ld.lld": [
-          "-Tnanos_layout.ld",
-          "-Tlink.ld"
-      ],
-      "ld": [
-          "-Tnanos_layout.ld",
-          "-Tlink.ld"
-      ]
+    "ld.lld": [
+      "-Tnanos_layout.ld",
+      "-Tlink.ld",
+      "--emit-relocs"
+    ],
+    "ld": [
+      "-Tnanos_layout.ld",
+      "-Tlink.ld",
+      "--emit-relocs"
+    ]
   },
   "relocation-model": "ropi",
   "singlethread": true,

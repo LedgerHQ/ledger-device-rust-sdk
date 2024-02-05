@@ -13,7 +13,7 @@ pub fn install_targets() {
     let sysroot_cmd = std::str::from_utf8(&sysroot_cmd).unwrap().trim();
 
     let target_files_url = Path::new(
-        "https://raw.githubusercontent.com/LedgerHQ/ledger-device-rust-sdk/cee5644d6c20ff97b13e79a30caca751b7b52ac8/ledger_device_sdk/",
+        "https://raw.githubusercontent.com/LedgerHQ/ledger-device-rust-sdk/a630c93398316cc56dcec6aceb0d424b626d150c/ledger_device_sdk/"
     );
     let sysroot = Path::new(sysroot_cmd).join("lib").join("rustlib");
 
@@ -21,22 +21,56 @@ pub fn install_targets() {
     // TODO: handle target.json modified upstream
     for target in &["nanos", "nanox", "nanosplus"] {
         let outfilepath = sysroot.join(target).join("target.json");
-        if !outfilepath.exists() {
-            let targetpath =
-                outfilepath.clone().into_os_string().into_string().unwrap();
-            println!("* Adding \x1b[1;32m{target}\x1b[0m in \x1b[1;33m{targetpath}\x1b[0m");
+        let targetpath =
+            outfilepath.clone().into_os_string().into_string().unwrap();
+        println!("* Adding \x1b[1;32m{target}\x1b[0m in \x1b[1;33m{targetpath}\x1b[0m");
 
-            let target_url = target_files_url.join(format!("{target}.json"));
-            let cmd = Command::new("curl")
-                .arg(target_url)
-                .arg("-o")
-                .arg(outfilepath)
-                .arg("--create-dirs")
-                .output()
-                .expect("failed to execute 'curl'");
-            println!("{}", std::str::from_utf8(&cmd.stderr).unwrap());
-        } else {
-            println!("* {target} already installed");
-        }
+        let target_url = target_files_url.join(format!("{target}.json"));
+        let cmd = Command::new("curl")
+            .arg(target_url)
+            .arg("-o")
+            .arg(outfilepath)
+            .arg("--create-dirs")
+            .output()
+            .expect("failed to execute 'curl'");
+        println!("{}", std::str::from_utf8(&cmd.stderr).unwrap());
     }
+
+    // Install link_wrap.sh script needed for relocation
+    println!("[ ] Install custom link script...");
+
+    /*  Shall be put at the same place as rust-lld */
+    let custom_link_script = "link_wrap.sh";
+
+    let cmd = Command::new("find")
+        .arg(sysroot_cmd)
+        .arg("-name")
+        .arg("rust-lld")
+        .output()
+        .expect("failed to find rust-lld linker")
+        .stdout;
+
+    let rust_lld_path = std::str::from_utf8(&cmd).unwrap();
+    let end = rust_lld_path.rfind('/').unwrap();
+
+    let outfilepath =
+        sysroot.join(&rust_lld_path[..end]).join(custom_link_script);
+
+    /* Retrieve the linker script */
+    let target_url = target_files_url.join(custom_link_script);
+    Command::new("curl")
+        .arg(target_url)
+        .arg("-o")
+        .arg(&outfilepath)
+        .output()
+        .expect("failed to execute 'curl'");
+
+    println!("* Custom link script is {}", outfilepath.display());
+
+    /* Make the linker script executable */
+    Command::new("chmod")
+        .arg("+x")
+        .arg(outfilepath)
+        .output()
+        .expect("failed to execute chmod");
 }

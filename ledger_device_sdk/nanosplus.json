@@ -6,20 +6,20 @@
   "emit-debug-gdb-scripts": false,
   "executables": true,
   "frame-pointer": "always",
-  "linker": "rust-lld",
+  "linker": "link_wrap.sh",
   "linker-flavor": "ld.lld",
   "llvm-target": "thumbv8m.main-none-eabi",
   "max-atomic-width": 32,
   "panic-strategy": "abort",
   "pre-link-args": {
-      "ld.lld": [
-          "-Tnanosplus_layout.ld",
-          "-Tlink.ld"
-      ],
-      "ld": [
-          "-Tnanosplus_layout.ld",
-          "-Tlink.ld"
-      ]
+    "ld.lld": [
+      "-Tnanosplus_layout.ld",
+      "-Tlink.ld"
+    ],
+    "ld": [
+      "-Tnanosplus_layout.ld",
+      "-Tlink.ld"
+    ]
   },
   "relocation-model": "ropi-rwpi",
   "singlethread": true,
