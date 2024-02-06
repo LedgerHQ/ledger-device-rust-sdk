@@ -18,9 +18,8 @@ jobs:
       - name: update nightly toolchain
         run: |
           rustup update nightly
-          rustup default nightly
           rustup component add rust-src --toolchain nightly
-          cargo ledger setup
+          cargo +nightly ledger setup
 
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -33,6 +32,7 @@ jobs:
           BUILD_DEVICE_NAME="$(echo ${{ matrix.device }})"
           BIN_DIR_NAME="$(echo ${{ matrix.device }} | sed 's/nanosplus/nanos2/')"
           cd app-boilerplate
+          RUST_NIGHTLY=nightly
           cargo ledger build ${{ matrix.device }}
           mkdir -p build/${BIN_DIR_NAME}/bin
           mv ./target/${BUILD_DEVICE_NAME}/release/app-boilerplate-rust ./build/${BIN_DIR_NAME}/bin/app.elf
