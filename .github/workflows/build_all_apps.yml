@@ -17,23 +17,20 @@ jobs:
             fail-fast: false
             matrix:
                 include: 
-                    - repo: 'app-mobilecoin'
-                      branch: 'develop'
-                      build_path: './fw'
-                      device: nanosplus
+                    #- repo: 'app-mobilecoin'
+                    #  branch: 'develop'
                     - repo: 'app-radix-babylon'
                       branch: 'develop'
-                      build_path: './'
-                      device: nanos nanox nanosplus
                     - repo: 'app-boilerplate-rust'
                       branch: 'main'
-                      build_path: './'
-                      device: nanos nanox nanosplus
 
         runs-on: ubuntu-latest
         container:
             image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
         steps:
+            - name: Install dependencies
+              run: pip install ledgered
+
             - name: Clone SDK
               uses: actions/checkout@v4
               with:
@@ -50,7 +47,9 @@ jobs:
             - name: Patch Cargo.toml
               continue-on-error: false
               run: |
-                cd ${{ matrix.repo }}-${{ matrix.branch }}/${{ matrix.build_path }}
+                cd ${{ matrix.repo }}-${{ matrix.branch }}
+                build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
+                cd $build_directory
                 # Patch ledger_device_sdk
                 if grep -Fxq "[patch.crates-io.ledger_device_sdk]" Cargo.toml; then
                     echo "The patch already exists in the file."
@@ -76,8 +75,12 @@ jobs:
                 
             - name: Build
               run: |
-                cd ${{ matrix.repo }}-${{ matrix.branch }}/${{ matrix.build_path }}
-                for device in ${{ matrix.device }}; do
+                cd ${{ matrix.repo }}-${{ matrix.branch }}
+                build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
+                devices="$(ledger-manifest --output-devices ledger_app.toml | sed 's/+/plus/')"
+                formatted_devices=$(echo $devices | sed "s/\['//;s/'\]//;s/', '/ /g")
+                cd $build_directory
+                for device in $formatted_devices; do
                     # Required as patch has a different version from what is locked in Cargo.lock
                     cargo +$RUST_NIGHTLY update ledger_device_sdk
                     cargo +$RUST_NIGHTLY update ledger_secure_sdk_sys
