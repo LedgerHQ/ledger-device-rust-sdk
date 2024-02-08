@@ -104,7 +104,7 @@ extern "C" {
     // access, as if it were a RAM access.
     // To force the compiler out of this assumption, we define
     // it as a function instead, but it is _not_ a function at all
-    fn _nvram_data();
+    fn _nvm_data_start();
 }
 
 /// The following is a means to correctly access data stored in NVM
@@ -138,7 +138,7 @@ impl<T> NVMData<T> {
             let static_base: u32;
             asm!( "mov {}, r9", out(reg) static_base);
             let offset = (addr - static_base) as isize;
-            let data_addr = (_nvram_data as *const u8).offset(offset);
+            let data_addr = (_nvm_data_start as *const u8).offset(offset);
             let pic_addr =
                 ledger_secure_sdk_sys::pic(data_addr as *mut core::ffi::c_void) as *mut T;
             &mut *pic_addr.cast()

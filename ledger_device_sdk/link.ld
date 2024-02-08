@@ -76,6 +76,7 @@ SECTIONS
      relocations are also needed. */
   .nvm_data : ALIGN(PAGE_SIZE)
   {
+    _nvm_data_start = .;
     *(.nvm_data*)
 
     /* Store _nvram value during link_pass and use this to detect movement of
