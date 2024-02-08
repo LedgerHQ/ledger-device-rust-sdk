@@ -377,7 +377,12 @@ impl<const P: usize> ECPublicKey<P, 'E'> {
 ///
 /// Checks consistency of curve choice and key length
 /// in order to prevent the underlying syscall from throwing
-pub fn bip32_derive(curve: CurvesId, path: &[u32], key: &mut [u8]) -> Result<(), CxError> {
+pub fn bip32_derive(
+    curve: CurvesId,
+    path: &[u32],
+    key: &mut [u8],
+    cc: &mut [u8],
+) -> Result<(), CxError> {
     match curve {
         CurvesId::Secp256k1 | CurvesId::Secp256r1 => {
             if key.len() < 64 {
@@ -397,7 +402,7 @@ pub fn bip32_derive(curve: CurvesId, path: &[u32], key: &mut [u8]) -> Result<(),
             path.as_ptr(),
             path.len() as u32,
             key.as_mut_ptr(),
-            core::ptr::null_mut(),
+            cc.as_mut_ptr(),
         )
     };
     Ok(())
@@ -436,6 +441,18 @@ impl<const N: usize> Drop for Secret<N> {
     }
 }
 
+#[repr(C)]
+#[derive(Default)]
+pub struct ChainCode {
+    value: [u8; 32],
+}
+
+impl ChainCode {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 /// Fill the key buffer `ECPrivateKey<_,_>.key` with bytes
 /// derived from the seed through BIP32 or other standard
 /// derivation scheme.
@@ -444,54 +461,57 @@ impl<const N: usize> Drop for Secret<N> {
 /// curves.
 pub trait SeedDerive {
     type Target;
-    fn derive_from_path(path: &[u32]) -> Self::Target;
+    fn derive_from_path(path: &[u32]) -> (Self::Target, Option<ChainCode>);
 }
 
 impl SeedDerive for Secp256k1 {
     type Target = ECPrivateKey<32, 'W'>;
-    fn derive_from_path(path: &[u32]) -> Self::Target {
+    fn derive_from_path(path: &[u32]) -> (Self::Target, Option<ChainCode>) {
         let mut tmp = Secret::<64>::new();
+        let mut cc = ChainCode::new();
         // Ignoring 'Result' here because known to be valid
-        let _ = bip32_derive(CurvesId::Secp256k1, path, tmp.as_mut());
+        let _ = bip32_derive(CurvesId::Secp256k1, path, tmp.as_mut(), cc.value.as_mut());
         let mut sk = Self::Target::new(CurvesId::Secp256k1);
         let keylen = sk.key.len();
         sk.key.copy_from_slice(&tmp.0[..keylen]);
-        sk
+        (sk, Some(cc))
     }
 }
 
 impl SeedDerive for Secp256r1 {
     type Target = ECPrivateKey<32, 'W'>;
-    fn derive_from_path(path: &[u32]) -> Self::Target {
+    fn derive_from_path(path: &[u32]) -> (Self::Target, Option<ChainCode>) {
         let mut tmp = Secret::<64>::new();
+        let mut cc = ChainCode::new();
         // Ignoring 'Result' here because known to be valid
-        let _ = bip32_derive(CurvesId::Secp256r1, path, tmp.as_mut());
+        let _ = bip32_derive(CurvesId::Secp256r1, path, tmp.as_mut(), cc.value.as_mut());
         let mut sk = Self::Target::new(CurvesId::Secp256r1);
         let keylen = sk.key.len();
         sk.key.copy_from_slice(&tmp.0[..keylen]);
-        sk
+        (sk, Some(cc))
     }
 }
 
 impl SeedDerive for Ed25519 {
     type Target = ECPrivateKey<32, 'E'>;
-    fn derive_from_path(path: &[u32]) -> Self::Target {
+    fn derive_from_path(path: &[u32]) -> (Self::Target, Option<ChainCode>) {
         let mut tmp = Secret::<96>::new();
+        let mut cc = ChainCode::new();
         // Ignoring 'Result' here because known to be valid
-        let _ = bip32_derive(CurvesId::Ed25519, path, tmp.as_mut());
+        let _ = bip32_derive(CurvesId::Ed25519, path, tmp.as_mut(), cc.value.as_mut());
         let mut sk = Self::Target::new(CurvesId::Ed25519);
         let keylen = sk.key.len();
         sk.key.copy_from_slice(&tmp.0[..keylen]);
-        sk
+        (sk, Some(cc))
     }
 }
 
 impl SeedDerive for Stark256 {
     type Target = ECPrivateKey<32, 'W'>;
-    fn derive_from_path(path: &[u32]) -> Self::Target {
+    fn derive_from_path(path: &[u32]) -> (Self::Target, Option<ChainCode>) {
         let mut sk = Self::Target::new(CurvesId::Stark256);
         stark::eip2645_derive(path, &mut sk.key);
-        sk
+        (sk, None)
     }
 }
 
@@ -681,7 +701,7 @@ mod tests {
 
     #[test]
     fn ecdsa_secp256k1() {
-        let sk = Secp256k1::derive_from_path(&PATH0);
+        let (sk, _) = Secp256k1::derive_from_path(&PATH0);
         let s = sk
             .deterministic_sign(TEST_HASH)
             .map_err(display_error_code)?;
@@ -693,7 +713,7 @@ mod tests {
 
     #[test]
     fn ecdsa_secp256r1() {
-        let sk = Secp256r1::derive_from_path(&PATH0);
+        let (sk, _) = Secp256r1::derive_from_path(&PATH0);
         let s = sk
             .deterministic_sign(TEST_HASH)
             .map_err(display_error_code)?;
@@ -770,7 +790,7 @@ mod tests {
 
     #[test]
     fn ecdsa_stark256() {
-        let sk = Stark256::derive_from_path(&PATH0);
+        let (sk, _) = Stark256::derive_from_path(&PATH0);
         let s = sk
             .deterministic_sign(TEST_HASH)
             .map_err(display_error_code)?;
@@ -782,7 +802,7 @@ mod tests {
 
     #[test]
     fn eddsa_ed25519() {
-        let sk = Ed25519::derive_from_path(&PATH0);
+        let (sk, _) = Ed25519::derive_from_path(&PATH0);
         let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
         let pk = sk.public_key().map_err(display_error_code)?;
         assert_eq!(pk.verify((&s.0, s.1), TEST_HASH, CX_SHA512), true);
@@ -814,10 +834,10 @@ mod tests {
 
     #[test]
     fn test_ecdh() {
-        let sk0 = Secp256k1::derive_from_path(&PATH0);
+        let (sk0, _) = Secp256k1::derive_from_path(&PATH0);
         let pk0 = sk0.public_key().map_err(display_error_code)?;
 
-        let sk1 = Secp256k1::derive_from_path(&PATH1);
+        let (sk1, _) = Secp256k1::derive_from_path(&PATH1);
         let pk1 = sk1.public_key().map_err(display_error_code)?;
 
         let shared_secret0 = sk1.ecdh(&pk0.pubkey).map_err(display_error_code)?;
