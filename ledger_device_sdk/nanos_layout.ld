@@ -6,5 +6,5 @@ MEMORY
 }
 
 PAGE_SIZE  = 64;
-STACK_SIZE = DEFINED(stack_size) ? stack_size : 1024;
+STACK_SIZE = 3692+512;
 END_STACK  = ORIGIN(SRAM) + LENGTH(SRAM);
