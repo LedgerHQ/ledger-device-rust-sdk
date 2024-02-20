@@ -16,9 +16,8 @@ const C_CX_STARK256_N: [u8; 32] = [
 /// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2645.md
 pub fn eip2645_derive(path: &[u32], key: &mut [u8]) {
     let mut x_key = Secret::<64>::new();
-    let mut cc = Secret::<32>::new();
     // Ignoring 'Result' here because known to be valid
-    let _ = super::bip32_derive(CurvesId::Secp256k1, path, x_key.as_mut(), cc.as_mut());
+    let _ = super::bip32_derive(CurvesId::Secp256k1, path, x_key.as_mut(), None);
 
     let mut index = 0;
     let mut cmp = 0;
