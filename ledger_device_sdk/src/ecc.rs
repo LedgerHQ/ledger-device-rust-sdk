@@ -384,13 +384,8 @@ pub fn bip32_derive(
     cc: Option<&mut [u8]>,
 ) -> Result<(), CxError> {
     match curve {
-        CurvesId::Secp256k1 | CurvesId::Secp256r1 => {
+        CurvesId::Secp256k1 | CurvesId::Secp256r1 | CurvesId::Ed25519 => {
             if key.len() < 64 {
-                return Err(CxError::InvalidParameter);
-            }
-        }
-        CurvesId::Ed25519 => {
-            if key.len() < 96 {
                 return Err(CxError::InvalidParameter);
             }
         }
@@ -508,7 +503,7 @@ impl SeedDerive for Secp256r1 {
 impl SeedDerive for Ed25519 {
     type Target = ECPrivateKey<32, 'E'>;
     fn derive_from_path(path: &[u32]) -> (Self::Target, Option<ChainCode>) {
-        let mut tmp = Secret::<96>::new();
+        let mut tmp = Secret::<64>::new();
         let mut cc: ChainCode = Default::default();
         // Ignoring 'Result' here because known to be valid
         let _ = bip32_derive(
