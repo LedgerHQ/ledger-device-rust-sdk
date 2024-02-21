@@ -53,26 +53,28 @@ pub struct TestType {
 /// using semihosting. Only reports 'Ok' or 'fail'.
 #[cfg(feature = "speculos")]
 pub fn sdk_test_runner(tests: &[&TestType]) {
+    use core::ffi::c_void;
+    use ledger_secure_sdk_sys::{pic, pic_rs};
     let mut failures = 0;
     debug_print("--- Tests ---\n");
     for test_ in tests {
         // (ノಠ益ಠ)ノ彡ꓛIꓒ
-        let test = *test_;
+        let test = pic_rs(*test_);
         let modname;
         let name;
         unsafe {
-            let t = test.modname.as_ptr() as *const u8;
+            let t = pic(test.modname.as_ptr() as *mut c_void) as *const u8;
             let t = core::ptr::slice_from_raw_parts(t, test.modname.len());
             let t: &[u8] = core::mem::transmute(t);
             modname = core::str::from_utf8_unchecked(t);
 
-            let t = test.name.as_ptr() as *const u8;
+            let t = pic(test.name.as_ptr() as *mut c_void) as *const u8;
             let t = core::ptr::slice_from_raw_parts(t, test.name.len());
             let t: &[u8] = core::mem::transmute(t);
             name = core::str::from_utf8_unchecked(t);
         }
-        let fp = test.f;
-        //let fp: fn() -> Result<(), ()> = unsafe { core::mem::transmute(fp) };
+        let fp = unsafe { pic(test.f as *mut c_void) };
+        let fp: fn() -> Result<(), ()> = unsafe { core::mem::transmute(fp) };
         let res = fp();
         match res {
             Ok(()) => debug_print("\x1b[1;32m   ok   \x1b[0m"),
