@@ -121,9 +121,10 @@ pub struct ECPrivateKey<const N: usize, const TY: char> {
 /// let public_key = sk.public_key();
 /// ```
 #[repr(C)]
+#[derive(Clone)]
 pub struct ECPublicKey<const S: usize, const TY: char> {
-    curve: CurvesId,
-    keylength: usize,
+    pub curve: CurvesId,
+    pub keylength: usize,
     pub pubkey: [u8; S],
 }
 
