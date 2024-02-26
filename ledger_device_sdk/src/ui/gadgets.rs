@@ -495,6 +495,7 @@ impl<'a> Page<'a> {
         let mut buttons = ButtonsState::new();
 
         self.place();
+        crate::ui::screen_util::screen_update();
 
         loop {
             match get_event(&mut buttons) {
@@ -867,6 +868,7 @@ impl<'a> MultiFieldReview<'a> {
                     let mut buttons = ButtonsState::new();
                     clear_screen();
                     cancel_page.place();
+                    crate::ui::screen_util::screen_update();
                     loop {
                         match get_event(&mut buttons) {
                             Some(ButtonEvent::LeftButtonRelease) => {
@@ -886,6 +888,7 @@ impl<'a> MultiFieldReview<'a> {
                     let mut buttons = ButtonsState::new();
                     clear_screen();
                     validation_page.place();
+                    crate::ui::screen_util::screen_update();
                     loop {
                         match get_event(&mut buttons) {
                             Some(ButtonEvent::LeftButtonRelease) => {
