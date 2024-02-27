@@ -4,89 +4,11 @@ use ledger_secure_sdk_sys::{
     cx_sha384_init_no_throw, cx_sha512_init_no_throw, cx_sha512_t,
 };
 
-#[derive(Default)]
-pub struct Sha2_224 {
-    ctx: cx_sha256_t,
-}
-
-impl HashInit for Sha2_224 {
-    fn as_ctx_mut(&mut self) -> &mut cx_hash_t {
-        &mut self.ctx.header
-    }
-
-    fn as_ctx(&self) -> &cx_hash_t {
-        &self.ctx.header
-    }
-
-    fn new() -> Self {
-        let mut ctx: Sha2_224 = Default::default();
-        let _err = unsafe { cx_sha224_init_no_throw(&mut ctx.ctx) };
-        ctx
-    }
-}
-
-#[derive(Default)]
-pub struct Sha2_256 {
-    ctx: cx_sha256_t,
-}
-
-impl HashInit for Sha2_256 {
-    fn as_ctx_mut(&mut self) -> &mut cx_hash_t {
-        &mut self.ctx.header
-    }
-
-    fn as_ctx(&self) -> &cx_hash_t {
-        &self.ctx.header
-    }
-
-    fn new() -> Self {
-        let mut ctx: Sha2_256 = Default::default();
-        let _err = unsafe { cx_sha256_init_no_throw(&mut ctx.ctx) };
-        ctx
-    }
-}
-
-#[derive(Default)]
-pub struct Sha2_384 {
-    ctx: cx_sha512_t,
-}
-
-impl HashInit for Sha2_384 {
-    fn as_ctx_mut(&mut self) -> &mut cx_hash_t {
-        &mut self.ctx.header
-    }
-
-    fn as_ctx(&self) -> &cx_hash_t {
-        &self.ctx.header
-    }
-
-    fn new() -> Self {
-        let mut ctx: Sha2_384 = Default::default();
-        let _err = unsafe { cx_sha384_init_no_throw(&mut ctx.ctx) };
-        ctx
-    }
-}
-
-#[derive(Default)]
-pub struct Sha2_512 {
-    ctx: cx_sha512_t,
-}
-
-impl HashInit for Sha2_512 {
-    fn as_ctx_mut(&mut self) -> &mut cx_hash_t {
-        &mut self.ctx.header
-    }
-
-    fn as_ctx(&self) -> &cx_hash_t {
-        &self.ctx.header
-    }
-
-    fn new() -> Self {
-        let mut ctx: Sha2_512 = Default::default();
-        let _err = unsafe { cx_sha512_init_no_throw(&mut ctx.ctx) };
-        ctx
-    }
-}
+use super::impl_hash;
+impl_hash!(Sha2_224, cx_sha256_t, cx_sha224_init_no_throw);
+impl_hash!(Sha2_256, cx_sha256_t, cx_sha256_init_no_throw);
+impl_hash!(Sha2_384, cx_sha512_t, cx_sha384_init_no_throw);
+impl_hash!(Sha2_512, cx_sha512_t, cx_sha512_init_no_throw);
 
 #[cfg(test)]
 mod tests {

@@ -1,26 +1,8 @@
 use super::HashInit;
 use ledger_secure_sdk_sys::{cx_hash_t, cx_ripemd160_init_no_throw, cx_ripemd160_t};
 
-#[derive(Default)]
-pub struct Ripemd160 {
-    ctx: cx_ripemd160_t,
-}
-
-impl HashInit for Ripemd160 {
-    fn as_ctx_mut(&mut self) -> &mut cx_hash_t {
-        &mut self.ctx.header
-    }
-
-    fn as_ctx(&self) -> &cx_hash_t {
-        &self.ctx.header
-    }
-
-    fn new() -> Self {
-        let mut ctx: Ripemd160 = Default::default();
-        let _err = unsafe { cx_ripemd160_init_no_throw(&mut ctx.ctx) };
-        ctx
-    }
-}
+use super::impl_hash;
+impl_hash!(Ripemd160, cx_ripemd160_t, cx_ripemd160_init_no_throw);
 
 #[cfg(test)]
 mod tests {

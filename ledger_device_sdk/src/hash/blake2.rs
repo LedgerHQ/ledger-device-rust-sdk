@@ -1,71 +1,10 @@
 use super::HashInit;
 use ledger_secure_sdk_sys::{cx_blake2b_init_no_throw, cx_blake2b_t, cx_hash_t};
 
-#[derive(Default)]
-#[allow(non_camel_case_types)]
-pub struct Blake2b_256 {
-    ctx: cx_blake2b_t,
-}
-
-impl HashInit for Blake2b_256 {
-    fn as_ctx_mut(&mut self) -> &mut cx_hash_t {
-        &mut self.ctx.header
-    }
-
-    fn as_ctx(&self) -> &cx_hash_t {
-        &self.ctx.header
-    }
-
-    fn new() -> Self {
-        let mut ctx: Blake2b_256 = Default::default();
-        let _err = unsafe { cx_blake2b_init_no_throw(&mut ctx.ctx, 256) };
-        ctx
-    }
-}
-
-#[derive(Default)]
-#[allow(non_camel_case_types)]
-pub struct Blake2b_384 {
-    ctx: cx_blake2b_t,
-}
-
-impl HashInit for Blake2b_384 {
-    fn as_ctx_mut(&mut self) -> &mut cx_hash_t {
-        &mut self.ctx.header
-    }
-
-    fn as_ctx(&self) -> &cx_hash_t {
-        &self.ctx.header
-    }
-
-    fn new() -> Self {
-        let mut ctx: Blake2b_384 = Default::default();
-        let _err = unsafe { cx_blake2b_init_no_throw(&mut ctx.ctx, 384) };
-        ctx
-    }
-}
-
-#[derive(Default)]
-#[allow(non_camel_case_types)]
-pub struct Blake2b_512 {
-    ctx: cx_blake2b_t,
-}
-
-impl HashInit for Blake2b_512 {
-    fn as_ctx_mut(&mut self) -> &mut cx_hash_t {
-        &mut self.ctx.header
-    }
-
-    fn as_ctx(&self) -> &cx_hash_t {
-        &self.ctx.header
-    }
-
-    fn new() -> Self {
-        let mut ctx: Blake2b_512 = Default::default();
-        let _err = unsafe { cx_blake2b_init_no_throw(&mut ctx.ctx, 512) };
-        ctx
-    }
-}
+use super::impl_hash;
+impl_hash!(Blake2b_256, cx_blake2b_t, cx_blake2b_init_no_throw, 256);
+impl_hash!(Blake2b_384, cx_blake2b_t, cx_blake2b_init_no_throw, 384);
+impl_hash!(Blake2b_512, cx_blake2b_t, cx_blake2b_init_no_throw, 512);
 
 #[cfg(test)]
 mod tests {

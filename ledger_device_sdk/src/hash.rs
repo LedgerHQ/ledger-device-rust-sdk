@@ -82,6 +82,55 @@ pub trait HashInit: Sized {
     }
 }
 
+macro_rules! impl_hash {
+    ($typename:ident, $ctxname:ident, $initfname:ident, $size:expr) => {
+        #[derive(Default)]
+        #[allow(non_camel_case_types)]
+        pub struct $typename {
+            ctx: $ctxname,
+        }
+        impl HashInit for $typename {
+            fn as_ctx_mut(&mut self) -> &mut cx_hash_t {
+                &mut self.ctx.header
+            }
+
+            fn as_ctx(&self) -> &cx_hash_t {
+                &self.ctx.header
+            }
+
+            fn new() -> Self {
+                let mut ctx: $typename = Default::default();
+                let _err = unsafe { $initfname(&mut ctx.ctx, $size) };
+                ctx
+            }
+        }
+    };
+
+    ($typename:ident, $ctxname:ident, $initfname:ident) => {
+        #[derive(Default)]
+        #[allow(non_camel_case_types)]
+        pub struct $typename {
+            ctx: $ctxname,
+        }
+        impl HashInit for $typename {
+            fn as_ctx_mut(&mut self) -> &mut cx_hash_t {
+                &mut self.ctx.header
+            }
+
+            fn as_ctx(&self) -> &cx_hash_t {
+                &self.ctx.header
+            }
+
+            fn new() -> Self {
+                let mut ctx: $typename = Default::default();
+                let _err = unsafe { $initfname(&mut ctx.ctx) };
+                ctx
+            }
+        }
+    };
+}
+pub(crate) use impl_hash;
+
 #[cfg(test)]
 mod tests {
     use crate::assert_eq_err as assert_eq;
