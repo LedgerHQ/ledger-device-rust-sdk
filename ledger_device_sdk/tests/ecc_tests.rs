@@ -5,7 +5,7 @@
 #![test_runner(ledger_device_sdk::testing::sdk_test_runner)]
 
 use core::panic::PanicInfo;
-use ledger_device_sdk::testing::{debug_print, test_panic, to_hex, TestType};
+use ledger_device_sdk::testing::{test_panic, TestType};
 use testmacro::test_item as test;
 
 #[panic_handler]

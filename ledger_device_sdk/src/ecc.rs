@@ -377,28 +377,37 @@ impl<const P: usize> ECPublicKey<P, 'E'> {
 ///
 /// Checks consistency of curve choice and key length
 /// in order to prevent the underlying syscall from throwing
-pub fn bip32_derive(curve: CurvesId, path: &[u32], key: &mut [u8]) -> Result<(), CxError> {
+pub fn bip32_derive(
+    curve: CurvesId,
+    path: &[u32],
+    key: &mut [u8],
+    cc: Option<&mut [u8]>,
+) -> Result<(), CxError> {
     match curve {
-        CurvesId::Secp256k1 | CurvesId::Secp256r1 => {
+        CurvesId::Secp256k1 | CurvesId::Secp256r1 | CurvesId::Ed25519 => {
             if key.len() < 64 {
-                return Err(CxError::InvalidParameter);
-            }
-        }
-        CurvesId::Ed25519 => {
-            if key.len() < 96 {
                 return Err(CxError::InvalidParameter);
             }
         }
         _ => return Err(CxError::InvalidParameter),
     }
     unsafe {
-        os_perso_derive_node_bip32(
-            curve as u8,
-            path.as_ptr(),
-            path.len() as u32,
-            key.as_mut_ptr(),
-            core::ptr::null_mut(),
-        )
+        match cc {
+            Some(buf) => os_perso_derive_node_bip32(
+                curve as u8,
+                path.as_ptr(),
+                path.len() as u32,
+                key.as_mut_ptr(),
+                buf.as_mut_ptr(),
+            ),
+            None => os_perso_derive_node_bip32(
+                curve as u8,
+                path.as_ptr(),
+                path.len() as u32,
+                key.as_mut_ptr(),
+                core::ptr::null_mut(),
+            ),
+        }
     };
     Ok(())
 }
@@ -436,6 +445,12 @@ impl<const N: usize> Drop for Secret<N> {
     }
 }
 
+#[repr(C)]
+#[derive(Default)]
+pub struct ChainCode {
+    value: [u8; 32],
+}
+
 /// Fill the key buffer `ECPrivateKey<_,_>.key` with bytes
 /// derived from the seed through BIP32 or other standard
 /// derivation scheme.
@@ -444,54 +459,75 @@ impl<const N: usize> Drop for Secret<N> {
 /// curves.
 pub trait SeedDerive {
     type Target;
-    fn derive_from_path(path: &[u32]) -> Self::Target;
+    fn derive_from(path: &[u32]) -> (Self::Target, Option<ChainCode>);
+    fn derive_from_path(path: &[u32]) -> Self::Target {
+        Self::derive_from(path).0
+    }
 }
 
 impl SeedDerive for Secp256k1 {
     type Target = ECPrivateKey<32, 'W'>;
-    fn derive_from_path(path: &[u32]) -> Self::Target {
+    fn derive_from(path: &[u32]) -> (Self::Target, Option<ChainCode>) {
         let mut tmp = Secret::<64>::new();
+        let mut cc: ChainCode = Default::default();
         // Ignoring 'Result' here because known to be valid
-        let _ = bip32_derive(CurvesId::Secp256k1, path, tmp.as_mut());
+        let _ = bip32_derive(
+            CurvesId::Secp256k1,
+            path,
+            tmp.as_mut(),
+            Some(cc.value.as_mut()),
+        );
         let mut sk = Self::Target::new(CurvesId::Secp256k1);
         let keylen = sk.key.len();
         sk.key.copy_from_slice(&tmp.0[..keylen]);
-        sk
+        (sk, Some(cc))
     }
 }
 
 impl SeedDerive for Secp256r1 {
     type Target = ECPrivateKey<32, 'W'>;
-    fn derive_from_path(path: &[u32]) -> Self::Target {
+    fn derive_from(path: &[u32]) -> (Self::Target, Option<ChainCode>) {
         let mut tmp = Secret::<64>::new();
+        let mut cc: ChainCode = Default::default();
         // Ignoring 'Result' here because known to be valid
-        let _ = bip32_derive(CurvesId::Secp256r1, path, tmp.as_mut());
+        let _ = bip32_derive(
+            CurvesId::Secp256r1,
+            path,
+            tmp.as_mut(),
+            Some(cc.value.as_mut()),
+        );
         let mut sk = Self::Target::new(CurvesId::Secp256r1);
         let keylen = sk.key.len();
         sk.key.copy_from_slice(&tmp.0[..keylen]);
-        sk
+        (sk, Some(cc))
     }
 }
 
 impl SeedDerive for Ed25519 {
     type Target = ECPrivateKey<32, 'E'>;
-    fn derive_from_path(path: &[u32]) -> Self::Target {
-        let mut tmp = Secret::<96>::new();
+    fn derive_from(path: &[u32]) -> (Self::Target, Option<ChainCode>) {
+        let mut tmp = Secret::<64>::new();
+        let mut cc: ChainCode = Default::default();
         // Ignoring 'Result' here because known to be valid
-        let _ = bip32_derive(CurvesId::Ed25519, path, tmp.as_mut());
+        let _ = bip32_derive(
+            CurvesId::Ed25519,
+            path,
+            tmp.as_mut(),
+            Some(cc.value.as_mut()),
+        );
         let mut sk = Self::Target::new(CurvesId::Ed25519);
         let keylen = sk.key.len();
         sk.key.copy_from_slice(&tmp.0[..keylen]);
-        sk
+        (sk, Some(cc))
     }
 }
 
 impl SeedDerive for Stark256 {
     type Target = ECPrivateKey<32, 'W'>;
-    fn derive_from_path(path: &[u32]) -> Self::Target {
+    fn derive_from(path: &[u32]) -> (Self::Target, Option<ChainCode>) {
         let mut sk = Self::Target::new(CurvesId::Stark256);
         stark::eip2645_derive(path, &mut sk.key);
-        sk
+        (sk, None)
     }
 }
 
