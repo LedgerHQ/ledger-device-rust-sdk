@@ -527,8 +527,6 @@ impl SeedDerive for Ed25519 {
 impl Ed25519 {
     pub fn derive_from_path_slip10(path: &[u32]) -> ECPrivateKey<32, 'E'> {
         let mut tmp = Secret::<64>::new();
-        let seed_key: &mut [u8; 12] = &mut [0; 12];
-        seed_key.copy_from_slice(b"ed25519 seed");
         unsafe {
             os_perso_derive_node_with_seed_key(
                 HDW_ED25519_SLIP10,
@@ -537,8 +535,8 @@ impl Ed25519 {
                 path.len() as u32,
                 tmp.as_mut().as_mut_ptr(),
                 core::ptr::null_mut(),
-                seed_key.as_mut_ptr(),
-                12,
+                core::ptr::null_mut(),
+                0,
             );
         }
         let mut sk = ECPrivateKey::new(CurvesId::Ed25519);
