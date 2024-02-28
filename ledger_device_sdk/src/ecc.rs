@@ -523,6 +523,31 @@ impl SeedDerive for Ed25519 {
     }
 }
 
+/// Support SLIP10 derivation for Ed25519
+impl Ed25519 {
+    pub fn derive_from_path_slip10(path: &[u32]) -> ECPrivateKey<32, 'E'> {
+        let mut tmp = Secret::<64>::new();
+        let seed_key: &mut [u8; 12] = &mut [0; 12];
+        seed_key.copy_from_slice(b"ed25519 seed");
+        unsafe {
+            os_perso_derive_node_with_seed_key(
+                HDW_ED25519_SLIP10,
+                CurvesId::Ed25519 as u8,
+                path.as_ptr(),
+                path.len() as u32,
+                tmp.as_mut().as_mut_ptr(),
+                core::ptr::null_mut(),
+                seed_key.as_mut_ptr(),
+                12,
+            );
+        }
+        let mut sk = ECPrivateKey::new(CurvesId::Ed25519);
+        let keylen = sk.key.len();
+        sk.key.copy_from_slice(&tmp.0[..keylen]);
+        sk
+    }
+}
+
 impl SeedDerive for Stark256 {
     type Target = ECPrivateKey<32, 'W'>;
     fn derive_from(path: &[u32]) -> (Self::Target, Option<ChainCode>) {
@@ -820,6 +845,15 @@ mod tests {
     #[test]
     fn eddsa_ed25519() {
         let sk = Ed25519::derive_from_path(&PATH0);
+        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
+        let pk = sk.public_key().map_err(display_error_code)?;
+        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH, CX_SHA512), true);
+    }
+
+    #[test]
+    fn eddsa_ed25519_slip10() {
+        let path: [u32; 5] = make_bip32_path(b"m/44'/535348'/0'/0'/1'");
+        let sk = Ed25519::derive_from_path_slip10(&path);
         let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
         let pk = sk.public_key().map_err(display_error_code)?;
         assert_eq!(pk.verify((&s.0, s.1), TEST_HASH, CX_SHA512), true);
