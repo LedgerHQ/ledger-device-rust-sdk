@@ -40,7 +40,7 @@ extern "C" fn sample_main() {
             .app_name("Stax Sample\0")
             .info_contents(env!("CARGO_PKG_VERSION"), env!("CARGO_PKG_AUTHORS"))
             .icon(&BTC_BMP)
-            .show_home::<Instruction>()
+            .show::<Instruction>()
         {
             Event::Command(_) => {
                 let fields = [
@@ -57,7 +57,7 @@ extern "C" fn sample_main() {
                         value: "Value 3\0",
                     },
                 ];
-                if NbglReview::new(&mut comm).review_transaction(&fields) {
+                if NbglReview.review_transaction(&fields) {
                     debug_print("Validation result: true\n");
                 } else {
                     debug_print("Validation result: false\n");

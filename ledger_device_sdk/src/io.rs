@@ -103,6 +103,7 @@ pub struct Comm {
     pub apdu_buffer: [u8; 260],
     pub rx: usize,
     pub tx: usize,
+    pub event_pending: bool,
     buttons: ButtonsState,
     /// Expected value for the APDU CLA byte.
     /// If defined, [`Comm`] will automatically reply with [`StatusWords::BadCla`] when an APDU
@@ -137,6 +138,7 @@ impl Comm {
             apdu_buffer: [0u8; 260],
             rx: 0,
             tx: 0,
+            event_pending: false,
             buttons: ButtonsState::new(),
             expected_cla: None,
         }
@@ -247,6 +249,13 @@ impl Comm {
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
+        // if self.event_pending {
+        //     self.event_pending = false;
+        //     if let Some(value) = self.check_event() {
+        //         return value;
+        //     }
+        // }
+
         let mut spi_buffer = [0u8; 128];
 
         unsafe {
@@ -271,7 +280,89 @@ impl Comm {
         }
     }
 
-    pub fn decode_event<T>(&mut self, spi_buffer: &mut [u8; 128]) -> Option<Event<T>>
+    pub fn next_event_ahead<T>(&mut self) -> bool
+    where
+        T: TryFrom<ApduHeader>,
+        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
+    {
+        // if self.event_pending {
+        //     let event: Option<Event<T>> = self.check_event();
+        //     if event.is_some() {
+        //         return true;
+        //     }
+        // }
+
+        let mut spi_buffer = [0u8; 128];
+
+        // unsafe {
+        //     G_io_app.apdu_state = APDU_IDLE;
+        //     G_io_app.apdu_media = IO_APDU_MEDIA_NONE;
+        //     G_io_app.apdu_length = 0;
+        // }
+
+        // Signal end of command stream from SE to MCU
+        // And prepare reception
+        if !sys_seph::is_status_sent() {
+            sys_seph::send_general_status();
+        }
+        // Fetch the next message from the MCU             }
+        let _rx = sys_seph::seph_recv(&mut spi_buffer, 0);
+        return self.detect_apdu::<T>(&mut spi_buffer);
+    }
+
+    pub fn check_event<T>(&mut self) -> Option<Event<T>>
+    where
+        T: TryFrom<ApduHeader>,
+        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
+    {
+        if self.event_pending {
+            self.event_pending = false;
+            // Reject incomplete APDUs
+            if self.rx < 4 {
+                self.reply(StatusWords::BadLen);
+                return None;
+            }
+
+            // Check for data length by using `get_data`
+            if let Err(sw) = self.get_data() {
+                self.reply(sw);
+                return None;
+            }
+
+            // Manage BOLOS specific APDUs B0xx0000
+            if self.apdu_buffer[0] == 0xB0
+                && self.apdu_buffer[2] == 0x00
+                && self.apdu_buffer[3] == 0x00
+            {
+                handle_bolos_apdu(self, self.apdu_buffer[1]);
+                return None;
+            }
+
+            // If CLA filtering is enabled, automatically reject APDUs with wrong CLA
+            if let Some(cla) = self.expected_cla {
+                if self.apdu_buffer[0] != cla {
+                    self.reply(StatusWords::BadCla);
+                    return None;
+                }
+            }
+
+            let res = T::try_from(*self.get_apdu_metadata());
+            match res {
+                Ok(ins) => {
+                    return Some(Event::Command(ins));
+                }
+                Err(sw) => {
+                    // Invalid Ins code. Send automatically an error, mask
+                    // the bad instruction to the application and just
+                    // discard this event.
+                    self.reply(sw);
+                }
+            }
+        }
+        None
+    }
+
+    pub fn process_event<T>(&mut self, spi_buffer: &mut [u8; 128]) -> Option<Event<T>>
     where
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
@@ -332,53 +423,38 @@ impl Comm {
 
             _ => (),
         }
+        None
+    }
+
+    pub fn decode_event<T>(&mut self, spi_buffer: &mut [u8; 128]) -> Option<Event<T>>
+    where
+        T: TryFrom<ApduHeader>,
+        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
+    {
+        if let Some(event) = self.process_event(spi_buffer) {
+            return Some(event);
+        }
 
         if unsafe { G_io_app.apdu_state } != APDU_IDLE && unsafe { G_io_app.apdu_length } > 0 {
             self.rx = unsafe { G_io_app.apdu_length as usize };
-
-            // Reject incomplete APDUs
-            if self.rx < 4 {
-                self.reply(StatusWords::BadLen);
-                return None;
-            }
-
-            // Check for data length by using `get_data`
-            if let Err(sw) = self.get_data() {
-                self.reply(sw);
-                return None;
-            }
-
-            // Manage BOLOS specific APDUs B0xx0000
-            if self.apdu_buffer[0] == 0xB0
-                && self.apdu_buffer[2] == 0x00
-                && self.apdu_buffer[3] == 0x00
-            {
-                handle_bolos_apdu(self, self.apdu_buffer[1]);
-                return None;
-            }
-
-            // If CLA filtering is enabled, automatically reject APDUs with wrong CLA
-            if let Some(cla) = self.expected_cla {
-                if self.apdu_buffer[0] != cla {
-                    self.reply(StatusWords::BadCla);
-                    return None;
-                }
-            }
-
-            let res = T::try_from(*self.get_apdu_metadata());
-            match res {
-                Ok(ins) => {
-                    return Some(Event::Command(ins));
-                }
-                Err(sw) => {
-                    // Invalid Ins code. Send automatically an error, mask
-                    // the bad instruction to the application and just
-                    // discard this event.
-                    self.reply(sw);
-                }
-            }
+            return self.check_event();
         }
         None
+    }
+
+    fn detect_apdu<T>(&mut self, spi_buffer: &mut [u8; 128]) -> bool
+    where
+        T: TryFrom<ApduHeader>,
+        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
+    {
+        let _: Option<Event<T>> = self.decode_event(spi_buffer);
+
+        if unsafe { G_io_app.apdu_state } != APDU_IDLE && unsafe { G_io_app.apdu_length } > 0 {
+            self.rx = unsafe { G_io_app.apdu_length as usize };
+            self.event_pending = true;
+            return true;
+        }
+        false
     }
 
     /// Wait for the next Command event. Discards received button events.

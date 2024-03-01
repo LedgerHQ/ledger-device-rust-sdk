@@ -1,5 +1,6 @@
 #define HAVE_NBGL
 #define NBGL_USE_CASE
+#define HAVE_SE_TOUCH
 #define HAVE_PIEZO_SOUND
 #define NBGL_PAGE
 #define HAVE_LOCAL_APDU_BUFFER
