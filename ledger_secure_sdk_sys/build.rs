@@ -1,8 +1,8 @@
 extern crate cc;
+use glob::glob;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs::File, io::BufRead, io::BufReader, io::Read};
-use glob::glob;
 
 #[cfg(feature = "ccid")]
 const DEFINES_CCID: [(&str, Option<&str>); 2] =
@@ -222,7 +222,7 @@ fn clone_sdk(device: &Device) -> PathBuf {
         ),
         Device::Stax => (
             Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_13",
+            "API_LEVEL_14",
         ),
     };
 
@@ -494,7 +494,7 @@ impl SDKBuilder {
             Device::NanoS => ("nanos", "sdk_nanos.h"),
             Device::NanoX => ("nanox", "sdk_nanox.h"),
             Device::NanoSPlus => ("nanos2", "sdk_nanosp.h"),
-            Device::Stax => ("stax", "sdk_stax.h")
+            Device::Stax => ("stax", "sdk_stax.h"),
         };
         bindings = bindings.clang_arg(format!("-I{bsdk}/target/{include_path}/include/"));
         bindings = bindings.header(header);
@@ -526,6 +526,12 @@ impl SDKBuilder {
                     .header(
                         self.bolos_sdk
                             .join("lib_nbgl/include/nbgl_use_case.h")
+                            .to_str()
+                            .unwrap(),
+                    )
+                    .header(
+                        self.bolos_sdk
+                            .join("lib_nbgl/include/nbgl_sync.h")
                             .to_str()
                             .unwrap(),
                     )
