@@ -3,10 +3,10 @@ use ledger_secure_sdk_sys::{
     CX_INVALID_PARAMETER, CX_LAST, CX_OK,
 };
 
-mod blake2;
-mod ripemd;
-mod sha2;
-mod sha3;
+pub mod blake2;
+pub mod ripemd;
+pub mod sha2;
+pub mod sha3;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum HashError {
