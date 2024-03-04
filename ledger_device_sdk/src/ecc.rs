@@ -449,7 +449,7 @@ impl<const N: usize> Drop for Secret<N> {
 #[repr(C)]
 #[derive(Default)]
 pub struct ChainCode {
-    value: [u8; 32],
+    pub value: [u8; 32],
 }
 
 /// Fill the key buffer `ECPrivateKey<_,_>.key` with bytes
