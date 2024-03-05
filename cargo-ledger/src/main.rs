@@ -45,7 +45,7 @@ struct DeviceMetadata {
 #[command(name = "cargo")]
 #[command(bin_name = "cargo")]
 #[clap(name = "Ledger devices build and load commands")]
-#[clap(version = "0.0")]
+#[clap(version = "1.4.0")]
 #[clap(about = "Builds the project and emits a JSON manifest for ledgerctl.")]
 enum Cli {
     Ledger(CliArgs),
@@ -92,6 +92,16 @@ impl AsRef<str> for Device {
     }
 }
 
+impl Device {
+    fn as_ref_for_std_tree(&self) -> &str {
+        match self {
+            Device::Nanos => "nanos",
+            Device::Nanox => "nanox",
+            Device::Nanosplus => "nanos2",
+        }
+    }
+}
+
 #[derive(Subcommand, Debug)]
 enum MainCommand {
     #[clap(about = "install custom target files")]
@@ -104,6 +114,11 @@ enum MainCommand {
         #[clap(short, long)]
         #[clap(help = "load on a device")]
         load: bool,
+        #[clap(short, long)]
+        #[clap(
+            help = "copy output files (.hex, .elf, .apdu) to standard ledger app build tree (inspired from C SDK)"
+        )]
+        standard_build_tree: bool,
         #[clap(last = true)]
         remaining_args: Vec<String>,
     },
@@ -117,9 +132,10 @@ fn main() {
         MainCommand::Build {
             device: d,
             load: a,
+            standard_build_tree: s,
             remaining_args: r,
         } => {
-            build_app(d, a, cli.use_prebuilt, cli.hex_next_to_json, r);
+            build_app(d, a, s, cli.use_prebuilt, cli.hex_next_to_json, r);
         }
     }
 }
@@ -191,6 +207,7 @@ fn build_app(
     is_load: bool,
     use_prebuilt: Option<PathBuf>,
     hex_next_to_json: bool,
+    standard_build_tree: bool,
     remaining_args: Vec<String>,
 ) {
     let exe_path = match use_prebuilt {
@@ -362,6 +379,46 @@ fn build_app(
         &app_json,
         apdu_file_path.to_str().unwrap(),
     );
+
+    if standard_build_tree {
+        // Standard bin name.
+        const STANDARD_BIN_NAME: &str = "app";
+        // Closure to copy file with error message if any.
+        let copy_file_with_err_msg = |src: &Path, dst: &Path| {
+            if let Err(err) = fs::copy(src, dst) {
+                eprintln!("Error copying file to output directory : {}", err);
+            }
+        };
+        // Closure to copy generated binaries to standard path.
+        let copy_binaries_to_standard_path = |dir: &Path| {
+            let elf_dest = dir.join(format!("{}.elf", STANDARD_BIN_NAME));
+            let hex_dest = dir.join(format!("{}.hex", STANDARD_BIN_NAME));
+            let apdu_dest = dir.join(format!("{}.apdu", STANDARD_BIN_NAME));
+            println!(
+                "Copying generated binaries to standard directory : {:?}",
+                dir
+            );
+            if let Err(err) = fs::create_dir(&dir) {
+                eprintln!(
+                    "Error creating standard device build directory : {}",
+                    err
+                );
+            }
+            copy_file_with_err_msg(&exe_path, &elf_dest);
+            copy_file_with_err_msg(&hex_file_abs, &hex_dest);
+            copy_file_with_err_msg(&apdu_file_path, &apdu_dest);
+        };
+        // Copying binaries to standard bin directory.
+        let bin_dir = PathBuf::new().join(current_dir).join("bin");
+        copy_binaries_to_standard_path(&bin_dir);
+        // Copying binaries to standard device build directory.
+        let target_build_dir = PathBuf::new()
+            .join(current_dir)
+            .join("build")
+            .join(device.as_ref_for_std_tree())
+            .join("bin");
+        copy_binaries_to_standard_path(&target_build_dir);
+    };
 
     if is_load {
         install_with_ledgerctl(current_dir, &app_json);
