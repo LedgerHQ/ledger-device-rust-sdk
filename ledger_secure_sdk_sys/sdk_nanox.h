@@ -20,3 +20,4 @@
 
 #define HAVE_BLE
 #define HAVE_BLE_APDU
+#define HAVE_BLS
