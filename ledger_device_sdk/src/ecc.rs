@@ -1,6 +1,8 @@
 use ledger_secure_sdk_sys::*;
 use zeroize::Zeroize;
 
+use crate::hash::{sha2::Sha2_512, HashInit};
+
 mod stark;
 
 #[repr(u8)]
@@ -283,9 +285,304 @@ impl<const N: usize> ECPrivateKey<N, 'W'> {
     }
 }
 
+struct BnLock;
+
+impl BnLock {
+    fn lock() -> Result<Self, CxError> {
+        let err = unsafe { cx_bn_lock(32, 0) };
+        if err != 0 {
+            Err(err.into())
+        } else {
+            Ok(BnLock)
+        }
+    }
+}
+
+impl Drop for BnLock {
+    fn drop(&mut self) {
+        unsafe { cx_bn_unlock() };
+    }
+}
+
+pub struct Ed25519Stream {
+    hash: Option<Sha2_512>,
+    r_pre: [u8; 64],
+    big_r: Option<[u8; 32]>,
+    big_s: Option<[u8; 32]>,
+}
+
+impl Default for Ed25519Stream {
+    fn default() -> Self {
+        Ed25519Stream {
+            hash: None,
+            r_pre: [0u8; 64],
+            big_r: None,
+            big_s: None,
+        }
+    }
+}
+
+impl<const N: usize> ECPrivateKey<N, 'E'> {
+    pub fn pure_sign(
+        &self,
+        ctx: &mut Ed25519Stream,
+        msg: &[u8],
+        is_last: bool,
+    ) -> Result<(), CxError>
+    where
+        [(); Self::P]:,
+    {
+        match ctx.big_r {
+            None => match ctx.hash {
+                None => {
+                    let hash = Sha2_512::new();
+                    let mut temp = Secret::<64>::new();
+                    hash.hash(&self.key, temp.as_mut())
+                        .map_err(|_| CxError::GenericError)?;
+
+                    let mut hash = Sha2_512::new();
+                    hash.update(&temp.0[32..64])
+                        .map_err(|_| CxError::GenericError)?;
+
+                    hash.update(msg).map_err(|_| CxError::GenericError)?;
+
+                    ctx.hash = Some(hash);
+                    Ok(())
+                }
+                Some(mut h) => {
+                    h.update(msg).map_err(|_| CxError::GenericError)?;
+                    if is_last {
+                        h.finalize(&mut ctx.r_pre)
+                            .map_err(|_| CxError::GenericError)?;
+                        ctx.r_pre.reverse();
+
+                        let _lock = BnLock::lock()?;
+                        let mut r = CX_BN_FLAG_UNSET;
+
+                        let err = unsafe {
+                            cx_bn_alloc_init(
+                                &mut r as *mut cx_bn_t,
+                                64,
+                                ctx.r_pre.as_ptr(),
+                                ctx.r_pre.len(),
+                            )
+                        };
+                        if err != 0 {
+                            return Err(err.into());
+                        }
+
+                        let mut ed_p = cx_ecpoint_t::default();
+                        // Get the generator for Ed25519's curve
+                        let err = unsafe {
+                            cx_ecpoint_alloc(&mut ed_p as *mut cx_ecpoint_t, CX_CURVE_Ed25519)
+                        };
+                        if err != 0 {
+                            return Err(err.into());
+                        }
+
+                        let err = unsafe { cx_ecdomain_generator_bn(CX_CURVE_Ed25519, &mut ed_p) };
+                        if err != 0 {
+                            return Err(err.into());
+                        }
+
+                        // Multiply r by generator, store in ed_p
+                        let err = unsafe { cx_ecpoint_scalarmul_bn(&mut ed_p, r) };
+                        if err != 0 {
+                            return Err(err.into());
+                        }
+
+                        // and copy/compress it to ctx.big_r
+                        let mut sign = 0;
+                        let mut big_r = [0u8; 32];
+                        let err = unsafe {
+                            cx_ecpoint_compress(&ed_p, big_r.as_mut_ptr(), big_r.len(), &mut sign)
+                        };
+                        if err != 0 {
+                            return Err(err.into());
+                        }
+                        big_r.reverse();
+                        big_r[31] |= if sign != 0 { 0x80 } else { 0x00 };
+                        ctx.big_r = Some(big_r);
+                        ctx.hash = None;
+                    }
+                    return Ok(());
+                }
+            },
+            Some(big_r) => {
+                match ctx.hash {
+                    None => {
+                        let mut hash = Sha2_512::new();
+                        hash.update(&big_r).map_err(|_| CxError::GenericError)?;
+
+                        let mut pk = self.public_key()?;
+
+                        let err = unsafe {
+                            cx_edwards_compress_point_no_throw(
+                                CX_CURVE_Ed25519,
+                                pk.pubkey.as_mut_ptr(),
+                                pk.keylength,
+                            )
+                        };
+                        if err != 0 {
+                            return Err(err.into());
+                        }
+                        // Note: public key has a byte in front of it in W, from how the ledger's system call
+                        // works; it's not for ed25519.
+                        hash.update(&pk.pubkey[1..33])
+                            .map_err(|_| CxError::GenericError)?;
+                        ctx.hash = Some(hash);
+                        Ok(())
+                    }
+                    Some(mut hash) => {
+                        if !is_last {
+                            hash.update(msg).map_err(|_| CxError::GenericError)?;
+                            return Ok(());
+                        }
+
+                        let (h_a, _lock, ed25519_order) = {
+                            let _lock = BnLock::lock();
+
+                            let mut h_scalar = Secret::<64>::new();
+                            hash.finalize(h_scalar.as_mut())
+                                .map_err(|_| CxError::GenericError)?;
+
+                            h_scalar.0.reverse();
+
+                            // Make k into a BN
+                            let mut h_scalar_bn = CX_BN_FLAG_UNSET;
+                            let err = unsafe {
+                                cx_bn_alloc_init(
+                                    &mut h_scalar_bn as *mut cx_bn_t,
+                                    64,
+                                    h_scalar.0.as_ptr(),
+                                    h_scalar.0.len(),
+                                )
+                            };
+                            if err != 0 {
+                                return Err(err.into());
+                            }
+
+                            // Get the group order
+                            let mut ed25519_order = CX_BN_FLAG_UNSET;
+                            let err = unsafe { cx_bn_alloc(&mut ed25519_order, 64) };
+                            if err != 0 {
+                                return Err(err.into());
+                            }
+                            let err = unsafe {
+                                cx_ecdomain_parameter_bn(
+                                    CX_CURVE_Ed25519,
+                                    CX_CURVE_PARAM_Order,
+                                    ed25519_order,
+                                )
+                            };
+                            if err != 0 {
+                                return Err(err.into());
+                            }
+
+                            // Generate the hashed private key
+                            let mut rv = CX_BN_FLAG_UNSET;
+                            let mut temp = Secret::<64>::new();
+
+                            let hash = Sha2_512::new();
+                            hash.hash(&self.key[0..self.keylength], temp.as_mut())
+                                .map_err(|_| CxError::GenericError)?;
+
+                            // Bit twiddling for ed25519
+                            temp.0[0] &= 248;
+                            temp.0[31] &= 63;
+                            temp.0[31] |= 64;
+
+                            let key_slice = &mut temp.0[0..32];
+
+                            key_slice.reverse();
+                            let mut key_bn = CX_BN_FLAG_UNSET;
+
+                            // Load key into bn
+                            let err = unsafe {
+                                cx_bn_alloc_init(
+                                    &mut key_bn as *mut cx_bn_t,
+                                    64,
+                                    key_slice.as_ptr(),
+                                    key_slice.len(),
+                                )
+                            };
+                            if err != 0 {
+                                return Err(err.into());
+                            }
+
+                            let err = unsafe { cx_bn_alloc(&mut rv, 64) };
+                            if err != 0 {
+                                return Err(err.into());
+                            }
+
+                            // multiply h_scalar_bn by key_bn
+                            let err =
+                                unsafe { cx_bn_mod_mul(rv, key_bn, h_scalar_bn, ed25519_order) };
+                            if err != 0 {
+                                return Err(err.into());
+                            }
+
+                            // Destroy the private key, so it doesn't leak from with_private_key even in the bn
+                            // area. temp will zeroize on drop already.
+                            let err = unsafe { cx_bn_destroy(&mut key_bn) };
+                            if err != 0 {
+                                return Err(err.into());
+                            }
+                            (rv, _lock, ed25519_order)
+                        };
+
+                        let mut r = CX_BN_FLAG_UNSET;
+                        let err = unsafe {
+                            cx_bn_alloc_init(
+                                &mut r as *mut cx_bn_t,
+                                64,
+                                ctx.r_pre.as_ptr(),
+                                ctx.r_pre.len(),
+                            )
+                        };
+                        if err != 0 {
+                            return Err(err.into());
+                        }
+
+                        // finally, compute s:
+                        let mut s = CX_BN_FLAG_UNSET;
+                        let err = unsafe { cx_bn_alloc(&mut s, 64) };
+                        if err != 0 {
+                            return Err(err.into());
+                        }
+                        let err = unsafe { cx_bn_mod_add(s, h_a, r, ed25519_order) };
+                        if err != 0 {
+                            return Err(err.into());
+                        }
+
+                        // Spooky sub 0 to avoid Nano S+ bug
+                        let err = unsafe { cx_bn_set_u32(r, 0) };
+                        if err != 0 {
+                            return Err(err.into());
+                        }
+                        let err = unsafe { cx_bn_mod_sub(s, s, r, ed25519_order) };
+                        if err != 0 {
+                            return Err(err.into());
+                        }
+                        // and copy s back to normal memory to return.
+                        let mut s_bytes = [0u8; 32];
+                        let err = unsafe { cx_bn_export(s, s_bytes.as_mut_ptr(), s_bytes.len()) };
+                        if err != 0 {
+                            return Err(err.into());
+                        }
+                        s_bytes.reverse();
+                        ctx.big_s = Some(s_bytes);
+                        Ok(())
+                    }
+                }
+            }
+        }
+    }
+}
+
 /// Edwards Curves-specific implementation
 impl<const N: usize> ECPrivateKey<N, 'E'> {
-    /// Size of an Edwards curve public key relative to the private key size
+    /// Size of an Edwards curve signature relative to the private key size
     pub const EP: usize = 2 * N;
 
     pub fn sign(&self, hash: &[u8]) -> Result<([u8; Self::EP], u32), CxError> {
@@ -855,6 +1152,43 @@ mod tests {
         let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
         let pk = sk.public_key().map_err(display_error_code)?;
         assert_eq!(pk.verify((&s.0, s.1), TEST_HASH, CX_SHA512), true);
+    }
+
+    #[test]
+    fn eddsa_ed25519_stream_sign() {
+        let sk = Ed25519::derive_from_path(&PATH0);
+        let pk = sk.public_key().map_err(display_error_code)?;
+        const TEST_MSG1: &[u8; 13] = b"test_message1";
+        const TEST_MSG2: &[u8; 13] = b"test_message2";
+        const TEST_MSG3: &[u8; 13] = b"test_message3";
+
+        let mut ctx = Ed25519Stream::default();
+
+        sk.pure_sign(&mut ctx, TEST_MSG1.as_slice(), false).unwrap();
+        sk.pure_sign(&mut ctx, TEST_MSG2.as_slice(), false).unwrap();
+        sk.pure_sign(&mut ctx, TEST_MSG3.as_slice(), true).unwrap();
+
+        sk.pure_sign(&mut ctx, TEST_MSG1.as_slice(), false).unwrap();
+        sk.pure_sign(&mut ctx, TEST_MSG2.as_slice(), false).unwrap();
+        sk.pure_sign(&mut ctx, TEST_MSG3.as_slice(), true).unwrap();
+
+        let mut signature: [u8; 64] = [0u8; 64];
+        signature[0..32].copy_from_slice(&ctx.big_r.unwrap());
+        signature[32..64].copy_from_slice(&ctx.big_s.unwrap());
+
+        let mut concatenated: [u8; 39] = [0; 39];
+        // Copy the contents of each array into the concatenated array
+        concatenated[0..13].copy_from_slice(TEST_MSG1);
+        concatenated[13..26].copy_from_slice(TEST_MSG2);
+        concatenated[26..39].copy_from_slice(TEST_MSG3);
+        assert_eq!(
+            pk.verify(
+                (&signature, signature.len() as u32),
+                &concatenated,
+                CX_SHA512
+            ),
+            true
+        );
     }
 
     #[test]
