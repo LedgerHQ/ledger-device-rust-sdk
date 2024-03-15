@@ -1,3 +1,5 @@
+use crate::hash::sha2::Sha2_512;
+use crate::hash::{HashError, HashInit};
 use ledger_secure_sdk_sys::*;
 use zeroize::Zeroize;
 
@@ -546,6 +548,316 @@ impl Ed25519 {
     }
 }
 
+/// This allows doing EdDSA sign on a message using streaming, and can therefore
+/// support creation of signature for messages of arbitrary length.
+///
+/// # Usage
+/// ```
+/// let sk = ECPrivateKey::<32, 'E'>::new();
+/// let mut e = Ed25519StreamSign::default();
+/// e.init(sk);
+/// e.update(MSG1);
+/// e.update(MSG2);
+/// e.done_with_r();
+/// e.update(MSG1);
+/// e.update(MSG2);
+/// let (sig, sig_len) = e.finalize();
+/// ```
+pub struct Ed25519StreamSign {
+    hash: Sha2_512,
+    key: ECPrivateKey<32, 'E'>,
+    r_pre: [u8; 64],
+    r: [u8; 32],
+}
+
+impl Default for Ed25519StreamSign {
+    fn default() -> Ed25519StreamSign {
+        Ed25519StreamSign {
+            hash: Sha2_512::default(),
+            key: ECPrivateKey::default(),
+            r_pre: [0; 64],
+            r: [0; 32],
+        }
+    }
+}
+
+struct BnLock;
+
+impl BnLock {
+    fn lock() -> Result<Self, CxError> {
+        let err = unsafe { cx_bn_lock(32, 0) };
+        if err != 0 {
+            Err(err.into())
+        } else {
+            Ok(BnLock)
+        }
+    }
+}
+
+impl Drop for BnLock {
+    fn drop(&mut self) {
+        unsafe { cx_bn_unlock() };
+    }
+}
+
+use core::mem::take;
+
+impl Ed25519StreamSign {
+    #[inline(never)]
+    pub fn init(&mut self, key: ECPrivateKey<32, 'E'>) -> Result<(), HashError> {
+        self.hash = Sha2_512::new();
+        self.key = key;
+        self.r_pre = [0; 64];
+        self.r = [0; 32];
+        // Generate the hashed private key
+        {
+            self.hash.update(&self.key.key[0..(self.key.keylength)])?;
+            let mut temp = Secret::<64>::new();
+            take(&mut self.hash).finalize(temp.as_mut())?;
+
+            self.hash = Sha2_512::new();
+            self.hash.update(&temp.0[32..64])?;
+        }
+        Ok(())
+    }
+
+    #[inline(never)]
+    pub fn update(&mut self, bytes: &[u8]) -> Result<(), HashError> {
+        self.hash.update(bytes)
+    }
+
+    #[inline(never)]
+    pub fn done_with_r(&mut self) -> Result<(), CxError> {
+        let mut sign = 0;
+        {
+            let _lock = BnLock::lock()?;
+
+            let mut r = CX_BN_FLAG_UNSET;
+
+            take(&mut self.hash)
+                .finalize(&mut self.r_pre)
+                .map_err(|_| CxError::GenericError)?;
+            self.r_pre.reverse();
+
+            // Make r_pre into a BN
+            let err = unsafe {
+                cx_bn_alloc_init(
+                    &mut r as *mut cx_bn_t,
+                    64,
+                    self.r_pre.as_ptr(),
+                    self.r_pre.len(),
+                )
+            };
+            if err != 0 {
+                return Err(err.into());
+            }
+
+            let mut ed_p = cx_ecpoint_t::default();
+            // Get the generator for Ed25519's curve
+            let err = unsafe { cx_ecpoint_alloc(&mut ed_p as *mut cx_ecpoint_t, CX_CURVE_Ed25519) };
+            if err != 0 {
+                return Err(err.into());
+            }
+
+            let err = unsafe { cx_ecdomain_generator_bn(CX_CURVE_Ed25519, &mut ed_p) };
+            if err != 0 {
+                return Err(err.into());
+            }
+
+            // Multiply r by generator, store in ed_p
+            let err = unsafe { cx_ecpoint_scalarmul_bn(&mut ed_p, r) };
+            if err != 0 {
+                return Err(err.into());
+            }
+
+            // and copy/compress it to self.r
+            let err =
+                unsafe { cx_ecpoint_compress(&ed_p, self.r.as_mut_ptr(), self.r.len(), &mut sign) };
+            if err != 0 {
+                return Err(err.into());
+            }
+        }
+
+        // and do the mandated byte order and bit twiddling.
+        self.r.reverse();
+        self.r[31] |= if sign != 0 { 0x80 } else { 0x00 };
+
+        // Start calculating s.
+
+        self.hash = Sha2_512::new();
+        self.hash
+            .update(&self.r)
+            .map_err(|_| CxError::GenericError)?;
+
+        let mut pk = self.key.public_key()?;
+
+        let err = unsafe {
+            cx_edwards_compress_point_no_throw(
+                CX_CURVE_Ed25519,
+                pk.pubkey.as_mut_ptr(),
+                pk.keylength,
+            )
+        };
+        if err != 0 {
+            return Err(err.into());
+        }
+        // Note: public key has a byte in front of it in W, from how the ledger's system call
+        // works; it's not for ed25519.
+        self.hash
+            .update(&pk.pubkey[1..33])
+            .map_err(|_| CxError::GenericError)?;
+        Ok(())
+    }
+
+    #[inline(never)]
+    pub fn finalize(&mut self) -> Result<([u8; 64], u32), CxError> {
+        let (h_a, _lock, ed25519_order) = {
+            let _lock = BnLock::lock();
+
+            let mut h_scalar = Secret::<64>::new();
+            take(&mut self.hash)
+                .finalize(h_scalar.as_mut())
+                .map_err(|_| CxError::GenericError)?;
+
+            h_scalar.0.reverse();
+
+            // Make k into a BN
+            let mut h_scalar_bn = CX_BN_FLAG_UNSET;
+            let err = unsafe {
+                cx_bn_alloc_init(
+                    &mut h_scalar_bn as *mut cx_bn_t,
+                    64,
+                    h_scalar.0.as_ptr(),
+                    h_scalar.0.len(),
+                )
+            };
+            if err != 0 {
+                return Err(err.into());
+            }
+
+            // Get the group order
+            let mut ed25519_order = CX_BN_FLAG_UNSET;
+            let err = unsafe { cx_bn_alloc(&mut ed25519_order, 64) };
+            if err != 0 {
+                return Err(err.into());
+            }
+            let err = unsafe {
+                cx_ecdomain_parameter_bn(CX_CURVE_Ed25519, CX_CURVE_PARAM_Order, ed25519_order)
+            };
+            if err != 0 {
+                return Err(err.into());
+            }
+
+            // Generate the hashed private key
+            let mut rv = CX_BN_FLAG_UNSET;
+            self.hash = Sha2_512::new();
+            self.hash
+                .update(&self.key.key[0..(self.key.keylength)])
+                .map_err(|_| CxError::GenericError)?;
+
+            let mut temp = Secret::<64>::new();
+            take(&mut self.hash)
+                .finalize(temp.as_mut())
+                .map_err(|_| CxError::GenericError)?;
+
+            // Bit twiddling for ed25519
+            temp.0[0] &= 248;
+            temp.0[31] &= 63;
+            temp.0[31] |= 64;
+
+            let key_slice = &mut temp.0[0..32];
+
+            key_slice.reverse();
+            let mut key_bn = CX_BN_FLAG_UNSET;
+
+            // Load key into bn
+            let err = unsafe {
+                cx_bn_alloc_init(
+                    &mut key_bn as *mut cx_bn_t,
+                    64,
+                    key_slice.as_ptr(),
+                    key_slice.len(),
+                )
+            };
+            if err != 0 {
+                return Err(err.into());
+            }
+            self.hash = Sha2_512::new();
+
+            let err = unsafe { cx_bn_alloc(&mut rv, 64) };
+            if err != 0 {
+                return Err(err.into());
+            }
+
+            // multiply h_scalar_bn by key_bn
+            let err = unsafe { cx_bn_mod_mul(rv, key_bn, h_scalar_bn, ed25519_order) };
+            if err != 0 {
+                return Err(err.into());
+            }
+
+            // Destroy the private key, so it doesn't leak from with_private_key even in the bn
+            // area. temp will zeroize on drop already.
+            let err = unsafe { cx_bn_destroy(&mut key_bn) };
+            if err != 0 {
+                return Err(err.into());
+            }
+            (rv, _lock, ed25519_order)
+        };
+
+        // Reload the r value into the bn area
+        let mut r = CX_BN_FLAG_UNSET;
+        let err = unsafe {
+            cx_bn_alloc_init(
+                &mut r as *mut cx_bn_t,
+                64,
+                self.r_pre.as_ptr(),
+                self.r_pre.len(),
+            )
+        };
+        if err != 0 {
+            return Err(err.into());
+        }
+
+        // finally, compute s:
+        let mut s = CX_BN_FLAG_UNSET;
+        let err = unsafe { cx_bn_alloc(&mut s, 64) };
+        if err != 0 {
+            return Err(err.into());
+        }
+        let err = unsafe { cx_bn_mod_add(s, h_a, r, ed25519_order) };
+        if err != 0 {
+            return Err(err.into());
+        }
+
+        // Spooky sub 0 to avoid Nano S+ bug
+        let err = unsafe { cx_bn_set_u32(r, 0) };
+        if err != 0 {
+            return Err(err.into());
+        }
+        let err = unsafe { cx_bn_mod_sub(s, s, r, ed25519_order) };
+        if err != 0 {
+            return Err(err.into());
+        }
+        // and copy s back to normal memory to return.
+        let mut s_bytes = [0; 32];
+        let err = unsafe { cx_bn_export(s, s_bytes.as_mut_ptr(), s_bytes.len()) };
+        if err != 0 {
+            return Err(err.into());
+        }
+
+        s_bytes.reverse();
+
+        // And copy the signature into the output.
+        let mut buf = [0; 64];
+
+        buf[..32].copy_from_slice(&self.r);
+
+        buf[32..].copy_from_slice(&s_bytes);
+
+        Ok((buf, buf.len() as u32))
+    }
+}
+
 impl SeedDerive for Stark256 {
     type Target = ECPrivateKey<32, 'W'>;
     fn derive_from(path: &[u32]) -> (Self::Target, Option<ChainCode>) {
@@ -855,6 +1167,34 @@ mod tests {
         let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
         let pk = sk.public_key().map_err(display_error_code)?;
         assert_eq!(pk.verify((&s.0, s.1), TEST_HASH, CX_SHA512), true);
+    }
+
+    #[test]
+    fn eddsa_ed25519_stream_sign() {
+        let sk = Ed25519::derive_from_path(&PATH0);
+        let pk = sk.public_key().map_err(display_error_code)?;
+        const TEST_MSG1: &[u8; 13] = b"test_message1";
+        const TEST_MSG2: &[u8; 13] = b"test_message2";
+        const TEST_MSG3: &[u8; 13] = b"test_message3";
+        let s = {
+            let mut e = Ed25519StreamSign::default();
+            let _ = e.init(sk);
+            let _ = e.update(TEST_MSG1);
+            let _ = e.update(TEST_MSG2);
+            let _ = e.update(TEST_MSG3);
+            e.done_with_r().map_err(display_error_code)?;
+            let _ = e.update(TEST_MSG1);
+            let _ = e.update(TEST_MSG2);
+            let _ = e.update(TEST_MSG3);
+            e.finalize().map_err(display_error_code)?
+        };
+
+        let mut concatenated: [u8; 39] = [0; 39];
+        // Copy the contents of each array into the concatenated array
+        concatenated[0..13].copy_from_slice(TEST_MSG1);
+        concatenated[13..26].copy_from_slice(TEST_MSG2);
+        concatenated[26..39].copy_from_slice(TEST_MSG3);
+        assert_eq!(pk.verify((&s.0, s.1), &concatenated, CX_SHA512), true);
     }
 
     #[test]
