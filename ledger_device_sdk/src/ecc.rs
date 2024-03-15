@@ -1,6 +1,8 @@
 use ledger_secure_sdk_sys::*;
 use zeroize::Zeroize;
 
+use crate::hash::{sha2::Sha2_512, HashInit};
+
 mod stark;
 
 #[repr(u8)]
@@ -283,9 +285,234 @@ impl<const N: usize> ECPrivateKey<N, 'W'> {
     }
 }
 
+pub struct Ed25519Stream {
+    hash: Sha2_512,
+    big_r_started: bool,
+    pub big_r: [u8; 32],
+    pub signature: [u8; 64],
+}
+
+impl Default for Ed25519Stream {
+    fn default() -> Self {
+        Ed25519Stream {
+            hash: Sha2_512::default(),
+            big_r_started: false,
+            big_r: [0u8; 32],
+            signature: [0u8; 64],
+        }
+    }
+}
+
+macro_rules! check_cx_ok {
+    ($fn_call:expr) => {{
+        let err = unsafe { $fn_call };
+        if err != CX_OK {
+            return Err(err.into());
+        }
+    }};
+}
+
+impl<const N: usize> ECPrivateKey<N, 'E'> {
+    pub fn stream_sign_init(&self, ctx: &mut Ed25519Stream) -> Result<(), CxError> {
+        // Compute prefix (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 1)
+        match ctx.big_r_started {
+            false => {
+                let hash = Sha2_512::new();
+                let mut temp = Secret::<64>::new();
+                hash.hash(&self.key, temp.as_mut())
+                    .map_err(|_| CxError::GenericError)?;
+
+                ctx.hash = Sha2_512::new();
+                ctx.hash
+                    .update(&temp.0[32..64])
+                    .map_err(|_| CxError::GenericError)?;
+
+                ctx.big_r_started = true;
+
+                Ok(())
+            }
+            true => Err(CxError::GenericError),
+        }
+    }
+
+    pub fn stream_sign_finalize(&self, ctx: &mut Ed25519Stream) -> Result<(), CxError>
+    where
+        [(); Self::P]:,
+    {
+        match ctx.big_r.into_iter().all(|b| b == 0) {
+            true => {
+                // Compute R (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 3)
+                ctx.hash
+                    .finalize(&mut ctx.signature)
+                    .map_err(|_| CxError::GenericError)?;
+                ctx.signature.reverse();
+
+                check_cx_ok!(cx_bn_lock(32, 0));
+
+                let mut r = CX_BN_FLAG_UNSET;
+
+                check_cx_ok!(cx_bn_alloc_init(
+                    &mut r as *mut cx_bn_t,
+                    64,
+                    ctx.signature.as_ptr(),
+                    ctx.signature.len(),
+                ));
+
+                let mut ed_p = cx_ecpoint_t::default();
+                // Get the generator for Ed25519's curve
+                check_cx_ok!(cx_ecpoint_alloc(
+                    &mut ed_p as *mut cx_ecpoint_t,
+                    CX_CURVE_Ed25519
+                ));
+                check_cx_ok!(cx_ecdomain_generator_bn(CX_CURVE_Ed25519, &mut ed_p));
+
+                // Multiply r by generator, store in ed_p
+                check_cx_ok!(cx_ecpoint_scalarmul_bn(&mut ed_p, r));
+
+                // and copy/compress it to ctx.big_r
+                let mut sign = 0;
+
+                check_cx_ok!(cx_ecpoint_compress(
+                    &ed_p,
+                    ctx.big_r.as_mut_ptr(),
+                    ctx.big_r.len(),
+                    &mut sign
+                ));
+
+                check_cx_ok!(cx_bn_unlock());
+
+                ctx.big_r.reverse();
+                ctx.big_r[31] |= if sign != 0 { 0x80 } else { 0x00 };
+
+                // Compute S (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 4)
+                ctx.hash = Sha2_512::new();
+                ctx.hash
+                    .update(&ctx.big_r)
+                    .map_err(|_| CxError::GenericError)?;
+
+                let mut pk = self.public_key()?;
+
+                check_cx_ok!(cx_edwards_compress_point_no_throw(
+                    CX_CURVE_Ed25519,
+                    pk.pubkey.as_mut_ptr(),
+                    pk.keylength,
+                ));
+                // Note: public key has a byte in front of it in W, from how the ledger's system call
+                // works; it's not for ed25519.
+                ctx.hash
+                    .update(&pk.pubkey[1..33])
+                    .map_err(|_| CxError::GenericError)?;
+                Ok(())
+            }
+            false => {
+                // Compute S (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 5)
+                check_cx_ok!(cx_bn_lock(32, 0));
+                let (h_a, ed25519_order) = {
+                    let mut h_scalar = Secret::<64>::new();
+                    ctx.hash
+                        .finalize(h_scalar.as_mut())
+                        .map_err(|_| CxError::GenericError)?;
+
+                    h_scalar.0.reverse();
+
+                    // Make k into a BN
+                    let mut h_scalar_bn = CX_BN_FLAG_UNSET;
+                    check_cx_ok!(cx_bn_alloc_init(
+                        &mut h_scalar_bn as *mut cx_bn_t,
+                        64,
+                        h_scalar.0.as_ptr(),
+                        h_scalar.0.len(),
+                    ));
+
+                    // Get the group order
+                    let mut ed25519_order = CX_BN_FLAG_UNSET;
+
+                    check_cx_ok!(cx_bn_alloc(&mut ed25519_order, 64));
+
+                    check_cx_ok!(cx_ecdomain_parameter_bn(
+                        CX_CURVE_Ed25519,
+                        CX_CURVE_PARAM_Order,
+                        ed25519_order,
+                    ));
+
+                    // Generate the hashed private key
+                    let mut rv = CX_BN_FLAG_UNSET;
+                    let mut temp = Secret::<64>::new();
+
+                    let hash = Sha2_512::new();
+                    hash.hash(&self.key[0..self.keylength], temp.as_mut())
+                        .map_err(|_| CxError::GenericError)?;
+
+                    // Bit twiddling for ed25519
+                    temp.0[0] &= 248;
+                    temp.0[31] &= 63;
+                    temp.0[31] |= 64;
+
+                    let key_slice = &mut temp.0[0..32];
+
+                    key_slice.reverse();
+                    let mut key_bn = CX_BN_FLAG_UNSET;
+
+                    // Load key into bn
+                    check_cx_ok!(cx_bn_alloc_init(
+                        &mut key_bn as *mut cx_bn_t,
+                        64,
+                        key_slice.as_ptr(),
+                        key_slice.len(),
+                    ));
+
+                    check_cx_ok!(cx_bn_alloc(&mut rv, 64));
+
+                    // multiply h_scalar_bn by key_bn
+                    check_cx_ok!(cx_bn_mod_mul(rv, key_bn, h_scalar_bn, ed25519_order));
+
+                    // Destroy the private key, so it doesn't leak from with_private_key even in the bn
+                    // area. temp will zeroize on drop already.
+                    check_cx_ok!(cx_bn_destroy(&mut key_bn));
+                    (rv, ed25519_order)
+                };
+
+                let mut r = CX_BN_FLAG_UNSET;
+                check_cx_ok!(cx_bn_alloc_init(
+                    &mut r as *mut cx_bn_t,
+                    64,
+                    ctx.signature.as_ptr(),
+                    ctx.signature.len(),
+                ));
+
+                // finally, compute s:
+                let mut s = CX_BN_FLAG_UNSET;
+                check_cx_ok!(cx_bn_alloc(&mut s, 64));
+                check_cx_ok!(cx_bn_mod_add(s, h_a, r, ed25519_order));
+
+                // Spooky sub 0 to avoid Nano S+ bug
+                check_cx_ok!(cx_bn_set_u32(r, 0));
+
+                check_cx_ok!(cx_bn_mod_sub(s, s, r, ed25519_order));
+                // and copy s back to normal memory to return.
+                check_cx_ok!(cx_bn_export(s, ctx.signature.as_mut_ptr(), 32));
+                check_cx_ok!(cx_bn_unlock());
+
+                ctx.signature[..32].reverse();
+
+                // Copy R[32] and S[32] into signature[64]
+                ctx.signature.copy_within(0..32, 32);
+                ctx.signature[0..32].copy_from_slice(&ctx.big_r);
+
+                Ok(())
+            }
+        }
+    }
+
+    pub fn stream_sign_update(&self, ctx: &mut Ed25519Stream, msg: &[u8]) -> Result<(), CxError> {
+        ctx.hash.update(msg).map_err(|_| CxError::GenericError)?;
+        Ok(())
+    }
+}
+
 /// Edwards Curves-specific implementation
 impl<const N: usize> ECPrivateKey<N, 'E'> {
-    /// Size of an Edwards curve public key relative to the private key size
+    /// Size of an Edwards curve signature relative to the private key size
     pub const EP: usize = 2 * N;
 
     pub fn sign(&self, hash: &[u8]) -> Result<([u8; Self::EP], u32), CxError> {
@@ -855,6 +1082,43 @@ mod tests {
         let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
         let pk = sk.public_key().map_err(display_error_code)?;
         assert_eq!(pk.verify((&s.0, s.1), TEST_HASH, CX_SHA512), true);
+    }
+
+    #[test]
+    fn eddsa_ed25519_stream_sign() {
+        let sk = Ed25519::derive_from_path(&PATH0);
+        let pk = sk.public_key().map_err(display_error_code)?;
+        const MSG1: &[u8; 13] = b"test_message1";
+        const MSG2: &[u8; 13] = b"test_message2";
+        const MSG3: &[u8; 13] = b"test_message3";
+
+        let mut ctx = Ed25519Stream::default();
+
+        sk.stream_sign_init(&mut ctx).unwrap();
+
+        sk.stream_sign_update(&mut ctx, MSG1.as_slice()).unwrap();
+        sk.stream_sign_update(&mut ctx, MSG2.as_slice()).unwrap();
+        sk.stream_sign_update(&mut ctx, MSG3.as_slice()).unwrap();
+        sk.stream_sign_finalize(&mut ctx).unwrap();
+
+        sk.stream_sign_update(&mut ctx, MSG1.as_slice()).unwrap();
+        sk.stream_sign_update(&mut ctx, MSG2.as_slice()).unwrap();
+        sk.stream_sign_update(&mut ctx, MSG3.as_slice()).unwrap();
+        sk.stream_sign_finalize(&mut ctx).unwrap();
+
+        let mut concatenated: [u8; 39] = [0; 39];
+        // Copy the contents of each array into the concatenated array
+        concatenated[0..13].copy_from_slice(MSG1);
+        concatenated[13..26].copy_from_slice(MSG2);
+        concatenated[26..39].copy_from_slice(MSG3);
+        assert_eq!(
+            pk.verify(
+                (&ctx.signature, ctx.signature.len() as u32),
+                &concatenated,
+                CX_SHA512
+            ),
+            true
+        );
     }
 
     #[test]
