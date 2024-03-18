@@ -3,6 +3,23 @@ use zeroize::Zeroize;
 
 use crate::hash::{sha2::Sha2_512, HashInit};
 
+use core::fmt::{Error, Write};
+struct Buf {
+    buf: [u8; 128],
+    len: usize,
+}
+impl Write for Buf {
+    fn write_str(&mut self, s: &str) -> Result<(), Error> {
+        let bytes = s.as_bytes();
+
+        for (i, b) in bytes.iter().enumerate() {
+            self.buf[(self.len + i) % self.buf.len()] = *b;
+        }
+        self.len = (self.len + bytes.len()) % 128;
+        Ok(())
+    }
+}
+
 mod stark;
 
 #[repr(u8)]
@@ -335,6 +352,7 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
         match ctx.big_r {
             None => match ctx.hash {
                 None => {
+                    crate::testing::debug_print("R init \n");
                     let hash = Sha2_512::new();
                     let mut temp = Secret::<64>::new();
                     hash.hash(&self.key, temp.as_mut())
@@ -350,8 +368,14 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
                     Ok(())
                 }
                 Some(mut h) => {
-                    h.update(msg).map_err(|_| CxError::GenericError)?;
-                    if is_last {
+                    if !is_last {
+                        crate::testing::debug_print("R update \n");
+                        h.update(msg).map_err(|_| CxError::GenericError)?;
+                        ctx.hash = Some(h);
+                    } else {
+                        crate::testing::debug_print("R finalize \n");
+                        h.update(msg).map_err(|_| CxError::GenericError)?;
+
                         h.finalize(&mut ctx.r_pre)
                             .map_err(|_| CxError::GenericError)?;
                         ctx.r_pre.reverse();
@@ -411,6 +435,7 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
             Some(big_r) => {
                 match ctx.hash {
                     None => {
+                        crate::testing::debug_print("S init \n");
                         let mut hash = Sha2_512::new();
                         hash.update(&big_r).map_err(|_| CxError::GenericError)?;
 
@@ -430,15 +455,21 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
                         // works; it's not for ed25519.
                         hash.update(&pk.pubkey[1..33])
                             .map_err(|_| CxError::GenericError)?;
+
+                        hash.update(msg).map_err(|_| CxError::GenericError)?;
+
                         ctx.hash = Some(hash);
                         Ok(())
                     }
                     Some(mut hash) => {
                         if !is_last {
+                            crate::testing::debug_print("S update \n");
                             hash.update(msg).map_err(|_| CxError::GenericError)?;
+                            ctx.hash = Some(hash);
                             return Ok(());
                         }
-
+                        hash.update(msg).map_err(|_| CxError::GenericError)?;
+                        crate::testing::debug_print("S finalize \n");
                         let (h_a, _lock, ed25519_order) = {
                             let _lock = BnLock::lock();
 
