@@ -325,7 +325,6 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
         match ctx.big_r {
             None => match ctx.hash {
                 None => {
-                    crate::testing::debug_print("R init \n");
                     let hash = Sha2_512::new();
                     let mut temp = Secret::<64>::new();
                     hash.hash(&self.key, temp.as_mut())
@@ -342,11 +341,9 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
                 }
                 Some(mut h) => {
                     if !is_last {
-                        crate::testing::debug_print("R update \n");
                         h.update(msg).map_err(|_| CxError::GenericError)?;
                         ctx.hash = Some(h);
                     } else {
-                        crate::testing::debug_print("R finalize \n");
                         h.update(msg).map_err(|_| CxError::GenericError)?;
 
                         h.finalize(&mut ctx.r_pre)
@@ -399,7 +396,6 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
             Some(big_r) => {
                 match ctx.hash {
                     None => {
-                        crate::testing::debug_print("S init \n");
                         let mut hash = Sha2_512::new();
                         hash.update(&big_r).map_err(|_| CxError::GenericError)?;
 
@@ -422,12 +418,10 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
                     }
                     Some(mut hash) => {
                         if !is_last {
-                            crate::testing::debug_print("S update \n");
                             hash.update(msg).map_err(|_| CxError::GenericError)?;
                             ctx.hash = Some(hash);
                         } else {
                             hash.update(msg).map_err(|_| CxError::GenericError)?;
-                            crate::testing::debug_print("S finalize \n");
 
                             check_cx_ok!(cx_bn_lock(32, 0));
 
