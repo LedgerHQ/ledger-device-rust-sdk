@@ -286,8 +286,10 @@ impl<const N: usize> ECPrivateKey<N, 'W'> {
 }
 
 pub struct Ed25519Stream {
-    hash: Option<Sha2_512>,
+    hash: Sha2_512,
     r_pre: [u8; 64],
+    big_r_started: bool,
+    big_s_started: bool,
     pub big_r: Option<[u8; 32]>,
     pub big_s: Option<[u8; 32]>,
 }
@@ -295,8 +297,10 @@ pub struct Ed25519Stream {
 impl Default for Ed25519Stream {
     fn default() -> Self {
         Ed25519Stream {
-            hash: None,
+            hash: Sha2_512::default(),
             r_pre: [0u8; 64],
+            big_r_started: false,
+            big_s_started: false,
             big_r: None,
             big_s: None,
         }
@@ -318,32 +322,35 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
         [(); Self::P]:,
     {
         match ctx.big_r {
-            None => match ctx.hash {
-                None => {
+            None => match ctx.big_r_started {
+                false => {
                     let hash = Sha2_512::new();
                     let mut temp = Secret::<64>::new();
                     hash.hash(&self.key, temp.as_mut())
                         .map_err(|_| CxError::GenericError)?;
 
-                    let mut hash = Sha2_512::new();
-                    hash.update(&temp.0[32..64])
+                    ctx.hash = Sha2_512::new();
+                    ctx.hash
+                        .update(&temp.0[32..64])
                         .map_err(|_| CxError::GenericError)?;
 
-                    hash.update(msg.unwrap_or(b"".as_slice()))
+                    ctx.hash
+                        .update(msg.unwrap_or(b"".as_slice()))
                         .map_err(|_| CxError::GenericError)?;
 
-                    ctx.hash = Some(hash);
+                    ctx.big_r_started = true;
+
                     Ok(())
                 }
-                Some(mut h) => {
+                true => {
                     match msg {
                         Some(m) => {
-                            h.update(m).map_err(|_| CxError::GenericError)?;
-                            ctx.hash = Some(h);
+                            ctx.hash.update(m).map_err(|_| CxError::GenericError)?;
                             Ok(())
                         }
                         None => {
-                            h.finalize(&mut ctx.r_pre)
+                            ctx.hash
+                                .finalize(&mut ctx.r_pre)
                                 .map_err(|_| CxError::GenericError)?;
                             ctx.r_pre.reverse();
 
@@ -385,17 +392,16 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
                             big_r.reverse();
                             big_r[31] |= if sign != 0 { 0x80 } else { 0x00 };
                             ctx.big_r = Some(big_r);
-                            ctx.hash = None;
                             Ok(())
                         }
                     }
                 }
             },
             Some(big_r) => {
-                match ctx.hash {
-                    None => {
-                        let mut hash = Sha2_512::new();
-                        hash.update(&big_r).map_err(|_| CxError::GenericError)?;
+                match ctx.big_s_started {
+                    false => {
+                        ctx.hash = Sha2_512::new();
+                        ctx.hash.update(&big_r).map_err(|_| CxError::GenericError)?;
 
                         let mut pk = self.public_key()?;
 
@@ -406,20 +412,21 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
                         ));
                         // Note: public key has a byte in front of it in W, from how the ledger's system call
                         // works; it's not for ed25519.
-                        hash.update(&pk.pubkey[1..33])
+                        ctx.hash
+                            .update(&pk.pubkey[1..33])
                             .map_err(|_| CxError::GenericError)?;
 
-                        hash.update(msg.unwrap_or(b"".as_slice()))
+                        ctx.hash
+                            .update(msg.unwrap_or(b"".as_slice()))
                             .map_err(|_| CxError::GenericError)?;
 
-                        ctx.hash = Some(hash);
+                        ctx.big_s_started = true;
                         Ok(())
                     }
-                    Some(mut hash) => {
+                    true => {
                         match msg {
                             Some(m) => {
-                                hash.update(m).map_err(|_| CxError::GenericError)?;
-                                ctx.hash = Some(hash);
+                                ctx.hash.update(m).map_err(|_| CxError::GenericError)?;
                                 Ok(())
                             }
                             None => {
@@ -427,7 +434,8 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
 
                                 let (h_a, ed25519_order) = {
                                     let mut h_scalar = Secret::<64>::new();
-                                    hash.finalize(h_scalar.as_mut())
+                                    ctx.hash
+                                        .finalize(h_scalar.as_mut())
                                         .map_err(|_| CxError::GenericError)?;
 
                                     h_scalar.0.reverse();
