@@ -289,9 +289,8 @@ pub struct Ed25519Stream {
     hash: Sha2_512,
     r_pre: [u8; 64],
     big_r_started: bool,
-    big_s_started: bool,
-    pub big_r: Option<[u8; 32]>,
-    pub big_s: Option<[u8; 32]>,
+    pub big_r: [u8; 32],
+    pub big_s: [u8; 32],
 }
 
 impl Default for Ed25519Stream {
@@ -300,9 +299,8 @@ impl Default for Ed25519Stream {
             hash: Sha2_512::default(),
             r_pre: [0u8; 64],
             big_r_started: false,
-            big_s_started: false,
-            big_r: None,
-            big_s: None,
+            big_r: [0u8; 32],
+            big_s: [0u8; 32],
         }
     }
 }
@@ -319,8 +317,8 @@ macro_rules! check_cx_ok {
 impl<const N: usize> ECPrivateKey<N, 'E'> {
     pub fn stream_sign_init(&self, ctx: &mut Ed25519Stream) -> Result<(), CxError> {
         // Compute prefix (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 1)
-        match (ctx.big_r, ctx.big_r_started) {
-            (None, false) => {
+        match ctx.big_r_started {
+            false => {
                 let hash = Sha2_512::new();
                 let mut temp = Secret::<64>::new();
                 hash.hash(&self.key, temp.as_mut())
@@ -335,7 +333,7 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
 
                 Ok(())
             }
-            (_, _) => Err(CxError::GenericError),
+            true => Err(CxError::GenericError),
         }
     }
 
@@ -343,8 +341,8 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
     where
         [(); Self::P]:,
     {
-        match ctx.big_r {
-            None => {
+        match ctx.big_r.into_iter().all(|b| b == 0) {
+            true => {
                 // Compute R (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 3)
                 ctx.hash
                     .finalize(&mut ctx.r_pre)
@@ -375,24 +373,24 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
 
                 // and copy/compress it to ctx.big_r
                 let mut sign = 0;
-                let mut big_r = [0u8; 32];
 
                 check_cx_ok!(cx_ecpoint_compress(
                     &ed_p,
-                    big_r.as_mut_ptr(),
-                    big_r.len(),
+                    ctx.big_r.as_mut_ptr(),
+                    ctx.big_r.len(),
                     &mut sign
                 ));
 
                 check_cx_ok!(cx_bn_unlock());
 
-                big_r.reverse();
-                big_r[31] |= if sign != 0 { 0x80 } else { 0x00 };
-                ctx.big_r = Some(big_r);
+                ctx.big_r.reverse();
+                ctx.big_r[31] |= if sign != 0 { 0x80 } else { 0x00 };
 
                 // Compute S (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 4)
                 ctx.hash = Sha2_512::new();
-                ctx.hash.update(&big_r).map_err(|_| CxError::GenericError)?;
+                ctx.hash
+                    .update(&ctx.big_r)
+                    .map_err(|_| CxError::GenericError)?;
 
                 let mut pk = self.public_key()?;
 
@@ -406,11 +404,9 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
                 ctx.hash
                     .update(&pk.pubkey[1..33])
                     .map_err(|_| CxError::GenericError)?;
-
-                ctx.big_s_started = true;
                 Ok(())
             }
-            Some(_b) => {
+            false => {
                 // Compute S (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 5)
                 check_cx_ok!(cx_bn_lock(32, 0));
                 let (h_a, ed25519_order) = {
@@ -496,13 +492,10 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
 
                 check_cx_ok!(cx_bn_mod_sub(s, s, r, ed25519_order));
                 // and copy s back to normal memory to return.
-                let mut s_bytes = [0u8; 32];
-                check_cx_ok!(cx_bn_export(s, s_bytes.as_mut_ptr(), s_bytes.len()));
+                check_cx_ok!(cx_bn_export(s, ctx.big_s.as_mut_ptr(), ctx.big_s.len()));
                 check_cx_ok!(cx_bn_unlock());
 
-                s_bytes.reverse();
-                ctx.big_s = Some(s_bytes);
-
+                ctx.big_s.reverse();
                 Ok(())
             }
         }
@@ -1111,8 +1104,8 @@ mod tests {
         sk.stream_sign_finalize(&mut ctx).unwrap();
 
         let mut signature: [u8; 64] = [0u8; 64];
-        signature[0..32].copy_from_slice(&ctx.big_r.unwrap());
-        signature[32..64].copy_from_slice(&ctx.big_s.unwrap());
+        signature[0..32].copy_from_slice(&ctx.big_r);
+        signature[32..64].copy_from_slice(&ctx.big_s);
 
         let mut concatenated: [u8; 39] = [0; 39];
         // Copy the contents of each array into the concatenated array
