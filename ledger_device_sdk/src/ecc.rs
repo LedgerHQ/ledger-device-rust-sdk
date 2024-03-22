@@ -285,7 +285,6 @@ impl<const N: usize> ECPrivateKey<N, 'W'> {
     }
 }
 
-pub struct Ed25519StreamInit;
 pub struct Ed25519Stream {
     hash: Sha2_512,
     pub big_r: [u8; 32],
@@ -295,7 +294,7 @@ pub struct Ed25519Stream {
 impl Default for Ed25519Stream {
     fn default() -> Self {
         Ed25519Stream {
-            hash: Sha2_512::default(),
+            hash: Sha2_512::new(),
             big_r: [0u8; 32],
             signature: [0u8; 64],
         }
@@ -311,27 +310,19 @@ macro_rules! check_cx_ok {
     }};
 }
 
-impl Ed25519StreamInit {
-    pub fn sign_init(key: &ECPrivateKey<32, 'E'>) -> Result<Ed25519Stream, CxError> {
+impl Ed25519Stream {
+    pub fn new(key: &ECPrivateKey<32, 'E'>) -> Result<Ed25519Stream, CxError> {
         // Compute prefix (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 1)
-        let hash = Sha2_512::new();
+        let mut res = Ed25519Stream::default();
         let mut temp = Secret::<64>::new();
-        hash.hash(&key.key[..], temp.as_mut())
+        res.hash.hash(&key.key[..], temp.as_mut())
             .map_err(|_| CxError::GenericError)?;
-
-        let mut hash2 = Sha2_512::new();
-        hash2
+        res.hash = Sha2_512::new();
+        res.hash
             .update(&temp.0[32..64])
             .map_err(|_| CxError::GenericError)?;
-
-        Ok(Ed25519Stream {
-            hash: hash2,
-            ..Default::default()
-        })
+        Ok(res)
     }
-}
-
-impl Ed25519Stream {
     pub fn sign_finalize(&mut self, key: &ECPrivateKey<32, 'E'>) -> Result<(), CxError> {
         match self.big_r.into_iter().all(|b| b == 0) {
             true => {
@@ -433,7 +424,7 @@ impl Ed25519Stream {
                     let mut rv = CX_BN_FLAG_UNSET;
                     let mut temp = Secret::<64>::new();
 
-                    let hash = Sha2_512::new();
+                    let mut hash = Sha2_512::new();
                     hash.hash(&key.key[0..key.keylength], temp.as_mut())
                         .map_err(|_| CxError::GenericError)?;
 
@@ -1086,7 +1077,7 @@ mod tests {
         const MSG2: &[u8] = b"test_message2";
         const MSG3: &[u8] = b"test_message3";
 
-        let mut streamer = Ed25519StreamInit::sign_init(&sk).unwrap();
+        let mut streamer = Ed25519Stream::new(&sk).map_err(display_error_code)?;
 
         streamer.sign_update(MSG1).unwrap();
         streamer.sign_update(MSG2).unwrap();

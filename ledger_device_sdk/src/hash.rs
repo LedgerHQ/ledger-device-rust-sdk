@@ -37,7 +37,7 @@ pub trait HashInit: Sized {
     fn get_size(&mut self) -> usize {
         unsafe { cx_hash_get_size(self.as_ctx()) }
     }
-    fn hash(mut self, input: &[u8], output: &mut [u8]) -> Result<(), HashError> {
+    fn hash(&mut self, input: &[u8], output: &mut [u8]) -> Result<(), HashError> {
         let output_size = self.get_size();
         if output_size > output.len() {
             return Err(HashError::InvalidOutputLength);
@@ -84,7 +84,7 @@ pub trait HashInit: Sized {
 
 macro_rules! impl_hash {
     ($typename:ident, $ctxname:ident, $initfname:ident, $size:expr) => {
-        #[derive(Copy, Clone, Default)]
+        #[derive(Default)]
         #[allow(non_camel_case_types)]
         pub struct $typename {
             ctx: $ctxname,
