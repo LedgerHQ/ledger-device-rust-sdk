@@ -315,7 +315,8 @@ impl Ed25519Stream {
         // Compute prefix (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 1)
         let mut res = Ed25519Stream::default();
         let mut temp = Secret::<64>::new();
-        res.hash.hash(&key.key[..], temp.as_mut())
+        res.hash
+            .hash(&key.key[..], temp.as_mut())
             .map_err(|_| CxError::GenericError)?;
         res.hash = Sha2_512::new();
         res.hash

@@ -67,7 +67,7 @@ pub trait HashInit: Sized {
             Ok(())
         }
     }
-    fn finalize(mut self, output: &mut [u8]) -> Result<(), HashError> {
+    fn finalize(&mut self, output: &mut [u8]) -> Result<(), HashError> {
         let output_size = self.get_size();
         if output_size > output.len() {
             return Err(HashError::InvalidOutputLength);
@@ -107,7 +107,7 @@ macro_rules! impl_hash {
     };
 
     ($typename:ident, $ctxname:ident, $initfname:ident) => {
-        #[derive(Copy, Clone, Default)]
+        #[derive(Default)]
         #[allow(non_camel_case_types)]
         pub struct $typename {
             ctx: $ctxname,
