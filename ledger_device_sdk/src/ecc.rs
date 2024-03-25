@@ -311,18 +311,17 @@ macro_rules! check_cx_ok {
 }
 
 impl Ed25519Stream {
-    pub fn new(key: &ECPrivateKey<32, 'E'>) -> Result<Ed25519Stream, CxError> {
+    pub fn init(&mut self, key: &ECPrivateKey<32, 'E'>) -> Result<(), CxError> {
         // Compute prefix (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 1)
-        let mut res = Ed25519Stream::default();
         let mut temp = Secret::<64>::new();
-        res.hash
+        self.hash
             .hash(&key.key[..], temp.as_mut())
             .map_err(|_| CxError::GenericError)?;
-        res.hash = Sha2_512::new();
-        res.hash
+        self.hash = Sha2_512::new();
+        self.hash
             .update(&temp.0[32..64])
             .map_err(|_| CxError::GenericError)?;
-        Ok(res)
+        Ok(())
     }
     pub fn sign_finalize(&mut self, key: &ECPrivateKey<32, 'E'>) -> Result<(), CxError> {
         match self.big_r.into_iter().all(|b| b == 0) {
@@ -1078,7 +1077,8 @@ mod tests {
         const MSG2: &[u8] = b"test_message2";
         const MSG3: &[u8] = b"test_message3";
 
-        let mut streamer = Ed25519Stream::new(&sk).map_err(display_error_code)?;
+        let mut streamer = Ed25519Stream::default();
+        streamer.init(&sk).map_err(display_error_code)?;
 
         streamer.sign_update(MSG1).unwrap();
         streamer.sign_update(MSG2).unwrap();
