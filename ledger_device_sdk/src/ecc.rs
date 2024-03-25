@@ -317,175 +317,180 @@ impl Ed25519Stream {
         self.hash
             .hash(&key.key[..], temp.as_mut())
             .map_err(|_| CxError::GenericError)?;
-        self.hash = Sha2_512::new();
+        self.hash.reset();
         self.hash
             .update(&temp.0[32..64])
             .map_err(|_| CxError::GenericError)?;
         Ok(())
     }
+
+    fn compute_r(&mut self, key: &ECPrivateKey<32, 'E'>) -> Result<(), CxError> {
+        // Compute R (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 3)
+        self.hash
+            .finalize(&mut self.signature)
+            .map_err(|_| CxError::GenericError)?;
+        self.signature.reverse();
+
+        check_cx_ok!(cx_bn_lock(32, 0));
+
+        let mut r = CX_BN_FLAG_UNSET;
+
+        check_cx_ok!(cx_bn_alloc_init(
+            &mut r as *mut cx_bn_t,
+            64,
+            self.signature.as_ptr(),
+            self.signature.len(),
+        ));
+
+        let mut ed_p = cx_ecpoint_t::default();
+        // Get the generator for Ed25519's curve
+        check_cx_ok!(cx_ecpoint_alloc(
+            &mut ed_p as *mut cx_ecpoint_t,
+            CX_CURVE_Ed25519
+        ));
+        check_cx_ok!(cx_ecdomain_generator_bn(CX_CURVE_Ed25519, &mut ed_p));
+
+        // Multiply r by generator, store in ed_p
+        check_cx_ok!(cx_ecpoint_scalarmul_bn(&mut ed_p, r));
+
+        // and copy/compress it to ctx.big_r
+        let mut sign = 0;
+
+        check_cx_ok!(cx_ecpoint_compress(
+            &ed_p,
+            self.big_r.as_mut_ptr(),
+            self.big_r.len(),
+            &mut sign
+        ));
+
+        check_cx_ok!(cx_bn_unlock());
+
+        self.big_r.reverse();
+        self.big_r[31] |= if sign != 0 { 0x80 } else { 0x00 };
+
+        // Compute S (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 4)
+        self.hash.reset();
+        self.hash
+            .update(&self.big_r)
+            .map_err(|_| CxError::GenericError)?;
+
+        let mut pk = key.public_key()?;
+
+        check_cx_ok!(cx_edwards_compress_point_no_throw(
+            CX_CURVE_Ed25519,
+            pk.pubkey.as_mut_ptr(),
+            pk.keylength,
+        ));
+        // Note: public key has a byte in front of it in W, from how the ledger's system call
+        // works; it's not for ed25519.
+        self.hash
+            .update(&pk.pubkey[1..33])
+            .map_err(|_| CxError::GenericError)?;
+        Ok(())
+    }
+
+    fn compute_s(&mut self, key: &ECPrivateKey<32, 'E'>) -> Result<(), CxError> {
+        // Compute S (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 5)
+        check_cx_ok!(cx_bn_lock(32, 0));
+        let (h_a, ed25519_order) = {
+            let mut h_scalar = Secret::<64>::new();
+            self.hash
+                .finalize(h_scalar.as_mut())
+                .map_err(|_| CxError::GenericError)?;
+
+            h_scalar.0.reverse();
+
+            // Make k into a BN
+            let mut h_scalar_bn = CX_BN_FLAG_UNSET;
+            check_cx_ok!(cx_bn_alloc_init(
+                &mut h_scalar_bn as *mut cx_bn_t,
+                64,
+                h_scalar.0.as_ptr(),
+                h_scalar.0.len(),
+            ));
+
+            // Get the group order
+            let mut ed25519_order = CX_BN_FLAG_UNSET;
+
+            check_cx_ok!(cx_bn_alloc(&mut ed25519_order, 64));
+
+            check_cx_ok!(cx_ecdomain_parameter_bn(
+                CX_CURVE_Ed25519,
+                CX_CURVE_PARAM_Order,
+                ed25519_order,
+            ));
+
+            // Generate the hashed private key
+            let mut rv = CX_BN_FLAG_UNSET;
+            let mut temp = Secret::<64>::new();
+
+            let mut hash = Sha2_512::new();
+            hash.hash(&key.key[0..key.keylength], temp.as_mut())
+                .map_err(|_| CxError::GenericError)?;
+
+            // Bit twiddling for ed25519
+            temp.0[0] &= 248;
+            temp.0[31] &= 63;
+            temp.0[31] |= 64;
+
+            let key_slice = &mut temp.0[0..32];
+
+            key_slice.reverse();
+            let mut key_bn = CX_BN_FLAG_UNSET;
+
+            // Load key into bn
+            check_cx_ok!(cx_bn_alloc_init(
+                &mut key_bn as *mut cx_bn_t,
+                64,
+                key_slice.as_ptr(),
+                key_slice.len(),
+            ));
+
+            check_cx_ok!(cx_bn_alloc(&mut rv, 64));
+
+            // multiply h_scalar_bn by key_bn
+            check_cx_ok!(cx_bn_mod_mul(rv, key_bn, h_scalar_bn, ed25519_order));
+
+            // Destroy the private key, so it doesn't leak from with_private_key even in the bn
+            // area. temp will zeroize on drop already.
+            check_cx_ok!(cx_bn_destroy(&mut key_bn));
+            (rv, ed25519_order)
+        };
+
+        let mut r = CX_BN_FLAG_UNSET;
+        check_cx_ok!(cx_bn_alloc_init(
+            &mut r as *mut cx_bn_t,
+            64,
+            self.signature.as_ptr(),
+            self.signature.len(),
+        ));
+
+        // finally, compute s:
+        let mut s = CX_BN_FLAG_UNSET;
+        check_cx_ok!(cx_bn_alloc(&mut s, 64));
+        check_cx_ok!(cx_bn_mod_add(s, h_a, r, ed25519_order));
+
+        // Spooky sub 0 to avoid Nano S+ bug
+        check_cx_ok!(cx_bn_set_u32(r, 0));
+
+        check_cx_ok!(cx_bn_mod_sub(s, s, r, ed25519_order));
+        // and copy s back to normal memory to return.
+        check_cx_ok!(cx_bn_export(s, self.signature.as_mut_ptr(), 32));
+        check_cx_ok!(cx_bn_unlock());
+
+        self.signature[..32].reverse();
+
+        // Copy R[32] and S[32] into signature[64]
+        self.signature.copy_within(0..32, 32);
+        self.signature[0..32].copy_from_slice(&self.big_r);
+
+        Ok(())
+    }
+
     pub fn sign_finalize(&mut self, key: &ECPrivateKey<32, 'E'>) -> Result<(), CxError> {
-        match self.big_r.into_iter().all(|b| b == 0) {
-            true => {
-                // Compute R (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 3)
-                self.hash
-                    .finalize(&mut self.signature)
-                    .map_err(|_| CxError::GenericError)?;
-                self.signature.reverse();
-
-                check_cx_ok!(cx_bn_lock(32, 0));
-
-                let mut r = CX_BN_FLAG_UNSET;
-
-                check_cx_ok!(cx_bn_alloc_init(
-                    &mut r as *mut cx_bn_t,
-                    64,
-                    self.signature.as_ptr(),
-                    self.signature.len(),
-                ));
-
-                let mut ed_p = cx_ecpoint_t::default();
-                // Get the generator for Ed25519's curve
-                check_cx_ok!(cx_ecpoint_alloc(
-                    &mut ed_p as *mut cx_ecpoint_t,
-                    CX_CURVE_Ed25519
-                ));
-                check_cx_ok!(cx_ecdomain_generator_bn(CX_CURVE_Ed25519, &mut ed_p));
-
-                // Multiply r by generator, store in ed_p
-                check_cx_ok!(cx_ecpoint_scalarmul_bn(&mut ed_p, r));
-
-                // and copy/compress it to ctx.big_r
-                let mut sign = 0;
-
-                check_cx_ok!(cx_ecpoint_compress(
-                    &ed_p,
-                    self.big_r.as_mut_ptr(),
-                    self.big_r.len(),
-                    &mut sign
-                ));
-
-                check_cx_ok!(cx_bn_unlock());
-
-                self.big_r.reverse();
-                self.big_r[31] |= if sign != 0 { 0x80 } else { 0x00 };
-
-                // Compute S (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 4)
-                self.hash = Sha2_512::new();
-                self.hash
-                    .update(&self.big_r)
-                    .map_err(|_| CxError::GenericError)?;
-
-                let mut pk = key.public_key()?;
-
-                check_cx_ok!(cx_edwards_compress_point_no_throw(
-                    CX_CURVE_Ed25519,
-                    pk.pubkey.as_mut_ptr(),
-                    pk.keylength,
-                ));
-                // Note: public key has a byte in front of it in W, from how the ledger's system call
-                // works; it's not for ed25519.
-                self.hash
-                    .update(&pk.pubkey[1..33])
-                    .map_err(|_| CxError::GenericError)?;
-                Ok(())
-            }
-            false => {
-                // Compute S (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 5)
-                check_cx_ok!(cx_bn_lock(32, 0));
-                let (h_a, ed25519_order) = {
-                    let mut h_scalar = Secret::<64>::new();
-                    self.hash
-                        .finalize(h_scalar.as_mut())
-                        .map_err(|_| CxError::GenericError)?;
-
-                    h_scalar.0.reverse();
-
-                    // Make k into a BN
-                    let mut h_scalar_bn = CX_BN_FLAG_UNSET;
-                    check_cx_ok!(cx_bn_alloc_init(
-                        &mut h_scalar_bn as *mut cx_bn_t,
-                        64,
-                        h_scalar.0.as_ptr(),
-                        h_scalar.0.len(),
-                    ));
-
-                    // Get the group order
-                    let mut ed25519_order = CX_BN_FLAG_UNSET;
-
-                    check_cx_ok!(cx_bn_alloc(&mut ed25519_order, 64));
-
-                    check_cx_ok!(cx_ecdomain_parameter_bn(
-                        CX_CURVE_Ed25519,
-                        CX_CURVE_PARAM_Order,
-                        ed25519_order,
-                    ));
-
-                    // Generate the hashed private key
-                    let mut rv = CX_BN_FLAG_UNSET;
-                    let mut temp = Secret::<64>::new();
-
-                    let mut hash = Sha2_512::new();
-                    hash.hash(&key.key[0..key.keylength], temp.as_mut())
-                        .map_err(|_| CxError::GenericError)?;
-
-                    // Bit twiddling for ed25519
-                    temp.0[0] &= 248;
-                    temp.0[31] &= 63;
-                    temp.0[31] |= 64;
-
-                    let key_slice = &mut temp.0[0..32];
-
-                    key_slice.reverse();
-                    let mut key_bn = CX_BN_FLAG_UNSET;
-
-                    // Load key into bn
-                    check_cx_ok!(cx_bn_alloc_init(
-                        &mut key_bn as *mut cx_bn_t,
-                        64,
-                        key_slice.as_ptr(),
-                        key_slice.len(),
-                    ));
-
-                    check_cx_ok!(cx_bn_alloc(&mut rv, 64));
-
-                    // multiply h_scalar_bn by key_bn
-                    check_cx_ok!(cx_bn_mod_mul(rv, key_bn, h_scalar_bn, ed25519_order));
-
-                    // Destroy the private key, so it doesn't leak from with_private_key even in the bn
-                    // area. temp will zeroize on drop already.
-                    check_cx_ok!(cx_bn_destroy(&mut key_bn));
-                    (rv, ed25519_order)
-                };
-
-                let mut r = CX_BN_FLAG_UNSET;
-                check_cx_ok!(cx_bn_alloc_init(
-                    &mut r as *mut cx_bn_t,
-                    64,
-                    self.signature.as_ptr(),
-                    self.signature.len(),
-                ));
-
-                // finally, compute s:
-                let mut s = CX_BN_FLAG_UNSET;
-                check_cx_ok!(cx_bn_alloc(&mut s, 64));
-                check_cx_ok!(cx_bn_mod_add(s, h_a, r, ed25519_order));
-
-                // Spooky sub 0 to avoid Nano S+ bug
-                check_cx_ok!(cx_bn_set_u32(r, 0));
-
-                check_cx_ok!(cx_bn_mod_sub(s, s, r, ed25519_order));
-                // and copy s back to normal memory to return.
-                check_cx_ok!(cx_bn_export(s, self.signature.as_mut_ptr(), 32));
-                check_cx_ok!(cx_bn_unlock());
-
-                self.signature[..32].reverse();
-
-                // Copy R[32] and S[32] into signature[64]
-                self.signature.copy_within(0..32, 32);
-                self.signature[0..32].copy_from_slice(&self.big_r);
-
-                Ok(())
-            }
+        match self.big_r.iter().all(|b| b == &0) {
+            true => self.compute_r(key),
+            false => self.compute_s(key),
         }
     }
 
