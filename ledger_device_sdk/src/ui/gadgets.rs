@@ -690,7 +690,11 @@ pub struct Field<'a> {
 }
 
 impl<'a> Field<'a> {
-    pub fn event_loop(&self, incoming_direction: ButtonEvent) -> ButtonEvent {
+    /// # Panics
+    ///
+    /// This method may panic if either `self.name` or `self.value` contains some non-ASCII
+    /// characters. 
+    fn event_loop(&self, incoming_direction: ButtonEvent) -> ButtonEvent {
         let mut buttons = ButtonsState::new();
         let chunk_max_lines = layout::MAX_LINES - 1;
         let page_count = 1 + self.value.len() / (chunk_max_lines * MAX_CHAR_PER_LINE);
@@ -714,7 +718,7 @@ impl<'a> Field<'a> {
                 .take(chunk_max_lines)
                 .enumerate()
             {
-                chunks[1 + i] = Label::from(core::str::from_utf8(chunk).unwrap_or(""));
+                chunks[1 + i] = Label::from(core::str::from_utf8(chunk).unwrap());
             }
 
             let mut header_buf = [b' '; MAX_CHAR_PER_LINE + 4];
@@ -734,7 +738,7 @@ impl<'a> Field<'a> {
                 );
             }
             let header = core::str::from_utf8(&header_buf)
-                .unwrap_or("")
+                .unwrap()
                 .trim_end_matches(' ');
             chunks[0] = Label::from(header).bold();
 
@@ -807,6 +811,12 @@ fn concatenate(strings: &[&str], output: &mut [u8]) {
         }
     }
 }
+#[derive(Debug)]
+pub enum DisplayError {
+    /// Input strings verification error, indicating that they contain characters, 
+    /// which cannot be displayed and verified before clear signing.
+    NonASCIIChars
+}
 
 impl<'a> MultiFieldReview<'a> {
     pub fn new(
@@ -829,7 +839,26 @@ impl<'a> MultiFieldReview<'a> {
         }
     }
 
-    pub fn show(&self) -> bool {
+    pub fn show(&self) -> Result<bool, DisplayError> {
+        for field in self.fields {
+            if !field.name.is_ascii() {
+                return Err(DisplayError::NonASCIIChars);
+            }
+            if !field.value.is_ascii() {
+                return Err(DisplayError::NonASCIIChars);
+            }
+        }
+        for msg in self.review_message {
+            if !msg.is_ascii() {
+                return Err(DisplayError::NonASCIIChars);
+            }
+        }
+        if !self.validation_message.is_ascii() {
+            return Err(DisplayError::NonASCIIChars);
+        }
+        if !self.cancel_message.is_ascii() {
+            return Err(DisplayError::NonASCIIChars);
+        }
         let first_page = match self.review_message.len() {
             0 => Page::new(PageStyle::PictureNormal, ["", ""], self.review_glyph),
             1 => Page::new(
@@ -879,7 +908,7 @@ impl<'a> MultiFieldReview<'a> {
                                 cur_page += 1;
                                 break;
                             }
-                            Some(ButtonEvent::BothButtonsRelease) => return false,
+                            Some(ButtonEvent::BothButtonsRelease) => return Ok(false),
                             _ => (),
                         }
                     }
@@ -895,7 +924,7 @@ impl<'a> MultiFieldReview<'a> {
                                 cur_page = cur_page.saturating_sub(1);
                                 break;
                             }
-                            Some(ButtonEvent::BothButtonsRelease) => return true,
+                            Some(ButtonEvent::BothButtonsRelease) => return Ok(true),
                             _ => (),
                         }
                     }
