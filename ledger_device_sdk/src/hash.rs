@@ -34,10 +34,11 @@ pub trait HashInit: Sized {
     fn as_ctx_mut(&mut self) -> &mut cx_hash_t;
     fn as_ctx(&self) -> &cx_hash_t;
     fn new() -> Self;
+    fn reset(&mut self);
     fn get_size(&mut self) -> usize {
         unsafe { cx_hash_get_size(self.as_ctx()) }
     }
-    fn hash(mut self, input: &[u8], output: &mut [u8]) -> Result<(), HashError> {
+    fn hash(&mut self, input: &[u8], output: &mut [u8]) -> Result<(), HashError> {
         let output_size = self.get_size();
         if output_size > output.len() {
             return Err(HashError::InvalidOutputLength);
@@ -67,7 +68,7 @@ pub trait HashInit: Sized {
             Ok(())
         }
     }
-    fn finalize(mut self, output: &mut [u8]) -> Result<(), HashError> {
+    fn finalize(&mut self, output: &mut [u8]) -> Result<(), HashError> {
         let output_size = self.get_size();
         if output_size > output.len() {
             return Err(HashError::InvalidOutputLength);
@@ -103,6 +104,10 @@ macro_rules! impl_hash {
                 let _err = unsafe { $initfname(&mut ctx.ctx, $size) };
                 ctx
             }
+
+            fn reset(&mut self) {
+                let _err = unsafe { $initfname(&mut self.ctx, $size) };
+            }
         }
     };
 
@@ -125,6 +130,10 @@ macro_rules! impl_hash {
                 let mut ctx: $typename = Default::default();
                 let _err = unsafe { $initfname(&mut ctx.ctx) };
                 ctx
+            }
+
+            fn reset(&mut self) {
+                let _err = unsafe { $initfname(&mut self.ctx) };
             }
         }
     };
