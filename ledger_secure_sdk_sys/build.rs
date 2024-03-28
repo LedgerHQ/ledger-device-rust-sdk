@@ -1,4 +1,5 @@
 extern crate cc;
+use glob::glob;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs::File, io::BufRead, io::BufReader, io::Read};
@@ -48,6 +49,7 @@ enum Device {
     NanoS,
     NanoSPlus,
     NanoX,
+    Stax,
 }
 
 impl std::fmt::Display for Device {
@@ -56,6 +58,7 @@ impl std::fmt::Display for Device {
             Device::NanoS => write!(f, "nanos"),
             Device::NanoSPlus => write!(f, "nanos2"),
             Device::NanoX => write!(f, "nanox"),
+            Device::Stax => write!(f, "stax"),
         }
     }
 }
@@ -217,6 +220,10 @@ fn clone_sdk(device: &Device) -> PathBuf {
             Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
             "API_LEVEL_5",
         ),
+        Device::Stax => (
+            Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
+            "API_LEVEL_14",
+        ),
     };
 
     let out_dir = env::var("OUT_DIR").unwrap();
@@ -319,6 +326,7 @@ impl SDKBuilder {
             "nanos" => Device::NanoS,
             "nanosplus" => Device::NanoSPlus,
             "nanox" => Device::NanoX,
+            "stax" => Device::Stax,
             target_name => panic!(
                 "invalid target `{target_name}`, expected one of `nanos`, `nanox`, `nanosplus`. Run with `-Z build-std=core --target=./<target name>.json`"
             ),
@@ -436,6 +444,7 @@ impl SDKBuilder {
             Device::NanoS => finalize_nanos_configuration(&mut command, &self.bolos_sdk),
             Device::NanoX => finalize_nanox_configuration(&mut command, &self.bolos_sdk),
             Device::NanoSPlus => finalize_nanosplus_configuration(&mut command, &self.bolos_sdk),
+            Device::Stax => finalize_stax_configuration(&mut command, &self.bolos_sdk),
         };
 
         // Add the defines found in the Makefile.conf.cx to our build command.
@@ -485,6 +494,7 @@ impl SDKBuilder {
             Device::NanoS => ("nanos", "sdk_nanos.h"),
             Device::NanoX => ("nanox", "sdk_nanox.h"),
             Device::NanoSPlus => ("nanos2", "sdk_nanosp.h"),
+            Device::Stax => ("stax", "sdk_stax.h"),
         };
         bindings = bindings.clang_arg(format!("-I{bsdk}/target/{include_path}/include/"));
         bindings = bindings.header(header);
@@ -505,6 +515,27 @@ impl SDKBuilder {
                         .to_str()
                         .unwrap(),
                 )
+            }
+            Device::Stax => {
+                bindings = bindings.clang_args([
+                    format!("-I{bsdk}/lib_nbgl/include/").as_str(),
+                    format!("-I{bsdk}/lib_ux_stax/").as_str(),
+                    "-I./src/c/",
+                ]);
+                bindings = bindings
+                    .header(
+                        self.bolos_sdk
+                            .join("lib_nbgl/include/nbgl_use_case.h")
+                            .to_str()
+                            .unwrap(),
+                    )
+                    .header(
+                        self.bolos_sdk
+                            .join("lib_nbgl/include/nbgl_sync.h")
+                            .to_str()
+                            .unwrap(),
+                    )
+                    .header(self.bolos_sdk.join("lib_ux_stax/ux.h").to_str().unwrap())
             }
             _ => (),
         }
@@ -626,4 +657,50 @@ fn configure_lib_bagl(command: &mut cc::Build, bolos_sdk: &Path) {
             .file(bolos_sdk.join("lib_bagl/src/bagl_fonts.c"))
             .file(bolos_sdk.join("lib_bagl/src/bagl_glyphs.c"));
     }
+}
+
+fn finalize_stax_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
+    let defines = header2define("sdk_stax.h");
+    for (define, value) in defines {
+        command.define(define.as_str(), value.as_deref());
+    }
+    
+    command
+        .target("thumbv8m.main-none-eabi")
+        .define("ST33K1M5", None)
+        .include(bolos_sdk.join("target/stax/include/"))
+        .flag("-fropi")
+        .flag("-frwpi");
+    configure_lib_nbgl(command, bolos_sdk);
+}
+
+fn configure_lib_nbgl(command: &mut cc::Build, bolos_sdk: &Path) {
+    command
+        .flag("-Wno-microsoft-anon-tag")
+        .flag("-fms-extensions")
+        .define("HAVE_SE_TOUCH", None)
+        .define("HAVE_NBGL", None)
+        .define("NBGL_PAGE", None)
+        .define("NBGL_USE_CASE", None)
+        .define("HAVE_BAGL_FONT_INTER_REGULAR_24PX", None)
+        .define("HAVE_BAGL_FONT_INTER_SEMIBOLD_24PX", None)
+        .define("HAVE_BAGL_FONT_INTER_MEDIUM_32PX", None)
+        .define("HAVE_BAGL_FONT_HMALPHAMONO_MEDIUM_32PX", None)
+        .define("HAVE_PIEZO_SOUND", None)
+        .define("HAVE_SPRINTF", None)
+        .include(bolos_sdk.join("lib_nbgl/include/"))
+        .include(bolos_sdk.join("lib_ux_stax/"))
+        .include(bolos_sdk.join("qrcode/include/"))
+        .include("./src/c/")
+        .include(bolos_sdk.join("lib_bagl/include/"))
+        .file("./src/c/glyphs.c")
+        .file(bolos_sdk.join("lib_ux_stax/ux.c"))
+        .file(bolos_sdk.join("lib_bagl/src/bagl_fonts.c"))
+        .file(bolos_sdk.join("src/os_printf.c"))
+        .files(
+            glob(bolos_sdk.join("lib_nbgl/src/*.c").to_str().unwrap())
+                .unwrap()
+                .map(|x| x.unwrap())
+                .collect::<Vec<PathBuf>>(),
+        );
 }
