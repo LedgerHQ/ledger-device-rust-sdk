@@ -7,7 +7,7 @@ on:
                 type: string
                 required: false
                 default: ''
-    pull_request: 
+    pull_request:
 
 
 jobs:    
@@ -20,6 +20,10 @@ jobs:
                     #- repo: 'app-mobilecoin'
                     #  branch: 'develop'
                     - repo: 'app-radix-babylon'
+                      branch: 'develop'
+                    - repo: 'app-kadena'
+                      branch: 'develop'
+                    - repo: 'app-sui'
                       branch: 'develop'
                     - repo: 'app-boilerplate-rust'
                       branch: 'main'
