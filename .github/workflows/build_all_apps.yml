@@ -17,8 +17,6 @@ jobs:
             fail-fast: false
             matrix:
                 include: 
-                    #- repo: 'app-mobilecoin'
-                    #  branch: 'develop'
                     - repo: 'app-radix-babylon'
                       branch: 'develop'
                     - repo: 'app-kadena'
@@ -81,10 +79,9 @@ jobs:
               run: |
                 cd ${{ matrix.repo }}-${{ matrix.branch }}
                 build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
-                devices="$(ledger-manifest --output-devices ledger_app.toml | sed 's/+/plus/')"
-                formatted_devices=$(echo $devices | sed "s/\['//;s/'\]//;s/', '/ /g")
+                devices="$(ledger-manifest --output-devices ledger_app.toml -j | sed 's/+/plus/' | jq -rc '.devices[]')"
                 cd $build_directory
-                for device in $formatted_devices; do
+                for device in $devices; do
                     # Required as patch has a different version from what is locked in Cargo.lock
                     cargo +$RUST_NIGHTLY update ledger_device_sdk
                     cargo +$RUST_NIGHTLY update ledger_secure_sdk_sys
