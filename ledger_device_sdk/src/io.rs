@@ -331,6 +331,44 @@ impl Comm {
                 return None;
             }
 
+            // Default BOLOS APDU Handling
+            let apdu_header = self.get_apdu_metadata();
+            if apdu_header.cla == 0xB0 && apdu_header.p1 == 0x00 && apdu_header.p2 == 0x00 {
+                match apdu_header.ins {
+                    0x01 => {
+                        unsafe {
+                            self.apdu_buffer[0] = 0x01;
+                            self.tx += 1;
+                            let len = os_registry_get_current_app_tag(
+                                BOLOS_TAG_APPNAME,
+                                &mut self.apdu_buffer[self.tx + 1] as *mut u8,
+                                (260 - self.tx - 1) as u32,
+                            );
+                            self.apdu_buffer[self.tx] = len as u8;
+                            self.tx += (1 + len) as usize;
+
+                            let len = os_registry_get_current_app_tag(
+                                BOLOS_TAG_APPVERSION,
+                                &mut self.apdu_buffer[self.tx + 1] as *mut u8,
+                                (260 - self.tx - 1) as u32,
+                            );
+                            self.apdu_buffer[self.tx] = len as u8;
+                            self.tx += (1 + len) as usize;
+                        }
+                        self.reply_ok();
+                        return None;
+                    }
+                    0xa7 => {
+                        self.reply_ok();
+                        crate::exit_app(0);
+                    }
+                    _ => {
+                        self.reply(StatusWords::BadIns);
+                        return None;
+                    }
+                }
+            }
+
             // If CLA filtering is enabled, automatically reject APDUs with wrong CLA
             if let Some(cla) = self.expected_cla {
                 if self.apdu_buffer[0] != cla {
