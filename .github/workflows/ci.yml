@@ -93,6 +93,9 @@ jobs:
       matrix:
         target: ["nanos", "nanox", "nanosplus"]
     steps:
+      - name: Force speculos update
+        run: |
+          pip3 install --no-cache-dir speculos --upgrade
       - name: Clone
         uses: actions/checkout@v4
       - name: Unit tests
