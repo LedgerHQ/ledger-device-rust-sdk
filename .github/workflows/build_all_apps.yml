@@ -23,6 +23,8 @@ jobs:
                       branch: 'develop'
                     - repo: 'app-sui'
                       branch: 'develop'
+                    - repo: 'app-pocket'
+                      branch: 'develop'
                     - repo: 'app-boilerplate-rust'
                       branch: 'main'
 
