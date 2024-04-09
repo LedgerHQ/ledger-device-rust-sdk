@@ -331,42 +331,13 @@ impl Comm {
                 return None;
             }
 
-            // Default BOLOS APDU Handling
-            let apdu_header = self.get_apdu_metadata();
-            if apdu_header.cla == 0xB0 && apdu_header.p1 == 0x00 && apdu_header.p2 == 0x00 {
-                match apdu_header.ins {
-                    0x01 => {
-                        unsafe {
-                            self.apdu_buffer[0] = 0x01;
-                            self.tx += 1;
-                            let len = os_registry_get_current_app_tag(
-                                BOLOS_TAG_APPNAME,
-                                &mut self.apdu_buffer[self.tx + 1] as *mut u8,
-                                (260 - self.tx - 1) as u32,
-                            );
-                            self.apdu_buffer[self.tx] = len as u8;
-                            self.tx += (1 + len) as usize;
-
-                            let len = os_registry_get_current_app_tag(
-                                BOLOS_TAG_APPVERSION,
-                                &mut self.apdu_buffer[self.tx + 1] as *mut u8,
-                                (260 - self.tx - 1) as u32,
-                            );
-                            self.apdu_buffer[self.tx] = len as u8;
-                            self.tx += (1 + len) as usize;
-                        }
-                        self.reply_ok();
-                        return None;
-                    }
-                    0xa7 => {
-                        self.reply_ok();
-                        crate::exit_app(0);
-                    }
-                    _ => {
-                        self.reply(StatusWords::BadIns);
-                        return None;
-                    }
-                }
+            // Manage BOLOS specific APDUs B0xx0000
+            if self.apdu_buffer[0] == 0xB0
+                && self.apdu_buffer[2] == 0x00
+                && self.apdu_buffer[3] == 0x00
+            {
+                handle_bolos_apdu(self, self.apdu_buffer[1]);
+                return None;
             }
 
             // If CLA filtering is enabled, automatically reject APDUs with wrong CLA
@@ -501,6 +472,43 @@ impl Comm {
         for c in m.iter() {
             self.apdu_buffer[self.tx] = *c;
             self.tx += 1;
+        }
+    }
+}
+
+// BOLOS APDU Handling (see https://developers.ledger.com/docs/connectivity/ledgerJS/open-close-info-on-apps)
+fn handle_bolos_apdu(com: &mut Comm, ins: u8) {
+    match ins {
+        // Get Information INS: retrieve App name and version
+        0x01 => {
+            unsafe {
+                com.apdu_buffer[0] = 0x01;
+                com.tx += 1;
+                let len = os_registry_get_current_app_tag(
+                    BOLOS_TAG_APPNAME,
+                    &mut com.apdu_buffer[com.tx + 1] as *mut u8,
+                    (260 - com.tx - 1) as u32,
+                );
+                com.apdu_buffer[com.tx] = len as u8;
+                com.tx += (1 + len) as usize;
+
+                let len = os_registry_get_current_app_tag(
+                    BOLOS_TAG_APPVERSION,
+                    &mut com.apdu_buffer[com.tx + 1] as *mut u8,
+                    (260 - com.tx - 1) as u32,
+                );
+                com.apdu_buffer[com.tx] = len as u8;
+                com.tx += (1 + len) as usize;
+            }
+            com.reply_ok();
+        }
+        // Quit Application INS
+        0xa7 => {
+            com.reply_ok();
+            crate::exit_app(0);
+        }
+        _ => {
+            com.reply(StatusWords::BadIns);
         }
     }
 }
