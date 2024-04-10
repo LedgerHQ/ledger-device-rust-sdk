@@ -1,6 +1,6 @@
 [package]
 name = "ledger_device_sdk"
-version = "1.8.1"
+version = "1.8.2"
 authors = ["yhql", "yogh333"]
 edition = "2021"
 license.workspace = true
