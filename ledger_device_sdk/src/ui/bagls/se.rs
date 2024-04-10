@@ -116,7 +116,7 @@ fn pic_draw(x: i32, y: i32, width: u32, height: u32, inverted: bool, bitmap: &[u
     let inverted = [inverted as u32, !inverted as u32];
     unsafe {
         let pic_bmp = ledger_secure_sdk_sys::pic(bitmap.as_ptr() as *mut c_void);
-        ledger_secure_sdk_sys::bagl_hal_draw_bitmap_within_rect(
+        let _ = ledger_secure_sdk_sys::bagl_hal_draw_bitmap_within_rect(
             x,
             y,
             width,
@@ -126,7 +126,7 @@ fn pic_draw(x: i32, y: i32, width: u32, height: u32, inverted: bool, bitmap: &[u
             1,
             pic_bmp as *const u8,
             width * height,
-        )
+        );
     }
 }
 
