@@ -203,7 +203,7 @@ fn generate_nbgl_glyph(frame: &gif::Frame, palette: &[u8]) -> (Vec<u8>, u8) {
         4 => BppFormat::Bpp4 as u8,
         _ => panic!("Invalid bpp"),
     };
-    
+
     let len = compressed_image.len();
     let metadata: [u8; 8] = [
         frame.width as u8,

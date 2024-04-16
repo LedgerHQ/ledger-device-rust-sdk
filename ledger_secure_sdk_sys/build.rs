@@ -222,7 +222,8 @@ fn clone_sdk(device: &Device) -> PathBuf {
         ),
         Device::Stax => (
             Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_14",
+            // TODO : Replace with API_LEVEL_15 when feature is cherry-picked.
+            "xch/test-nbgl-sync-api-level-15",
         ),
     };
 
@@ -519,7 +520,8 @@ impl SDKBuilder {
             Device::Stax => {
                 bindings = bindings.clang_args([
                     format!("-I{bsdk}/lib_nbgl/include/").as_str(),
-                    format!("-I{bsdk}/lib_ux_stax/").as_str(),
+                    format!("-I{bsdk}/lib_ux_sync/include/").as_str(),
+                    format!("-I{bsdk}/lib_ux_nbgl/").as_str(),
                     "-I./src/c/",
                 ]);
                 bindings = bindings
@@ -531,11 +533,16 @@ impl SDKBuilder {
                     )
                     .header(
                         self.bolos_sdk
-                            .join("lib_nbgl/include/nbgl_sync.h")
+                            .join("lib_ux_sync/include/ux_sync.h")
                             .to_str()
                             .unwrap(),
                     )
-                    .header(self.bolos_sdk.join("lib_ux_stax/ux.h").to_str().unwrap())
+                    .header(
+                        self.bolos_sdk
+                            .join("lib_ux_nbgl/ux_nbgl.h")
+                            .to_str()
+                            .unwrap(),
+                    )
             }
             _ => (),
         }
@@ -664,7 +671,7 @@ fn finalize_stax_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
     for (define, value) in defines {
         command.define(define.as_str(), value.as_deref());
     }
-    
+
     command
         .target("thumbv8m.main-none-eabi")
         .define("ST33K1M5", None)
@@ -689,12 +696,14 @@ fn configure_lib_nbgl(command: &mut cc::Build, bolos_sdk: &Path) {
         .define("HAVE_PIEZO_SOUND", None)
         .define("HAVE_SPRINTF", None)
         .include(bolos_sdk.join("lib_nbgl/include/"))
-        .include(bolos_sdk.join("lib_ux_stax/"))
+        .include(bolos_sdk.join("lib_ux_sync/include/"))
+        .include(bolos_sdk.join("lib_ux_nbgl/"))
         .include(bolos_sdk.join("qrcode/include/"))
         .include("./src/c/")
         .include(bolos_sdk.join("lib_bagl/include/"))
         .file("./src/c/glyphs.c")
-        .file(bolos_sdk.join("lib_ux_stax/ux.c"))
+        .file(bolos_sdk.join("lib_ux_nbgl/ux.c"))
+        .file(bolos_sdk.join("lib_ux_sync/src/ux_sync.c"))
         .file(bolos_sdk.join("lib_bagl/src/bagl_fonts.c"))
         .file(bolos_sdk.join("src/os_printf.c"))
         .files(

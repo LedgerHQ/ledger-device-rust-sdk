@@ -1,8 +1,6 @@
 use crate::io::{ApduHeader, Comm, Event, Reply};
 use const_zero::const_zero;
-use core::str::from_utf8;
 use core::mem::transmute;
-use ledger_secure_sdk_sys::{nbgl_icon_details_t, nbgl_bpp_t};
 use ledger_secure_sdk_sys::*;
 
 #[derive(PartialEq)]
@@ -18,12 +16,10 @@ pub struct NbglHome<'a> {
     glyph: Option<&'a NbglGlyph<'a>>,
 }
 
-pub struct NbglReview<'a>{
-    intro_str: &'a str,
-    long_press_str: &'a str,
-    long_press_button_str: &'a str,
-    confirmed_str: &'a str,
-    rejected_str: &'a str,
+pub struct NbglReview<'a> {
+    title: &'a str,
+    subtitle: &'a str,
+    finish_title: &'a str,
     glyph: Option<&'a NbglGlyph<'a>>,
 }
 
@@ -44,6 +40,9 @@ impl<'a> Into<nbgl_layoutTagValue_t> for Field<'a> {
             item: self.name.as_ptr() as *const i8,
             value: self.value.as_ptr() as *const i8,
             valueIcon: core::ptr::null() as *const nbgl_icon_details_t,
+            _bitfield_align_1: [0; 0],
+            _bitfield_1: __BindgenBitfieldUnit::new([0; 1usize]),
+            __bindgen_padding_0: [0; 3usize],
         }
     }
 }
@@ -57,7 +56,13 @@ pub struct NbglGlyph<'a> {
 }
 
 impl<'a> NbglGlyph<'a> {
-    pub const fn new(bitmap: &'a [u8], width: u16, height: u16, bpp: u8, is_file: bool) -> NbglGlyph<'a> {
+    pub const fn new(
+        bitmap: &'a [u8],
+        width: u16,
+        height: u16,
+        bpp: u8,
+        is_file: bool,
+    ) -> NbglGlyph<'a> {
         NbglGlyph {
             width,
             height,
@@ -95,17 +100,12 @@ impl<'a> Into<nbgl_icon_details_t> for &NbglGlyph<'a> {
     }
 }
 
-// const INFOTYPES: [*const ::core::ffi::c_char; 2] = [
-//     "Version\0".as_ptr() as *const ::core::ffi::c_char,
-//     "Developer\0".as_ptr() as *const ::core::ffi::c_char,
-// ];
-
 #[no_mangle]
-pub extern "C" fn recv_and_process_event(return_on_apdu: bool) -> bool {
+pub extern "C" fn io_recv_and_process_event() -> bool {
     unsafe {
         if let Some(comm) = COMM_REF.as_mut() {
             let apdu_received = comm.next_event_ahead::<ApduHeader>();
-            if apdu_received && return_on_apdu {
+            if apdu_received {
                 return true;
             }
         }
@@ -131,10 +131,7 @@ impl<'a> NbglHome<'a> {
     }
 
     pub fn app_name(self, app_name: &'a str) -> NbglHome<'a> {
-        NbglHome {
-            app_name,
-            ..self
-        }
+        NbglHome { app_name, ..self }
     }
 
     pub fn glyph(self, icon: &'a NbglGlyph) -> NbglHome<'a> {
@@ -161,9 +158,38 @@ impl<'a> NbglHome<'a> {
             core::ptr::null() as *const nbgl_icon_details_t
         };
         unsafe {
+            let info_list: nbgl_contentInfoList_t = nbgl_contentInfoList_t {
+                infoTypes: [
+                    "Version\0".as_ptr() as *const ::core::ffi::c_char,
+                    "Developer\0".as_ptr() as *const ::core::ffi::c_char,
+                ]
+                .as_ptr(),
+                infoContents: [
+                    self.info_contents[0].as_ptr() as *const ::core::ffi::c_char,
+                    self.info_contents[1].as_ptr() as *const ::core::ffi::c_char,
+                ]
+                .as_ptr(),
+                nbInfos: 2,
+            };
+
+            let setting_contents: nbgl_genericContents_t = nbgl_genericContents_t {
+                callbackCallNeeded: false,
+                __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
+                    contentsList: core::ptr::null(),
+                },
+                nbContents: 0,
+            };
             loop {
-                match ledger_secure_sdk_sys::sync_nbgl_useCaseHomeAndSettings(self.app_name.as_ptr() as *const ::core::ffi::c_char ,icon) {
-                    ledger_secure_sdk_sys::NBGL_SYNC_RET_RX_APDU => {
+                match ledger_secure_sdk_sys::ux_sync_homeAndSettings(
+                    self.app_name.as_ptr() as *const ::core::ffi::c_char,
+                    icon,
+                    core::ptr::null(),
+                    INIT_HOME_PAGE as u8,
+                    &setting_contents as *const nbgl_genericContents_t,
+                    &info_list as *const nbgl_contentInfoList_t,
+                    core::ptr::null(),
+                ) {
+                    ledger_secure_sdk_sys::UX_SYNC_RET_APDU_RECEIVED => {
                         if let Some(comm) = COMM_REF.as_mut() {
                             if let Some(value) = comm.check_event() {
                                 return value;
@@ -182,19 +208,23 @@ impl<'a> NbglHome<'a> {
 impl<'a> NbglReview<'a> {
     pub fn new() -> NbglReview<'a> {
         NbglReview {
-            confirmed_str: "TRANSACTION\nSIGNED\0",
-            rejected_str: "Transaction\nRejected\0",
-            intro_str: "Please Review\nTransaction\0",
-            long_press_button_str: "Hold to sign\0",
-            long_press_str: "Sign transaction\nto send CRAB\0",
+            title: "Please review\ntransaction\0",
+            subtitle: "\0",
+            finish_title: "Sign transaction\0",
             glyph: None,
         }
     }
 
-    pub fn status_strings(self, confirmed: &'a str, rejected: &'a str) -> NbglReview<'a> {
+    pub fn titles(
+        self,
+        title: &'a str,
+        subtitle: &'a str,
+        finish_title: &'a str,
+    ) -> NbglReview<'a> {
         NbglReview {
-            confirmed_str: confirmed,
-            rejected_str: rejected,
+            title,
+            subtitle,
+            finish_title,
             ..self
         }
     }
@@ -205,7 +235,7 @@ impl<'a> NbglReview<'a> {
             ..self
         }
     }
-    
+
     pub fn show(&self, fields: &[nbgl_layoutTagValue_t]) -> bool {
         unsafe {
             let tag_value_list: nbgl_layoutTagValueList_t = nbgl_layoutTagValueList_t {
@@ -225,27 +255,22 @@ impl<'a> NbglReview<'a> {
                 core::ptr::null() as *const nbgl_icon_details_t
             };
 
-            let sync_ret = ledger_secure_sdk_sys::sync_nbgl_useCaseTransactionReview(
+            let sync_ret = ledger_secure_sdk_sys::ux_sync_review(
+                TYPE_TRANSACTION,
                 &tag_value_list as *const nbgl_layoutTagValueList_t,
                 icon,
-                self.intro_str.as_ptr() as *const ::core::ffi::c_char,
-                core::ptr::null(),
-                self.long_press_str.as_ptr() as *const ::core::ffi::c_char,
+                self.title.as_ptr() as *const ::core::ffi::c_char,
+                self.subtitle.as_ptr() as *const ::core::ffi::c_char,
+                self.finish_title.as_ptr() as *const ::core::ffi::c_char,
             );
 
             match sync_ret {
-                ledger_secure_sdk_sys::NBGL_SYNC_RET_SUCCESS => {
-                    ledger_secure_sdk_sys::sync_nbgl_useCaseStatus(
-                        self.confirmed_str.as_ptr() as *const ::core::ffi::c_char,
-                        true,
-                    );
+                ledger_secure_sdk_sys::UX_SYNC_RET_APPROVED => {
+                    ledger_secure_sdk_sys::ux_sync_reviewStatus(STATUS_TYPE_TRANSACTION_SIGNED);
                     return true;
                 }
                 _ => {
-                    ledger_secure_sdk_sys::sync_nbgl_useCaseStatus(
-                        self.rejected_str.as_ptr() as *const ::core::ffi::c_char,
-                        false,
-                    );
+                    ledger_secure_sdk_sys::ux_sync_reviewStatus(STATUS_TYPE_TRANSACTION_REJECTED);
                     return false;
                 }
             }
@@ -271,10 +296,7 @@ impl<'a> NbglAddressConfirm<'a> {
     }
 
     pub fn verify_str(self, verify_str: &'a str) -> NbglAddressConfirm<'a> {
-        NbglAddressConfirm {
-            verify_str,
-            ..self
-        }
+        NbglAddressConfirm { verify_str, ..self }
     }
 
     pub fn show(&mut self, address: &str) -> bool {
@@ -285,18 +307,19 @@ impl<'a> NbglAddressConfirm<'a> {
                 core::ptr::null() as *const nbgl_icon_details_t
             };
 
-            let sync_ret = sync_nbgl_useCaseAddressReview(
+            let sync_ret = ux_sync_addressReview(
                 address.as_ptr() as *const ::core::ffi::c_char,
+                core::ptr::null(),
                 icon,
                 self.verify_str.as_ptr() as *const ::core::ffi::c_char,
                 core::ptr::null(),
             );
 
             match sync_ret {
-                ledger_secure_sdk_sys::NBGL_SYNC_RET_SUCCESS => {
+                ledger_secure_sdk_sys::UX_SYNC_RET_APPROVED => {
                     return true;
                 }
-                ledger_secure_sdk_sys::NBGL_SYNC_RET_REJECTED => {
+                ledger_secure_sdk_sys::UX_SYNC_RET_REJECTED => {
                     return false;
                 }
                 _ => {

@@ -413,7 +413,7 @@ impl Comm {
                     ux_process_ticker_event();
                 }
                 return Some(Event::Ticker);
-            },
+            }
 
             #[cfg(target_os = "stax")]
             seph::Events::ScreenTouch => unsafe {

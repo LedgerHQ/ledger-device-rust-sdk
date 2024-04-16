@@ -1,3 +1,4 @@
+#define SCREEN_SIZE_WALLET
 #define HAVE_NBGL
 #define NBGL_USE_CASE
 #define HAVE_SE_TOUCH
