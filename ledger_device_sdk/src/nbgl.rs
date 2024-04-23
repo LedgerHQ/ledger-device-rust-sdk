@@ -1,50 +1,18 @@
 use crate::io::{ApduHeader, Comm, Event, Reply};
 use const_zero::const_zero;
+use core::cell::RefCell;
+use core::ffi::{c_char, CStr};
 use core::mem::transmute;
 use ledger_secure_sdk_sys::*;
 
-#[derive(PartialEq)]
-pub enum ReviewStatus {
-    Pending,
-    Validate,
-    Reject,
-}
+#[no_mangle]
+pub static mut G_ux_params: bolos_ux_params_t = unsafe { const_zero!(bolos_ux_params_t) };
 
-pub struct NbglHome<'a> {
-    app_name: &'a str,
-    info_contents: [&'a str; 2],
-    glyph: Option<&'a NbglGlyph<'a>>,
-}
+static mut COMM_REF: Option<&mut Comm> = None;
 
-pub struct NbglReview<'a> {
-    title: &'a str,
-    subtitle: &'a str,
-    finish_title: &'a str,
-    glyph: Option<&'a NbglGlyph<'a>>,
-}
-
-pub struct NbglAddressConfirm<'a> {
-    glyph: Option<&'a NbglGlyph<'a>>,
-    verify_str: &'a str,
-}
-
-#[derive(Debug, Clone, Copy)]
 pub struct Field<'a> {
     pub name: &'a str,
     pub value: &'a str,
-}
-
-impl<'a> Into<nbgl_layoutTagValue_t> for Field<'a> {
-    fn into(self) -> nbgl_layoutTagValue_t {
-        nbgl_layoutTagValue_t {
-            item: self.name.as_ptr() as *const i8,
-            value: self.value.as_ptr() as *const i8,
-            valueIcon: core::ptr::null() as *const nbgl_icon_details_t,
-            _bitfield_align_1: [0; 0],
-            _bitfield_1: __BindgenBitfieldUnit::new([0; 1usize]),
-            __bindgen_padding_0: [0; 3usize],
-        }
-    }
 }
 
 pub struct NbglGlyph<'a> {
@@ -113,10 +81,58 @@ pub extern "C" fn io_recv_and_process_event() -> bool {
     false
 }
 
-#[no_mangle]
-pub static mut G_ux_params: bolos_ux_params_t = unsafe { const_zero!(bolos_ux_params_t) };
+/// Helper struct that converts strings to null-terminated c strings.
+/// It uses an internal buffer to store the strings, with a maximum size of SIZE.
+struct CStringHelper<const SIZE: usize = 64> {
+    /// Internal buffer where strings are allocated.
+    /// Stored in a [RefCell] because we want [CStringHelper::to_cstring] to be non-mutable.
+    pub buffer: RefCell<[u8; SIZE]>,
+    /// Index of the next string in the internal buffer.
+    /// Stored in a [RefCell] because we want [CStringHelper::to_cstring] to be non-mutable.
+    next: RefCell<usize>,
+}
 
-static mut COMM_REF: Option<&mut Comm> = None;
+impl<const SIZE: usize> CStringHelper<SIZE> {
+    pub fn new() -> Self {
+        Self {
+            buffer: RefCell::new([0u8; SIZE]),
+            next: RefCell::new(0),
+        }
+    }
+
+    pub fn to_cstring<'a>(&'a self, s: &str) -> Result<&'a CStr, ()> {
+        let size = s.len();
+        let mut buffer = self.buffer.borrow_mut();
+        let next: usize = *self.next.borrow();
+        // Verify there is enough space in the internal buffer.
+        // +1 for the null byte
+        if size + next + 1 > buffer.len() {
+            // Not enough space remaining in the internal buffer.
+            return Err(());
+        }
+        // Verify that the input string does not have null bytes already.
+        if s.bytes().find(|c| *c == 0).is_some() {
+            return Err(());
+        }
+
+        // Copy the input string to the internal buffer, and add null byte.
+        buffer[next..next + size].copy_from_slice(s.as_bytes());
+        buffer[next + size] = 0;
+        let start = next;
+        *self.next.borrow_mut() += size + 1;
+
+        let buffer = self.buffer.as_ptr();
+        let slice = unsafe { &(*buffer)[start..start + size + 1] };
+        let cstr = unsafe { CStr::from_bytes_with_nul_unchecked(slice) };
+        Ok(cstr)
+    }
+}
+
+pub struct NbglHome<'a> {
+    app_name: &'a str,
+    info_contents: [&'a str; 2],
+    glyph: Option<&'a NbglGlyph<'a>>,
+}
 
 impl<'a> NbglHome<'a> {
     pub fn new(comm: &mut Comm) -> NbglHome {
@@ -124,8 +140,8 @@ impl<'a> NbglHome<'a> {
             COMM_REF = Some(transmute(comm));
         }
         NbglHome {
-            app_name: "App\0",
-            info_contents: ["0.0.0\0", "Ledger\0"],
+            app_name: "Rust App",
+            info_contents: ["0.0.0", "Ledger"],
             glyph: None,
         }
     }
@@ -157,16 +173,22 @@ impl<'a> NbglHome<'a> {
         } else {
             core::ptr::null() as *const nbgl_icon_details_t
         };
+
+        let helper: CStringHelper<128> = CStringHelper::new();
+        let c_ver = helper.to_cstring(&self.info_contents[0]).unwrap();
+        let c_dev = helper.to_cstring(&self.info_contents[1]).unwrap();
+        let c_app_name = helper.to_cstring(&self.app_name).unwrap();
+
         unsafe {
             let info_list: nbgl_contentInfoList_t = nbgl_contentInfoList_t {
                 infoTypes: [
-                    "Version\0".as_ptr() as *const ::core::ffi::c_char,
-                    "Developer\0".as_ptr() as *const ::core::ffi::c_char,
+                    "Version\0".as_ptr() as *const c_char,
+                    "Developer\0".as_ptr() as *const c_char,
                 ]
                 .as_ptr(),
                 infoContents: [
-                    self.info_contents[0].as_ptr() as *const ::core::ffi::c_char,
-                    self.info_contents[1].as_ptr() as *const ::core::ffi::c_char,
+                    c_ver.as_ptr() as *const c_char,
+                    c_dev.as_ptr() as *const c_char,
                 ]
                 .as_ptr(),
                 nbInfos: 2,
@@ -181,7 +203,7 @@ impl<'a> NbglHome<'a> {
             };
             loop {
                 match ledger_secure_sdk_sys::ux_sync_homeAndSettings(
-                    self.app_name.as_ptr() as *const ::core::ffi::c_char,
+                    c_app_name.as_ptr() as *const c_char,
                     icon,
                     core::ptr::null(),
                     INIT_HOME_PAGE as u8,
@@ -205,13 +227,30 @@ impl<'a> NbglHome<'a> {
     }
 }
 
-impl<'a> NbglReview<'a> {
-    pub fn new() -> NbglReview<'a> {
+pub struct NbglReview<
+    'a,
+    const MAX_FIELD_NUMBER: usize = 32,
+    const STRING_BUFFER_SIZE: usize = 1024,
+> {
+    title: &'a str,
+    subtitle: &'a str,
+    finish_title: &'a str,
+    glyph: Option<&'a NbglGlyph<'a>>,
+    tag_value_array: [nbgl_layoutTagValue_t; MAX_FIELD_NUMBER],
+    c_string_helper: CStringHelper<STRING_BUFFER_SIZE>,
+}
+
+impl<'a, const MAX_FIELD_NUMBER: usize, const STRING_BUFFER_SIZE: usize>
+    NbglReview<'a, MAX_FIELD_NUMBER, STRING_BUFFER_SIZE>
+{
+    pub fn new() -> NbglReview<'a, MAX_FIELD_NUMBER, STRING_BUFFER_SIZE> {
         NbglReview {
-            title: "Please review\ntransaction\0",
-            subtitle: "\0",
-            finish_title: "Sign transaction\0",
+            title: "Please review\ntransaction",
+            subtitle: "To send CRAB",
+            finish_title: "Sign transaction",
             glyph: None,
+            tag_value_array: [nbgl_layoutTagValue_t::default(); MAX_FIELD_NUMBER],
+            c_string_helper: CStringHelper::<STRING_BUFFER_SIZE>::new(),
         }
     }
 
@@ -220,7 +259,7 @@ impl<'a> NbglReview<'a> {
         title: &'a str,
         subtitle: &'a str,
         finish_title: &'a str,
-    ) -> NbglReview<'a> {
+    ) -> NbglReview<'a, MAX_FIELD_NUMBER, STRING_BUFFER_SIZE> {
         NbglReview {
             title,
             subtitle,
@@ -229,17 +268,41 @@ impl<'a> NbglReview<'a> {
         }
     }
 
-    pub fn glyph(self, glyph: &'a NbglGlyph) -> NbglReview<'a> {
+    pub fn glyph(
+        self,
+        glyph: &'a NbglGlyph,
+    ) -> NbglReview<'a, MAX_FIELD_NUMBER, STRING_BUFFER_SIZE> {
         NbglReview {
             glyph: Some(glyph),
             ..self
         }
     }
 
-    pub fn show(&self, fields: &[nbgl_layoutTagValue_t]) -> bool {
+    pub fn show(&mut self, fields: &[Field]) -> bool {
         unsafe {
+            // Check if there are too many fields (more than MAX_FIELD_NUMBER).
+            if fields.len() > self.tag_value_array.len() {
+                panic!("Too many fields for this review instance.");
+            }
+
+            // Fill the tag_value_array with the fields converted to nbgl_layoutTagValue_t
+            // with proper c strings (ending with \0).
+            for (i, field) in fields.iter().enumerate() {
+                let name = self.c_string_helper.to_cstring(field.name).unwrap();
+                let value = self.c_string_helper.to_cstring(field.value).unwrap();
+                self.tag_value_array[i] = nbgl_layoutTagValue_t {
+                    item: name.as_ptr() as *const i8,
+                    value: value.as_ptr() as *const i8,
+                    valueIcon: core::ptr::null() as *const nbgl_icon_details_t,
+                    _bitfield_align_1: [0; 0],
+                    _bitfield_1: __BindgenBitfieldUnit::new([0; 1usize]),
+                    __bindgen_padding_0: [0; 3usize],
+                }
+            }
+
+            // Create the tag_value_list with the tag_value_array.
             let tag_value_list: nbgl_layoutTagValueList_t = nbgl_layoutTagValueList_t {
-                pairs: fields.as_ptr(),
+                pairs: self.tag_value_array.as_ptr() as *const nbgl_layoutTagValue_t,
                 callback: None,
                 nbPairs: fields.len() as u8,
                 startIndex: 0,
@@ -249,21 +312,29 @@ impl<'a> NbglReview<'a> {
                 wrapping: false,
             };
 
+            // Convert the glyph into a nbgl_icon_details_t or set it to null.
             let icon = if let Some(glyph) = self.glyph {
                 &glyph.into() as *const nbgl_icon_details_t
             } else {
                 core::ptr::null() as *const nbgl_icon_details_t
             };
 
+            // Convert the title, subtitle and finish_title into c strings.
+            let c_title = self.c_string_helper.to_cstring(self.title).unwrap();
+            let c_subtitle = self.c_string_helper.to_cstring(self.subtitle).unwrap();
+            let c_finish_title = self.c_string_helper.to_cstring(self.finish_title).unwrap();
+
+            // Show the review on the device.
             let sync_ret = ledger_secure_sdk_sys::ux_sync_review(
                 TYPE_TRANSACTION,
                 &tag_value_list as *const nbgl_layoutTagValueList_t,
                 icon,
-                self.title.as_ptr() as *const ::core::ffi::c_char,
-                self.subtitle.as_ptr() as *const ::core::ffi::c_char,
-                self.finish_title.as_ptr() as *const ::core::ffi::c_char,
+                c_title.as_ptr() as *const c_char,
+                c_subtitle.as_ptr() as *const c_char,
+                c_finish_title.as_ptr() as *const c_char,
             );
 
+            // Return true if the user approved the transaction, false otherwise.
             match sync_ret {
                 ledger_secure_sdk_sys::UX_SYNC_RET_APPROVED => {
                     ledger_secure_sdk_sys::ux_sync_reviewStatus(STATUS_TYPE_TRANSACTION_SIGNED);
@@ -278,12 +349,15 @@ impl<'a> NbglReview<'a> {
     }
 }
 
-// =================================================================================================
+pub struct NbglAddressConfirm<'a> {
+    glyph: Option<&'a NbglGlyph<'a>>,
+    verify_str: &'a str,
+}
 
 impl<'a> NbglAddressConfirm<'a> {
     pub fn new() -> NbglAddressConfirm<'a> {
         NbglAddressConfirm {
-            verify_str: "Verify address\0",
+            verify_str: "Verify address",
             glyph: None,
         }
     }
@@ -301,20 +375,28 @@ impl<'a> NbglAddressConfirm<'a> {
 
     pub fn show(&mut self, address: &str) -> bool {
         unsafe {
+            // Convert the glyph into a nbgl_icon_details_t or set it to null.
             let icon = if let Some(glyph) = self.glyph {
                 &glyph.into() as *const nbgl_icon_details_t
             } else {
                 core::ptr::null() as *const nbgl_icon_details_t
             };
 
+            // Create CStringHelper instance and convert the address and verify_str into c strings.
+            let c_string_helper = CStringHelper::<128>::new();
+            let c_addr_str = c_string_helper.to_cstring(address).unwrap();
+            let c_verif_str = c_string_helper.to_cstring(self.verify_str).unwrap();
+
+            // Show the address confirmation on the device.
             let sync_ret = ux_sync_addressReview(
-                address.as_ptr() as *const ::core::ffi::c_char,
+                c_addr_str.as_ptr() as *const c_char,
                 core::ptr::null(),
                 icon,
-                self.verify_str.as_ptr() as *const ::core::ffi::c_char,
+                c_verif_str.as_ptr() as *const c_char,
                 core::ptr::null(),
             );
 
+            // Return true if the user approved the address, false otherwise.
             match sync_ret {
                 ledger_secure_sdk_sys::UX_SYNC_RET_APPROVED => {
                     return true;
