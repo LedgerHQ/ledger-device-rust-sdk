@@ -22,9 +22,9 @@ pub mod seph;
 
 pub mod testing;
 
-#[cfg(target_os = "stax")]
+#[cfg(any(target_os = "stax", target_os = "flex"))]
 pub mod nbgl;
-#[cfg(not(target_os = "stax"))]
+#[cfg(not(any(target_os = "stax", target_os = "flex")))]
 pub mod ui;
 
 pub mod uxapp;

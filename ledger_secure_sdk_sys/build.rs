@@ -50,6 +50,7 @@ enum Device {
     NanoSPlus,
     NanoX,
     Stax,
+    Flex,
 }
 
 impl std::fmt::Display for Device {
@@ -59,6 +60,7 @@ impl std::fmt::Display for Device {
             Device::NanoSPlus => write!(f, "nanos2"),
             Device::NanoX => write!(f, "nanox"),
             Device::Stax => write!(f, "stax"),
+            Device::Flex => write!(f, "flex"),
         }
     }
 }
@@ -138,6 +140,7 @@ fn retrieve_sdk_git_info(bolos_sdk: &Path) -> (String, String) {
 }
 
 fn retrieve_makefile_infos(bolos_sdk: &Path) -> Result<(Option<u32>, String), SDKBuildError> {
+    println!("SDK path: {:?}", bolos_sdk);
     let makefile_defines =
         File::open(bolos_sdk.join("Makefile.defines")).expect("Could not find Makefile.defines");
     let mut api_level: Option<u32> = None;
@@ -222,8 +225,11 @@ fn clone_sdk(device: &Device) -> PathBuf {
         ),
         Device::Stax => (
             Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            // TODO : Replace with API_LEVEL_15 when feature is cherry-picked.
-            "xch/test-nbgl-sync-api-level-15",
+            "API_LEVEL_15",
+        ),
+        Device::Flex => (
+            Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
+            "API_LEVEL_18",
         ),
     };
 
@@ -328,6 +334,7 @@ impl SDKBuilder {
             "nanosplus" => Device::NanoSPlus,
             "nanox" => Device::NanoX,
             "stax" => Device::Stax,
+            "flex" => Device::Flex,
             target_name => panic!(
                 "invalid target `{target_name}`, expected one of `nanos`, `nanox`, `nanosplus`. Run with `-Z build-std=core --target=./<target name>.json`"
             ),
@@ -446,6 +453,7 @@ impl SDKBuilder {
             Device::NanoX => finalize_nanox_configuration(&mut command, &self.bolos_sdk),
             Device::NanoSPlus => finalize_nanosplus_configuration(&mut command, &self.bolos_sdk),
             Device::Stax => finalize_stax_configuration(&mut command, &self.bolos_sdk),
+            Device::Flex => finalize_flex_configuration(&mut command, &self.bolos_sdk),
         };
 
         // Add the defines found in the Makefile.conf.cx to our build command.
@@ -496,6 +504,7 @@ impl SDKBuilder {
             Device::NanoX => ("nanox", "sdk_nanox.h"),
             Device::NanoSPlus => ("nanos2", "sdk_nanosp.h"),
             Device::Stax => ("stax", "sdk_stax.h"),
+            Device::Flex => ("flex", "sdk_flex.h"),
         };
         bindings = bindings.clang_arg(format!("-I{bsdk}/target/{include_path}/include/"));
         bindings = bindings.header(header);
@@ -517,12 +526,17 @@ impl SDKBuilder {
                         .unwrap(),
                 )
             }
-            Device::Stax => {
+            Device::Stax | Device::Flex => {
+                if Device::Stax == self.device {
+                    bindings = bindings.clang_args(["-I./src/c/glyphs_stax_15"]);
+                } else {
+                    bindings = bindings.clang_args(["-I./src/c/glyphs_flex_18"]);
+                }
+
                 bindings = bindings.clang_args([
                     format!("-I{bsdk}/lib_nbgl/include/").as_str(),
                     format!("-I{bsdk}/lib_ux_sync/include/").as_str(),
                     format!("-I{bsdk}/lib_ux_nbgl/").as_str(),
-                    "-I./src/c/",
                 ]);
                 bindings = bindings
                     .header(
@@ -674,10 +688,27 @@ fn finalize_stax_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
 
     command
         .target("thumbv8m.main-none-eabi")
-        .define("ST33K1M5", None)
         .include(bolos_sdk.join("target/stax/include/"))
         .flag("-fropi")
-        .flag("-frwpi");
+        .flag("-frwpi")
+        .include("./src/c/glyphs_stax_15/")
+        .file("./src/c/glyphs_stax_15/glyphs.c");
+    configure_lib_nbgl(command, bolos_sdk);
+}
+
+fn finalize_flex_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
+    let defines = header2define("sdk_flex.h");
+    for (define, value) in defines {
+        command.define(define.as_str(), value.as_deref());
+    }
+
+    command
+        .target("thumbv8m.main-none-eabi")
+        .include(bolos_sdk.join("target/flex/include/"))
+        .flag("-fropi")
+        .flag("-frwpi")
+        .include("./src/c/glyphs_flex_18/")
+        .file("./src/c/glyphs_flex_18/glyphs.c");
     configure_lib_nbgl(command, bolos_sdk);
 }
 
@@ -685,23 +716,11 @@ fn configure_lib_nbgl(command: &mut cc::Build, bolos_sdk: &Path) {
     command
         .flag("-Wno-microsoft-anon-tag")
         .flag("-fms-extensions")
-        .define("HAVE_SE_TOUCH", None)
-        .define("HAVE_NBGL", None)
-        .define("NBGL_PAGE", None)
-        .define("NBGL_USE_CASE", None)
-        .define("HAVE_BAGL_FONT_INTER_REGULAR_24PX", None)
-        .define("HAVE_BAGL_FONT_INTER_SEMIBOLD_24PX", None)
-        .define("HAVE_BAGL_FONT_INTER_MEDIUM_32PX", None)
-        .define("HAVE_BAGL_FONT_HMALPHAMONO_MEDIUM_32PX", None)
-        .define("HAVE_PIEZO_SOUND", None)
-        .define("HAVE_SPRINTF", None)
         .include(bolos_sdk.join("lib_nbgl/include/"))
         .include(bolos_sdk.join("lib_ux_sync/include/"))
         .include(bolos_sdk.join("lib_ux_nbgl/"))
         .include(bolos_sdk.join("qrcode/include/"))
-        .include("./src/c/")
         .include(bolos_sdk.join("lib_bagl/include/"))
-        .file("./src/c/glyphs.c")
         .file(bolos_sdk.join("lib_ux_nbgl/ux.c"))
         .file(bolos_sdk.join("lib_ux_sync/src/ux_sync.c"))
         .file(bolos_sdk.join("lib_bagl/src/bagl_fonts.c"))
