@@ -1,5 +1,5 @@
 use crate::io::{ApduHeader, Comm, Event, Reply};
-use crate::testing::debug_print;
+use crate::nvm::*;
 use const_zero::const_zero;
 use core::cell::RefCell;
 use core::ffi::{c_char, CStr};
@@ -10,6 +10,10 @@ use ledger_secure_sdk_sys::*;
 pub static mut G_ux_params: bolos_ux_params_t = unsafe { const_zero!(bolos_ux_params_t) };
 
 static mut COMM_REF: Option<&mut Comm> = None;
+const SETTINGS_SIZE: usize = 10;
+static mut NVM_REF: Option<&mut AtomicStorage<[u8; SETTINGS_SIZE]>> = None;
+static mut SWITCH_ARRAY: [nbgl_contentSwitch_t; SETTINGS_SIZE] =
+    [unsafe { const_zero!(nbgl_contentSwitch_t) }; SETTINGS_SIZE];
 
 pub struct Field<'a> {
     pub name: &'a str,
@@ -69,6 +73,9 @@ impl<'a> Into<nbgl_icon_details_t> for &NbglGlyph<'a> {
     }
 }
 
+/// IO function used in the synchronous NBGL C library to process
+/// events (touch, buttons, etc.) or detect if an APDU was received.
+/// It returns true if an APDU was received, false otherwise.
 #[no_mangle]
 pub extern "C" fn io_recv_and_process_event() -> bool {
     unsafe {
@@ -133,26 +140,50 @@ impl<const SIZE: usize> CStringHelper<SIZE> {
     }
 }
 
+/// Callback triggered by the NBGL API when a setting switch is toggled.
+unsafe fn settings_callback(token: ::core::ffi::c_int, _index: u8, _page: ::core::ffi::c_int) {
+    let idx = token - FIRST_USER_TOKEN as i32;
+    if idx < 0 || idx >= SETTINGS_SIZE as i32 {
+        panic!("Invalid token.");
+    }
+
+    if let Some(data) = NVM_REF.as_mut() {
+        let setting_idx: usize = idx as usize;
+        let mut switch_values: [u8; SETTINGS_SIZE] = data.get_ref().clone();
+        switch_values[setting_idx] = !switch_values[setting_idx];
+        data.update(&switch_values);
+        SWITCH_ARRAY[setting_idx].initState = switch_values[setting_idx] as nbgl_state_t;
+    }
+}
+
+/// Informations fields name to display in the dedicated
+/// page of the home screen.
 const INFO_FIELDS: [*const c_char; 2] = [
     "Version\0".as_ptr() as *const c_char,
     "Developer\0".as_ptr() as *const c_char,
 ];
 
-pub struct NbglHome<'a> {
+/// A wrapper around the synchronous NBGL ux_sync_homeAndSettings C API binding.
+/// Used to display the home screen of the application, with an optional glyph,
+/// information fields, and settings switches.  
+pub struct NbglHomeAndSettings<'a> {
     app_name: *const c_char,
     icon: *const nbgl_icon_details_t,
     glyph: Option<&'a NbglGlyph<'a>>,
     info_contents: [*const c_char; 2],
     info_list: nbgl_contentInfoList_t,
+    settings_contents: nbgl_content_t,
+    nb_settings: u8,
+    generic_contents: nbgl_genericContents_t,
     c_string_helper: CStringHelper<128>,
 }
 
-impl<'a> NbglHome<'a> {
-    pub fn new(comm: &mut Comm) -> NbglHome<'a> {
+impl<'a> NbglHomeAndSettings<'a> {
+    pub fn new(comm: &mut Comm) -> NbglHomeAndSettings<'a> {
         unsafe {
             COMM_REF = Some(transmute(comm));
         }
-        NbglHome {
+        NbglHomeAndSettings {
             app_name: "Rust App\0".as_ptr() as *const c_char,
             icon: core::ptr::null(),
             glyph: None,
@@ -166,24 +197,69 @@ impl<'a> NbglHome<'a> {
                 nbInfos: 0,
             },
             c_string_helper: CStringHelper::<128>::new(),
+            settings_contents: nbgl_content_t::default(),
+            generic_contents: nbgl_genericContents_t {
+                callbackCallNeeded: false,
+                __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
+                    contentsList: core::ptr::null(),
+                },
+                nbContents: 0,
+            },
+            nb_settings: 0,
         }
     }
 
-    pub fn glyph(self, glyph: &'a NbglGlyph) -> NbglHome<'a> {
-        NbglHome {
+    pub fn glyph(self, glyph: &'a NbglGlyph) -> NbglHomeAndSettings<'a> {
+        NbglHomeAndSettings {
             glyph: Some(glyph),
             ..self
         }
     }
 
-    pub fn infos(self, app_name: &str, version: &str, author: &str) -> NbglHome<'a> {
-        self.c_string_helper.flush();
-        NbglHome {
+    pub fn infos(self, app_name: &str, version: &str, author: &str) -> NbglHomeAndSettings<'a> {
+        NbglHomeAndSettings {
             app_name: self.c_string_helper.to_cstring(app_name).unwrap().as_ptr() as *const c_char,
             info_contents: [
                 self.c_string_helper.to_cstring(version).unwrap().as_ptr() as *const c_char,
                 self.c_string_helper.to_cstring(author).unwrap().as_ptr() as *const c_char,
             ],
+            ..self
+        }
+    }
+
+    pub fn settings(
+        self,
+        nvm_data: &'a mut AtomicStorage<[u8; SETTINGS_SIZE]>,
+        settings_strings: &[[&str; 2]],
+    ) -> NbglHomeAndSettings<'a> {
+        unsafe {
+            NVM_REF = Some(transmute(nvm_data));
+        }
+
+        if settings_strings.len() > SETTINGS_SIZE {
+            panic!("Too many settings.");
+        }
+
+        unsafe {
+            for (i, setting) in settings_strings.iter().enumerate() {
+                SWITCH_ARRAY[i].text = self
+                    .c_string_helper
+                    .to_cstring(setting[0])
+                    .unwrap()
+                    .as_ptr() as *const c_char;
+                SWITCH_ARRAY[i].subText = self
+                    .c_string_helper
+                    .to_cstring(setting[1])
+                    .unwrap()
+                    .as_ptr() as *const c_char;
+                SWITCH_ARRAY[i].initState = NVM_REF.as_mut().unwrap().get_ref()[i] as nbgl_state_t;
+                SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
+                SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
+            }
+        }
+
+        NbglHomeAndSettings {
+            nb_settings: settings_strings.len() as u8,
             ..self
         }
     }
@@ -197,6 +273,30 @@ impl<'a> NbglHome<'a> {
             self.info_list.infoContents = self.info_contents.as_ptr() as *const *const c_char;
             self.info_list.nbInfos = 2;
 
+            if NVM_REF.is_some() {
+                self.settings_contents = nbgl_content_t {
+                    content: nbgl_content_u {
+                        switchesList: nbgl_pageSwitchesList_s {
+                            switches: &SWITCH_ARRAY as *const nbgl_contentSwitch_t,
+                            nbSwitches: self.nb_settings,
+                        },
+                    },
+                    contentActionCallback: transmute(
+                        (|token, index, page| settings_callback(token, index, page))
+                            as fn(::core::ffi::c_int, u8, ::core::ffi::c_int),
+                    ),
+                    type_: SWITCHES_LIST,
+                };
+
+                self.generic_contents = nbgl_genericContents_t {
+                    callbackCallNeeded: false,
+                    __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
+                        contentsList: &self.settings_contents as *const nbgl_content_t,
+                    },
+                    nbContents: 1,
+                };
+            }
+
             loop {
                 if self.glyph.is_some() {
                     self.icon = &self.glyph.unwrap().into() as *const nbgl_icon_details_t;
@@ -206,7 +306,7 @@ impl<'a> NbglHome<'a> {
                     self.icon as *const nbgl_icon_details_t,
                     core::ptr::null(),
                     INIT_HOME_PAGE as u8,
-                    core::ptr::null(),
+                    &self.generic_contents as *const nbgl_genericContents_t,
                     &self.info_list as *const nbgl_contentInfoList_t,
                     core::ptr::null(),
                 ) {
@@ -226,6 +326,12 @@ impl<'a> NbglHome<'a> {
     }
 }
 
+/// A wrapper around the synchronous NBGL ux_sync_review C API binding.
+/// Used to display transaction review screens.
+/// The maximum number of fields that can be displayed can be overriden by the
+/// MAX_FIELD_NUMBER const parameter.
+/// The maximum size of the internal buffer used to convert C strings can be overriden by the
+/// STRING_BUFFER_SIZE const parameter.
 pub struct NbglReview<
     'a,
     const MAX_FIELD_NUMBER: usize = 32,
@@ -316,11 +422,6 @@ impl<'a, const MAX_FIELD_NUMBER: usize, const STRING_BUFFER_SIZE: usize>
                 wrapping: false,
             };
 
-            // Convert the title, subtitle and finish_title into c strings.
-            let c_title = self.c_string_helper.to_cstring(self.title).unwrap();
-            let c_subtitle = self.c_string_helper.to_cstring(self.subtitle).unwrap();
-            let c_finish_title = self.c_string_helper.to_cstring(self.finish_title).unwrap();
-
             if self.glyph.is_some() {
                 self.icon = &self.glyph.unwrap().into() as *const nbgl_icon_details_t;
             }
@@ -330,9 +431,9 @@ impl<'a, const MAX_FIELD_NUMBER: usize, const STRING_BUFFER_SIZE: usize>
                 TYPE_TRANSACTION,
                 &tag_value_list as *const nbgl_layoutTagValueList_t,
                 self.icon,
-                c_title.as_ptr() as *const c_char,
-                c_subtitle.as_ptr() as *const c_char,
-                c_finish_title.as_ptr() as *const c_char,
+                self.c_string_helper.to_cstring(self.title).unwrap().as_ptr() as *const c_char,
+                self.c_string_helper.to_cstring(self.subtitle).unwrap().as_ptr() as *const c_char,
+                self.c_string_helper.to_cstring(self.finish_title).unwrap().as_ptr() as *const c_char,
             );
 
             // Return true if the user approved the transaction, false otherwise.
@@ -350,6 +451,8 @@ impl<'a, const MAX_FIELD_NUMBER: usize, const STRING_BUFFER_SIZE: usize>
     }
 }
 
+/// A wrapper around the synchronous NBGL ux_sync_addressReview C API binding.
+/// Used to display address confirmation screens.
 pub struct NbglAddressConfirm<'a> {
     icon: *const nbgl_icon_details_t,
     glyph: Option<&'a NbglGlyph<'a>>,
