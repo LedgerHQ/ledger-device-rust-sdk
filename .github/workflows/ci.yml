@@ -25,14 +25,15 @@ jobs:
         package: [include_gif, testmacro, ledger_secure_sdk_sys, ledger_device_sdk]
     steps:
       - name: Print Environment variables
-        run: 
+        run:
           echo "The value of RUST_NIGHTLY is $RUST_NIGHTLY"
       - name: Clone
         uses: actions/checkout@v4
       - name: Cargo clippy
+        working-directory: ${{ matrix.package }}
         run: |
-          cargo +$RUST_NIGHTLY clippy -p ${{ matrix.package }} --target ${{ matrix.target }}
-  
+          cargo +$RUST_NIGHTLY clippy --target ${{ matrix.target }}
+
   clippy-cargo-ledger:
     name: Run static analysis for cargo-ledger
     runs-on: ubuntu-latest
@@ -42,8 +43,9 @@ jobs:
       - name: Clone
         uses: actions/checkout@v4
       - name: Cargo clippy for cargo-ledger
+        working-directory: cargo-ledger
         run: |
-          cargo +$RUST_STABLE clippy -p cargo-ledger --no-deps
+          cargo +$RUST_STABLE clippy --no-deps
 
   format:
     name: Check code formatting
@@ -69,8 +71,9 @@ jobs:
       - name: Clone
         uses: actions/checkout@v4
       - name: Cargo build
+        working-directory: ledger_device_sdk
         run: |
-          cargo +$RUST_NIGHTLY build -p ledger_device_sdk --target ${{ matrix.target }}
+          cargo +$RUST_NIGHTLY build --target ${{ matrix.target }}
 
   build-cargo-ledger:
     name: Build SDK
@@ -81,8 +84,9 @@ jobs:
       - name: Clone
         uses: actions/checkout@v4
       - name: Cargo build
+        working-directory: cargo-ledger
         run: |
-          cargo +$RUST_STABLE build -p cargo-ledger
+          cargo +$RUST_STABLE build
 
   test:
     name: Run unit and integration tests
@@ -99,5 +103,6 @@ jobs:
       - name: Clone
         uses: actions/checkout@v4
       - name: Unit tests
+        working-directory: ledger_device_sdk
         run: |
-          cargo +$RUST_NIGHTLY test -p ledger_device_sdk --target ${{ matrix.target }} --features speculos --tests
+          cargo +$RUST_NIGHTLY test --target ${{ matrix.target }} --features speculos --tests
