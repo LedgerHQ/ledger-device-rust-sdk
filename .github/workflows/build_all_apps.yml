@@ -25,6 +25,8 @@ jobs:
                       branch: 'develop'
                     - repo: 'app-pocket'
                       branch: 'develop'
+                    - repo: 'app-starknet'
+                      branch: 'develop'
                     - repo: 'app-boilerplate-rust'
                       branch: 'main'
 
