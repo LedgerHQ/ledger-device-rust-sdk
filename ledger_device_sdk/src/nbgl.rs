@@ -431,9 +431,18 @@ impl<'a, const MAX_FIELD_NUMBER: usize, const STRING_BUFFER_SIZE: usize>
                 TYPE_TRANSACTION,
                 &tag_value_list as *const nbgl_layoutTagValueList_t,
                 self.icon,
-                self.c_string_helper.to_cstring(self.title).unwrap().as_ptr() as *const c_char,
-                self.c_string_helper.to_cstring(self.subtitle).unwrap().as_ptr() as *const c_char,
-                self.c_string_helper.to_cstring(self.finish_title).unwrap().as_ptr() as *const c_char,
+                self.c_string_helper
+                    .to_cstring(self.title)
+                    .unwrap()
+                    .as_ptr() as *const c_char,
+                self.c_string_helper
+                    .to_cstring(self.subtitle)
+                    .unwrap()
+                    .as_ptr() as *const c_char,
+                self.c_string_helper
+                    .to_cstring(self.finish_title)
+                    .unwrap()
+                    .as_ptr() as *const c_char,
             );
 
             // Return true if the user approved the transaction, false otherwise.

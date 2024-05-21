@@ -1,8 +1,8 @@
 [package]
 name = "cargo-ledger"
-version = "1.3.0"
+version = "1.4.0"
 authors = ["yhql"]
-description = "Build and sideload Ledger Nano apps"
+description = "Build and sideload Ledger devices apps"
 categories = ["development-tools::cargo-plugins"]
 repository = "https://github.com/LedgerHQ/cargo-ledger"
 readme = "README.md"

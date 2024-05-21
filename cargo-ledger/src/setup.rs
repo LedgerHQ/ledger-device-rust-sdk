@@ -13,13 +13,13 @@ pub fn install_targets() {
     let sysroot_cmd = std::str::from_utf8(&sysroot_cmd).unwrap().trim();
 
     let target_files_url = Path::new(
-        "https://raw.githubusercontent.com/LedgerHQ/ledger-device-rust-sdk/a630c93398316cc56dcec6aceb0d424b626d150c/ledger_device_sdk/"
+        "https://raw.githubusercontent.com/LedgerHQ/ledger-device-rust-sdk/feat/stax_nbgl_2/ledger_device_sdk/"
     );
     let sysroot = Path::new(sysroot_cmd).join("lib").join("rustlib");
 
     // Retrieve each target file independently
     // TODO: handle target.json modified upstream
-    for target in &["nanos", "nanox", "nanosplus"] {
+    for target in &["nanos", "nanox", "nanosplus", "stax", "flex"] {
         let outfilepath = sysroot.join(target).join("target.json");
         let targetpath =
             outfilepath.clone().into_os_string().into_string().unwrap();
