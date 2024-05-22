@@ -100,4 +100,4 @@ jobs:
         uses: actions/checkout@v4
       - name: Unit tests
         run: |
-          cargo +$RUST_NIGHTLY test -p ledger_device_sdk --target ${{ matrix.target }} --features speculos
+          cargo +$RUST_NIGHTLY test -p ledger_device_sdk --target ${{ matrix.target }} --features speculos --tests
