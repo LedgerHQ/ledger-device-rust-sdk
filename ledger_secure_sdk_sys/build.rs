@@ -229,7 +229,7 @@ fn clone_sdk(device: &Device) -> PathBuf {
         ),
         Device::Flex => (
             Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_18",
+            "API_LEVEL_19",
         ),
     };
 
