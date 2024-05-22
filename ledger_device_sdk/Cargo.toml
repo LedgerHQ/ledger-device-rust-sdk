@@ -1,7 +1,7 @@
 [package]
 name = "ledger_device_sdk"
-version = "1.8.2"
-authors = ["yhql", "yogh333"]
+version = "1.9.0"
+authors = ["yhql", "yogh333", "agrojean-ledger"]
 edition = "2021"
 license.workspace = true
 repository.workspace = true
@@ -15,8 +15,8 @@ ledger_device_sdk = { path = ".", features = ["speculos"] }
 testmacro = { path = "../testmacro", version = "0.1.0"}
 
 [dependencies]
-ledger_secure_sdk_sys = {path = "../ledger_secure_sdk_sys", version = "1.2.0"}
-include_gif = {path = "../include_gif", version = "1.0.1"}
+ledger_secure_sdk_sys = {path = "../ledger_secure_sdk_sys", version = "1.3.0"}
+include_gif = {path = "../include_gif", version = "1.1.0"}
 num-traits = { version = "0.2.14", default_features = false }
 rand_core = { version = "0.6.3", default_features = false }
 zeroize = { version = "1.6.0", default_features = false }
