@@ -6,7 +6,7 @@ use ledger_device_sdk as _;
 
 use include_gif::include_gif;
 use ledger_device_sdk::io::*;
-use ledger_device_sdk::nbgl::{NbglGlyph, NbglHomeAndSettings};
+use ledger_device_sdk::nbgl::{init_comm, NbglGlyph, NbglHomeAndSettings};
 use ledger_device_sdk::nvm::*;
 use ledger_device_sdk::NVMData;
 use ledger_secure_sdk_sys::*;
@@ -40,6 +40,9 @@ extern "C" fn sample_main() {
         NVMData::new(AtomicStorage::new(&[0u8; 10]));
 
     let mut comm = Comm::new();
+    // Initialize reference to Comm instance for NBGL
+    // API calls.
+    init_comm(&mut comm);
 
     // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
     const FERRIS: NbglGlyph =
@@ -47,7 +50,7 @@ extern "C" fn sample_main() {
 
     let settings_strings = [["Switch title", "Switch subtitle"]];
     // Display the home screen.
-    NbglHomeAndSettings::new(&mut comm)
+    NbglHomeAndSettings::new()
         .glyph(&FERRIS)
         .settings(unsafe { DATA.get_mut() }, &settings_strings)
         .infos(
