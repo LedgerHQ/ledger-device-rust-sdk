@@ -73,6 +73,16 @@ impl<'a> Into<nbgl_icon_details_t> for &NbglGlyph<'a> {
     }
 }
 
+/// Initialize the global COMM_REF variable with the provided Comm instance.
+/// This function should be called from the main function of the application.
+/// The COMM_REF variable is used by the NBGL API to detect touch events and
+/// APDU reception.
+pub fn init_comm(comm: &mut Comm) {
+    unsafe {
+        COMM_REF = Some(transmute(comm));
+    }
+}
+
 /// IO function used in the synchronous NBGL C library to process
 /// events (touch, buttons, etc.) or detect if an APDU was received.
 /// It returns true if an APDU was received, false otherwise.
@@ -179,10 +189,7 @@ pub struct NbglHomeAndSettings<'a> {
 }
 
 impl<'a> NbglHomeAndSettings<'a> {
-    pub fn new(comm: &mut Comm) -> NbglHomeAndSettings<'a> {
-        unsafe {
-            COMM_REF = Some(transmute(comm));
-        }
+    pub fn new() -> NbglHomeAndSettings<'a> {
         NbglHomeAndSettings {
             app_name: "Rust App\0".as_ptr() as *const c_char,
             icon: core::ptr::null(),
