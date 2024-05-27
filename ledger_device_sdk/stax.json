@@ -13,11 +13,11 @@
   "panic-strategy": "abort",
   "pre-link-args": {
       "ld.lld": [
-          "-Tnanosplus_layout.ld",
+          "-Tstax_flex_layout.ld",
           "-Tlink.ld"
       ],
       "ld": [
-          "-Tnanosplus_layout.ld",
+          "-Tstax_flex_layout.ld",
           "-Tlink.ld"
       ]
   },

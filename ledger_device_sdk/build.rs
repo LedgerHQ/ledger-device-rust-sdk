@@ -34,7 +34,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let linkerscript = match device {
         NanoS => "nanos_layout.ld",
         NanoX => "nanox_layout.ld",
-        NanoSPlus | Stax | Flex => "nanosplus_layout.ld",
+        NanoSPlus => "nanosplus_layout.ld",
+        Stax | Flex => "stax_flex_layout.ld",
     };
     std::fs::copy(linkerscript, out_dir.join(linkerscript))?;
     std::fs::copy("link.ld", out_dir.join("link.ld"))?;
