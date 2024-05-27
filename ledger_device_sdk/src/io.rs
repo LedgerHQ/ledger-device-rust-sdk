@@ -1,6 +1,6 @@
 #[cfg(target_os = "nanox")]
 use crate::ble;
-use ledger_secure_sdk_sys::buttons::{get_button_event, ButtonEvent, ButtonsState};
+use ledger_secure_sdk_sys::buttons::ButtonsState;
 use ledger_secure_sdk_sys::seph as sys_seph;
 use ledger_secure_sdk_sys::*;
 
