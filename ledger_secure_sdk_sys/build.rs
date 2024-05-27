@@ -140,7 +140,6 @@ fn retrieve_sdk_git_info(bolos_sdk: &Path) -> (String, String) {
 }
 
 fn retrieve_makefile_infos(bolos_sdk: &Path) -> Result<(Option<u32>, String), SDKBuildError> {
-    println!("SDK path: {:?}", bolos_sdk);
     let makefile_defines =
         File::open(bolos_sdk.join("Makefile.defines")).expect("Could not find Makefile.defines");
     let mut api_level: Option<u32> = None;

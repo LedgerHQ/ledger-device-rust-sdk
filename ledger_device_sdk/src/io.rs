@@ -249,13 +249,6 @@ impl Comm {
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
-        // if self.event_pending {
-        //     self.event_pending = false;
-        //     if let Some(value) = self.check_event() {
-        //         return value;
-        //     }
-        // }
-
         let mut spi_buffer = [0u8; 128];
 
         unsafe {
@@ -285,27 +278,14 @@ impl Comm {
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
-        // if self.event_pending {
-        //     let event: Option<Event<T>> = self.check_event();
-        //     if event.is_some() {
-        //         return true;
-        //     }
-        // }
-
         let mut spi_buffer = [0u8; 128];
-
-        // unsafe {
-        //     G_io_app.apdu_state = APDU_IDLE;
-        //     G_io_app.apdu_media = IO_APDU_MEDIA_NONE;
-        //     G_io_app.apdu_length = 0;
-        // }
 
         // Signal end of command stream from SE to MCU
         // And prepare reception
         if !sys_seph::is_status_sent() {
             sys_seph::send_general_status();
         }
-        // Fetch the next message from the MCU             }
+        // Fetch the next message from the MCU
         let _rx = sys_seph::seph_recv(&mut spi_buffer, 0);
         return self.detect_apdu::<T>(&mut spi_buffer);
     }
