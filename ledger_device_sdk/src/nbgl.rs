@@ -518,9 +518,11 @@ impl<'a> NbglAddressReview<'a> {
             // Return true if the user approved the address, false otherwise.
             match sync_ret {
                 ledger_secure_sdk_sys::UX_SYNC_RET_APPROVED => {
+                    ledger_secure_sdk_sys::ux_sync_reviewStatus(STATUS_TYPE_ADDRESS_VERIFIED);
                     return true;
                 }
                 ledger_secure_sdk_sys::UX_SYNC_RET_REJECTED => {
+                    ledger_secure_sdk_sys::ux_sync_reviewStatus(STATUS_TYPE_ADDRESS_REJECTED);
                     return false;
                 }
                 _ => {
