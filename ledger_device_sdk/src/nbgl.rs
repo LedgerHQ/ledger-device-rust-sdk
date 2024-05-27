@@ -178,10 +178,8 @@ const INFO_FIELDS: [*const c_char; 2] = [
 /// information fields, and settings switches.  
 pub struct NbglHomeAndSettings<'a> {
     app_name: *const c_char,
-    icon: *const nbgl_icon_details_t,
     glyph: Option<&'a NbglGlyph<'a>>,
     info_contents: [*const c_char; 2],
-    info_list: nbgl_contentInfoList_t,
     settings_contents: nbgl_content_t,
     nb_settings: u8,
     generic_contents: nbgl_genericContents_t,
@@ -192,17 +190,11 @@ impl<'a> NbglHomeAndSettings<'a> {
     pub fn new() -> NbglHomeAndSettings<'a> {
         NbglHomeAndSettings {
             app_name: "Rust App\0".as_ptr() as *const c_char,
-            icon: core::ptr::null(),
             glyph: None,
             info_contents: [
                 "0.0.0\0".as_ptr() as *const c_char,
                 "Ledger\0".as_ptr() as *const c_char,
             ],
-            info_list: nbgl_contentInfoList_t {
-                infoTypes: core::ptr::null(),
-                infoContents: core::ptr::null(),
-                nbInfos: 0,
-            },
             c_string_helper: CStringHelper::<128>::new(),
             settings_contents: nbgl_content_t::default(),
             generic_contents: nbgl_genericContents_t {
@@ -223,7 +215,12 @@ impl<'a> NbglHomeAndSettings<'a> {
         }
     }
 
-    pub fn infos(self, app_name: &str, version: &str, author: &str) -> NbglHomeAndSettings<'a> {
+    pub fn infos(
+        self,
+        app_name: &str,
+        version: &'a str,
+        author: &'a str,
+    ) -> NbglHomeAndSettings<'a> {
         NbglHomeAndSettings {
             app_name: self.c_string_helper.to_cstring(app_name).unwrap().as_ptr() as *const c_char,
             info_contents: [
@@ -276,10 +273,6 @@ impl<'a> NbglHomeAndSettings<'a> {
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
         unsafe {
-            self.info_list.infoTypes = INFO_FIELDS.as_ptr() as *const *const c_char;
-            self.info_list.infoContents = self.info_contents.as_ptr() as *const *const c_char;
-            self.info_list.nbInfos = 2;
-
             if NVM_REF.is_some() {
                 self.settings_contents = nbgl_content_t {
                     content: nbgl_content_u {
@@ -305,16 +298,18 @@ impl<'a> NbglHomeAndSettings<'a> {
             }
 
             loop {
-                if self.glyph.is_some() {
-                    self.icon = &self.glyph.unwrap().into() as *const nbgl_icon_details_t;
-                }
+                let info_list: nbgl_contentInfoList_t = nbgl_contentInfoList_t {
+                    infoTypes: INFO_FIELDS.as_ptr() as *const *const c_char,
+                    infoContents: self.info_contents.as_ptr() as *const *const c_char,
+                    nbInfos: self.info_contents.len() as u8,
+                };
                 match ledger_secure_sdk_sys::ux_sync_homeAndSettings(
                     self.app_name,
-                    self.icon as *const nbgl_icon_details_t,
+                    &self.glyph.unwrap().into() as *const nbgl_icon_details_t,
                     core::ptr::null(),
                     INIT_HOME_PAGE as u8,
                     &self.generic_contents as *const nbgl_genericContents_t,
-                    &self.info_list as *const nbgl_contentInfoList_t,
+                    &info_list as *const nbgl_contentInfoList_t,
                     core::ptr::null(),
                 ) {
                     ledger_secure_sdk_sys::UX_SYNC_RET_APDU_RECEIVED => {
