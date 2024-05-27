@@ -18,6 +18,7 @@ pub enum Events {
     ButtonPush = SEPROXYHAL_TAG_BUTTON_PUSH_EVENT as u8,
     DisplayProcessed = SEPROXYHAL_TAG_DISPLAY_PROCESSED_EVENT as u8,
     BleReceive = SEPROXYHAL_TAG_BLE_RECV_EVENT as u8,
+    ScreenTouch = SEPROXYHAL_TAG_FINGER_EVENT as u8,
     Unknown = 0xff,
 }
 #[repr(u8)]
@@ -44,6 +45,7 @@ impl From<u8> for Events {
             SEPROXYHAL_TAG_BUTTON_PUSH_EVENT => Events::ButtonPush,
             SEPROXYHAL_TAG_DISPLAY_PROCESSED_EVENT => Events::DisplayProcessed,
             SEPROXYHAL_TAG_BLE_RECV_EVENT => Events::BleReceive,
+            SEPROXYHAL_TAG_FINGER_EVENT => Events::ScreenTouch,
             _ => Events::Unknown,
         }
     }

@@ -89,7 +89,10 @@ pub enum Event<T> {
     /// APDU event
     Command(T),
     /// Button press or release event
+    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     Button(ButtonEvent),
+    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    TouchEvent,
     /// Ticker
     Ticker,
 }
@@ -100,6 +103,7 @@ pub struct Comm {
     pub apdu_buffer: [u8; 260],
     pub rx: usize,
     pub tx: usize,
+    pub event_pending: bool,
     buttons: ButtonsState,
     /// Expected value for the APDU CLA byte.
     /// If defined, [`Comm`] will automatically reply with [`StatusWords::BadCla`] when an APDU
@@ -134,6 +138,7 @@ impl Comm {
             apdu_buffer: [0u8; 260],
             rx: 0,
             tx: 0,
+            event_pending: false,
             buttons: ButtonsState::new(),
             expected_cla: None,
         }
@@ -268,57 +273,30 @@ impl Comm {
         }
     }
 
-    pub fn decode_event<T>(&mut self, spi_buffer: &mut [u8; 128]) -> Option<Event<T>>
+    pub fn next_event_ahead<T>(&mut self) -> bool
     where
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
-        // message = [ tag, len_hi, len_lo, ... ]
-        let tag = spi_buffer[0];
-        let len = u16::from_be_bytes([spi_buffer[1], spi_buffer[2]]);
+        let mut spi_buffer = [0u8; 128];
 
-        // XXX: check whether this is necessary
-        // if rx < 3 && rx != len+3 {
-        //     unsafe {
-        //        G_io_app.apdu_state = APDU_IDLE;
-        //        G_io_app.apdu_length = 0;
-        //     }
-        //     return None
-        // }
-
-        // Treat all possible events.
-        // If this is a button push, return with the associated event
-        // If this is an APDU, return with the "received command" event
-        // Any other event (usb, xfer, ticker) is silently handled
-        match seph::Events::from(tag) {
-            seph::Events::ButtonPush => {
-                let button_info = spi_buffer[3] >> 1;
-                if let Some(btn_evt) = get_button_event(&mut self.buttons, button_info) {
-                    return Some(Event::Button(btn_evt));
-                }
-            }
-            seph::Events::USBEvent => {
-                if len == 1 {
-                    seph::handle_usb_event(spi_buffer[3]);
-                }
-            }
-            seph::Events::USBXFEREvent => {
-                if len >= 3 {
-                    seph::handle_usb_ep_xfer_event(&mut self.apdu_buffer, spi_buffer);
-                }
-            }
-            seph::Events::CAPDUEvent => seph::handle_capdu_event(&mut self.apdu_buffer, spi_buffer),
-
-            #[cfg(target_os = "nanox")]
-            seph::Events::BleReceive => ble::receive(&mut self.apdu_buffer, spi_buffer),
-
-            seph::Events::TickerEvent => return Some(Event::Ticker),
-            _ => (),
+        // Signal end of command stream from SE to MCU
+        // And prepare reception
+        if !sys_seph::is_status_sent() {
+            sys_seph::send_general_status();
         }
+        // Fetch the next message from the MCU
+        let _rx = sys_seph::seph_recv(&mut spi_buffer, 0);
+        return self.detect_apdu::<T>(&mut spi_buffer);
+    }
 
-        if unsafe { G_io_app.apdu_state } != APDU_IDLE && unsafe { G_io_app.apdu_length } > 0 {
-            self.rx = unsafe { G_io_app.apdu_length as usize };
-
+    pub fn check_event<T>(&mut self) -> Option<Event<T>>
+    where
+        T: TryFrom<ApduHeader>,
+        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
+    {
+        if self.event_pending {
+            self.event_pending = false;
             // Reject incomplete APDUs
             if self.rx < 4 {
                 self.reply(StatusWords::BadLen);
@@ -362,6 +340,102 @@ impl Comm {
             }
         }
         None
+    }
+
+    pub fn process_event<T>(&mut self, spi_buffer: &mut [u8; 128]) -> Option<Event<T>>
+    where
+        T: TryFrom<ApduHeader>,
+        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
+    {
+        // message = [ tag, len_hi, len_lo, ... ]
+        let tag = spi_buffer[0];
+        let len = u16::from_be_bytes([spi_buffer[1], spi_buffer[2]]);
+
+        // XXX: check whether this is necessary
+        // if rx < 3 && rx != len+3 {
+        //     unsafe {
+        //        G_io_app.apdu_state = APDU_IDLE;
+        //        G_io_app.apdu_length = 0;
+        //     }
+        //     return None
+        // }
+
+        // Treat all possible events.
+        // If this is a button push, return with the associated event
+        // If this is an APDU, return with the "received command" event
+        // Any other event (usb, xfer, ticker) is silently handled
+        match seph::Events::from(tag) {
+            #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+            seph::Events::ButtonPush => {
+                let button_info = spi_buffer[3] >> 1;
+                if let Some(btn_evt) = get_button_event(&mut self.buttons, button_info) {
+                    return Some(Event::Button(btn_evt));
+                }
+            }
+            seph::Events::USBEvent => {
+                if len == 1 {
+                    seph::handle_usb_event(spi_buffer[3]);
+                }
+            }
+            seph::Events::USBXFEREvent => {
+                if len >= 3 {
+                    seph::handle_usb_ep_xfer_event(&mut self.apdu_buffer, spi_buffer);
+                }
+            }
+            seph::Events::CAPDUEvent => seph::handle_capdu_event(&mut self.apdu_buffer, spi_buffer),
+
+            #[cfg(target_os = "nanox")]
+            seph::Events::BleReceive => ble::receive(&mut self.apdu_buffer, spi_buffer),
+
+            seph::Events::TickerEvent => {
+                #[cfg(any(target_os = "stax", target_os = "flex"))]
+                unsafe {
+                    ux_process_ticker_event();
+                }
+                return Some(Event::Ticker);
+            }
+
+            #[cfg(any(target_os = "stax", target_os = "flex"))]
+            seph::Events::ScreenTouch => unsafe {
+                ux_process_finger_event(spi_buffer.as_mut_ptr());
+                return Some(Event::TouchEvent);
+            },
+
+            _ => (),
+        }
+        None
+    }
+
+    pub fn decode_event<T>(&mut self, spi_buffer: &mut [u8; 128]) -> Option<Event<T>>
+    where
+        T: TryFrom<ApduHeader>,
+        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
+    {
+        if let Some(event) = self.process_event(spi_buffer) {
+            return Some(event);
+        }
+
+        if unsafe { G_io_app.apdu_state } != APDU_IDLE && unsafe { G_io_app.apdu_length } > 0 {
+            self.rx = unsafe { G_io_app.apdu_length as usize };
+            self.event_pending = true;
+            return self.check_event();
+        }
+        None
+    }
+
+    fn detect_apdu<T>(&mut self, spi_buffer: &mut [u8; 128]) -> bool
+    where
+        T: TryFrom<ApduHeader>,
+        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
+    {
+        let _: Option<Event<T>> = self.decode_event(spi_buffer);
+
+        if unsafe { G_io_app.apdu_state } != APDU_IDLE && unsafe { G_io_app.apdu_length } > 0 {
+            self.rx = unsafe { G_io_app.apdu_length as usize };
+            self.event_pending = true;
+            return true;
+        }
+        false
     }
 
     /// Wait for the next Command event. Discards received button events.

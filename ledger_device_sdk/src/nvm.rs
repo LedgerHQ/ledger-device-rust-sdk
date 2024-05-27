@@ -188,7 +188,7 @@ macro_rules! atomic_storage {
 atomic_storage!(64);
 #[cfg(target_os = "nanox")]
 atomic_storage!(256);
-#[cfg(target_os = "nanosplus")]
+#[cfg(any(target_os = "nanosplus", target_os = "stax", target_os = "flex"))]
 atomic_storage!(512);
 
 pub enum AtomicStorageElem {

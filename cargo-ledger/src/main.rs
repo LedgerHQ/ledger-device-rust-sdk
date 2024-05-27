@@ -74,6 +74,8 @@ enum Device {
     Nanos,
     Nanox,
     Nanosplus,
+    Stax,
+    Flex,
 }
 
 impl Display for Device {
@@ -88,6 +90,8 @@ impl AsRef<str> for Device {
             Device::Nanos => "nanos",
             Device::Nanox => "nanox",
             Device::Nanosplus => "nanosplus",
+            Device::Stax => "stax",
+            Device::Flex => "flex",
         }
     }
 }
@@ -199,6 +203,8 @@ fn build_app(
                 Device::Nanos => std::env::var("NANOS_SDK"),
                 Device::Nanosplus => std::env::var("NANOSP_SDK"),
                 Device::Nanox => std::env::var("NANOX_SDK"),
+                Device::Stax => std::env::var("STAX_SDK"),
+                Device::Flex => std::env::var("FLEX_SDK"),
             };
 
             let mut args: Vec<String> = vec![];
@@ -294,7 +300,7 @@ fn build_app(
     // Modify flags to enable BLE if targeting Nano X
     let flags = match device {
         Device::Nanos | Device::Nanosplus => metadata_ledger.flags,
-        Device::Nanox => {
+        Device::Nanox | Device::Stax | Device::Flex => {
             let base = u32::from_str_radix(metadata_ledger.flags.as_str(), 16)
                 .unwrap_or(0);
             format!("0x{:x}", base | 0x200)
@@ -307,6 +313,8 @@ fn build_app(
         Device::Nanos => String::from("0x31100004"),
         Device::Nanox => String::from("0x33000004"),
         Device::Nanosplus => String::from("0x33100004"),
+        Device::Stax => String::from("0x33200004"),
+        Device::Flex => String::from("0x33300004"),
     };
 
     // create manifest
