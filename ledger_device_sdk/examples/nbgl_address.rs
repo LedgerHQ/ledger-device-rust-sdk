@@ -6,7 +6,7 @@ use ledger_device_sdk as _;
 
 use include_gif::include_gif;
 use ledger_device_sdk::io::*;
-use ledger_device_sdk::nbgl::{init_comm, NbglAddressConfirm, NbglGlyph};
+use ledger_device_sdk::nbgl::{init_comm, NbglAddressReview, NbglGlyph};
 use ledger_secure_sdk_sys::*;
 
 #[no_mangle]
@@ -26,5 +26,5 @@ extern "C" fn sample_main() {
     const FERRIS: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
     // Display the address confirmation screen.
-    NbglAddressConfirm::new().glyph(&FERRIS).show(addr_hex);
+    NbglAddressReview::new().glyph(&FERRIS).show(addr_hex);
 }

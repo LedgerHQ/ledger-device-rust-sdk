@@ -325,7 +325,7 @@ impl<'a> NbglHomeAndSettings<'a> {
                         }
                     }
                     _ => {
-                        panic!("Unexpected return value from sync_nbgl_useCaseHome");
+                        panic!("Unexpected return value from ux_sync_homeAndSettings");
                     }
                 }
             }
@@ -469,30 +469,30 @@ impl<'a, const MAX_FIELD_NUMBER: usize, const STRING_BUFFER_SIZE: usize>
 
 /// A wrapper around the synchronous NBGL ux_sync_addressReview C API binding.
 /// Used to display address confirmation screens.
-pub struct NbglAddressConfirm<'a> {
+pub struct NbglAddressReview<'a> {
     icon: *const nbgl_icon_details_t,
     glyph: Option<&'a NbglGlyph<'a>>,
     verify_str: &'a str,
 }
 
-impl<'a> NbglAddressConfirm<'a> {
-    pub fn new() -> NbglAddressConfirm<'a> {
-        NbglAddressConfirm {
+impl<'a> NbglAddressReview<'a> {
+    pub fn new() -> NbglAddressReview<'a> {
+        NbglAddressReview {
             verify_str: "Verify address",
             icon: core::ptr::null(),
             glyph: None,
         }
     }
 
-    pub fn glyph(self, glyph: &'a NbglGlyph) -> NbglAddressConfirm<'a> {
-        NbglAddressConfirm {
+    pub fn glyph(self, glyph: &'a NbglGlyph) -> NbglAddressReview<'a> {
+        NbglAddressReview {
             glyph: Some(glyph),
             ..self
         }
     }
 
-    pub fn verify_str(self, verify_str: &'a str) -> NbglAddressConfirm<'a> {
-        NbglAddressConfirm { verify_str, ..self }
+    pub fn verify_str(self, verify_str: &'a str) -> NbglAddressReview<'a> {
+        NbglAddressReview { verify_str, ..self }
     }
 
     pub fn show(&mut self, address: &str) -> bool {
@@ -524,7 +524,7 @@ impl<'a> NbglAddressConfirm<'a> {
                     return false;
                 }
                 _ => {
-                    panic!("Unexpected return value from sync_nbgl_useCaseTransactionReview");
+                    panic!("Unexpected return value from ux_sync_addressReview");
                 }
             }
         }
