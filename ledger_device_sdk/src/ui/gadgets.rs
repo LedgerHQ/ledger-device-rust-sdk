@@ -1,6 +1,7 @@
 use crate::{
     buttons::ButtonEvent::*,
     io::{self, ApduHeader, Comm, Event, Reply},
+    uxapp::{UxEvent, BOLOS_UX_OK},
 };
 use ledger_secure_sdk_sys::{
     buttons::{get_button_event, ButtonEvent, ButtonsState},
@@ -513,6 +514,15 @@ pub enum EventOrPageIndex<T> {
     Index(usize),
 }
 
+// Trick to manage pin code
+struct Temp {}
+impl TryFrom<io::ApduHeader> for Temp {
+    type Error = io::StatusWords;
+    fn try_from(_header: io::ApduHeader) -> Result<Self, Self::Error> {
+        Ok(Self {})
+    }
+}
+
 pub struct MultiPageMenu<'a> {
     comm: &'a mut io::Comm,
     pages: &'a [&'a Page<'a>],
@@ -568,7 +578,17 @@ impl<'a> MultiPageMenu<'a> {
                     }
                 },
                 io::Event::Command(ins) => return EventOrPageIndex::Event(io::Event::Command(ins)),
-                _ => (),
+                io::Event::Ticker => {
+                    if UxEvent::Event.request() != BOLOS_UX_OK {
+                        // pin lock management
+                        let (_res, ins) = UxEvent::block_and_get_event::<Temp>(self.comm);
+                        if let Some(_e) = ins {
+                            self.comm.reply::<io::StatusWords>(io::StatusWords::Unknown);
+                        }
+                        // notify Ticker event only when redisplay is required
+                        return EventOrPageIndex::Event(io::Event::Ticker);
+                    }
+                }
             };
         }
     }
