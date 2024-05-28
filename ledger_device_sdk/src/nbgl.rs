@@ -351,7 +351,6 @@ impl<'a, const MAX_FIELD_NUMBER: usize, const STRING_BUFFER_SIZE: usize>
             subtitle: "To send CRAB",
             finish_title: "Sign transaction",
             glyph: None,
-            icon: core::ptr::null(),
             tag_value_array: [nbgl_layoutTagValue_t::default(); MAX_FIELD_NUMBER],
             c_string_helper: CStringHelper::<STRING_BUFFER_SIZE>::new(),
         }
@@ -462,13 +461,15 @@ impl<'a, const MAX_FIELD_NUMBER: usize, const STRING_BUFFER_SIZE: usize>
 /// Used to display address confirmation screens.
 pub struct NbglAddressReview<'a> {
     glyph: Option<&'a NbglGlyph<'a>>,
-    verify_str: &'a str,
+    verify_str: *const c_char,
 }
 
 impl<'a> NbglAddressReview<'a> {
     pub fn new() -> NbglAddressReview<'a> {
         NbglAddressReview {
-            verify_str: "Verify address",
+            verify_str: CStr::from_bytes_until_nul("Verify address\0".as_bytes())
+                .unwrap()
+                .as_ptr(),
             glyph: None,
         }
     }
@@ -481,15 +482,24 @@ impl<'a> NbglAddressReview<'a> {
     }
 
     pub fn verify_str(self, verify_str: &'a str) -> NbglAddressReview<'a> {
-        NbglAddressReview { verify_str, ..self }
+        NbglAddressReview {
+            verify_str: CStr::from_bytes_until_nul(verify_str.as_bytes())
+                .unwrap()
+                .as_ptr(),
+            ..self
+        }
     }
 
     pub fn show(&mut self, address: &str) -> bool {
         unsafe {
             // Create CStringHelper instance and convert the address and verify_str into c strings.
-            let c_string_helper = CStringHelper::<128>::new();
-            let c_addr_str = c_string_helper.to_cstring(address).unwrap();
-            let c_verif_str = c_string_helper.to_cstring(self.verify_str).unwrap();
+            //let c_string_helper = CStringHelper::<128>::new();
+            //let c_addr_str = c_string_helper.to_cstring(address).unwrap();
+            //let c_verif_str = c_string_helper.to_cstring(self.verify_str).unwrap();
+
+            let addr = CStr::from_bytes_until_nul(address.as_bytes())
+                .unwrap()
+                .as_ptr();
 
             let icon = if self.glyph.is_some() {
                 &self.glyph.unwrap().into() as *const nbgl_icon_details_t
@@ -499,10 +509,10 @@ impl<'a> NbglAddressReview<'a> {
 
             // Show the address confirmation on the device.
             let sync_ret = ux_sync_addressReview(
-                c_addr_str.as_ptr() as *const c_char,
+                addr,
                 core::ptr::null(),
                 icon,
-                c_verif_str.as_ptr() as *const c_char,
+                self.verify_str,
                 core::ptr::null(),
             );
 
