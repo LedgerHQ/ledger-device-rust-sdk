@@ -177,9 +177,9 @@ const INFO_FIELDS: [*const c_char; 2] = [
 /// Used to display the home screen of the application, with an optional glyph,
 /// information fields, and settings switches.  
 pub struct NbglHomeAndSettings<'a> {
-    app_name: *const c_char,
     glyph: Option<&'a NbglGlyph<'a>>,
-    info_contents: [*const c_char; 2],
+    // app_name, version, author
+    info_contents: [*const c_char; 3],
     settings_contents: nbgl_content_t,
     nb_settings: u8,
     generic_contents: nbgl_genericContents_t,
@@ -189,11 +189,17 @@ pub struct NbglHomeAndSettings<'a> {
 impl<'a> NbglHomeAndSettings<'a> {
     pub fn new() -> NbglHomeAndSettings<'a> {
         NbglHomeAndSettings {
-            app_name: "Rust App\0".as_ptr() as *const c_char,
             glyph: None,
             info_contents: [
-                "0.0.0\0".as_ptr() as *const c_char,
-                "Ledger\0".as_ptr() as *const c_char,
+                CStr::from_bytes_until_nul("Rust App\0".as_bytes())
+                    .unwrap()
+                    .as_ptr(),
+                CStr::from_bytes_until_nul("0.0.0\0".as_bytes())
+                    .unwrap()
+                    .as_ptr(),
+                CStr::from_bytes_until_nul("Ledger\0".as_bytes())
+                    .unwrap()
+                    .as_ptr(),
             ],
             c_string_helper: CStringHelper::<128>::new(),
             settings_contents: nbgl_content_t::default(),
@@ -217,15 +223,21 @@ impl<'a> NbglHomeAndSettings<'a> {
 
     pub fn infos(
         self,
-        app_name: &str,
+        app_name: &'a str,
         version: &'a str,
         author: &'a str,
     ) -> NbglHomeAndSettings<'a> {
         NbglHomeAndSettings {
-            app_name: self.c_string_helper.to_cstring(app_name).unwrap().as_ptr() as *const c_char,
             info_contents: [
-                self.c_string_helper.to_cstring(version).unwrap().as_ptr() as *const c_char,
-                self.c_string_helper.to_cstring(author).unwrap().as_ptr() as *const c_char,
+                CStr::from_bytes_until_nul(app_name.as_bytes())
+                    .unwrap()
+                    .as_ptr(),
+                CStr::from_bytes_until_nul(version.as_bytes())
+                    .unwrap()
+                    .as_ptr(),
+                CStr::from_bytes_until_nul(author.as_bytes())
+                    .unwrap()
+                    .as_ptr(),
             ],
             ..self
         }
@@ -300,11 +312,11 @@ impl<'a> NbglHomeAndSettings<'a> {
             loop {
                 let info_list: nbgl_contentInfoList_t = nbgl_contentInfoList_t {
                     infoTypes: INFO_FIELDS.as_ptr() as *const *const c_char,
-                    infoContents: self.info_contents.as_ptr() as *const *const c_char,
-                    nbInfos: self.info_contents.len() as u8,
+                    infoContents: self.info_contents[1..].as_ptr() as *const *const c_char,
+                    nbInfos: INFO_FIELDS.len() as u8,
                 };
                 match ledger_secure_sdk_sys::ux_sync_homeAndSettings(
-                    self.app_name,
+                    self.info_contents[0],
                     &self.glyph.unwrap().into() as *const nbgl_icon_details_t,
                     core::ptr::null(),
                     INIT_HOME_PAGE as u8,
