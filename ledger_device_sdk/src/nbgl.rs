@@ -177,11 +177,9 @@ const INFO_FIELDS: [*const c_char; 2] = [
 /// Used to display the home screen of the application, with an optional glyph,
 /// information fields, and settings switches.  
 pub struct NbglHomeAndSettings<'a> {
-    app_name: *const c_char,
-    icon: *const nbgl_icon_details_t,
     glyph: Option<&'a NbglGlyph<'a>>,
-    info_contents: [*const c_char; 2],
-    info_list: nbgl_contentInfoList_t,
+    // app_name, version, author
+    info_contents: [*const c_char; 3],
     settings_contents: nbgl_content_t,
     nb_settings: u8,
     generic_contents: nbgl_genericContents_t,
@@ -191,18 +189,18 @@ pub struct NbglHomeAndSettings<'a> {
 impl<'a> NbglHomeAndSettings<'a> {
     pub fn new() -> NbglHomeAndSettings<'a> {
         NbglHomeAndSettings {
-            app_name: "Rust App\0".as_ptr() as *const c_char,
-            icon: core::ptr::null(),
             glyph: None,
             info_contents: [
-                "0.0.0\0".as_ptr() as *const c_char,
-                "Ledger\0".as_ptr() as *const c_char,
+                CStr::from_bytes_until_nul("Rust App\0".as_bytes())
+                    .unwrap()
+                    .as_ptr(),
+                CStr::from_bytes_until_nul("0.0.0\0".as_bytes())
+                    .unwrap()
+                    .as_ptr(),
+                CStr::from_bytes_until_nul("Ledger\0".as_bytes())
+                    .unwrap()
+                    .as_ptr(),
             ],
-            info_list: nbgl_contentInfoList_t {
-                infoTypes: core::ptr::null(),
-                infoContents: core::ptr::null(),
-                nbInfos: 0,
-            },
             c_string_helper: CStringHelper::<128>::new(),
             settings_contents: nbgl_content_t::default(),
             generic_contents: nbgl_genericContents_t {
@@ -223,10 +221,15 @@ impl<'a> NbglHomeAndSettings<'a> {
         }
     }
 
-    pub fn infos(self, app_name: &str, version: &str, author: &str) -> NbglHomeAndSettings<'a> {
+    pub fn infos(
+        self,
+        app_name: &'a str,
+        version: &'a str,
+        author: &'a str,
+    ) -> NbglHomeAndSettings<'a> {
         NbglHomeAndSettings {
-            app_name: self.c_string_helper.to_cstring(app_name).unwrap().as_ptr() as *const c_char,
             info_contents: [
+                self.c_string_helper.to_cstring(app_name).unwrap().as_ptr() as *const c_char,
                 self.c_string_helper.to_cstring(version).unwrap().as_ptr() as *const c_char,
                 self.c_string_helper.to_cstring(author).unwrap().as_ptr() as *const c_char,
             ],
@@ -276,10 +279,6 @@ impl<'a> NbglHomeAndSettings<'a> {
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
         unsafe {
-            self.info_list.infoTypes = INFO_FIELDS.as_ptr() as *const *const c_char;
-            self.info_list.infoContents = self.info_contents.as_ptr() as *const *const c_char;
-            self.info_list.nbInfos = 2;
-
             if NVM_REF.is_some() {
                 self.settings_contents = nbgl_content_t {
                     content: nbgl_content_u {
@@ -305,16 +304,23 @@ impl<'a> NbglHomeAndSettings<'a> {
             }
 
             loop {
-                if self.glyph.is_some() {
-                    self.icon = &self.glyph.unwrap().into() as *const nbgl_icon_details_t;
-                }
+                let info_list: nbgl_contentInfoList_t = nbgl_contentInfoList_t {
+                    infoTypes: INFO_FIELDS.as_ptr() as *const *const c_char,
+                    infoContents: self.info_contents[1..].as_ptr() as *const *const c_char,
+                    nbInfos: INFO_FIELDS.len() as u8,
+                };
+                let icon = if self.glyph.is_some() {
+                    &self.glyph.unwrap().into() as *const nbgl_icon_details_t
+                } else {
+                    core::ptr::null()
+                };
                 match ledger_secure_sdk_sys::ux_sync_homeAndSettings(
-                    self.app_name,
-                    self.icon as *const nbgl_icon_details_t,
+                    self.info_contents[0],
+                    icon,
                     core::ptr::null(),
                     INIT_HOME_PAGE as u8,
                     &self.generic_contents as *const nbgl_genericContents_t,
-                    &self.info_list as *const nbgl_contentInfoList_t,
+                    &info_list as *const nbgl_contentInfoList_t,
                     core::ptr::null(),
                 ) {
                     ledger_secure_sdk_sys::UX_SYNC_RET_APDU_RECEIVED => {
@@ -348,7 +354,6 @@ pub struct NbglReview<
     subtitle: &'a str,
     finish_title: &'a str,
     glyph: Option<&'a NbglGlyph<'a>>,
-    icon: *const nbgl_icon_details_t,
     tag_value_array: [nbgl_layoutTagValue_t; MAX_FIELD_NUMBER],
     c_string_helper: CStringHelper<STRING_BUFFER_SIZE>,
 }
@@ -362,7 +367,6 @@ impl<'a, const MAX_FIELD_NUMBER: usize, const STRING_BUFFER_SIZE: usize>
             subtitle: "To send CRAB",
             finish_title: "Sign transaction",
             glyph: None,
-            icon: core::ptr::null(),
             tag_value_array: [nbgl_layoutTagValue_t::default(); MAX_FIELD_NUMBER],
             c_string_helper: CStringHelper::<STRING_BUFFER_SIZE>::new(),
         }
@@ -429,15 +433,17 @@ impl<'a, const MAX_FIELD_NUMBER: usize, const STRING_BUFFER_SIZE: usize>
                 wrapping: false,
             };
 
-            if self.glyph.is_some() {
-                self.icon = &self.glyph.unwrap().into() as *const nbgl_icon_details_t;
-            }
+            let icon = if self.glyph.is_some() {
+                &self.glyph.unwrap().into() as *const nbgl_icon_details_t
+            } else {
+                core::ptr::null()
+            };
 
             // Show the review on the device.
             let sync_ret = ledger_secure_sdk_sys::ux_sync_review(
                 TYPE_TRANSACTION,
                 &tag_value_list as *const nbgl_layoutTagValueList_t,
-                self.icon,
+                icon,
                 self.c_string_helper
                     .to_cstring(self.title)
                     .unwrap()
@@ -470,7 +476,6 @@ impl<'a, const MAX_FIELD_NUMBER: usize, const STRING_BUFFER_SIZE: usize>
 /// A wrapper around the synchronous NBGL ux_sync_addressReview C API binding.
 /// Used to display address confirmation screens.
 pub struct NbglAddressReview<'a> {
-    icon: *const nbgl_icon_details_t,
     glyph: Option<&'a NbglGlyph<'a>>,
     verify_str: &'a str,
 }
@@ -479,7 +484,6 @@ impl<'a> NbglAddressReview<'a> {
     pub fn new() -> NbglAddressReview<'a> {
         NbglAddressReview {
             verify_str: "Verify address",
-            icon: core::ptr::null(),
             glyph: None,
         }
     }
@@ -502,15 +506,17 @@ impl<'a> NbglAddressReview<'a> {
             let c_addr_str = c_string_helper.to_cstring(address).unwrap();
             let c_verif_str = c_string_helper.to_cstring(self.verify_str).unwrap();
 
-            if self.glyph.is_some() {
-                self.icon = &self.glyph.unwrap().into() as *const nbgl_icon_details_t;
-            }
+            let icon = if self.glyph.is_some() {
+                &self.glyph.unwrap().into() as *const nbgl_icon_details_t
+            } else {
+                core::ptr::null()
+            };
 
             // Show the address confirmation on the device.
             let sync_ret = ux_sync_addressReview(
                 c_addr_str.as_ptr() as *const c_char,
                 core::ptr::null(),
-                self.icon,
+                icon,
                 c_verif_str.as_ptr() as *const c_char,
                 core::ptr::null(),
             );
