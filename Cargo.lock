@@ -350,8 +350,6 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 name = "ledger_device_sdk"
 version = "1.9.3"
 dependencies = [
- "critical-section",
- "embedded-alloc",
  "include_gif",
  "ledger_device_sdk",
  "ledger_secure_sdk_sys",
@@ -368,7 +366,12 @@ version = "1.3.1"
 dependencies = [
  "bindgen",
  "cc",
+<<<<<<< HEAD
  "glob",
+=======
+ "critical-section",
+ "embedded-alloc",
+>>>>>>> 97d6168 (Moved heap code to ledger_secure_sdk_sys)
 ]
 
 [[package]]

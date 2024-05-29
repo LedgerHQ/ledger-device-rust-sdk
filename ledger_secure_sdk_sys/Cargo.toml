@@ -11,3 +11,10 @@ description = "Bindings to Ledger C SDK"
 bindgen = "0.65.1"
 cc = "1.0.73"
 glob = "0.3.1"
+
+[dependencies]
+embedded-alloc = { version = "0.5.1", optional = true }
+critical-section = { version = "1.1.2", optional = true }
+
+[features]
+heap = ["dep:embedded-alloc", "dep:critical-section"]
