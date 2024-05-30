@@ -1,25 +1,28 @@
 # Ledger wallets SDK for Rust Applications
 
-Crate that allows developing Ledger Nano apps in Rust with a default configuration.
+Crate that allows developing Ledger device apps in Rust with a default configuration.
 
 Contains:
 
 - some safe wrappers over common syscalls
 - IO abstractions
 - signature abstractions
+- UI libraries (the `ui` module for Nano (S/SP/X) apps, `nbgl` module for Stax and Flex apps)
 
-This SDK is incomplete in the sense that wrappers are currently missing, and not all wrappers have a nice Rust abstraction on top, but two apps were made using it:
+## Links
 
-- [A demo application with a signature UI workflow](https://github.com/LedgerHQ/rust-app)
-- [A Password Manager](https://github.com/LedgerHQ/rust-app-password-manager)
+To learn more about using the SDK and what is required to publish an app on the Ledger Live app store, please don't hesitate to check the following resources :
 
-You can submit an issue or even a pull request if you wish to contribute, we will check what we can do.
+- 📚 [Developer's documentation](https://developers.ledger.com/)
+- 🗣️ [Ledger's Discord server](https://discord.gg/Ledger)
+- 📦 [Fully featured boilerplate app](https://github.com/LedgerHQ/app-boilerplate-rust)
+- 📦 [A Password Manager app](https://github.com/LedgerHQ/rust-app-password-manager)
 
 ## Supported devices
 
-|       Nano S       |       Nano X       |    Nano S Plus     |
-| ------------------ | ------------------ | ------------------ |
-| :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+|       Nano S       |       Nano X       |    Nano S Plus     |        Stax        |       Flex         |
+| ------------------ | ------------------ | ------------------ | ------------------ | ------------------ |
+| :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 
 ## Usage
 
@@ -46,7 +49,7 @@ sudo dnf install clang arm-none-eabi-gcc arm-none-eabi-newlib
 sudo pacman -S clang arm-none-eabi-gcc arm-none-eabi-newlib
 ```
 
-This SDK provides three [custom target](https://doc.rust-lang.org/rustc/targets/custom.html) files for Nano S, Nano X and Nano S+.
+This SDK provides [custom target](https://doc.rust-lang.org/rustc/targets/custom.html) files. One for each supported device.
 
 ### Building for Nano S
 
@@ -66,6 +69,17 @@ cargo build --release -Z build-std=core --target=./nanox.json
 cargo build --release -Z build-std=core --target=./nanosplus.json
 ```
 
+### Building for Stax
+
+```
+cargo build --release -Z build-std=core --target=./stax.json
+```
+
+### Building for Flex
+
+```
+cargo build --release -Z build-std=core --target=./flex.json
+```
 
 ## Building with rustc < 1.54
 
@@ -74,6 +88,8 @@ Building before rustc 1.54 should fail with `error[E0635]: unknown feature const
 This is solved by activating a specific feature: `cargo build --features pre1_54`
 
 ## Contributing
+
+You can submit an issue or even a pull request if you wish to contribute, we will check what we can do.
 
 Make sure you've followed the installation steps above. In order for your PR to be accepted, it will have to pass the CI, which performs the following checks:
 

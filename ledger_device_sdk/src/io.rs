@@ -401,7 +401,12 @@ impl Comm {
                 return Some(Event::TouchEvent);
             },
 
-            _ => (),
+            _ => {
+                #[cfg(any(target_os = "stax", target_os = "flex"))]
+                unsafe {
+                    ux_process_default_event();
+                }
+            }
         }
         None
     }
