@@ -64,48 +64,6 @@ impl From<u8> for UsbEp {
     }
 }
 
-/// FFI bindings to USBD functions inlined here for clarity
-/// and also because some of the generated ones are incorrectly
-/// assuming mutable pointers when they are not
-/*#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct apdu_buffer_s {
-    pub buf: *mut u8,
-    pub len: u16,
-}
-impl Default for apdu_buffer_s {
-    fn default() -> Self {
-        unsafe { ::core::mem::zeroed() }
-    }
-}
-pub type ApduBufferT = apdu_buffer_s;
-extern "C" {
-    pub static mut USBD_Device: USBD_HandleTypeDef;
-    pub fn USBD_LL_SetupStage(
-        pdev: *mut USBD_HandleTypeDef,
-        psetup: *const u8,
-    ) -> USBD_StatusTypeDef;
-    pub fn USBD_LL_DataOutStage(
-        pdev: *mut USBD_HandleTypeDef,
-        epnum: u8,
-        pdata: *const u8,
-        arg1: *mut ApduBufferT,
-    ) -> USBD_StatusTypeDef;
-    pub fn USBD_LL_DataInStage(
-        pdev: *mut USBD_HandleTypeDef,
-        epnum: u8,
-        pdata: *const u8,
-    ) -> USBD_StatusTypeDef;
-    pub fn USBD_LL_Reset(pdev: *mut USBD_HandleTypeDef) -> USBD_StatusTypeDef;
-    pub fn USBD_LL_SetSpeed(
-        pdev: *mut USBD_HandleTypeDef,
-        speed: USBD_SpeedTypeDef,
-    ) -> USBD_StatusTypeDef;
-    pub fn USBD_LL_Suspend(pdev: *mut USBD_HandleTypeDef) -> USBD_StatusTypeDef;
-    pub fn USBD_LL_Resume(pdev: *mut USBD_HandleTypeDef) -> USBD_StatusTypeDef;
-    pub fn USBD_LL_SOF(pdev: *mut USBD_HandleTypeDef) -> USBD_StatusTypeDef;
-}*/
-
 /// Below is a straightforward translation of the corresponding functions
 /// in the C SDK, they could be improved
 pub fn handle_usb_event(event: u8) {
