@@ -486,6 +486,7 @@ impl SDKBuilder {
                 "include/os_ux.h",
                 "include/ox.h", /* crypto-related syscalls */
                 "lib_stusb/STM32_USB_Device_Library/Core/Inc/usbd_def.h",
+                "lib_stusb/STM32_USB_Device_Library/Core/Inc/usbd_core.h",
                 "include/os_io_usb.h",
             ],
         );

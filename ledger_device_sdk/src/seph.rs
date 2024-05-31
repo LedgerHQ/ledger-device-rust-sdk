@@ -64,65 +64,21 @@ impl From<u8> for UsbEp {
     }
 }
 
-/// FFI bindings to USBD functions inlined here for clarity
-/// and also because some of the generated ones are incorrectly
-/// assuming mutable pointers when they are not
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct apdu_buffer_s {
-    pub buf: *mut u8,
-    pub len: u16,
-}
-impl Default for apdu_buffer_s {
-    fn default() -> Self {
-        unsafe { ::core::mem::zeroed() }
-    }
-}
-pub type ApduBufferT = apdu_buffer_s;
-extern "C" {
-    pub static mut USBD_Device: USBD_HandleTypeDef;
-    pub fn USBD_LL_SetupStage(
-        pdev: *mut USBD_HandleTypeDef,
-        psetup: *const u8,
-    ) -> USBD_StatusTypeDef;
-    pub fn USBD_LL_DataOutStage(
-        pdev: *mut USBD_HandleTypeDef,
-        epnum: u8,
-        pdata: *const u8,
-        arg1: *mut ApduBufferT,
-    ) -> USBD_StatusTypeDef;
-    pub fn USBD_LL_DataInStage(
-        pdev: *mut USBD_HandleTypeDef,
-        epnum: u8,
-        pdata: *const u8,
-    ) -> USBD_StatusTypeDef;
-    pub fn USBD_LL_Reset(pdev: *mut USBD_HandleTypeDef) -> USBD_StatusTypeDef;
-    pub fn USBD_LL_SetSpeed(
-        pdev: *mut USBD_HandleTypeDef,
-        speed: USBD_SpeedTypeDef,
-    ) -> USBD_StatusTypeDef;
-    pub fn USBD_LL_Suspend(pdev: *mut USBD_HandleTypeDef) -> USBD_StatusTypeDef;
-    pub fn USBD_LL_Resume(pdev: *mut USBD_HandleTypeDef) -> USBD_StatusTypeDef;
-    pub fn USBD_LL_SOF(pdev: *mut USBD_HandleTypeDef) -> USBD_StatusTypeDef;
-}
-
 /// Below is a straightforward translation of the corresponding functions
 /// in the C SDK, they could be improved
 pub fn handle_usb_event(event: u8) {
     match Events::from(event) {
-        Events::USBEventReset => {
-            unsafe {
-                USBD_LL_SetSpeed(&mut USBD_Device, 1 /*USBD_SPEED_FULL*/);
-                USBD_LL_Reset(&mut USBD_Device);
+        Events::USBEventReset => unsafe {
+            USBD_LL_SetSpeed(&mut USBD_Device, USBD_SPEED_FULL);
+            USBD_LL_Reset(&mut USBD_Device);
 
-                if G_io_app.apdu_media != IO_APDU_MEDIA_NONE {
-                    return;
-                }
-
-                G_io_app.usb_ep_xfer_len = core::mem::zeroed();
-                G_io_app.usb_ep_timeouts = core::mem::zeroed();
+            if G_io_app.apdu_media != IO_APDU_MEDIA_NONE {
+                return;
             }
-        }
+
+            G_io_app.usb_ep_xfer_len = core::mem::zeroed();
+            G_io_app.usb_ep_timeouts = core::mem::zeroed();
+        },
         Events::USBEventSOF => unsafe {
             USBD_LL_SOF(&mut USBD_Device);
         },
@@ -136,17 +92,17 @@ pub fn handle_usb_event(event: u8) {
     }
 }
 
-pub fn handle_usb_ep_xfer_event(apdu_buffer: &mut [u8], buffer: &[u8]) {
+pub fn handle_usb_ep_xfer_event(apdu_buffer: &mut [u8], buffer: &mut [u8]) {
     let endpoint = buffer[3] & 0x7f;
     match UsbEp::from(buffer[4]) {
         UsbEp::USBEpXFERSetup => unsafe {
-            USBD_LL_SetupStage(&mut USBD_Device, &buffer[6]);
+            USBD_LL_SetupStage(&mut USBD_Device, &mut buffer[6]);
         },
         UsbEp::USBEpXFERIn => {
             if (endpoint as u32) < IO_USB_MAX_ENDPOINTS {
                 unsafe {
                     G_io_app.usb_ep_timeouts[endpoint as usize].timeout = 0;
-                    USBD_LL_DataInStage(&mut USBD_Device, endpoint, &buffer[6]);
+                    USBD_LL_DataInStage(&mut USBD_Device, endpoint, &mut buffer[6]);
                 }
             }
         }
@@ -154,11 +110,11 @@ pub fn handle_usb_ep_xfer_event(apdu_buffer: &mut [u8], buffer: &[u8]) {
             if (endpoint as u32) < IO_USB_MAX_ENDPOINTS {
                 unsafe {
                     G_io_app.usb_ep_xfer_len[endpoint as usize] = buffer[5];
-                    let mut apdu_buf = ApduBufferT {
+                    let mut apdu_buf = apdu_buffer_s {
                         buf: apdu_buffer.as_mut_ptr(),
                         len: 260,
                     };
-                    USBD_LL_DataOutStage(&mut USBD_Device, endpoint, &buffer[6], &mut apdu_buf);
+                    USBD_LL_DataOutStage(&mut USBD_Device, endpoint, &mut buffer[6], &mut apdu_buf);
                 }
             }
         }
@@ -183,7 +139,7 @@ pub fn handle_capdu_event(apdu_buffer: &mut [u8], buffer: &[u8]) {
     }
 }
 
-pub fn handle_event(apdu_buffer: &mut [u8], spi_buffer: &[u8]) {
+pub fn handle_event(apdu_buffer: &mut [u8], spi_buffer: &mut [u8]) {
     let len = u16::from_be_bytes([spi_buffer[1], spi_buffer[2]]);
     match Events::from(spi_buffer[0]) {
         Events::USBEvent => {
