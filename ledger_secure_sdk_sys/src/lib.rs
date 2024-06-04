@@ -4,6 +4,7 @@
 #![allow(non_snake_case)]
 
 use core::ffi::c_void;
+#[cfg(feature = "heap")]
 use core::mem::MaybeUninit;
 
 pub mod buttons;
