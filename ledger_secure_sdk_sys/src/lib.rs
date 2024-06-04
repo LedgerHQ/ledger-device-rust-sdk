@@ -53,7 +53,7 @@ critical_section::set_impl!(CriticalSection);
 #[cfg(feature = "heap")]
 unsafe impl critical_section::Impl for CriticalSection {
     unsafe fn acquire() -> RawRestoreState {}
-    unsafe fn release(restore_state: RawRestoreState) {}
+    unsafe fn release(_restore_state: RawRestoreState) {}
 }
 
 /// Initializes the heap memory for the global allocator.
