@@ -21,7 +21,7 @@ jobs:
       image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
     strategy:
       matrix:
-        target: ["nanos", "nanox", "nanosplus"]
+        target: ["nanos", "nanox", "nanosplus", "stax", "flex"]
         package: [include_gif, testmacro, ledger_secure_sdk_sys, ledger_device_sdk]
     steps:
       - name: Print Environment variables
@@ -64,7 +64,7 @@ jobs:
       image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
     strategy:
       matrix:
-        target: ["nanos", "nanox", "nanosplus"]
+        target: ["nanos", "nanox", "nanosplus", "stax", "flex"]
     steps:
       - name: Clone
         uses: actions/checkout@v4
@@ -91,7 +91,7 @@ jobs:
       image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
     strategy:
       matrix:
-        target: ["nanos", "nanox", "nanosplus"]
+        target: ["nanos", "nanox", "nanosplus", "stax", "flex"]
     steps:
       - name: Force speculos update
         run: |
