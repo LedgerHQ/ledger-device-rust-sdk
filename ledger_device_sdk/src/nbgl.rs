@@ -583,8 +583,3 @@ extern "C" fn io_seproxyhal_play_tune(tune_index: u8) {
         return;
     }
 }
-
-#[panic_handler]
-fn panic(_: &core::panic::PanicInfo) -> ! {
-    exit_app(1);
-}
