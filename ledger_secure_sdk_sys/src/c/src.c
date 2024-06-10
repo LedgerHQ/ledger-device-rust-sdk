@@ -14,6 +14,7 @@
 #endif
 
 extern void sample_main();
+extern void heap_init();
 
 struct SectionSrc;
 struct SectionDst;
@@ -329,6 +330,7 @@ int c_main(void) {
         check_audited_app();
     #endif // !defined(HAVE_BOLOS) && defined(HAVE_PENDING_REVIEW_SCREEN)
 
+        heap_init();
         sample_main();
       }
       CATCH(EXCEPTION_IO_RESET) {

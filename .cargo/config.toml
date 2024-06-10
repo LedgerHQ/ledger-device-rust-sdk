@@ -8,10 +8,10 @@ runner = "speculos -m nanox --display=headless"
 runner = "speculos -m nanosp --display=headless"
 
 [target.stax]
-runner = "speculos --model stax"
+runner = "speculos --model stax --display=headless"
 
 [target.flex]
-runner = "speculos --model flex"
+runner = "speculos --model flex --display=headless"
 
 [unstable]
 build-std = ["core"]

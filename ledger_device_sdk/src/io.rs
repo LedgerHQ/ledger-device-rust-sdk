@@ -1,5 +1,6 @@
 #[cfg(target_os = "nanox")]
 use crate::ble;
+#[cfg(not(any(target_os = "stax", target_os = "flex")))]
 use ledger_secure_sdk_sys::buttons::{get_button_event, ButtonEvent, ButtonsState};
 use ledger_secure_sdk_sys::seph as sys_seph;
 use ledger_secure_sdk_sys::*;
@@ -104,6 +105,7 @@ pub struct Comm {
     pub rx: usize,
     pub tx: usize,
     pub event_pending: bool,
+    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     buttons: ButtonsState,
     /// Expected value for the APDU CLA byte.
     /// If defined, [`Comm`] will automatically reply with [`StatusWords::BadCla`] when an APDU
@@ -139,6 +141,7 @@ impl Comm {
             rx: 0,
             tx: 0,
             event_pending: false,
+            #[cfg(not(any(target_os = "stax", target_os = "flex")))]
             buttons: ButtonsState::new(),
             expected_cla: None,
         }
