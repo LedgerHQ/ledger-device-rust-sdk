@@ -13,7 +13,7 @@ jobs:
       image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
     strategy:
       matrix:
-        device: ["nanos", "nanox", "nanosplus", "stax", "flex"]
+        device: ["nanox", "nanosplus", "stax", "flex"]
     steps:
       - name: update nightly toolchain
         run: |
