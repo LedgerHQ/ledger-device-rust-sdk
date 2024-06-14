@@ -8,6 +8,10 @@ use core::ffi::c_char;
 use core::mem::transmute;
 use ledger_secure_sdk_sys::*;
 
+use alloc::boxed::Box;
+use alloc::ffi::CString;
+use alloc::vec::Vec;
+
 #[no_mangle]
 pub static mut G_ux_params: bolos_ux_params_t = unsafe { const_zero!(bolos_ux_params_t) };
 
@@ -63,6 +67,24 @@ impl<'a> NbglGlyph<'a> {
 }
 
 impl<'a> Into<nbgl_icon_details_t> for &NbglGlyph<'a> {
+    fn into(self) -> nbgl_icon_details_t {
+        let bpp = match self.bpp {
+            1 => NBGL_BPP_1,
+            2 => NBGL_BPP_2,
+            4 => NBGL_BPP_4,
+            _ => panic!("Invalid bpp"),
+        };
+        nbgl_icon_details_t {
+            width: self.width,
+            height: self.height,
+            bpp,
+            isFile: self.is_file,
+            bitmap: self.bitmap.as_ptr() as *const u8,
+        }
+    }
+}
+
+impl<'a> Into<nbgl_icon_details_t> for NbglGlyph<'a> {
     fn into(self) -> nbgl_icon_details_t {
         let bpp = match self.bpp {
             1 => NBGL_BPP_1,
@@ -372,6 +394,562 @@ impl<'a> NbglReview<'a> {
     }
 }
 
+pub enum CenteredInfoStyle {
+    LargeCaseInfo = 0,
+    LargeCaseBoldInfo,
+    NormalInfo,
+    PluginInfo,
+}
+
+impl From<CenteredInfoStyle> for nbgl_contentCenteredInfoStyle_t {
+    fn from(style: CenteredInfoStyle) -> nbgl_contentCenteredInfoStyle_t {
+        match style {
+            CenteredInfoStyle::LargeCaseInfo => LARGE_CASE_INFO,
+            CenteredInfoStyle::LargeCaseBoldInfo => LARGE_CASE_BOLD_INFO,
+            CenteredInfoStyle::NormalInfo => NORMAL_INFO,
+            CenteredInfoStyle::PluginInfo => PLUGIN_INFO,
+        }
+    }
+}
+
+/// Structure exposed by the NBGL Rust API to the user to create a
+/// centered info screen that will be displayed on the device
+/// when using the NbglGenericReview struct.
+pub struct CenteredInfo<'a> {
+    pub text1: &'a str,
+    pub text2: &'a str,
+    pub text3: &'a str,
+    pub icon: Option<&'a NbglGlyph<'a>>,
+    pub on_top: bool,
+    pub style: CenteredInfoStyle,
+    pub offset_y: i16,
+}
+
+/// Wrapper around the nbgl_contentCenteredInfo_t struct
+/// that contains the necessary variables used as pointers
+/// in the C struct.
+/// The variables are heap allocated and stored
+/// in the wrapper to ensure they live long enough.
+#[allow(dead_code)]
+struct CenteredInfoWrapper {
+    c_struct: nbgl_contentCenteredInfo_t,
+    text1: CString,
+    text2: CString,
+    text3: CString,
+    icon: Option<Box<nbgl_icon_details_t>>,
+    content_type: nbgl_contentType_t,
+    action_callback: nbgl_contentActionCallback_t,
+}
+
+impl CenteredInfoWrapper {
+    pub fn get_c_struct_ref(&self) -> &nbgl_contentCenteredInfo_t {
+        &self.c_struct
+    }
+}
+
+impl<'a> From<CenteredInfo<'a>> for CenteredInfoWrapper {
+    fn from(info: CenteredInfo) -> Self {
+        // Create heap allocated variables that will live long
+        // enough in the wrapper to be used in the C struct when
+        // passed to the C API.
+        let text1 = CString::new(info.text1).unwrap();
+        let text2 = CString::new(info.text2).unwrap();
+        let text3 = CString::new(info.text3).unwrap();
+        let mut icon_ptr: *const nbgl_icon_details_t = core::ptr::null();
+        let mut icon_boxed: Option<Box<nbgl_icon_details_t>> = None;
+        if info.icon.is_some() {
+            icon_boxed = Some(Box::new(info.icon.unwrap().into()));
+            icon_ptr = icon_boxed.as_ref().unwrap().as_ref();
+        };
+        CenteredInfoWrapper {
+            c_struct: nbgl_contentCenteredInfo_t {
+                text1: text1.as_ptr() as *const c_char,
+                text2: text2.as_ptr() as *const c_char,
+                text3: text3.as_ptr() as *const c_char,
+                icon: icon_ptr,
+                onTop: info.on_top,
+                style: info.style.into(),
+                offsetY: info.offset_y,
+            },
+            text1: text1,
+            text2: text2,
+            text3: text3,
+            icon: icon_boxed,
+            content_type: CENTERED_INFO,
+            action_callback: None,
+        }
+    }
+}
+
+/// Structure exposed by the NBGL Rust API to the user to create a
+/// "long press" button to confirm some information that will be displayed
+/// on the device when using the NbglGenericReview struct.
+pub struct InfoLongPress<'a> {
+    pub text: &'a str,
+    pub icon: Option<&'a NbglGlyph<'a>>,
+    pub long_press_text: &'a str,
+    pub tune_id: TuneIndex,
+}
+
+/// Wrapper around the nbgl_contentInfoLongPress_t struct
+/// that contains the necessary variables used as pointers
+/// in the C struct.
+/// The variables are heap allocated and stored
+/// in the wrapper to ensure they live long enough.
+#[allow(dead_code)]
+struct InfoLongPressWrapper {
+    c_struct: nbgl_contentInfoLongPress_t,
+    text: CString,
+    long_press_text: CString,
+    icon: Option<Box<nbgl_icon_details_t>>,
+    content_type: nbgl_contentType_t,
+    action_callback: nbgl_contentActionCallback_t,
+}
+
+impl InfoLongPressWrapper {
+    // Get a reference to the internal nbgl_contentInfoLongPress_t struct
+    pub fn get_c_struct_ref(&self) -> &nbgl_contentInfoLongPress_t {
+        &self.c_struct
+    }
+}
+
+impl<'a> From<InfoLongPress<'a>> for InfoLongPressWrapper {
+    fn from(info: InfoLongPress) -> Self {
+        // Create heap allocated variables that will live long
+        // enough in the wrapper to be used in the C struct when
+        // passed to the C API.
+        let text = CString::new(info.text).unwrap();
+        let long_press_text = CString::new(info.long_press_text).unwrap();
+        let mut icon_ptr: *const nbgl_icon_details_t = core::ptr::null();
+        let mut icon_boxed: Option<Box<nbgl_icon_details_t>> = None;
+        if info.icon.is_some() {
+            icon_boxed = Some(Box::new(info.icon.unwrap().into()));
+            icon_ptr = icon_boxed.as_ref().unwrap().as_ref();
+        };
+        InfoLongPressWrapper {
+            c_struct: nbgl_contentInfoLongPress_t {
+                text: text.as_ptr() as *const c_char,
+                icon: icon_ptr,
+                longPressText: long_press_text.as_ptr() as *const c_char,
+                longPressToken: FIRST_USER_TOKEN as u8,
+                tuneId: info.tune_id as u8,
+            },
+            text: text,
+            long_press_text: long_press_text,
+            icon: icon_boxed,
+            content_type: INFO_LONG_PRESS,
+            action_callback: Some(generic_content_action_callback),
+        }
+    }
+}
+
+/// Structure exposed by the NBGL Rust API to the user to create a
+/// button to confirm some information that will be displayed
+/// on the device when using the NbglGenericReview struct.
+pub struct InfoButton<'a> {
+    pub text: &'a str,
+    pub icon: Option<&'a NbglGlyph<'a>>,
+    pub button_text: &'a str,
+    pub tune_id: TuneIndex,
+}
+
+/// Wrapper around the nbgl_contentInfoButton_t struct
+/// that contains the necessary variables used as pointers
+/// in the C struct.
+/// The variables are heap allocated and stored
+/// in the wrapper to ensure they live long enough.
+#[allow(dead_code)]
+struct InfoButtonWrapper {
+    c_struct: nbgl_contentInfoButton_t,
+    text: CString,
+    button_text: CString,
+    icon: Option<Box<nbgl_icon_details_t>>,
+    content_type: nbgl_contentType_t,
+    action_callback: nbgl_contentActionCallback_t,
+}
+
+impl InfoButtonWrapper {
+    // Get a reference to the internal nbgl_contentInfoButton_t struct
+    pub fn get_c_struct_ref(&self) -> &nbgl_contentInfoButton_t {
+        &self.c_struct
+    }
+}
+
+impl<'a> From<InfoButton<'a>> for InfoButtonWrapper {
+    fn from(info: InfoButton) -> Self {
+        // Create heap allocated variables that will live long
+        // enough in the wrapper to be used in the C struct when
+        // passed to the C API.
+        let text = CString::new(info.text).unwrap();
+        let button_text = CString::new(info.button_text).unwrap();
+        let mut icon_ptr: *const nbgl_icon_details_t = core::ptr::null();
+        let mut icon_boxed: Option<Box<nbgl_icon_details_t>> = None;
+        if info.icon.is_some() {
+            icon_boxed = Some(Box::new(info.icon.unwrap().into()));
+            icon_ptr = icon_boxed.as_ref().unwrap().as_ref();
+        };
+        InfoButtonWrapper {
+            c_struct: nbgl_contentInfoButton_t {
+                text: text.as_ptr() as *const c_char,
+                icon: icon_ptr,
+                buttonText: button_text.as_ptr() as *const c_char,
+                buttonToken: FIRST_USER_TOKEN as u8,
+                tuneId: info.tune_id as u8,
+            },
+            text: text,
+            button_text: button_text,
+            icon: icon_boxed,
+            content_type: INFO_BUTTON,
+            action_callback: Some(generic_content_action_callback),
+        }
+    }
+}
+
+/// Structure exposed by the NBGL Rust API to the user to create a
+/// tag/value list screen that will be displayed on the device when
+/// using the NbglGenericReview struct.
+pub struct TagValueList<'a> {
+    pub pairs: &'a [Field<'a>],
+    pub nb_max_lines_for_value: u8,
+    pub small_case_for_value: bool,
+    pub wrapping: bool,
+}
+
+/// Wrapper around the nbgl_contentTagValueList_t struct
+/// that contains the necessary variables used as pointers
+/// in the C struct.
+/// The variables are heap allocated and stored
+/// in the wrapper to ensure they live long enough.
+#[allow(dead_code)]
+struct TagValueListWrapper {
+    c_struct: nbgl_contentTagValueList_t,
+    pairs: Vec<nbgl_contentTagValue_t>,
+    items: Vec<CString>,
+    values: Vec<CString>,
+    content_type: nbgl_contentType_t,
+    action_callback: nbgl_contentActionCallback_t,
+}
+
+impl TagValueListWrapper {
+    // Get a reference to the internal nbgl_contentTagValueList_t struct
+    pub fn get_c_struct_ref(&self) -> &nbgl_contentTagValueList_t {
+        &self.c_struct
+    }
+}
+
+impl<'a> From<TagValueList<'a>> for TagValueListWrapper {
+    fn from(list: TagValueList) -> Self {
+        // Create heap allocated variables that will live long
+        // enough in the wrapper to be used in the C struct when
+        // passed to the C API.
+        let mut c_field_strings: Vec<nbgl_contentTagValue_t> = Vec::new();
+        let mut c_field_names: Vec<CString> = Vec::new();
+        let mut c_field_values: Vec<CString> = Vec::new();
+        for field in list.pairs {
+            let name = CString::new(field.name).unwrap();
+            let value = CString::new(field.value).unwrap();
+            c_field_strings.push(nbgl_contentTagValue_t {
+                item: name.as_ptr() as *const c_char,
+                value: value.as_ptr() as *const c_char,
+                valueIcon: core::ptr::null() as *const nbgl_icon_details_t,
+                _bitfield_align_1: [0; 0],
+                _bitfield_1: __BindgenBitfieldUnit::new([0; 1usize]),
+                __bindgen_padding_0: [0; 3usize],
+            });
+            c_field_names.push(name);
+            c_field_values.push(value);
+        }
+        TagValueListWrapper {
+            c_struct: nbgl_contentTagValueList_t {
+                pairs: c_field_strings.as_ptr() as *const nbgl_contentTagValue_t,
+                callback: None,
+                nbPairs: c_field_strings.len() as u8,
+                startIndex: 0,
+                nbMaxLinesForValue: list.nb_max_lines_for_value,
+                token: FIRST_USER_TOKEN as u8,
+                smallCaseForValue: list.small_case_for_value,
+                wrapping: list.wrapping,
+            },
+            pairs: c_field_strings,
+            items: c_field_names,
+            values: c_field_values,
+            content_type: TAG_VALUE_LIST,
+            action_callback: None,
+        }
+    }
+}
+
+/// Structure exposed by the NBGL Rust API to the user to create a
+/// list of tag-value pairs and confirmation button that will be displayed
+/// on the device when using the NbglGenericReview struct.
+pub struct TagValueConfirm<'a> {
+    pub tag_value_list: TagValueList<'a>,
+    pub tune_id: TuneIndex,
+    pub confirmation_text: &'a str,
+    pub cancel_text: &'a str,
+}
+
+/// Wrapper around the nbgl_contentTagValueConfirm_t struct
+/// that contains the necessary variables used as pointers
+/// in the C struct.
+/// The variables are heap allocated and stored
+/// in the wrapper to ensure they live long enough.
+#[allow(dead_code)]
+struct TagValueConfirmWrapper {
+    c_struct: nbgl_contentTagValueConfirm_t,
+    tag_value_list: Box<TagValueListWrapper>,
+    confirmation_text: CString,
+    cancel_text: CString,
+    content_type: nbgl_contentType_t,
+    action_callback: nbgl_contentActionCallback_t,
+}
+
+impl TagValueConfirmWrapper {
+    // Get a reference to the internal nbgl_contentTagValueConfirm_t struct
+    pub fn get_c_struct_ref(&self) -> &nbgl_contentTagValueConfirm_t {
+        &self.c_struct
+    }
+}
+
+impl<'a> From<TagValueConfirm<'a>> for TagValueConfirmWrapper {
+    fn from(confirm: TagValueConfirm) -> Self {
+        // Create heap allocated variables that will live long
+        // enough in the wrapper to be used in the C struct when
+        // passed to the C API.
+        let tag_value_list_box = Box::new(TagValueListWrapper::from(confirm.tag_value_list));
+        let confirmation_text = CString::new(confirm.confirmation_text).unwrap();
+        let cancel_text = CString::new(confirm.cancel_text).unwrap();
+        TagValueConfirmWrapper {
+            c_struct: nbgl_contentTagValueConfirm_t {
+                tagValueList: *tag_value_list_box.get_c_struct_ref(),
+                detailsButtonIcon: core::ptr::null(),
+                detailsButtonText: core::ptr::null(),
+                detailsButtonToken: (FIRST_USER_TOKEN + 2) as u8,
+                tuneId: confirm.tune_id as u8,
+                confirmationText: confirmation_text.as_ptr() as *const c_char,
+                cancelText: cancel_text.as_ptr() as *const c_char,
+                confirmationToken: FIRST_USER_TOKEN as u8,
+                cancelToken: (FIRST_USER_TOKEN + 1) as u8,
+            },
+            tag_value_list: tag_value_list_box,
+            confirmation_text: confirmation_text,
+            cancel_text: cancel_text,
+            content_type: TAG_VALUE_CONFIRM,
+            action_callback: Some(generic_content_action_callback),
+        }
+    }
+}
+
+/// Structure exposed by the NBGL Rust API to the user to create a
+/// list of information fields that will be displayed on the device
+/// when using the NbglGenericReview struct.
+pub struct InfosList<'a> {
+    pub infos: &'a [Field<'a>],
+}
+
+/// Wrapper around the nbgl_contentInfoList_t struct
+/// that contains the necessary variables used as pointers
+/// in the C struct.
+/// The variables are heap allocated and stored
+/// in the wrapper to ensure they live long enough.
+#[allow(dead_code)]
+struct InfosListWrapper {
+    c_struct: nbgl_contentInfoList_t,
+    info_types: Vec<CString>,
+    info_contents: Vec<CString>,
+    content_type: nbgl_contentType_t,
+    action_callback: nbgl_contentActionCallback_t,
+}
+
+impl InfosListWrapper {
+    pub fn get_c_struct_ref(&self) -> &nbgl_contentInfoList_t {
+        &self.c_struct
+    }
+}
+
+impl<'a> From<InfosList<'a>> for InfosListWrapper {
+    fn from(infos: InfosList) -> Self {
+        // Create heap allocated variables that will live long
+        // enough in the wrapper to be used in the C struct when
+        // passed to the C API.
+        let info_types: Vec<CString> = infos
+            .infos
+            .iter()
+            .map(|field| CString::new(field.name).unwrap())
+            .collect();
+        let info_contents: Vec<CString> = infos
+            .infos
+            .iter()
+            .map(|field| CString::new(field.value).unwrap())
+            .collect();
+        InfosListWrapper {
+            c_struct: nbgl_contentInfoList_t {
+                infoTypes: info_types.as_ptr() as *const *const c_char,
+                infoContents: info_contents.as_ptr() as *const *const c_char,
+                nbInfos: infos.infos.len() as u8,
+            },
+            info_types: info_types,
+            info_contents: info_contents,
+            content_type: INFOS_LIST,
+            action_callback: None,
+        }
+    }
+}
+
+/// Represents the different types of content that can be displayed
+/// on the device when using the NbglGenericReview add_content method.
+pub enum NbglPageContent<'a> {
+    CenteredInfo(CenteredInfo<'a>),
+    InfoLongPress(InfoLongPress<'a>),
+    InfoButton(InfoButton<'a>),
+    TagValueList(TagValueList<'a>),
+    TagValueConfirm(TagValueConfirm<'a>),
+    InfosList(InfosList<'a>),
+}
+
+enum NbglWrapper {
+    CenteredInfo(CenteredInfoWrapper),
+    InfoLongPress(InfoLongPressWrapper),
+    InfoButton(InfoButtonWrapper),
+    TagValueList(TagValueListWrapper),
+    TagValueConfirm(TagValueConfirmWrapper),
+    InfosList(InfosListWrapper),
+}
+
+impl<'a> From<NbglPageContent<'a>> for NbglWrapper {
+    fn from(content: NbglPageContent) -> NbglWrapper {
+        match content {
+            NbglPageContent::CenteredInfo(data) => NbglWrapper::CenteredInfo(data.into()),
+            NbglPageContent::InfoLongPress(data) => NbglWrapper::InfoLongPress(data.into()),
+            NbglPageContent::InfoButton(data) => NbglWrapper::InfoButton(data.into()),
+            NbglPageContent::TagValueList(data) => NbglWrapper::TagValueList(data.into()),
+            NbglPageContent::TagValueConfirm(data) => NbglWrapper::TagValueConfirm(data.into()),
+            NbglPageContent::InfosList(data) => NbglWrapper::InfosList(data.into()),
+        }
+    }
+}
+
+pub struct NbglGenericReview {
+    content_list: Vec<NbglWrapper>,
+}
+
+impl NbglGenericReview {
+    pub fn new() -> NbglGenericReview {
+        NbglGenericReview {
+            content_list: Vec::new(),
+        }
+    }
+
+    pub fn add_content(mut self, content: NbglPageContent) -> NbglGenericReview {
+        self.content_list.push(content.into());
+        self
+    }
+
+    fn to_c_content_list(&self) -> Vec<nbgl_content_t> {
+        let mut c_content_list: Vec<nbgl_content_t> = Vec::new();
+        for content in self.content_list.iter() {
+            match content {
+                NbglWrapper::CenteredInfo(data) => {
+                    c_content_list.push(nbgl_content_t {
+                        content: nbgl_content_u {
+                            centeredInfo: *data.get_c_struct_ref(),
+                        },
+                        contentActionCallback: data.action_callback,
+                        type_: data.content_type,
+                    });
+                }
+                NbglWrapper::InfoLongPress(data) => {
+                    c_content_list.push(nbgl_content_t {
+                        content: nbgl_content_u {
+                            infoLongPress: *data.get_c_struct_ref(),
+                        },
+                        contentActionCallback: data.action_callback,
+                        type_: data.content_type,
+                    });
+                }
+                NbglWrapper::InfoButton(data) => {
+                    c_content_list.push(nbgl_content_t {
+                        content: nbgl_content_u {
+                            infoButton: *data.get_c_struct_ref(),
+                        },
+                        contentActionCallback: data.action_callback,
+                        type_: data.content_type,
+                    });
+                }
+                NbglWrapper::TagValueList(data) => {
+                    c_content_list.push(nbgl_content_t {
+                        content: nbgl_content_u {
+                            tagValueList: *data.get_c_struct_ref(),
+                        },
+                        contentActionCallback: data.action_callback,
+                        type_: data.content_type,
+                    });
+                }
+                NbglWrapper::TagValueConfirm(data) => {
+                    c_content_list.push(nbgl_content_t {
+                        content: nbgl_content_u {
+                            tagValueConfirm: *data.get_c_struct_ref(),
+                        },
+                        contentActionCallback: data.action_callback,
+                        type_: data.content_type,
+                    });
+                }
+                NbglWrapper::InfosList(data) => {
+                    c_content_list.push(nbgl_content_t {
+                        content: nbgl_content_u {
+                            infosList: *data.get_c_struct_ref(),
+                        },
+                        contentActionCallback: data.action_callback,
+                        type_: data.content_type,
+                    });
+                }
+            }
+        }
+        c_content_list
+    }
+
+    pub fn show(&mut self, reject_button_str: &str, succeed_str: &str, rejected_str: &str) -> bool {
+        unsafe {
+            let c_content_list: Vec<nbgl_content_t> = self.to_c_content_list();
+
+            let content_struct = nbgl_genericContents_t {
+                callbackCallNeeded: false,
+                __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
+                    contentsList: c_content_list.as_ptr() as *const nbgl_content_t,
+                },
+                nbContents: self.content_list.len() as u8,
+            };
+
+            let reject_button_cstring = CString::new(reject_button_str).unwrap();
+            let succeed_cstring = CString::new(succeed_str).unwrap();
+            let rejected_cstring = CString::new(rejected_str).unwrap();
+
+            let sync_ret = ux_sync_genericReview(
+                &content_struct as *const nbgl_genericContents_t,
+                reject_button_cstring.as_ptr() as *const c_char,
+            );
+
+            // Return true if the user approved the transaction, false otherwise.
+            match sync_ret {
+                ledger_secure_sdk_sys::UX_SYNC_RET_APPROVED => {
+                    ledger_secure_sdk_sys::ux_sync_status(
+                        succeed_cstring.as_ptr() as *const c_char,
+                        true,
+                    );
+                    return true;
+                }
+                _ => {
+                    ledger_secure_sdk_sys::ux_sync_status(
+                        rejected_cstring.as_ptr() as *const c_char,
+                        false,
+                    );
+                    return false;
+                }
+            }
+        }
+    }
+}
+
 /// A wrapper around the synchronous NBGL ux_sync_addressReview C API binding.
 /// Used to display address confirmation screens.
 pub struct NbglAddressReview<'a> {
@@ -437,7 +1015,8 @@ impl<'a> NbglAddressReview<'a> {
     }
 }
 
-enum TuneIndex {
+#[derive(Copy, Clone)]
+pub enum TuneIndex {
     Reserved,
     Boot,
     Charging,
