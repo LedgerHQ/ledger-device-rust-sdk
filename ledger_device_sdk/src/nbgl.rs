@@ -127,7 +127,7 @@ const INFO_FIELDS: [*const c_char; 2] = [
 pub struct NbglHomeAndSettings<'a> {
     glyph: Option<&'a NbglGlyph<'a>>,
     // app_name, version, author
-    info_contents: [*const c_char; 3],
+    info_contents: [&'a CStr; 3],
     nb_settings: u8,
 }
 
@@ -136,15 +136,9 @@ impl<'a> NbglHomeAndSettings<'a> {
         NbglHomeAndSettings {
             glyph: None,
             info_contents: [
-                CStr::from_bytes_until_nul("\0".as_bytes())
-                    .unwrap()
-                    .as_ptr(),
-                CStr::from_bytes_until_nul("\0".as_bytes())
-                    .unwrap()
-                    .as_ptr(),
-                CStr::from_bytes_until_nul("\0".as_bytes())
-                    .unwrap()
-                    .as_ptr(),
+                CStr::from_bytes_until_nul("\0".as_bytes()).unwrap(),
+                CStr::from_bytes_until_nul("\0".as_bytes()).unwrap(),
+                CStr::from_bytes_until_nul("\0".as_bytes()).unwrap(),
             ],
             nb_settings: 0,
         }
@@ -164,7 +158,7 @@ impl<'a> NbglHomeAndSettings<'a> {
         author: &'a CStr,
     ) -> NbglHomeAndSettings<'a> {
         NbglHomeAndSettings {
-            info_contents: [app_name.as_ptr(), version.as_ptr(), author.as_ptr()],
+            info_contents: [app_name, version, author],
             ..self
         }
     }
@@ -204,9 +198,15 @@ impl<'a> NbglHomeAndSettings<'a> {
     {
         unsafe {
             loop {
+                let info_contents: [*const c_char; 3] = [
+                    self.info_contents[0].as_ptr(),
+                    self.info_contents[1].as_ptr(),
+                    self.info_contents[2].as_ptr(),
+                ];
+
                 let info_list: nbgl_contentInfoList_t = nbgl_contentInfoList_t {
                     infoTypes: INFO_FIELDS.as_ptr() as *const *const c_char,
-                    infoContents: self.info_contents[1..].as_ptr() as *const *const c_char,
+                    infoContents: info_contents[1..].as_ptr() as *const *const c_char,
                     nbInfos: INFO_FIELDS.len() as u8,
                 };
 
@@ -248,7 +248,7 @@ impl<'a> NbglHomeAndSettings<'a> {
                 }
 
                 match ledger_secure_sdk_sys::ux_sync_homeAndSettings(
-                    self.info_contents[0],
+                    info_contents[0],
                     &icon as *const nbgl_icon_details_t,
                     core::ptr::null(),
                     INIT_HOME_PAGE as u8,
