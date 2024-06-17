@@ -180,10 +180,7 @@ pub struct NbglHomeAndSettings<'a> {
     glyph: Option<&'a NbglGlyph<'a>>,
     // app_name, version, author
     info_contents: [*const c_char; 3],
-    settings_contents: nbgl_content_t,
     nb_settings: u8,
-    generic_contents: nbgl_genericContents_t,
-    c_string_helper: CStringHelper<128>,
 }
 
 impl<'a> NbglHomeAndSettings<'a> {
@@ -191,25 +188,16 @@ impl<'a> NbglHomeAndSettings<'a> {
         NbglHomeAndSettings {
             glyph: None,
             info_contents: [
-                CStr::from_bytes_until_nul("Rust App\0".as_bytes())
+                CStr::from_bytes_until_nul("\0".as_bytes())
                     .unwrap()
                     .as_ptr(),
-                CStr::from_bytes_until_nul("0.0.0\0".as_bytes())
+                CStr::from_bytes_until_nul("\0".as_bytes())
                     .unwrap()
                     .as_ptr(),
-                CStr::from_bytes_until_nul("Ledger\0".as_bytes())
+                CStr::from_bytes_until_nul("\0".as_bytes())
                     .unwrap()
                     .as_ptr(),
             ],
-            c_string_helper: CStringHelper::<128>::new(),
-            settings_contents: nbgl_content_t::default(),
-            generic_contents: nbgl_genericContents_t {
-                callbackCallNeeded: false,
-                __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
-                    contentsList: core::ptr::null(),
-                },
-                nbContents: 0,
-            },
             nb_settings: 0,
         }
     }
@@ -223,16 +211,12 @@ impl<'a> NbglHomeAndSettings<'a> {
 
     pub fn infos(
         self,
-        app_name: &'a str,
-        version: &'a str,
-        author: &'a str,
+        app_name: &'a CStr,
+        version: &'a CStr,
+        author: &'a CStr,
     ) -> NbglHomeAndSettings<'a> {
         NbglHomeAndSettings {
-            info_contents: [
-                self.c_string_helper.to_cstring(app_name).unwrap().as_ptr() as *const c_char,
-                self.c_string_helper.to_cstring(version).unwrap().as_ptr() as *const c_char,
-                self.c_string_helper.to_cstring(author).unwrap().as_ptr() as *const c_char,
-            ],
+            info_contents: [app_name.as_ptr(), version.as_ptr(), author.as_ptr()],
             ..self
         }
     }
@@ -240,7 +224,7 @@ impl<'a> NbglHomeAndSettings<'a> {
     pub fn settings(
         self,
         nvm_data: &'a mut AtomicStorage<[u8; SETTINGS_SIZE]>,
-        settings_strings: &[[&str; 2]],
+        settings_strings: &[[&'a CStr; 2]],
     ) -> NbglHomeAndSettings<'a> {
         unsafe {
             NVM_REF = Some(transmute(nvm_data));
@@ -252,16 +236,8 @@ impl<'a> NbglHomeAndSettings<'a> {
 
         unsafe {
             for (i, setting) in settings_strings.iter().enumerate() {
-                SWITCH_ARRAY[i].text = self
-                    .c_string_helper
-                    .to_cstring(setting[0])
-                    .unwrap()
-                    .as_ptr() as *const c_char;
-                SWITCH_ARRAY[i].subText = self
-                    .c_string_helper
-                    .to_cstring(setting[1])
-                    .unwrap()
-                    .as_ptr() as *const c_char;
+                SWITCH_ARRAY[i].text = setting[0].as_ptr();
+                SWITCH_ARRAY[i].subText = setting[1].as_ptr();
                 SWITCH_ARRAY[i].initState = NVM_REF.as_mut().unwrap().get_ref()[i] as nbgl_state_t;
                 SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
                 SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
@@ -279,30 +255,6 @@ impl<'a> NbglHomeAndSettings<'a> {
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
         unsafe {
-            if NVM_REF.is_some() {
-                self.settings_contents = nbgl_content_t {
-                    content: nbgl_content_u {
-                        switchesList: nbgl_pageSwitchesList_s {
-                            switches: &SWITCH_ARRAY as *const nbgl_contentSwitch_t,
-                            nbSwitches: self.nb_settings,
-                        },
-                    },
-                    contentActionCallback: transmute(
-                        (|token, index, page| settings_callback(token, index, page))
-                            as fn(::core::ffi::c_int, u8, ::core::ffi::c_int),
-                    ),
-                    type_: SWITCHES_LIST,
-                };
-
-                self.generic_contents = nbgl_genericContents_t {
-                    callbackCallNeeded: false,
-                    __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
-                        contentsList: &self.settings_contents as *const nbgl_content_t,
-                    },
-                    nbContents: 1,
-                };
-            }
-
             loop {
                 let info_list: nbgl_contentInfoList_t = nbgl_contentInfoList_t {
                     infoTypes: INFO_FIELDS.as_ptr() as *const *const c_char,
@@ -314,12 +266,40 @@ impl<'a> NbglHomeAndSettings<'a> {
                 } else {
                     core::ptr::null()
                 };
+
+                let mut content: nbgl_content_t = nbgl_content_t::default();
+                let mut generic_contents: nbgl_genericContents_t =
+                    nbgl_genericContents_t::default();
+                if NVM_REF.is_some() {
+                    content = nbgl_content_t {
+                        content: nbgl_content_u {
+                            switchesList: nbgl_pageSwitchesList_s {
+                                switches: &SWITCH_ARRAY as *const nbgl_contentSwitch_t,
+                                nbSwitches: self.nb_settings,
+                            },
+                        },
+                        contentActionCallback: transmute(
+                            (|token, index, page| settings_callback(token, index, page))
+                                as fn(::core::ffi::c_int, u8, ::core::ffi::c_int),
+                        ),
+                        type_: SWITCHES_LIST,
+                    };
+
+                    generic_contents = nbgl_genericContents_t {
+                        callbackCallNeeded: false,
+                        __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
+                            contentsList: &content as *const nbgl_content_t,
+                        },
+                        nbContents: 1,
+                    };
+                }
+
                 match ledger_secure_sdk_sys::ux_sync_homeAndSettings(
                     self.info_contents[0],
                     icon,
                     core::ptr::null(),
                     INIT_HOME_PAGE as u8,
-                    &self.generic_contents as *const nbgl_genericContents_t,
+                    &generic_contents as *const nbgl_genericContents_t,
                     &info_list as *const nbgl_contentInfoList_t,
                     core::ptr::null(),
                 ) {
