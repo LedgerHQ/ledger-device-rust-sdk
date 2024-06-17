@@ -1,7 +1,6 @@
 use crate::io::{ApduHeader, Comm, Event, Reply};
 use crate::nvm::*;
 use const_zero::const_zero;
-use core::cell::RefCell;
 use core::ffi::{c_char, CStr};
 use core::mem::transmute;
 use ledger_secure_sdk_sys::*;
@@ -97,57 +96,6 @@ pub extern "C" fn io_recv_and_process_event() -> bool {
         }
     }
     false
-}
-
-/// Helper struct that converts strings to null-terminated c strings.
-/// It uses an internal buffer to store the strings, with a maximum size of SIZE.
-struct CStringHelper<const SIZE: usize = 64> {
-    /// Internal buffer where strings are allocated.
-    /// Stored in a [RefCell] because we want [CStringHelper::to_cstring] to be non-mutable.
-    pub buffer: RefCell<[u8; SIZE]>,
-    /// Index of the next string in the internal buffer.
-    /// Stored in a [RefCell] because we want [CStringHelper::to_cstring] to be non-mutable.
-    next: RefCell<usize>,
-}
-
-impl<const SIZE: usize> CStringHelper<SIZE> {
-    pub fn new() -> Self {
-        Self {
-            buffer: RefCell::new([0u8; SIZE]),
-            next: RefCell::new(0),
-        }
-    }
-
-    pub fn flush(&self) {
-        *self.next.borrow_mut() = 0; // Reset the next index to 0
-    }
-
-    pub fn to_cstring<'a>(&'a self, s: &str) -> Result<&'a CStr, ()> {
-        let size = s.len();
-        let mut buffer = self.buffer.borrow_mut();
-        let next: usize = *self.next.borrow();
-        // Verify there is enough space in the internal buffer.
-        // +1 for the null byte
-        if size + next + 1 > buffer.len() {
-            // Not enough space remaining in the internal buffer.
-            return Err(());
-        }
-        // Verify that the input string does not have null bytes already.
-        if s.bytes().find(|c| *c == 0).is_some() {
-            return Err(());
-        }
-
-        // Copy the input string to the internal buffer, and add null byte.
-        buffer[next..next + size].copy_from_slice(s.as_bytes());
-        buffer[next + size] = 0;
-        let start = next;
-        *self.next.borrow_mut() += size + 1;
-
-        let buffer = self.buffer.as_ptr();
-        let slice = unsafe { &(*buffer)[start..start + size + 1] };
-        let cstr = unsafe { CStr::from_bytes_with_nul_unchecked(slice) };
-        Ok(cstr)
-    }
 }
 
 /// Callback triggered by the NBGL API when a setting switch is toggled.
@@ -429,13 +377,13 @@ impl<'a, const MAX_FIELD_NUMBER: usize> NbglReview<'a, MAX_FIELD_NUMBER> {
 /// Used to display address confirmation screens.
 pub struct NbglAddressReview<'a> {
     glyph: Option<&'a NbglGlyph<'a>>,
-    verify_str: &'a str,
+    verify_str: &'a CStr,
 }
 
 impl<'a> NbglAddressReview<'a> {
     pub fn new() -> NbglAddressReview<'a> {
         NbglAddressReview {
-            verify_str: "Verify address",
+            verify_str: CStr::from_bytes_until_nul("\0".as_bytes()).unwrap(),
             glyph: None,
         }
     }
@@ -447,29 +395,23 @@ impl<'a> NbglAddressReview<'a> {
         }
     }
 
-    pub fn verify_str(self, verify_str: &'a str) -> NbglAddressReview<'a> {
+    pub fn verify_str(self, verify_str: &'a CStr) -> NbglAddressReview<'a> {
         NbglAddressReview { verify_str, ..self }
     }
 
-    pub fn show(&mut self, address: &str) -> bool {
+    pub fn show(&mut self, address: &CStr) -> bool {
         unsafe {
-            // Create CStringHelper instance and convert the address and verify_str into c strings.
-            let c_string_helper = CStringHelper::<128>::new();
-            let c_addr_str = c_string_helper.to_cstring(address).unwrap();
-            let c_verif_str = c_string_helper.to_cstring(self.verify_str).unwrap();
-
-            let icon = if self.glyph.is_some() {
-                &self.glyph.unwrap().into() as *const nbgl_icon_details_t
-            } else {
-                core::ptr::null()
+            let icon: nbgl_icon_details_t = match self.glyph {
+                Some(g) => g.into(),
+                None => nbgl_icon_details_t::default(),
             };
 
             // Show the address confirmation on the device.
             let sync_ret = ux_sync_addressReview(
-                c_addr_str.as_ptr() as *const c_char,
+                address.as_ptr(),
                 core::ptr::null(),
-                icon,
-                c_verif_str.as_ptr() as *const c_char,
+                &icon as *const nbgl_icon_details_t,
+                self.verify_str.as_ptr(),
                 core::ptr::null(),
             );
 
