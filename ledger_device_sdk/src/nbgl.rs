@@ -216,8 +216,13 @@ impl<'a> NbglHomeAndSettings<'a> {
                 };
 
                 let mut content: nbgl_content_t = nbgl_content_t::default();
-                let mut generic_contents: nbgl_genericContents_t =
-                    nbgl_genericContents_t::default();
+                let mut generic_contents = nbgl_genericContents_t {
+                    callbackCallNeeded: false,
+                    __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
+                        contentsList: &content as *const nbgl_content_t,
+                    },
+                    nbContents: 0,
+                };
                 if NVM_REF.is_some() {
                     content = nbgl_content_t {
                         content: nbgl_content_u {
