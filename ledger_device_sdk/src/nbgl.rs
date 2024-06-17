@@ -16,8 +16,8 @@ static mut SWITCH_ARRAY: [nbgl_contentSwitch_t; SETTINGS_SIZE] =
     [unsafe { const_zero!(nbgl_contentSwitch_t) }; SETTINGS_SIZE];
 
 pub struct Field<'a> {
-    pub name: &'a str,
-    pub value: &'a str,
+    pub name: &'a CStr,
+    pub value: &'a CStr,
 }
 
 pub struct NbglGlyph<'a> {
@@ -261,10 +261,10 @@ impl<'a> NbglHomeAndSettings<'a> {
                     infoContents: self.info_contents[1..].as_ptr() as *const *const c_char,
                     nbInfos: INFO_FIELDS.len() as u8,
                 };
-                let icon = if self.glyph.is_some() {
-                    &self.glyph.unwrap().into() as *const nbgl_icon_details_t
-                } else {
-                    core::ptr::null()
+
+                let icon: nbgl_icon_details_t = match self.glyph {
+                    Some(g) => g.into(),
+                    None => nbgl_icon_details_t::default(),
                 };
 
                 let mut content: nbgl_content_t = nbgl_content_t::default();
@@ -296,7 +296,7 @@ impl<'a> NbglHomeAndSettings<'a> {
 
                 match ledger_secure_sdk_sys::ux_sync_homeAndSettings(
                     self.info_contents[0],
-                    icon,
+                    &icon as *const nbgl_icon_details_t,
                     core::ptr::null(),
                     INIT_HOME_PAGE as u8,
                     &generic_contents as *const nbgl_genericContents_t,
@@ -325,39 +325,29 @@ impl<'a> NbglHomeAndSettings<'a> {
 /// MAX_FIELD_NUMBER const parameter.
 /// The maximum size of the internal buffer used to convert C strings can be overriden by the
 /// STRING_BUFFER_SIZE const parameter.
-pub struct NbglReview<
-    'a,
-    const MAX_FIELD_NUMBER: usize = 32,
-    const STRING_BUFFER_SIZE: usize = 1024,
-> {
-    title: &'a str,
-    subtitle: &'a str,
-    finish_title: &'a str,
+pub struct NbglReview<'a, const MAX_FIELD_NUMBER: usize = 32> {
+    title: &'a CStr,
+    subtitle: &'a CStr,
+    finish_title: &'a CStr,
     glyph: Option<&'a NbglGlyph<'a>>,
-    tag_value_array: [nbgl_layoutTagValue_t; MAX_FIELD_NUMBER],
-    c_string_helper: CStringHelper<STRING_BUFFER_SIZE>,
 }
 
-impl<'a, const MAX_FIELD_NUMBER: usize, const STRING_BUFFER_SIZE: usize>
-    NbglReview<'a, MAX_FIELD_NUMBER, STRING_BUFFER_SIZE>
-{
-    pub fn new() -> NbglReview<'a, MAX_FIELD_NUMBER, STRING_BUFFER_SIZE> {
+impl<'a, const MAX_FIELD_NUMBER: usize> NbglReview<'a, MAX_FIELD_NUMBER> {
+    pub fn new() -> NbglReview<'a, MAX_FIELD_NUMBER> {
         NbglReview {
-            title: "Please review\ntransaction",
-            subtitle: "To send CRAB",
-            finish_title: "Sign transaction",
+            title: CStr::from_bytes_until_nul("\0".as_bytes()).unwrap(),
+            subtitle: CStr::from_bytes_until_nul("\0".as_bytes()).unwrap(),
+            finish_title: CStr::from_bytes_until_nul("\0".as_bytes()).unwrap(),
             glyph: None,
-            tag_value_array: [nbgl_layoutTagValue_t::default(); MAX_FIELD_NUMBER],
-            c_string_helper: CStringHelper::<STRING_BUFFER_SIZE>::new(),
         }
     }
 
     pub fn titles(
         self,
-        title: &'a str,
-        subtitle: &'a str,
-        finish_title: &'a str,
-    ) -> NbglReview<'a, MAX_FIELD_NUMBER, STRING_BUFFER_SIZE> {
+        title: &'a CStr,
+        subtitle: &'a CStr,
+        finish_title: &'a CStr,
+    ) -> NbglReview<'a, MAX_FIELD_NUMBER> {
         NbglReview {
             title,
             subtitle,
@@ -366,10 +356,7 @@ impl<'a, const MAX_FIELD_NUMBER: usize, const STRING_BUFFER_SIZE: usize>
         }
     }
 
-    pub fn glyph(
-        self,
-        glyph: &'a NbglGlyph,
-    ) -> NbglReview<'a, MAX_FIELD_NUMBER, STRING_BUFFER_SIZE> {
+    pub fn glyph(self, glyph: &'a NbglGlyph) -> NbglReview<'a, MAX_FIELD_NUMBER> {
         NbglReview {
             glyph: Some(glyph),
             ..self
@@ -379,21 +366,16 @@ impl<'a, const MAX_FIELD_NUMBER: usize, const STRING_BUFFER_SIZE: usize>
     pub fn show(&mut self, fields: &[Field]) -> bool {
         unsafe {
             // Check if there are too many fields (more than MAX_FIELD_NUMBER).
-            if fields.len() > self.tag_value_array.len() {
+            if fields.len() > MAX_FIELD_NUMBER {
                 panic!("Too many fields for this review instance.");
             }
 
-            // Flush the internal buffer of the CStringHelper.
-            self.c_string_helper.flush();
-
             // Fill the tag_value_array with the fields converted to nbgl_layoutTagValue_t
-            // with proper c strings (ending with \0).
+            let mut tag_value_array = [nbgl_layoutTagValue_t::default(); MAX_FIELD_NUMBER];
             for (i, field) in fields.iter().enumerate() {
-                let name = self.c_string_helper.to_cstring(field.name).unwrap();
-                let value = self.c_string_helper.to_cstring(field.value).unwrap();
-                self.tag_value_array[i] = nbgl_layoutTagValue_t {
-                    item: name.as_ptr() as *const i8,
-                    value: value.as_ptr() as *const i8,
+                tag_value_array[i] = nbgl_layoutTagValue_t {
+                    item: field.name.as_ptr() as *const i8,
+                    value: field.value.as_ptr() as *const i8,
                     valueIcon: core::ptr::null() as *const nbgl_icon_details_t,
                     _bitfield_align_1: [0; 0],
                     _bitfield_1: __BindgenBitfieldUnit::new([0; 1usize]),
@@ -403,7 +385,7 @@ impl<'a, const MAX_FIELD_NUMBER: usize, const STRING_BUFFER_SIZE: usize>
 
             // Create the tag_value_list with the tag_value_array.
             let tag_value_list: nbgl_layoutTagValueList_t = nbgl_layoutTagValueList_t {
-                pairs: self.tag_value_array.as_ptr() as *const nbgl_layoutTagValue_t,
+                pairs: tag_value_array.as_ptr() as *const nbgl_layoutTagValue_t,
                 callback: None,
                 nbPairs: fields.len() as u8,
                 startIndex: 0,
@@ -413,29 +395,19 @@ impl<'a, const MAX_FIELD_NUMBER: usize, const STRING_BUFFER_SIZE: usize>
                 wrapping: false,
             };
 
-            let icon = if self.glyph.is_some() {
-                &self.glyph.unwrap().into() as *const nbgl_icon_details_t
-            } else {
-                core::ptr::null()
+            let icon: nbgl_icon_details_t = match self.glyph {
+                Some(g) => g.into(),
+                None => nbgl_icon_details_t::default(),
             };
 
             // Show the review on the device.
             let sync_ret = ledger_secure_sdk_sys::ux_sync_review(
                 TYPE_TRANSACTION,
                 &tag_value_list as *const nbgl_layoutTagValueList_t,
-                icon,
-                self.c_string_helper
-                    .to_cstring(self.title)
-                    .unwrap()
-                    .as_ptr() as *const c_char,
-                self.c_string_helper
-                    .to_cstring(self.subtitle)
-                    .unwrap()
-                    .as_ptr() as *const c_char,
-                self.c_string_helper
-                    .to_cstring(self.finish_title)
-                    .unwrap()
-                    .as_ptr() as *const c_char,
+                &icon as *const nbgl_icon_details_t,
+                self.title.as_ptr() as *const c_char,
+                self.subtitle.as_ptr() as *const c_char,
+                self.finish_title.as_ptr() as *const c_char,
             );
 
             // Return true if the user approved the transaction, false otherwise.
