@@ -1,7 +1,10 @@
 use crate::io::{ApduHeader, Comm, Event, Reply};
 use crate::nvm::*;
 use const_zero::const_zero;
-use core::ffi::{c_char, CStr};
+extern crate alloc;
+use alloc::ffi::CString;
+use alloc::vec::Vec;
+use core::ffi::c_char;
 use core::mem::transmute;
 use ledger_secure_sdk_sys::*;
 
@@ -15,8 +18,13 @@ static mut SWITCH_ARRAY: [nbgl_contentSwitch_t; SETTINGS_SIZE] =
     [unsafe { const_zero!(nbgl_contentSwitch_t) }; SETTINGS_SIZE];
 
 pub struct Field<'a> {
-    pub name: &'a CStr,
-    pub value: &'a CStr,
+    pub name: &'a str,
+    pub value: &'a str,
+}
+
+pub struct CField {
+    pub name: CString,
+    pub value: CString,
 }
 
 pub struct NbglGlyph<'a> {
@@ -127,7 +135,8 @@ const INFO_FIELDS: [*const c_char; 2] = [
 pub struct NbglHomeAndSettings<'a> {
     glyph: Option<&'a NbglGlyph<'a>>,
     // app_name, version, author
-    info_contents: [&'a CStr; 3],
+    info_contents: Vec<CString>,
+    setting_contents: Vec<[CString; 2]>,
     nb_settings: u8,
 }
 
@@ -135,11 +144,8 @@ impl<'a> NbglHomeAndSettings<'a> {
     pub fn new() -> NbglHomeAndSettings<'a> {
         NbglHomeAndSettings {
             glyph: None,
-            info_contents: [
-                CStr::from_bytes_until_nul("\0".as_bytes()).unwrap(),
-                CStr::from_bytes_until_nul("\0".as_bytes()).unwrap(),
-                CStr::from_bytes_until_nul("\0".as_bytes()).unwrap(),
-            ],
+            info_contents: Vec::default(),
+            setting_contents: Vec::default(),
             nb_settings: 0,
         }
     }
@@ -153,12 +159,16 @@ impl<'a> NbglHomeAndSettings<'a> {
 
     pub fn infos(
         self,
-        app_name: &'a CStr,
-        version: &'a CStr,
-        author: &'a CStr,
+        app_name: &'a str,
+        version: &'a str,
+        author: &'a str,
     ) -> NbglHomeAndSettings<'a> {
+        let mut v: Vec<CString> = Vec::new();
+        v.push(CString::new(app_name).unwrap());
+        v.push(CString::new(version).unwrap());
+        v.push(CString::new(author).unwrap());
         NbglHomeAndSettings {
-            info_contents: [app_name, version, author],
+            info_contents: v,
             ..self
         }
     }
@@ -166,28 +176,20 @@ impl<'a> NbglHomeAndSettings<'a> {
     pub fn settings(
         self,
         nvm_data: &'a mut AtomicStorage<[u8; SETTINGS_SIZE]>,
-        settings_strings: &[[&'a CStr; 2]],
+        settings_strings: &[[&'a str; 2]],
     ) -> NbglHomeAndSettings<'a> {
         unsafe {
             NVM_REF = Some(transmute(nvm_data));
         }
 
-        if settings_strings.len() > SETTINGS_SIZE {
-            panic!("Too many settings.");
-        }
-
-        unsafe {
-            for (i, setting) in settings_strings.iter().enumerate() {
-                SWITCH_ARRAY[i].text = setting[0].as_ptr();
-                SWITCH_ARRAY[i].subText = setting[1].as_ptr();
-                SWITCH_ARRAY[i].initState = NVM_REF.as_mut().unwrap().get_ref()[i] as nbgl_state_t;
-                SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
-                SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
-            }
-        }
+        let v: Vec<[CString; 2]> = settings_strings
+            .iter()
+            .map(|s| [CString::new(s[0]).unwrap(), CString::new(s[1]).unwrap()])
+            .collect();
 
         NbglHomeAndSettings {
             nb_settings: settings_strings.len() as u8,
+            setting_contents: v,
             ..self
         }
     }
@@ -224,6 +226,15 @@ impl<'a> NbglHomeAndSettings<'a> {
                     nbContents: 0,
                 };
                 if NVM_REF.is_some() {
+                    for (i, setting) in self.setting_contents.iter().enumerate() {
+                        SWITCH_ARRAY[i].text = setting[0].as_ptr();
+                        SWITCH_ARRAY[i].subText = setting[1].as_ptr();
+                        SWITCH_ARRAY[i].initState =
+                            NVM_REF.as_mut().unwrap().get_ref()[i] as nbgl_state_t;
+                        SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
+                        SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
+                    }
+
                     content = nbgl_content_t {
                         content: nbgl_content_u {
                             switchesList: nbgl_pageSwitchesList_s {
@@ -279,32 +290,32 @@ impl<'a> NbglHomeAndSettings<'a> {
 /// The maximum size of the internal buffer used to convert C strings can be overriden by the
 /// STRING_BUFFER_SIZE const parameter.
 pub struct NbglReview<'a, const MAX_FIELD_NUMBER: usize = 32> {
-    title: &'a CStr,
-    subtitle: &'a CStr,
-    finish_title: &'a CStr,
+    title: CString,
+    subtitle: CString,
+    finish_title: CString,
     glyph: Option<&'a NbglGlyph<'a>>,
 }
 
 impl<'a, const MAX_FIELD_NUMBER: usize> NbglReview<'a, MAX_FIELD_NUMBER> {
     pub fn new() -> NbglReview<'a, MAX_FIELD_NUMBER> {
         NbglReview {
-            title: CStr::from_bytes_until_nul("\0".as_bytes()).unwrap(),
-            subtitle: CStr::from_bytes_until_nul("\0".as_bytes()).unwrap(),
-            finish_title: CStr::from_bytes_until_nul("\0".as_bytes()).unwrap(),
+            title: CString::new("").unwrap(),
+            subtitle: CString::new("").unwrap(),
+            finish_title: CString::new("").unwrap(),
             glyph: None,
         }
     }
 
     pub fn titles(
         self,
-        title: &'a CStr,
-        subtitle: &'a CStr,
-        finish_title: &'a CStr,
+        title: &'a str,
+        subtitle: &'a str,
+        finish_title: &'a str,
     ) -> NbglReview<'a, MAX_FIELD_NUMBER> {
         NbglReview {
-            title,
-            subtitle,
-            finish_title,
+            title: CString::new(title).unwrap(),
+            subtitle: CString::new(subtitle).unwrap(),
+            finish_title: CString::new(finish_title).unwrap(),
             ..self
         }
     }
@@ -323,9 +334,17 @@ impl<'a, const MAX_FIELD_NUMBER: usize> NbglReview<'a, MAX_FIELD_NUMBER> {
                 panic!("Too many fields for this review instance.");
             }
 
+            let v: Vec<CField> = fields
+                .iter()
+                .map(|f| CField {
+                    name: CString::new(f.name).unwrap(),
+                    value: CString::new(f.value).unwrap(),
+                })
+                .collect();
+
             // Fill the tag_value_array with the fields converted to nbgl_layoutTagValue_t
             let mut tag_value_array = [nbgl_layoutTagValue_t::default(); MAX_FIELD_NUMBER];
-            for (i, field) in fields.iter().enumerate() {
+            for (i, field) in v.iter().enumerate() {
                 tag_value_array[i] = nbgl_layoutTagValue_t {
                     item: field.name.as_ptr() as *const i8,
                     value: field.value.as_ptr() as *const i8,
@@ -382,13 +401,13 @@ impl<'a, const MAX_FIELD_NUMBER: usize> NbglReview<'a, MAX_FIELD_NUMBER> {
 /// Used to display address confirmation screens.
 pub struct NbglAddressReview<'a> {
     glyph: Option<&'a NbglGlyph<'a>>,
-    verify_str: &'a CStr,
+    verify_str: CString,
 }
 
 impl<'a> NbglAddressReview<'a> {
     pub fn new() -> NbglAddressReview<'a> {
         NbglAddressReview {
-            verify_str: CStr::from_bytes_until_nul("\0".as_bytes()).unwrap(),
+            verify_str: CString::new("").unwrap(),
             glyph: None,
         }
     }
@@ -400,16 +419,21 @@ impl<'a> NbglAddressReview<'a> {
         }
     }
 
-    pub fn verify_str(self, verify_str: &'a CStr) -> NbglAddressReview<'a> {
-        NbglAddressReview { verify_str, ..self }
+    pub fn verify_str(self, verify_str: &str) -> NbglAddressReview<'a> {
+        NbglAddressReview {
+            verify_str: CString::new(verify_str).unwrap(),
+            ..self
+        }
     }
 
-    pub fn show(&mut self, address: &CStr) -> bool {
+    pub fn show(&mut self, address: &str) -> bool {
         unsafe {
             let icon: nbgl_icon_details_t = match self.glyph {
                 Some(g) => g.into(),
                 None => nbgl_icon_details_t::default(),
             };
+
+            let address = CString::new(address).unwrap();
 
             // Show the address confirmation on the device.
             let sync_ret = ux_sync_addressReview(
