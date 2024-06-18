@@ -15,13 +15,18 @@ ledger_device_sdk = { path = ".", features = ["speculos"] }
 testmacro = { path = "../testmacro", version = "0.1.0"}
 
 [dependencies]
-ledger_secure_sdk_sys = {path = "../ledger_secure_sdk_sys", version = "1.4.0", features = ["heap"]}
 include_gif = {path = "../include_gif", version = "1.1.0"}
 num-traits = { version = "0.2.14", default_features = false }
 rand_core = { version = "0.6.3", default_features = false }
 zeroize = { version = "1.6.0", default_features = false }
 numtoa = "0.2.4"
 const-zero = "0.1.1"
+
+[target.'cfg(target_os="nanos")'.dependencies]
+ledger_secure_sdk_sys = {path = "../ledger_secure_sdk_sys", version = "1.4.0"}
+
+[target.'cfg(not(target_os="nanos"))'.dependencies]
+ledger_secure_sdk_sys = {path = "../ledger_secure_sdk_sys", version = "1.4.0", features = ["heap"]}
 
 [features]
 speculos = []
