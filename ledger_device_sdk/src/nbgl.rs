@@ -200,11 +200,11 @@ impl<'a> NbglHomeAndSettings<'a> {
     {
         unsafe {
             loop {
-                let info_contents: [*const c_char; 3] = [
-                    self.info_contents[0].as_ptr(),
-                    self.info_contents[1].as_ptr(),
-                    self.info_contents[2].as_ptr(),
-                ];
+                let info_contents: Vec<*const c_char> = self
+                    .info_contents
+                    .iter()
+                    .map(|s| s.as_ptr())
+                    .collect::<Vec<_>>();
 
                 let info_list: nbgl_contentInfoList_t = nbgl_contentInfoList_t {
                     infoTypes: INFO_FIELDS.as_ptr() as *const *const c_char,
@@ -285,19 +285,15 @@ impl<'a> NbglHomeAndSettings<'a> {
 
 /// A wrapper around the synchronous NBGL ux_sync_review C API binding.
 /// Used to display transaction review screens.
-/// The maximum number of fields that can be displayed can be overriden by the
-/// MAX_FIELD_NUMBER const parameter.
-/// The maximum size of the internal buffer used to convert C strings can be overriden by the
-/// STRING_BUFFER_SIZE const parameter.
-pub struct NbglReview<'a, const MAX_FIELD_NUMBER: usize = 32> {
+pub struct NbglReview<'a> {
     title: CString,
     subtitle: CString,
     finish_title: CString,
     glyph: Option<&'a NbglGlyph<'a>>,
 }
 
-impl<'a, const MAX_FIELD_NUMBER: usize> NbglReview<'a, MAX_FIELD_NUMBER> {
-    pub fn new() -> NbglReview<'a, MAX_FIELD_NUMBER> {
+impl<'a> NbglReview<'a> {
+    pub fn new() -> NbglReview<'a> {
         NbglReview {
             title: CString::new("").unwrap(),
             subtitle: CString::new("").unwrap(),
@@ -311,7 +307,7 @@ impl<'a, const MAX_FIELD_NUMBER: usize> NbglReview<'a, MAX_FIELD_NUMBER> {
         title: &'a str,
         subtitle: &'a str,
         finish_title: &'a str,
-    ) -> NbglReview<'a, MAX_FIELD_NUMBER> {
+    ) -> NbglReview<'a> {
         NbglReview {
             title: CString::new(title).unwrap(),
             subtitle: CString::new(subtitle).unwrap(),
@@ -320,7 +316,7 @@ impl<'a, const MAX_FIELD_NUMBER: usize> NbglReview<'a, MAX_FIELD_NUMBER> {
         }
     }
 
-    pub fn glyph(self, glyph: &'a NbglGlyph) -> NbglReview<'a, MAX_FIELD_NUMBER> {
+    pub fn glyph(self, glyph: &'a NbglGlyph) -> NbglReview<'a> {
         NbglReview {
             glyph: Some(glyph),
             ..self
@@ -329,11 +325,6 @@ impl<'a, const MAX_FIELD_NUMBER: usize> NbglReview<'a, MAX_FIELD_NUMBER> {
 
     pub fn show(&mut self, fields: &[Field]) -> bool {
         unsafe {
-            // Check if there are too many fields (more than MAX_FIELD_NUMBER).
-            if fields.len() > MAX_FIELD_NUMBER {
-                panic!("Too many fields for this review instance.");
-            }
-
             let v: Vec<CField> = fields
                 .iter()
                 .map(|f| CField {
@@ -343,16 +334,16 @@ impl<'a, const MAX_FIELD_NUMBER: usize> NbglReview<'a, MAX_FIELD_NUMBER> {
                 .collect();
 
             // Fill the tag_value_array with the fields converted to nbgl_layoutTagValue_t
-            let mut tag_value_array = [nbgl_layoutTagValue_t::default(); MAX_FIELD_NUMBER];
-            for (i, field) in v.iter().enumerate() {
-                tag_value_array[i] = nbgl_layoutTagValue_t {
+            let mut tag_value_array: Vec<nbgl_layoutTagValue_t> = Vec::new();
+            for field in v.iter() {
+                tag_value_array.push(nbgl_layoutTagValue_t {
                     item: field.name.as_ptr() as *const i8,
                     value: field.value.as_ptr() as *const i8,
                     valueIcon: core::ptr::null() as *const nbgl_icon_details_t,
                     _bitfield_align_1: [0; 0],
                     _bitfield_1: __BindgenBitfieldUnit::new([0; 1usize]),
                     __bindgen_padding_0: [0; 3usize],
-                }
+                });
             }
 
             // Create the tag_value_list with the tag_value_array.
