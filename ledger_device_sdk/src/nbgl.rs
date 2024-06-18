@@ -217,46 +217,38 @@ impl<'a> NbglHomeAndSettings<'a> {
                     None => nbgl_icon_details_t::default(),
                 };
 
-                let mut content: nbgl_content_t = nbgl_content_t::default();
-                let mut generic_contents = nbgl_genericContents_t {
+                for (i, setting) in self.setting_contents.iter().enumerate() {
+                    SWITCH_ARRAY[i].text = setting[0].as_ptr();
+                    SWITCH_ARRAY[i].subText = setting[1].as_ptr();
+                    if NVM_REF.is_some() {
+                        SWITCH_ARRAY[i].initState =
+                            NVM_REF.as_mut().unwrap().get_ref()[i] as nbgl_state_t;
+                    }
+                    SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
+                    SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
+                }
+
+                let content: nbgl_content_t = nbgl_content_t {
+                    content: nbgl_content_u {
+                        switchesList: nbgl_pageSwitchesList_s {
+                            switches: &SWITCH_ARRAY as *const nbgl_contentSwitch_t,
+                            nbSwitches: self.nb_settings,
+                        },
+                    },
+                    contentActionCallback: transmute(
+                        (|token, index, page| settings_callback(token, index, page))
+                            as fn(::core::ffi::c_int, u8, ::core::ffi::c_int),
+                    ),
+                    type_: SWITCHES_LIST,
+                };
+
+                let generic_contents: nbgl_genericContents_t = nbgl_genericContents_t {
                     callbackCallNeeded: false,
                     __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
                         contentsList: &content as *const nbgl_content_t,
                     },
-                    nbContents: 0,
+                    nbContents: 1,
                 };
-                if NVM_REF.is_some() {
-                    for (i, setting) in self.setting_contents.iter().enumerate() {
-                        SWITCH_ARRAY[i].text = setting[0].as_ptr();
-                        SWITCH_ARRAY[i].subText = setting[1].as_ptr();
-                        SWITCH_ARRAY[i].initState =
-                            NVM_REF.as_mut().unwrap().get_ref()[i] as nbgl_state_t;
-                        SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
-                        SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
-                    }
-
-                    content = nbgl_content_t {
-                        content: nbgl_content_u {
-                            switchesList: nbgl_pageSwitchesList_s {
-                                switches: &SWITCH_ARRAY as *const nbgl_contentSwitch_t,
-                                nbSwitches: self.nb_settings,
-                            },
-                        },
-                        contentActionCallback: transmute(
-                            (|token, index, page| settings_callback(token, index, page))
-                                as fn(::core::ffi::c_int, u8, ::core::ffi::c_int),
-                        ),
-                        type_: SWITCHES_LIST,
-                    };
-
-                    generic_contents = nbgl_genericContents_t {
-                        callbackCallNeeded: false,
-                        __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
-                            contentsList: &content as *const nbgl_content_t,
-                        },
-                        nbContents: 1,
-                    };
-                }
 
                 match ledger_secure_sdk_sys::ux_sync_homeAndSettings(
                     info_contents[0],
