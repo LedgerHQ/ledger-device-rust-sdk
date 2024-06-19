@@ -326,30 +326,19 @@ impl<'a> NbglReview<'a> {
                 })
                 .collect();
 
-            // Fill the tag_value_array with the fields converted to nbgl_layoutTagValue_t
-            let mut tag_value_array: Vec<nbgl_layoutTagValue_t> = Vec::new();
+            // Fill the tag_value_array with the fields converted to nbgl_contentTagValue_t
+            let mut tag_value_array: Vec<nbgl_contentTagValue_t> = Vec::new();
             for field in v.iter() {
-                tag_value_array.push(nbgl_layoutTagValue_t {
-                    item: field.name.as_ptr() as *const i8,
-                    value: field.value.as_ptr() as *const i8,
-                    valueIcon: core::ptr::null() as *const nbgl_icon_details_t,
-                    _bitfield_align_1: [0; 0],
-                    _bitfield_1: __BindgenBitfieldUnit::new([0; 1usize]),
-                    __bindgen_padding_0: [0; 3usize],
-                });
+                let mut val = nbgl_contentTagValue_t::default();
+                val.item = field.name.as_ptr() as *const i8;
+                val.value = field.value.as_ptr() as *const i8;
+                tag_value_array.push(val);
             }
 
             // Create the tag_value_list with the tag_value_array.
-            let tag_value_list: nbgl_layoutTagValueList_t = nbgl_layoutTagValueList_t {
-                pairs: tag_value_array.as_ptr() as *const nbgl_layoutTagValue_t,
-                callback: None,
-                nbPairs: fields.len() as u8,
-                startIndex: 0,
-                nbMaxLinesForValue: 0,
-                token: 0,
-                smallCaseForValue: false,
-                wrapping: false,
-            };
+            let mut tag_value_list = nbgl_contentTagValueList_t::default();
+            tag_value_list.pairs = tag_value_array.as_ptr() as *const nbgl_contentTagValue_t;
+            tag_value_list.nbPairs = fields.len() as u8;
 
             let icon: nbgl_icon_details_t = match self.glyph {
                 Some(g) => g.into(),
@@ -358,8 +347,8 @@ impl<'a> NbglReview<'a> {
 
             // Show the review on the device.
             let sync_ret = ledger_secure_sdk_sys::ux_sync_review(
-                TYPE_TRANSACTION,
-                &tag_value_list as *const nbgl_layoutTagValueList_t,
+                TYPE_TRANSACTION.into(),
+                &tag_value_list as *const nbgl_contentTagValueList_t,
                 &icon as *const nbgl_icon_details_t,
                 self.title.as_ptr() as *const c_char,
                 self.subtitle.as_ptr() as *const c_char,
