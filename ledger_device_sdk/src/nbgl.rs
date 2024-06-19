@@ -755,8 +755,10 @@ pub struct InfosList<'a> {
 #[allow(dead_code)]
 struct InfosListWrapper {
     c_struct: nbgl_contentInfoList_t,
-    info_types: Vec<CString>,
-    info_contents: Vec<CString>,
+    info_types_cstrings: Vec<CString>,
+    info_contents_cstrings: Vec<CString>,
+    info_types_ptr: Vec<*const c_char>,
+    info_contents_ptr: Vec<*const c_char>,
     content_type: nbgl_contentType_t,
     action_callback: nbgl_contentActionCallback_t,
 }
@@ -772,24 +774,30 @@ impl<'a> From<InfosList<'a>> for InfosListWrapper {
         // Create heap allocated variables that will live long
         // enough in the wrapper to be used in the C struct when
         // passed to the C API.
-        let info_types: Vec<CString> = infos
+        let info_types_cstrings: Vec<CString> = infos
             .infos
             .iter()
             .map(|field| CString::new(field.name).unwrap())
             .collect();
-        let info_contents: Vec<CString> = infos
+        let info_contents_cstrings: Vec<CString> = infos
             .infos
             .iter()
             .map(|field| CString::new(field.value).unwrap())
             .collect();
+        let info_types_ptr: Vec<*const c_char> =
+            info_types_cstrings.iter().map(|s| s.as_ptr()).collect();
+        let info_contents_ptr: Vec<*const c_char> =
+            info_contents_cstrings.iter().map(|s| s.as_ptr()).collect(); 
         InfosListWrapper {
             c_struct: nbgl_contentInfoList_t {
-                infoTypes: info_types.as_ptr() as *const *const c_char,
-                infoContents: info_contents.as_ptr() as *const *const c_char,
-                nbInfos: infos.infos.len() as u8,
+                infoTypes: info_types_ptr.as_ptr() as *const *const c_char,
+                infoContents: info_contents_ptr.as_ptr() as *const *const c_char,
+                nbInfos: info_types_cstrings.len() as u8,
             },
-            info_types: info_types,
-            info_contents: info_contents,
+            info_types_cstrings: info_types_cstrings,
+            info_contents_cstrings: info_contents_cstrings,
+            info_types_ptr: info_types_ptr,
+            info_contents_ptr: info_contents_ptr,
             content_type: INFOS_LIST,
             action_callback: None,
         }
