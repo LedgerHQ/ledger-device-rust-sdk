@@ -5,27 +5,170 @@
 #include <stdint.h>
 #endif
 
-#ifndef GLYPH_app_boilerplate_16px_BPP
-    #define GLYPH_app_boilerplate_16px_WIDTH 16
-    #define GLYPH_app_boilerplate_16px_HEIGHT 16
-    #define GLYPH_app_boilerplate_16px_ISFILE true
-    #define GLYPH_app_boilerplate_16px_BPP 1
-  extern uint8_t const C_app_boilerplate_16px_bitmap[29];
+#ifndef GLYPH_icon_back_BPP
+    #define GLYPH_icon_back_WIDTH 14
+    #define GLYPH_icon_back_HEIGHT 14
+    #define GLYPH_icon_back_ISFILE false
+    #define GLYPH_icon_back_BPP 1
+  extern uint8_t const C_icon_back_bitmap[25];
   #ifdef HAVE_NBGL
-    extern const nbgl_icon_details_t C_app_boilerplate_16px;
+    extern const nbgl_icon_details_t C_icon_back;
   #endif // HAVE_NBGL
-#endif // GLYPH_app_boilerplate_16px_BPP
+#endif // GLYPH_icon_back_BPP
 
-#ifndef GLYPH_app_boilerplate_64px_BPP
-    #define GLYPH_app_boilerplate_64px_WIDTH 64
-    #define GLYPH_app_boilerplate_64px_HEIGHT 64
-    #define GLYPH_app_boilerplate_64px_ISFILE true
-    #define GLYPH_app_boilerplate_64px_BPP 1
-  extern uint8_t const C_app_boilerplate_64px_bitmap[187];
+#ifndef GLYPH_icon_back_x_BPP
+    #define GLYPH_icon_back_x_WIDTH 14
+    #define GLYPH_icon_back_x_HEIGHT 14
+    #define GLYPH_icon_back_x_ISFILE false
+    #define GLYPH_icon_back_x_BPP 1
+  extern uint8_t const C_icon_back_x_bitmap[25];
   #ifdef HAVE_NBGL
-    extern const nbgl_icon_details_t C_app_boilerplate_64px;
+    extern const nbgl_icon_details_t C_icon_back_x;
   #endif // HAVE_NBGL
-#endif // GLYPH_app_boilerplate_64px_BPP
+#endif // GLYPH_icon_back_x_BPP
+
+#ifndef GLYPH_icon_certificate_BPP
+    #define GLYPH_icon_certificate_WIDTH 14
+    #define GLYPH_icon_certificate_HEIGHT 14
+    #define GLYPH_icon_certificate_ISFILE false
+    #define GLYPH_icon_certificate_BPP 1
+  extern uint8_t const C_icon_certificate_bitmap[25];
+  #ifdef HAVE_NBGL
+    extern const nbgl_icon_details_t C_icon_certificate;
+  #endif // HAVE_NBGL
+#endif // GLYPH_icon_certificate_BPP
+
+#ifndef GLYPH_icon_coggle_BPP
+    #define GLYPH_icon_coggle_WIDTH 14
+    #define GLYPH_icon_coggle_HEIGHT 14
+    #define GLYPH_icon_coggle_ISFILE false
+    #define GLYPH_icon_coggle_BPP 1
+  extern uint8_t const C_icon_coggle_bitmap[25];
+  #ifdef HAVE_NBGL
+    extern const nbgl_icon_details_t C_icon_coggle;
+  #endif // HAVE_NBGL
+#endif // GLYPH_icon_coggle_BPP
+
+#ifndef GLYPH_icon_crossmark_BPP
+    #define GLYPH_icon_crossmark_WIDTH 14
+    #define GLYPH_icon_crossmark_HEIGHT 14
+    #define GLYPH_icon_crossmark_ISFILE false
+    #define GLYPH_icon_crossmark_BPP 1
+  extern uint8_t const C_icon_crossmark_bitmap[25];
+  #ifdef HAVE_NBGL
+    extern const nbgl_icon_details_t C_icon_crossmark;
+  #endif // HAVE_NBGL
+#endif // GLYPH_icon_crossmark_BPP
+
+#ifndef GLYPH_icon_dashboard_BPP
+    #define GLYPH_icon_dashboard_WIDTH 14
+    #define GLYPH_icon_dashboard_HEIGHT 14
+    #define GLYPH_icon_dashboard_ISFILE false
+    #define GLYPH_icon_dashboard_BPP 1
+  extern uint8_t const C_icon_dashboard_bitmap[25];
+  #ifdef HAVE_NBGL
+    extern const nbgl_icon_details_t C_icon_dashboard;
+  #endif // HAVE_NBGL
+#endif // GLYPH_icon_dashboard_BPP
+
+#ifndef GLYPH_icon_dashboard_x_BPP
+    #define GLYPH_icon_dashboard_x_WIDTH 14
+    #define GLYPH_icon_dashboard_x_HEIGHT 14
+    #define GLYPH_icon_dashboard_x_ISFILE true
+    #define GLYPH_icon_dashboard_x_BPP 1
+  extern uint8_t const C_icon_dashboard_x_bitmap[23];
+  #ifdef HAVE_NBGL
+    extern const nbgl_icon_details_t C_icon_dashboard_x;
+  #endif // HAVE_NBGL
+#endif // GLYPH_icon_dashboard_x_BPP
+
+#ifndef GLYPH_icon_down_BPP
+    #define GLYPH_icon_down_WIDTH 7
+    #define GLYPH_icon_down_HEIGHT 4
+    #define GLYPH_icon_down_ISFILE false
+    #define GLYPH_icon_down_BPP 1
+  extern uint8_t const C_icon_down_bitmap[4];
+  #ifdef HAVE_NBGL
+    extern const nbgl_icon_details_t C_icon_down;
+  #endif // HAVE_NBGL
+#endif // GLYPH_icon_down_BPP
+
+#ifndef GLYPH_icon_exchange_64x64_BPP
+    #define GLYPH_icon_exchange_64x64_WIDTH 64
+    #define GLYPH_icon_exchange_64x64_HEIGHT 64
+    #define GLYPH_icon_exchange_64x64_ISFILE true
+    #define GLYPH_icon_exchange_64x64_BPP 4
+  extern uint8_t const C_icon_exchange_64x64_bitmap[652];
+  #ifdef HAVE_NBGL
+    extern const nbgl_icon_details_t C_icon_exchange_64x64;
+  #endif // HAVE_NBGL
+#endif // GLYPH_icon_exchange_64x64_BPP
+
+#ifndef GLYPH_icon_eye_BPP
+    #define GLYPH_icon_eye_WIDTH 14
+    #define GLYPH_icon_eye_HEIGHT 14
+    #define GLYPH_icon_eye_ISFILE false
+    #define GLYPH_icon_eye_BPP 1
+  extern uint8_t const C_icon_eye_bitmap[25];
+  #ifdef HAVE_NBGL
+    extern const nbgl_icon_details_t C_icon_eye;
+  #endif // HAVE_NBGL
+#endif // GLYPH_icon_eye_BPP
+
+#ifndef GLYPH_icon_left_BPP
+    #define GLYPH_icon_left_WIDTH 4
+    #define GLYPH_icon_left_HEIGHT 7
+    #define GLYPH_icon_left_ISFILE false
+    #define GLYPH_icon_left_BPP 1
+  extern uint8_t const C_icon_left_bitmap[4];
+  #ifdef HAVE_NBGL
+    extern const nbgl_icon_details_t C_icon_left;
+  #endif // HAVE_NBGL
+#endif // GLYPH_icon_left_BPP
+
+#ifndef GLYPH_icon_right_BPP
+    #define GLYPH_icon_right_WIDTH 4
+    #define GLYPH_icon_right_HEIGHT 7
+    #define GLYPH_icon_right_ISFILE false
+    #define GLYPH_icon_right_BPP 1
+  extern uint8_t const C_icon_right_bitmap[4];
+  #ifdef HAVE_NBGL
+    extern const nbgl_icon_details_t C_icon_right;
+  #endif // HAVE_NBGL
+#endif // GLYPH_icon_right_BPP
+
+#ifndef GLYPH_icon_up_BPP
+    #define GLYPH_icon_up_WIDTH 7
+    #define GLYPH_icon_up_HEIGHT 4
+    #define GLYPH_icon_up_ISFILE false
+    #define GLYPH_icon_up_BPP 1
+  extern uint8_t const C_icon_up_bitmap[4];
+  #ifdef HAVE_NBGL
+    extern const nbgl_icon_details_t C_icon_up;
+  #endif // HAVE_NBGL
+#endif // GLYPH_icon_up_BPP
+
+#ifndef GLYPH_icon_validate_14_BPP
+    #define GLYPH_icon_validate_14_WIDTH 14
+    #define GLYPH_icon_validate_14_HEIGHT 14
+    #define GLYPH_icon_validate_14_ISFILE true
+    #define GLYPH_icon_validate_14_BPP 1
+  extern uint8_t const C_icon_validate_14_bitmap[23];
+  #ifdef HAVE_NBGL
+    extern const nbgl_icon_details_t C_icon_validate_14;
+  #endif // HAVE_NBGL
+#endif // GLYPH_icon_validate_14_BPP
+
+#ifndef GLYPH_icon_warning_BPP
+    #define GLYPH_icon_warning_WIDTH 14
+    #define GLYPH_icon_warning_HEIGHT 14
+    #define GLYPH_icon_warning_ISFILE false
+    #define GLYPH_icon_warning_BPP 1
+  extern uint8_t const C_icon_warning_bitmap[25];
+  #ifdef HAVE_NBGL
+    extern const nbgl_icon_details_t C_icon_warning;
+  #endif // HAVE_NBGL
+#endif // GLYPH_icon_warning_BPP
 
 #ifndef GLYPH_pin_24_BPP
     #define GLYPH_pin_24_WIDTH 24
@@ -445,6 +588,17 @@
   #endif // HAVE_NBGL
 #endif // GLYPH_Maj_Lock_40px_BPP
 
+#ifndef GLYPH_Mini_Push_40px_BPP
+    #define GLYPH_Mini_Push_40px_WIDTH 40
+    #define GLYPH_Mini_Push_40px_HEIGHT 40
+    #define GLYPH_Mini_Push_40px_ISFILE true
+    #define GLYPH_Mini_Push_40px_BPP 4
+  extern uint8_t const C_Mini_Push_40px_bitmap[214];
+  #ifdef HAVE_NBGL
+    extern const nbgl_icon_details_t C_Mini_Push_40px;
+  #endif // HAVE_NBGL
+#endif // GLYPH_Mini_Push_40px_BPP
+
 #ifndef GLYPH_Next_40px_BPP
     #define GLYPH_Next_40px_WIDTH 40
     #define GLYPH_Next_40px_HEIGHT 40
@@ -510,15 +664,4 @@
     extern const nbgl_icon_details_t C_Warning_40px;
   #endif // HAVE_NBGL
 #endif // GLYPH_Warning_40px_BPP
-
-#ifndef GLYPH_app_boilerplate_40px_BPP
-    #define GLYPH_app_boilerplate_40px_WIDTH 40
-    #define GLYPH_app_boilerplate_40px_HEIGHT 40
-    #define GLYPH_app_boilerplate_40px_ISFILE true
-    #define GLYPH_app_boilerplate_40px_BPP 4
-  extern uint8_t const C_app_boilerplate_40px_bitmap[236];
-  #ifdef HAVE_NBGL
-    extern const nbgl_icon_details_t C_app_boilerplate_40px;
-  #endif // HAVE_NBGL
-#endif // GLYPH_app_boilerplate_40px_BPP
 
