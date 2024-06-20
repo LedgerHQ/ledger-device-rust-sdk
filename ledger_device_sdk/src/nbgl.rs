@@ -113,13 +113,12 @@ unsafe fn settings_callback(token: ::core::ffi::c_int, _index: u8, _page: ::core
         panic!("Invalid token.");
     }
 
-    let setting_idx: usize = idx as usize;
-    SWITCH_ARRAY[setting_idx].initState = !SWITCH_ARRAY[setting_idx].initState;
-
     if let Some(data) = NVM_REF.as_mut() {
+        let setting_idx: usize = idx as usize;
         let mut switch_values: [u8; SETTINGS_SIZE] = data.get_ref().clone();
         switch_values[setting_idx] = !switch_values[setting_idx];
         data.update(&switch_values);
+        SWITCH_ARRAY[setting_idx].initState = !SWITCH_ARRAY[setting_idx].initState;
     }
 }
 
@@ -221,10 +220,8 @@ impl<'a> NbglHomeAndSettings<'a> {
                 for (i, setting) in self.setting_contents.iter().enumerate() {
                     SWITCH_ARRAY[i].text = setting[0].as_ptr();
                     SWITCH_ARRAY[i].subText = setting[1].as_ptr();
-                    if NVM_REF.is_some() {
-                        SWITCH_ARRAY[i].initState =
-                            NVM_REF.as_mut().unwrap().get_ref()[i] as nbgl_state_t;
-                    }
+                    SWITCH_ARRAY[i].initState =
+                        NVM_REF.as_mut().unwrap().get_ref()[i] as nbgl_state_t;
                     SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
                     SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
                 }
@@ -248,7 +245,7 @@ impl<'a> NbglHomeAndSettings<'a> {
                     __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
                         contentsList: &content as *const nbgl_content_t,
                     },
-                    nbContents: 1,
+                    nbContents: if self.nb_settings > 0 { 1 } else { 0 },
                 };
 
                 match ledger_secure_sdk_sys::ux_sync_homeAndSettings(
