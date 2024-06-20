@@ -32,29 +32,29 @@ extern "C" fn sample_main() {
     const FERRIS: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
 
-    let centered_info = CenteredInfo {
-        text1: "Sample centered info",
-        text2: "Generic text",
-        text3: "More generic text",
-        icon: Some(&FERRIS),
-        on_top: true,
-        style: CenteredInfoStyle::LargeCaseBoldInfo,
-        offset_y: 0,
-    };
+    let centered_info = CenteredInfo::new(
+        "Sample centered info",
+        "Generic text",
+        "More generic text",
+        Some(&FERRIS),
+        true,
+        CenteredInfoStyle::LargeCaseBoldInfo,
+        0,
+    );
 
-    let info_button = InfoButton {
-        text: "Validate info : abc",
-        icon: Some(&FERRIS),
-        button_text: "Approve",
-        tune_id: TuneIndex::Success,
-    };
+    let info_button = InfoButton::new(
+        "Validate info : abc",
+        Some(&FERRIS),
+        "Approve",
+        TuneIndex::Success,
+    );
 
-    let info_long_press = InfoLongPress {
-        text: "Validate to send token",
-        icon: Some(&FERRIS),
-        long_press_text: "Hold to validate",
-        tune_id: TuneIndex::Success,
-    };
+    let info_long_press = InfoLongPress::new(
+        "Validate to send token",
+        Some(&FERRIS),
+        "Hold to validate",
+        TuneIndex::Success,
+    );
 
     let my_example_fields = [
         Field {
@@ -67,30 +67,16 @@ extern "C" fn sample_main() {
         },
     ];
 
-    let tag_values_list = TagValueList {
-        pairs: &my_example_fields,
-        nb_max_lines_for_value: 2,
-        small_case_for_value: false,
-        wrapping: false,
-    };
+    let tag_values_list = TagValueList::new(&my_example_fields, 2, false, false);
 
-    let tag_values_list_2 = TagValueList {
-        pairs: &my_example_fields,
-        nb_max_lines_for_value: 2,
-        small_case_for_value: false,
-        wrapping: false,
-    };
+    let tag_value_confirm = TagValueConfirm::new(
+        &tag_values_list,
+        TuneIndex::Success,
+        "Confirm hash",
+        "Reject hash",
+    );
 
-    let tag_value_confirm = TagValueConfirm {
-        tag_value_list: tag_values_list_2,
-        tune_id: TuneIndex::Success,
-        confirmation_text: "Confirm hash",
-        cancel_text: "Reject hash",
-    };
-
-    let infos_list = InfosList {
-        infos: &my_example_fields,
-    };
+    let infos_list = InfosList::new(&my_example_fields);
 
     let mut review: NbglGenericReview = NbglGenericReview::new()
         .add_content(NbglPageContent::CenteredInfo(centered_info))
