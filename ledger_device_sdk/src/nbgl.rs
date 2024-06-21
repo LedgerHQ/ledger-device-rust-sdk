@@ -501,9 +501,9 @@ impl TagValueList {
         small_case_for_value: bool,
         wrapping: bool,
     ) -> TagValueList {
-        let mut c_field_strings: Vec<nbgl_contentTagValue_t> = Vec::new();
-        let mut c_field_names: Vec<CString> = Vec::new();
-        let mut c_field_values: Vec<CString> = Vec::new();
+        let mut c_field_strings: Vec<nbgl_contentTagValue_t> = Vec::with_capacity(pairs.len());
+        let mut c_field_names: Vec<CString> = Vec::with_capacity(pairs.len());
+        let mut c_field_values: Vec<CString> = Vec::with_capacity(pairs.len());
         for field in pairs {
             let name = CString::new(field.name).unwrap();
             let value = CString::new(field.value).unwrap();
