@@ -22,8 +22,6 @@ pub mod seph;
 
 pub mod testing;
 
-extern crate alloc;
-
 #[cfg(any(target_os = "stax", target_os = "flex"))]
 pub mod nbgl;
 #[cfg(not(any(target_os = "stax", target_os = "flex")))]
