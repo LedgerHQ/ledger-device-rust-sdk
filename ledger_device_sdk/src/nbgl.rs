@@ -2,15 +2,12 @@ use crate::io::{ApduHeader, Comm, Event, Reply};
 use crate::nvm::*;
 use const_zero::const_zero;
 extern crate alloc;
+use alloc::boxed::Box;
 use alloc::ffi::CString;
 use alloc::vec::Vec;
 use core::ffi::c_char;
 use core::mem::transmute;
 use ledger_secure_sdk_sys::*;
-
-use alloc::boxed::Box;
-use alloc::ffi::CString;
-use alloc::vec::Vec;
 
 #[no_mangle]
 pub static mut G_ux_params: bolos_ux_params_t = unsafe { const_zero!(bolos_ux_params_t) };
@@ -335,16 +332,20 @@ impl<'a> NbglReview<'a> {
             // Fill the tag_value_array with the fields converted to nbgl_contentTagValue_t
             let mut tag_value_array: Vec<nbgl_contentTagValue_t> = Vec::new();
             for field in v.iter() {
-                let mut val = nbgl_contentTagValue_t::default();
-                val.item = field.name.as_ptr() as *const i8;
-                val.value = field.value.as_ptr() as *const i8;
+                let val = nbgl_contentTagValue_t {
+                    item: field.name.as_ptr() as *const i8,
+                    value: field.value.as_ptr() as *const i8,
+                    ..Default::default()
+                };
                 tag_value_array.push(val);
             }
 
             // Create the tag_value_list with the tag_value_array.
-            let mut tag_value_list = nbgl_contentTagValueList_t::default();
-            tag_value_list.pairs = tag_value_array.as_ptr() as *const nbgl_contentTagValue_t;
-            tag_value_list.nbPairs = fields.len() as u8;
+            let tag_value_list = nbgl_contentTagValueList_t {
+                pairs: tag_value_array.as_ptr() as *const nbgl_contentTagValue_t,
+                nbPairs: fields.len() as u8,
+                ..Default::default()
+            };
 
             let icon: nbgl_icon_details_t = match self.glyph {
                 Some(g) => g.into(),
@@ -519,14 +520,12 @@ impl TagValueList {
         for field in pairs {
             let name = CString::new(field.name).unwrap();
             let value = CString::new(field.value).unwrap();
-            c_field_strings.push(nbgl_contentTagValue_t {
+            let tag_value = nbgl_contentTagValue_t {
                 item: name.as_ptr() as *const c_char,
                 value: value.as_ptr() as *const c_char,
-                valueIcon: core::ptr::null() as *const nbgl_icon_details_t,
-                _bitfield_align_1: [0; 0],
-                _bitfield_1: __BindgenBitfieldUnit::new([0; 1usize]),
-                __bindgen_padding_0: [0; 3usize],
-            });
+                ..Default::default()
+            };
+            c_field_strings.push(tag_value);
             c_field_names.push(name);
             c_field_values.push(value);
         }
@@ -543,16 +542,16 @@ impl TagValueList {
 
 impl From<&TagValueList> for nbgl_contentTagValueList_t {
     fn from(list: &TagValueList) -> nbgl_contentTagValueList_t {
-        nbgl_contentTagValueList_t {
+        let list = nbgl_contentTagValueList_t {
             pairs: list.pairs.as_ptr() as *const nbgl_contentTagValue_t,
-            callback: None,
             nbPairs: list.pairs.len() as u8,
-            startIndex: 0,
             nbMaxLinesForValue: list.nb_max_lines_for_value,
             token: FIRST_USER_TOKEN as u8,
             smallCaseForValue: list.small_case_for_value,
             wrapping: list.wrapping,
-        }
+            ..Default::default()
+        };
+        list
     }
 }
 
@@ -643,97 +642,114 @@ impl From<&NbglPageContent>
         nbgl_contentActionCallback_t,
     ) {
         match content {
-            NbglPageContent::CenteredInfo(data) => (
-                nbgl_content_u {
-                    centeredInfo: nbgl_contentCenteredInfo_t {
-                        text1: data.text1.as_ptr() as *const c_char,
-                        text2: data.text2.as_ptr() as *const c_char,
-                        text3: data.text3.as_ptr() as *const c_char,
-                        icon: data.icon.as_ref().map_or(core::ptr::null(), |icon| {
-                            icon.as_ref() as *const nbgl_icon_details_t
-                        }),
-                        onTop: data.on_top,
-                        style: data.style.into(),
-                        offsetY: data.offset_y,
+            NbglPageContent::CenteredInfo(data) => {
+                let centered_info = nbgl_contentCenteredInfo_t {
+                    text1: data.text1.as_ptr() as *const c_char,
+                    text2: data.text2.as_ptr() as *const c_char,
+                    text3: data.text3.as_ptr() as *const c_char,
+                    icon: data.icon.as_ref().map_or(core::ptr::null(), |icon| {
+                        icon.as_ref() as *const nbgl_icon_details_t
+                    }),
+                    onTop: data.on_top,
+                    style: data.style.into(),
+                    offsetY: data.offset_y,
+                    ..Default::default()
+                };
+                (
+                    nbgl_content_u {
+                        centeredInfo: centered_info,
                     },
-                },
-                CENTERED_INFO,
-                None,
-            ),
-            NbglPageContent::TagValueList(data) => (
-                nbgl_content_u {
-                    tagValueList: nbgl_contentTagValueList_t {
-                        pairs: data.pairs.as_ptr() as *const nbgl_contentTagValue_t,
-                        callback: None,
-                        nbPairs: data.pairs.len() as u8,
-                        startIndex: 0,
-                        nbMaxLinesForValue: data.nb_max_lines_for_value,
-                        token: FIRST_USER_TOKEN as u8,
-                        smallCaseForValue: data.small_case_for_value,
-                        wrapping: data.wrapping,
+                    CENTERED_INFO,
+                    None,
+                )
+            }
+            NbglPageContent::TagValueList(data) => {
+                let tag_list = nbgl_contentTagValueList_t {
+                    pairs: data.pairs.as_ptr() as *const nbgl_contentTagValue_t,
+                    nbPairs: data.pairs.len() as u8,
+                    nbMaxLinesForValue: data.nb_max_lines_for_value,
+                    smallCaseForValue: data.small_case_for_value,
+                    wrapping: data.wrapping,
+                    ..Default::default()
+                };
+                (
+                    nbgl_content_u {
+                        tagValueList: tag_list,
                     },
-                },
-                TAG_VALUE_LIST,
-                None,
-            ),
-            NbglPageContent::TagValueConfirm(data) => (
-                nbgl_content_u {
-                    tagValueConfirm: nbgl_contentTagValueConfirm_t {
-                        tagValueList: data.tag_value_list,
-                        detailsButtonIcon: core::ptr::null(),
-                        detailsButtonText: core::ptr::null(),
-                        detailsButtonToken: (FIRST_USER_TOKEN + 2) as u8,
-                        tuneId: data.tune_id as u8,
-                        confirmationText: data.confirmation_text.as_ptr() as *const c_char,
-                        cancelText: data.cancel_text.as_ptr() as *const c_char,
-                        confirmationToken: FIRST_USER_TOKEN as u8,
-                        cancelToken: (FIRST_USER_TOKEN + 1) as u8,
+                    TAG_VALUE_LIST,
+                    None,
+                )
+            }
+            NbglPageContent::TagValueConfirm(data) => {
+                let confirm = nbgl_contentTagValueConfirm_t {
+                    tagValueList: data.tag_value_list,
+                    detailsButtonToken: (FIRST_USER_TOKEN + 2) as u8,
+                    tuneId: data.tune_id as u8,
+                    confirmationText: data.confirmation_text.as_ptr() as *const c_char,
+                    cancelText: data.cancel_text.as_ptr() as *const c_char,
+                    confirmationToken: FIRST_USER_TOKEN as u8,
+                    cancelToken: (FIRST_USER_TOKEN + 1) as u8,
+                    ..Default::default()
+                };
+                (
+                    nbgl_content_u {
+                        tagValueConfirm: confirm,
                     },
-                },
-                TAG_VALUE_CONFIRM,
-                Some(generic_content_action_callback),
-            ),
-            NbglPageContent::InfoLongPress(data) => (
-                nbgl_content_u {
-                    infoLongPress: nbgl_contentInfoLongPress_t {
-                        text: data.text.as_ptr() as *const c_char,
-                        icon: data.icon.as_ref().map_or(core::ptr::null(), |icon| {
-                            icon.as_ref() as *const nbgl_icon_details_t
-                        }),
-                        longPressText: data.long_press_text.as_ptr() as *const c_char,
-                        longPressToken: FIRST_USER_TOKEN as u8,
-                        tuneId: data.tune_id as u8,
+                    TAG_VALUE_CONFIRM,
+                    Some(generic_content_action_callback),
+                )
+            }
+            NbglPageContent::InfoLongPress(data) => {
+                let long_press = nbgl_contentInfoLongPress_t {
+                    text: data.text.as_ptr() as *const c_char,
+                    icon: data.icon.as_ref().map_or(core::ptr::null(), |icon| {
+                        icon.as_ref() as *const nbgl_icon_details_t
+                    }),
+                    longPressText: data.long_press_text.as_ptr() as *const c_char,
+                    longPressToken: FIRST_USER_TOKEN as u8,
+                    tuneId: data.tune_id as u8,
+                    ..Default::default()
+                };
+                (
+                    nbgl_content_u {
+                        infoLongPress: long_press,
                     },
-                },
-                INFO_LONG_PRESS,
-                Some(generic_content_action_callback),
-            ),
-            NbglPageContent::InfoButton(data) => (
-                nbgl_content_u {
-                    infoButton: nbgl_contentInfoButton_t {
-                        text: data.text.as_ptr() as *const c_char,
-                        icon: data.icon.as_ref().map_or(core::ptr::null(), |icon| {
-                            icon.as_ref() as *const nbgl_icon_details_t
-                        }),
-                        buttonText: data.button_text.as_ptr() as *const c_char,
-                        buttonToken: FIRST_USER_TOKEN as u8,
-                        tuneId: data.tune_id as u8,
+                    INFO_LONG_PRESS,
+                    Some(generic_content_action_callback),
+                )
+            }
+            NbglPageContent::InfoButton(data) => {
+                let button = nbgl_contentInfoButton_t {
+                    text: data.text.as_ptr() as *const c_char,
+                    icon: data.icon.as_ref().map_or(core::ptr::null(), |icon| {
+                        icon.as_ref() as *const nbgl_icon_details_t
+                    }),
+                    buttonText: data.button_text.as_ptr() as *const c_char,
+                    buttonToken: FIRST_USER_TOKEN as u8,
+                    tuneId: data.tune_id as u8,
+                    ..Default::default()
+                };
+                (
+                    nbgl_content_u { infoButton: button },
+                    INFO_BUTTON,
+                    Some(generic_content_action_callback),
+                )
+            }
+            NbglPageContent::InfosList(data) => {
+                let infos_list = nbgl_contentInfoList_t {
+                    infoTypes: data.info_types_ptr.as_ptr() as *const *const c_char,
+                    infoContents: data.info_contents_ptr.as_ptr() as *const *const c_char,
+                    nbInfos: data.info_types_cstrings.len() as u8,
+                    ..Default::default()
+                };
+                (
+                    nbgl_content_u {
+                        infosList: infos_list,
                     },
-                },
-                INFO_BUTTON,
-                Some(generic_content_action_callback),
-            ),
-            NbglPageContent::InfosList(data) => (
-                nbgl_content_u {
-                    infosList: nbgl_contentInfoList_t {
-                        infoTypes: data.info_types_ptr.as_ptr() as *const *const c_char,
-                        infoContents: data.info_contents_ptr.as_ptr() as *const *const c_char,
-                        nbInfos: data.info_types_cstrings.len() as u8,
-                    },
-                },
-                INFOS_LIST,
-                None,
-            ),
+                    INFOS_LIST,
+                    None,
+                )
+            }
         }
     }
 }
