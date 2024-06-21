@@ -1,8 +1,10 @@
 use crate::io::{ApduHeader, Comm, Event, Reply};
 use crate::nvm::*;
 use const_zero::const_zero;
-use core::cell::RefCell;
-use core::ffi::{c_char, CStr};
+extern crate alloc;
+use alloc::ffi::CString;
+use alloc::vec::Vec;
+use core::ffi::c_char;
 use core::mem::transmute;
 use ledger_secure_sdk_sys::*;
 
@@ -18,6 +20,11 @@ static mut SWITCH_ARRAY: [nbgl_contentSwitch_t; SETTINGS_SIZE] =
 pub struct Field<'a> {
     pub name: &'a str,
     pub value: &'a str,
+}
+
+struct CField {
+    pub name: CString,
+    pub value: CString,
 }
 
 pub struct NbglGlyph<'a> {
@@ -99,57 +106,6 @@ pub extern "C" fn io_recv_and_process_event() -> bool {
     false
 }
 
-/// Helper struct that converts strings to null-terminated c strings.
-/// It uses an internal buffer to store the strings, with a maximum size of SIZE.
-struct CStringHelper<const SIZE: usize = 64> {
-    /// Internal buffer where strings are allocated.
-    /// Stored in a [RefCell] because we want [CStringHelper::to_cstring] to be non-mutable.
-    pub buffer: RefCell<[u8; SIZE]>,
-    /// Index of the next string in the internal buffer.
-    /// Stored in a [RefCell] because we want [CStringHelper::to_cstring] to be non-mutable.
-    next: RefCell<usize>,
-}
-
-impl<const SIZE: usize> CStringHelper<SIZE> {
-    pub fn new() -> Self {
-        Self {
-            buffer: RefCell::new([0u8; SIZE]),
-            next: RefCell::new(0),
-        }
-    }
-
-    pub fn flush(&self) {
-        *self.next.borrow_mut() = 0; // Reset the next index to 0
-    }
-
-    pub fn to_cstring<'a>(&'a self, s: &str) -> Result<&'a CStr, ()> {
-        let size = s.len();
-        let mut buffer = self.buffer.borrow_mut();
-        let next: usize = *self.next.borrow();
-        // Verify there is enough space in the internal buffer.
-        // +1 for the null byte
-        if size + next + 1 > buffer.len() {
-            // Not enough space remaining in the internal buffer.
-            return Err(());
-        }
-        // Verify that the input string does not have null bytes already.
-        if s.bytes().find(|c| *c == 0).is_some() {
-            return Err(());
-        }
-
-        // Copy the input string to the internal buffer, and add null byte.
-        buffer[next..next + size].copy_from_slice(s.as_bytes());
-        buffer[next + size] = 0;
-        let start = next;
-        *self.next.borrow_mut() += size + 1;
-
-        let buffer = self.buffer.as_ptr();
-        let slice = unsafe { &(*buffer)[start..start + size + 1] };
-        let cstr = unsafe { CStr::from_bytes_with_nul_unchecked(slice) };
-        Ok(cstr)
-    }
-}
-
 /// Callback triggered by the NBGL API when a setting switch is toggled.
 unsafe fn settings_callback(token: ::core::ffi::c_int, _index: u8, _page: ::core::ffi::c_int) {
     let idx = token - FIRST_USER_TOKEN as i32;
@@ -179,37 +135,17 @@ const INFO_FIELDS: [*const c_char; 2] = [
 pub struct NbglHomeAndSettings<'a> {
     glyph: Option<&'a NbglGlyph<'a>>,
     // app_name, version, author
-    info_contents: [*const c_char; 3],
-    settings_contents: nbgl_content_t,
+    info_contents: Vec<CString>,
+    setting_contents: Vec<[CString; 2]>,
     nb_settings: u8,
-    generic_contents: nbgl_genericContents_t,
-    c_string_helper: CStringHelper<128>,
 }
 
 impl<'a> NbglHomeAndSettings<'a> {
     pub fn new() -> NbglHomeAndSettings<'a> {
         NbglHomeAndSettings {
             glyph: None,
-            info_contents: [
-                CStr::from_bytes_until_nul("Rust App\0".as_bytes())
-                    .unwrap()
-                    .as_ptr(),
-                CStr::from_bytes_until_nul("0.0.0\0".as_bytes())
-                    .unwrap()
-                    .as_ptr(),
-                CStr::from_bytes_until_nul("Ledger\0".as_bytes())
-                    .unwrap()
-                    .as_ptr(),
-            ],
-            c_string_helper: CStringHelper::<128>::new(),
-            settings_contents: nbgl_content_t::default(),
-            generic_contents: nbgl_genericContents_t {
-                callbackCallNeeded: false,
-                __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
-                    contentsList: core::ptr::null(),
-                },
-                nbContents: 0,
-            },
+            info_contents: Vec::default(),
+            setting_contents: Vec::default(),
             nb_settings: 0,
         }
     }
@@ -227,12 +163,12 @@ impl<'a> NbglHomeAndSettings<'a> {
         version: &'a str,
         author: &'a str,
     ) -> NbglHomeAndSettings<'a> {
+        let mut v: Vec<CString> = Vec::new();
+        v.push(CString::new(app_name).unwrap());
+        v.push(CString::new(version).unwrap());
+        v.push(CString::new(author).unwrap());
         NbglHomeAndSettings {
-            info_contents: [
-                self.c_string_helper.to_cstring(app_name).unwrap().as_ptr() as *const c_char,
-                self.c_string_helper.to_cstring(version).unwrap().as_ptr() as *const c_char,
-                self.c_string_helper.to_cstring(author).unwrap().as_ptr() as *const c_char,
-            ],
+            info_contents: v,
             ..self
         }
     }
@@ -240,7 +176,7 @@ impl<'a> NbglHomeAndSettings<'a> {
     pub fn settings(
         self,
         nvm_data: &'a mut AtomicStorage<[u8; SETTINGS_SIZE]>,
-        settings_strings: &[[&str; 2]],
+        settings_strings: &[[&'a str; 2]],
     ) -> NbglHomeAndSettings<'a> {
         unsafe {
             NVM_REF = Some(transmute(nvm_data));
@@ -250,26 +186,14 @@ impl<'a> NbglHomeAndSettings<'a> {
             panic!("Too many settings.");
         }
 
-        unsafe {
-            for (i, setting) in settings_strings.iter().enumerate() {
-                SWITCH_ARRAY[i].text = self
-                    .c_string_helper
-                    .to_cstring(setting[0])
-                    .unwrap()
-                    .as_ptr() as *const c_char;
-                SWITCH_ARRAY[i].subText = self
-                    .c_string_helper
-                    .to_cstring(setting[1])
-                    .unwrap()
-                    .as_ptr() as *const c_char;
-                SWITCH_ARRAY[i].initState = NVM_REF.as_mut().unwrap().get_ref()[i] as nbgl_state_t;
-                SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
-                SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
-            }
-        }
+        let v: Vec<[CString; 2]> = settings_strings
+            .iter()
+            .map(|s| [CString::new(s[0]).unwrap(), CString::new(s[1]).unwrap()])
+            .collect();
 
         NbglHomeAndSettings {
             nb_settings: settings_strings.len() as u8,
+            setting_contents: v,
             ..self
         }
     }
@@ -279,8 +203,34 @@ impl<'a> NbglHomeAndSettings<'a> {
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
         unsafe {
-            if NVM_REF.is_some() {
-                self.settings_contents = nbgl_content_t {
+            loop {
+                let info_contents: Vec<*const c_char> = self
+                    .info_contents
+                    .iter()
+                    .map(|s| s.as_ptr())
+                    .collect::<Vec<_>>();
+
+                let info_list: nbgl_contentInfoList_t = nbgl_contentInfoList_t {
+                    infoTypes: INFO_FIELDS.as_ptr() as *const *const c_char,
+                    infoContents: info_contents[1..].as_ptr() as *const *const c_char,
+                    nbInfos: INFO_FIELDS.len() as u8,
+                };
+
+                let icon: nbgl_icon_details_t = match self.glyph {
+                    Some(g) => g.into(),
+                    None => nbgl_icon_details_t::default(),
+                };
+
+                for (i, setting) in self.setting_contents.iter().enumerate() {
+                    SWITCH_ARRAY[i].text = setting[0].as_ptr();
+                    SWITCH_ARRAY[i].subText = setting[1].as_ptr();
+                    SWITCH_ARRAY[i].initState =
+                        NVM_REF.as_mut().unwrap().get_ref()[i] as nbgl_state_t;
+                    SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
+                    SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
+                }
+
+                let content: nbgl_content_t = nbgl_content_t {
                     content: nbgl_content_u {
                         switchesList: nbgl_pageSwitchesList_s {
                             switches: &SWITCH_ARRAY as *const nbgl_contentSwitch_t,
@@ -294,32 +244,20 @@ impl<'a> NbglHomeAndSettings<'a> {
                     type_: SWITCHES_LIST,
                 };
 
-                self.generic_contents = nbgl_genericContents_t {
+                let generic_contents: nbgl_genericContents_t = nbgl_genericContents_t {
                     callbackCallNeeded: false,
                     __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
-                        contentsList: &self.settings_contents as *const nbgl_content_t,
+                        contentsList: &content as *const nbgl_content_t,
                     },
-                    nbContents: 1,
+                    nbContents: if self.nb_settings > 0 { 1 } else { 0 },
                 };
-            }
 
-            loop {
-                let info_list: nbgl_contentInfoList_t = nbgl_contentInfoList_t {
-                    infoTypes: INFO_FIELDS.as_ptr() as *const *const c_char,
-                    infoContents: self.info_contents[1..].as_ptr() as *const *const c_char,
-                    nbInfos: INFO_FIELDS.len() as u8,
-                };
-                let icon = if self.glyph.is_some() {
-                    &self.glyph.unwrap().into() as *const nbgl_icon_details_t
-                } else {
-                    core::ptr::null()
-                };
                 match ledger_secure_sdk_sys::ux_sync_homeAndSettings(
-                    self.info_contents[0],
-                    icon,
+                    info_contents[0],
+                    &icon as *const nbgl_icon_details_t,
                     core::ptr::null(),
                     INIT_HOME_PAGE as u8,
-                    &self.generic_contents as *const nbgl_genericContents_t,
+                    &generic_contents as *const nbgl_genericContents_t,
                     &info_list as *const nbgl_contentInfoList_t,
                     core::ptr::null(),
                 ) {
@@ -341,34 +279,20 @@ impl<'a> NbglHomeAndSettings<'a> {
 
 /// A wrapper around the synchronous NBGL ux_sync_review C API binding.
 /// Used to display transaction review screens.
-/// The maximum number of fields that can be displayed can be overriden by the
-/// MAX_FIELD_NUMBER const parameter.
-/// The maximum size of the internal buffer used to convert C strings can be overriden by the
-/// STRING_BUFFER_SIZE const parameter.
-pub struct NbglReview<
-    'a,
-    const MAX_FIELD_NUMBER: usize = 32,
-    const STRING_BUFFER_SIZE: usize = 1024,
-> {
-    title: &'a str,
-    subtitle: &'a str,
-    finish_title: &'a str,
+pub struct NbglReview<'a> {
+    title: CString,
+    subtitle: CString,
+    finish_title: CString,
     glyph: Option<&'a NbglGlyph<'a>>,
-    tag_value_array: [nbgl_layoutTagValue_t; MAX_FIELD_NUMBER],
-    c_string_helper: CStringHelper<STRING_BUFFER_SIZE>,
 }
 
-impl<'a, const MAX_FIELD_NUMBER: usize, const STRING_BUFFER_SIZE: usize>
-    NbglReview<'a, MAX_FIELD_NUMBER, STRING_BUFFER_SIZE>
-{
-    pub fn new() -> NbglReview<'a, MAX_FIELD_NUMBER, STRING_BUFFER_SIZE> {
+impl<'a> NbglReview<'a> {
+    pub fn new() -> NbglReview<'a> {
         NbglReview {
-            title: "Please review\ntransaction",
-            subtitle: "To send CRAB",
-            finish_title: "Sign transaction",
+            title: CString::new("").unwrap(),
+            subtitle: CString::new("").unwrap(),
+            finish_title: CString::new("").unwrap(),
             glyph: None,
-            tag_value_array: [nbgl_layoutTagValue_t::default(); MAX_FIELD_NUMBER],
-            c_string_helper: CStringHelper::<STRING_BUFFER_SIZE>::new(),
         }
     }
 
@@ -377,19 +301,16 @@ impl<'a, const MAX_FIELD_NUMBER: usize, const STRING_BUFFER_SIZE: usize>
         title: &'a str,
         subtitle: &'a str,
         finish_title: &'a str,
-    ) -> NbglReview<'a, MAX_FIELD_NUMBER, STRING_BUFFER_SIZE> {
+    ) -> NbglReview<'a> {
         NbglReview {
-            title,
-            subtitle,
-            finish_title,
+            title: CString::new(title).unwrap(),
+            subtitle: CString::new(subtitle).unwrap(),
+            finish_title: CString::new(finish_title).unwrap(),
             ..self
         }
     }
 
-    pub fn glyph(
-        self,
-        glyph: &'a NbglGlyph,
-    ) -> NbglReview<'a, MAX_FIELD_NUMBER, STRING_BUFFER_SIZE> {
+    pub fn glyph(self, glyph: &'a NbglGlyph) -> NbglReview<'a> {
         NbglReview {
             glyph: Some(glyph),
             ..self
@@ -398,64 +319,41 @@ impl<'a, const MAX_FIELD_NUMBER: usize, const STRING_BUFFER_SIZE: usize>
 
     pub fn show(&mut self, fields: &[Field]) -> bool {
         unsafe {
-            // Check if there are too many fields (more than MAX_FIELD_NUMBER).
-            if fields.len() > self.tag_value_array.len() {
-                panic!("Too many fields for this review instance.");
-            }
+            let v: Vec<CField> = fields
+                .iter()
+                .map(|f| CField {
+                    name: CString::new(f.name).unwrap(),
+                    value: CString::new(f.value).unwrap(),
+                })
+                .collect();
 
-            // Flush the internal buffer of the CStringHelper.
-            self.c_string_helper.flush();
-
-            // Fill the tag_value_array with the fields converted to nbgl_layoutTagValue_t
-            // with proper c strings (ending with \0).
-            for (i, field) in fields.iter().enumerate() {
-                let name = self.c_string_helper.to_cstring(field.name).unwrap();
-                let value = self.c_string_helper.to_cstring(field.value).unwrap();
-                self.tag_value_array[i] = nbgl_layoutTagValue_t {
-                    item: name.as_ptr() as *const i8,
-                    value: value.as_ptr() as *const i8,
-                    valueIcon: core::ptr::null() as *const nbgl_icon_details_t,
-                    _bitfield_align_1: [0; 0],
-                    _bitfield_1: __BindgenBitfieldUnit::new([0; 1usize]),
-                    __bindgen_padding_0: [0; 3usize],
-                }
+            // Fill the tag_value_array with the fields converted to nbgl_contentTagValue_t
+            let mut tag_value_array: Vec<nbgl_contentTagValue_t> = Vec::new();
+            for field in v.iter() {
+                let mut val = nbgl_contentTagValue_t::default();
+                val.item = field.name.as_ptr() as *const i8;
+                val.value = field.value.as_ptr() as *const i8;
+                tag_value_array.push(val);
             }
 
             // Create the tag_value_list with the tag_value_array.
-            let tag_value_list: nbgl_layoutTagValueList_t = nbgl_layoutTagValueList_t {
-                pairs: self.tag_value_array.as_ptr() as *const nbgl_layoutTagValue_t,
-                callback: None,
-                nbPairs: fields.len() as u8,
-                startIndex: 0,
-                nbMaxLinesForValue: 0,
-                token: 0,
-                smallCaseForValue: false,
-                wrapping: false,
-            };
+            let mut tag_value_list = nbgl_contentTagValueList_t::default();
+            tag_value_list.pairs = tag_value_array.as_ptr() as *const nbgl_contentTagValue_t;
+            tag_value_list.nbPairs = fields.len() as u8;
 
-            let icon = if self.glyph.is_some() {
-                &self.glyph.unwrap().into() as *const nbgl_icon_details_t
-            } else {
-                core::ptr::null()
+            let icon: nbgl_icon_details_t = match self.glyph {
+                Some(g) => g.into(),
+                None => nbgl_icon_details_t::default(),
             };
 
             // Show the review on the device.
             let sync_ret = ledger_secure_sdk_sys::ux_sync_review(
-                TYPE_TRANSACTION,
-                &tag_value_list as *const nbgl_layoutTagValueList_t,
-                icon,
-                self.c_string_helper
-                    .to_cstring(self.title)
-                    .unwrap()
-                    .as_ptr() as *const c_char,
-                self.c_string_helper
-                    .to_cstring(self.subtitle)
-                    .unwrap()
-                    .as_ptr() as *const c_char,
-                self.c_string_helper
-                    .to_cstring(self.finish_title)
-                    .unwrap()
-                    .as_ptr() as *const c_char,
+                TYPE_TRANSACTION.into(),
+                &tag_value_list as *const nbgl_contentTagValueList_t,
+                &icon as *const nbgl_icon_details_t,
+                self.title.as_ptr() as *const c_char,
+                self.subtitle.as_ptr() as *const c_char,
+                self.finish_title.as_ptr() as *const c_char,
             );
 
             // Return true if the user approved the transaction, false otherwise.
@@ -477,13 +375,13 @@ impl<'a, const MAX_FIELD_NUMBER: usize, const STRING_BUFFER_SIZE: usize>
 /// Used to display address confirmation screens.
 pub struct NbglAddressReview<'a> {
     glyph: Option<&'a NbglGlyph<'a>>,
-    verify_str: &'a str,
+    verify_str: CString,
 }
 
 impl<'a> NbglAddressReview<'a> {
     pub fn new() -> NbglAddressReview<'a> {
         NbglAddressReview {
-            verify_str: "Verify address",
+            verify_str: CString::new("").unwrap(),
             glyph: None,
         }
     }
@@ -495,29 +393,28 @@ impl<'a> NbglAddressReview<'a> {
         }
     }
 
-    pub fn verify_str(self, verify_str: &'a str) -> NbglAddressReview<'a> {
-        NbglAddressReview { verify_str, ..self }
+    pub fn verify_str(self, verify_str: &str) -> NbglAddressReview<'a> {
+        NbglAddressReview {
+            verify_str: CString::new(verify_str).unwrap(),
+            ..self
+        }
     }
 
     pub fn show(&mut self, address: &str) -> bool {
         unsafe {
-            // Create CStringHelper instance and convert the address and verify_str into c strings.
-            let c_string_helper = CStringHelper::<128>::new();
-            let c_addr_str = c_string_helper.to_cstring(address).unwrap();
-            let c_verif_str = c_string_helper.to_cstring(self.verify_str).unwrap();
-
-            let icon = if self.glyph.is_some() {
-                &self.glyph.unwrap().into() as *const nbgl_icon_details_t
-            } else {
-                core::ptr::null()
+            let icon: nbgl_icon_details_t = match self.glyph {
+                Some(g) => g.into(),
+                None => nbgl_icon_details_t::default(),
             };
+
+            let address = CString::new(address).unwrap();
 
             // Show the address confirmation on the device.
             let sync_ret = ux_sync_addressReview(
-                c_addr_str.as_ptr() as *const c_char,
+                address.as_ptr(),
                 core::ptr::null(),
-                icon,
-                c_verif_str.as_ptr() as *const c_char,
+                &icon as *const nbgl_icon_details_t,
+                self.verify_str.as_ptr(),
                 core::ptr::null(),
             );
 
