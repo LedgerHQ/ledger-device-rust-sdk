@@ -182,6 +182,10 @@ impl<'a> NbglHomeAndSettings<'a> {
             NVM_REF = Some(transmute(nvm_data));
         }
 
+        if settings_strings.len() > SETTINGS_SIZE {
+            panic!("Too many settings.");
+        }
+
         let v: Vec<[CString; 2]> = settings_strings
             .iter()
             .map(|s| [CString::new(s[0]).unwrap(), CString::new(s[1]).unwrap()])
