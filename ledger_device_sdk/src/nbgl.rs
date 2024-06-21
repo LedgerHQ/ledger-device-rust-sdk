@@ -22,7 +22,7 @@ pub struct Field<'a> {
     pub value: &'a str,
 }
 
-pub struct CField {
+struct CField {
     pub name: CString,
     pub value: CString,
 }
