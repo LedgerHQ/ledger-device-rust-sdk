@@ -2,7 +2,6 @@ use crate::io::{ApduHeader, Comm, Event, Reply};
 use crate::nvm::*;
 use const_zero::const_zero;
 extern crate alloc;
-use alloc::boxed::Box;
 use alloc::ffi::CString;
 use alloc::vec::Vec;
 use core::ffi::c_char;
@@ -403,7 +402,7 @@ pub struct CenteredInfo {
     text1: CString,
     text2: CString,
     text3: CString,
-    icon: Option<Box<nbgl_icon_details_t>>,
+    icon: Option<nbgl_icon_details_t>,
     on_top: bool,
     style: CenteredInfoStyle,
     offset_y: i16,
@@ -419,15 +418,11 @@ impl CenteredInfo {
         style: CenteredInfoStyle,
         offset_y: i16,
     ) -> CenteredInfo {
-        let icon_boxed: Option<Box<nbgl_icon_details_t>> = match icon {
-            Some(glyph) => Some(Box::new(glyph.into())),
-            None => None,
-        };
         CenteredInfo {
             text1: CString::new(text1).unwrap(),
             text2: CString::new(text2).unwrap(),
             text3: CString::new(text3).unwrap(),
-            icon: icon_boxed,
+            icon: icon.map_or(None, |g| Some(g.into())),
             on_top: on_top,
             style: style,
             offset_y: offset_y,
@@ -440,7 +435,7 @@ impl CenteredInfo {
 /// on the device when using the NbglGenericReview struct.
 pub struct InfoLongPress {
     text: CString,
-    icon: Option<Box<nbgl_icon_details_t>>,
+    icon: Option<nbgl_icon_details_t>,
     long_press_text: CString,
     tune_id: TuneIndex,
 }
@@ -452,13 +447,9 @@ impl InfoLongPress {
         long_press_text: &str,
         tune_id: TuneIndex,
     ) -> InfoLongPress {
-        let icon_boxed: Option<Box<nbgl_icon_details_t>> = match icon {
-            Some(glyph) => Some(Box::new(glyph.into())),
-            None => None,
-        };
         InfoLongPress {
             text: CString::new(text).unwrap(),
-            icon: icon_boxed,
+            icon: icon.map_or(None, |g| Some(g.into())),
             long_press_text: CString::new(long_press_text).unwrap(),
             tune_id: tune_id,
         }
@@ -470,7 +461,7 @@ impl InfoLongPress {
 /// on the device when using the NbglGenericReview struct.
 pub struct InfoButton {
     text: CString,
-    icon: Option<Box<nbgl_icon_details_t>>,
+    icon: Option<nbgl_icon_details_t>,
     button_text: CString,
     tune_id: TuneIndex,
 }
@@ -482,13 +473,9 @@ impl InfoButton {
         button_text: &str,
         tune_id: TuneIndex,
     ) -> InfoButton {
-        let icon_boxed: Option<Box<nbgl_icon_details_t>> = match icon {
-            Some(glyph) => Some(Box::new(glyph.into())),
-            None => None,
-        };
         InfoButton {
             text: CString::new(text).unwrap(),
-            icon: icon_boxed,
+            icon: icon.map_or(None, |g| Some(g.into())),
             button_text: CString::new(button_text).unwrap(),
             tune_id: tune_id,
         }
@@ -647,9 +634,10 @@ impl From<&NbglPageContent>
                     text1: data.text1.as_ptr() as *const c_char,
                     text2: data.text2.as_ptr() as *const c_char,
                     text3: data.text3.as_ptr() as *const c_char,
-                    icon: data.icon.as_ref().map_or(core::ptr::null(), |icon| {
-                        icon.as_ref() as *const nbgl_icon_details_t
-                    }),
+                    icon: data
+                        .icon
+                        .as_ref()
+                        .map_or(core::ptr::null(), |icon| icon as *const nbgl_icon_details_t),
                     onTop: data.on_top,
                     style: data.style.into(),
                     offsetY: data.offset_y,
@@ -702,9 +690,10 @@ impl From<&NbglPageContent>
             NbglPageContent::InfoLongPress(data) => {
                 let long_press = nbgl_contentInfoLongPress_t {
                     text: data.text.as_ptr() as *const c_char,
-                    icon: data.icon.as_ref().map_or(core::ptr::null(), |icon| {
-                        icon.as_ref() as *const nbgl_icon_details_t
-                    }),
+                    icon: data
+                        .icon
+                        .as_ref()
+                        .map_or(core::ptr::null(), |icon| icon as *const nbgl_icon_details_t),
                     longPressText: data.long_press_text.as_ptr() as *const c_char,
                     longPressToken: FIRST_USER_TOKEN as u8,
                     tuneId: data.tune_id as u8,
@@ -721,9 +710,10 @@ impl From<&NbglPageContent>
             NbglPageContent::InfoButton(data) => {
                 let button = nbgl_contentInfoButton_t {
                     text: data.text.as_ptr() as *const c_char,
-                    icon: data.icon.as_ref().map_or(core::ptr::null(), |icon| {
-                        icon.as_ref() as *const nbgl_icon_details_t
-                    }),
+                    icon: data
+                        .icon
+                        .as_ref()
+                        .map_or(core::ptr::null(), |icon| icon as *const nbgl_icon_details_t),
                     buttonText: data.button_text.as_ptr() as *const c_char,
                     buttonToken: FIRST_USER_TOKEN as u8,
                     tuneId: data.tune_id as u8,
