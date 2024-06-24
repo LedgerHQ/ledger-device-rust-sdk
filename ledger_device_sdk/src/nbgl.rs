@@ -4,7 +4,7 @@ use const_zero::const_zero;
 extern crate alloc;
 use alloc::ffi::CString;
 use alloc::vec::Vec;
-use core::ffi::c_char;
+use core::ffi::{c_char, c_int};
 use core::mem::transmute;
 use ledger_secure_sdk_sys::*;
 
@@ -107,7 +107,7 @@ pub extern "C" fn io_recv_and_process_event() -> bool {
 }
 
 /// Callback triggered by the NBGL API when a setting switch is toggled.
-unsafe fn settings_callback(token: ::core::ffi::c_int, _index: u8, _page: ::core::ffi::c_int) {
+unsafe fn settings_callback(token: c_int, _index: u8, _page: c_int) {
     let idx = token - FIRST_USER_TOKEN as i32;
     if idx < 0 || idx >= SETTINGS_SIZE as i32 {
         panic!("Invalid token.");
@@ -120,6 +120,15 @@ unsafe fn settings_callback(token: ::core::ffi::c_int, _index: u8, _page: ::core
         data.update(&switch_values);
         SWITCH_ARRAY[setting_idx].initState = switch_values[setting_idx] as nbgl_state_t;
     }
+}
+
+unsafe fn action_callback(token: c_int, _index: u8, _page: c_int) {
+    if token == FIRST_USER_TOKEN as i32 {
+        ux_sync_set_return_code(UX_SYNC_RET_APPROVED);
+    } else if token == (FIRST_USER_TOKEN + 1) as i32 {
+        ux_sync_set_return_code(UX_SYNC_RET_REJECTED);
+    }
+    ux_sync_set_ended(true);
 }
 
 /// Informations fields name to display in the dedicated
@@ -239,7 +248,7 @@ impl<'a> NbglHomeAndSettings<'a> {
                     },
                     contentActionCallback: transmute(
                         (|token, index, page| settings_callback(token, index, page))
-                            as fn(::core::ffi::c_int, u8, ::core::ffi::c_int),
+                            as fn(c_int, u8, c_int),
                     ),
                     type_: SWITCHES_LIST,
                 };
@@ -683,7 +692,12 @@ impl From<&NbglPageContent>
                         tagValueConfirm: confirm,
                     },
                     TAG_VALUE_CONFIRM,
-                    Some(generic_content_action_callback),
+                    Some(unsafe {
+                        transmute(
+                            (|token, index, page| action_callback(token, index, page))
+                                as fn(c_int, u8, c_int),
+                        )
+                    }),
                 )
             }
             NbglPageContent::InfoLongPress(data) => {
@@ -703,7 +717,12 @@ impl From<&NbglPageContent>
                         infoLongPress: long_press,
                     },
                     INFO_LONG_PRESS,
-                    Some(generic_content_action_callback),
+                    Some(unsafe {
+                        transmute(
+                            (|token, index, page| action_callback(token, index, page))
+                                as fn(c_int, u8, c_int),
+                        )
+                    }),
                 )
             }
             NbglPageContent::InfoButton(data) => {
@@ -721,7 +740,12 @@ impl From<&NbglPageContent>
                 (
                     nbgl_content_u { infoButton: button },
                     INFO_BUTTON,
-                    Some(generic_content_action_callback),
+                    Some(unsafe {
+                        transmute(
+                            (|token, index, page| action_callback(token, index, page))
+                                as fn(c_int, u8, c_int),
+                        )
+                    }),
                 )
             }
             NbglPageContent::InfosList(data) => {
