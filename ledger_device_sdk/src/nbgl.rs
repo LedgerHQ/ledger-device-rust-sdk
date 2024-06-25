@@ -107,7 +107,11 @@ pub extern "C" fn io_recv_and_process_event() -> bool {
 }
 
 /// Callback triggered by the NBGL API when a setting switch is toggled.
-unsafe fn settings_callback(token: ::core::ffi::c_int, _index: u8, _page: ::core::ffi::c_int) {
+unsafe extern "C" fn settings_callback(
+    token: ::core::ffi::c_int,
+    _index: u8,
+    _page: ::core::ffi::c_int,
+) {
     let idx = token - FIRST_USER_TOKEN as i32;
     if idx < 0 || idx >= SETTINGS_SIZE as i32 {
         panic!("Invalid token.");
@@ -237,10 +241,7 @@ impl<'a> NbglHomeAndSettings<'a> {
                             nbSwitches: self.nb_settings,
                         },
                     },
-                    contentActionCallback: transmute(
-                        (|token, index, page| settings_callback(token, index, page))
-                            as fn(::core::ffi::c_int, u8, ::core::ffi::c_int),
-                    ),
+                    contentActionCallback: Some(settings_callback),
                     type_: SWITCHES_LIST,
                 };
 
