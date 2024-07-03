@@ -122,13 +122,13 @@ unsafe extern "C" fn settings_callback(token: c_int, _index: u8, _page: c_int) {
     }
 }
 
-unsafe fn action_callback(token: c_int, _index: u8, _page: c_int) {
+unsafe extern "C" fn action_callback(token: c_int, _index: u8, _page: c_int) {
     if token == FIRST_USER_TOKEN as i32 {
-        ux_sync_set_return_code(UX_SYNC_RET_APPROVED);
+        ux_sync_setReturnCode(UX_SYNC_RET_APPROVED);
     } else if token == (FIRST_USER_TOKEN + 1) as i32 {
-        ux_sync_set_return_code(UX_SYNC_RET_REJECTED);
+        ux_sync_setReturnCode(UX_SYNC_RET_REJECTED);
     }
-    ux_sync_set_ended(true);
+    ux_sync_setEnded(true);
 }
 
 /// Informations fields name to display in the dedicated
@@ -689,12 +689,7 @@ impl From<&NbglPageContent>
                         tagValueConfirm: confirm,
                     },
                     TAG_VALUE_CONFIRM,
-                    Some(unsafe {
-                        transmute(
-                            (|token, index, page| action_callback(token, index, page))
-                                as fn(c_int, u8, c_int),
-                        )
-                    }),
+                    Some(action_callback),
                 )
             }
             NbglPageContent::InfoLongPress(data) => {
@@ -714,12 +709,7 @@ impl From<&NbglPageContent>
                         infoLongPress: long_press,
                     },
                     INFO_LONG_PRESS,
-                    Some(unsafe {
-                        transmute(
-                            (|token, index, page| action_callback(token, index, page))
-                                as fn(c_int, u8, c_int),
-                        )
-                    }),
+                    Some(action_callback),
                 )
             }
             NbglPageContent::InfoButton(data) => {
@@ -737,12 +727,7 @@ impl From<&NbglPageContent>
                 (
                     nbgl_content_u { infoButton: button },
                     INFO_BUTTON,
-                    Some(unsafe {
-                        transmute(
-                            (|token, index, page| action_callback(token, index, page))
-                                as fn(c_int, u8, c_int),
-                        )
-                    }),
+                    Some(action_callback),
                 )
             }
             NbglPageContent::InfosList(data) => {
