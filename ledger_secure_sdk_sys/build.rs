@@ -224,16 +224,15 @@ fn clone_sdk(device: &Device) -> PathBuf {
         ),
         Device::Stax => (
             Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "ux_sync_public_callbacks_15",
+            "API_LEVEL_15",
         ),
         Device::Flex => (
             Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "ux_sync_public_callbacks_20",
+            "API_LEVEL_21",
         ),
     };
 
     let out_dir = env::var("OUT_DIR").unwrap();
-    println!("cargo:warning=Outdir {:?}", out_dir);
     let bolos_sdk = Path::new(out_dir.as_str()).join("ledger-secure-sdk");
     if !bolos_sdk.exists() {
         Command::new("git")
@@ -347,12 +346,10 @@ impl SDKBuilder {
 
     pub fn bolos_sdk(&mut self) -> Result<(), SDKBuildError> {
         println!("cargo:rerun-if-env-changed=LEDGER_SDK_PATH");
-        // let sdk_path = match env::var("LEDGER_SDK_PATH") {
-        //     Err(_) => clone_sdk(&self.device),
-        //     Ok(path) => PathBuf::from(path),
-        // };
-
-        let sdk_path = clone_sdk(&self.device);
+        let sdk_path = match env::var("LEDGER_SDK_PATH") {
+            Err(_) => clone_sdk(&self.device),
+            Ok(path) => PathBuf::from(path),
+        };
 
         let sdk_info = retrieve_sdk_info(&self.device, &sdk_path)?;
 
