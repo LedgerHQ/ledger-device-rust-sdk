@@ -178,7 +178,7 @@ fn retrieve_target_file_infos(
     let mut target_name: Option<String> = None;
 
     for line in BufReader::new(target_file).lines().flatten() {
-        if target_id.is_none() && line.contains("TARGET_ID") {
+        if target_id.is_none() && line.contains("#define TARGET_ID") {
             target_id = Some(
                 line.split_whitespace()
                     .nth(2)
