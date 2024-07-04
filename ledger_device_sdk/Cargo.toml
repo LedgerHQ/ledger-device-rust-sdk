@@ -1,6 +1,6 @@
 [package]
 name = "ledger_device_sdk"
-version = "1.11.0"
+version = "1.11.1"
 authors = ["yhql", "yogh333", "agrojean-ledger", "kingofpayne"]
 edition = "2021"
 license.workspace = true
@@ -23,10 +23,10 @@ numtoa = "0.2.4"
 const-zero = "0.1.1"
 
 [target.'cfg(target_os="nanos")'.dependencies]
-ledger_secure_sdk_sys = {path = "../ledger_secure_sdk_sys", version = "1.4.1"}
+ledger_secure_sdk_sys = {path = "../ledger_secure_sdk_sys", version = "1.4.2"}
 
 [target.'cfg(not(target_os="nanos"))'.dependencies]
-ledger_secure_sdk_sys = {path = "../ledger_secure_sdk_sys", version = "1.4.1", features = ["heap"]}
+ledger_secure_sdk_sys = {path = "../ledger_secure_sdk_sys", version = "1.4.2", features = ["heap"]}
 
 [features]
 speculos = []
