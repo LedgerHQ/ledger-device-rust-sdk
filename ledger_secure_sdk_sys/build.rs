@@ -178,7 +178,7 @@ fn retrieve_target_file_infos(
     let mut target_name: Option<String> = None;
 
     for line in BufReader::new(target_file).lines().flatten() {
-        if target_id.is_none() && line.contains("TARGET_ID") {
+        if target_id.is_none() && line.contains("#define TARGET_ID") {
             target_id = Some(
                 line.split_whitespace()
                     .nth(2)
@@ -228,7 +228,7 @@ fn clone_sdk(device: &Device) -> PathBuf {
         ),
         Device::Flex => (
             Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_19",
+            "API_LEVEL_21",
         ),
     };
 
@@ -527,9 +527,9 @@ impl SDKBuilder {
             }
             Device::Stax | Device::Flex => {
                 if Device::Stax == self.device {
-                    bindings = bindings.clang_args(["-I./src/c/glyphs_stax_15"]);
+                    bindings = bindings.clang_args(["-I./src/c/glyphs_stax"]);
                 } else {
-                    bindings = bindings.clang_args(["-I./src/c/glyphs_flex_18"]);
+                    bindings = bindings.clang_args(["-I./src/c/glyphs_flex"]);
                 }
 
                 bindings = bindings.clang_args([
@@ -690,8 +690,8 @@ fn finalize_stax_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
         .include(bolos_sdk.join("target/stax/include/"))
         .flag("-fropi")
         .flag("-frwpi")
-        .include("./src/c/glyphs_stax_15/")
-        .file("./src/c/glyphs_stax_15/glyphs.c");
+        .include("./src/c/glyphs_stax/")
+        .file("./src/c/glyphs_stax/glyphs.c");
     configure_lib_nbgl(command, bolos_sdk);
 }
 
@@ -706,8 +706,8 @@ fn finalize_flex_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
         .include(bolos_sdk.join("target/flex/include/"))
         .flag("-fropi")
         .flag("-frwpi")
-        .include("./src/c/glyphs_flex_18/")
-        .file("./src/c/glyphs_flex_18/glyphs.c");
+        .include("./src/c/glyphs_flex/")
+        .file("./src/c/glyphs_flex/glyphs.c");
     configure_lib_nbgl(command, bolos_sdk);
 }
 
