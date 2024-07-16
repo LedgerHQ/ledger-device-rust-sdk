@@ -9,6 +9,11 @@ use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{init_comm, Field, NbglGlyph, NbglReview};
 use ledger_secure_sdk_sys::*;
 
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! {
+    exit_app(1);
+}
+
 #[no_mangle]
 extern "C" fn sample_main() {
     unsafe {
@@ -46,7 +51,8 @@ extern "C" fn sample_main() {
             "To send CRAB",
             "Sign transaction\nto send CRAB",
         )
-        .glyph(&FERRIS);
+        .glyph(&FERRIS)
+        .blind();
 
     review.show(&my_fields);
 }

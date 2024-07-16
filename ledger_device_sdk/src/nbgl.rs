@@ -86,17 +86,22 @@ pub enum TransactionType {
     Operation,
 }
 
-impl From<&TransactionType> for nbgl_operationType_t {
-    fn from(t: &TransactionType) -> nbgl_operationType_t {
-        match t {
+impl TransactionType {
+    pub fn to_c_type(&self, blind: bool, skippable: bool) -> nbgl_operationType_t {
+        let mut tx_type = match self {
             TransactionType::Transaction => TYPE_TRANSACTION.into(),
             TransactionType::Message => TYPE_MESSAGE.into(),
             TransactionType::Operation => TYPE_OPERATION.into(),
+        };
+        if blind {
+            tx_type |= BLIND_OPERATION;
         }
+        if skippable {
+            tx_type |= SKIPPABLE_OPERATION;
+        }
+        tx_type
     }
-}
-
-impl TransactionType {
+    
     pub fn to_message(&self, success: bool) -> nbgl_reviewStatusType_t {
         match self {
             TransactionType::Transaction => {
@@ -335,6 +340,7 @@ pub struct NbglReview<'a> {
     finish_title: CString,
     glyph: Option<&'a NbglGlyph<'a>>,
     tx_type: TransactionType,
+    blind: bool,
 }
 
 impl<'a> NbglReview<'a> {
@@ -345,11 +351,19 @@ impl<'a> NbglReview<'a> {
             finish_title: CString::new("").unwrap(),
             glyph: None,
             tx_type: TransactionType::Transaction,
+            blind: false,
         }
     }
 
     pub fn tx_type(self, tx_type: TransactionType) -> NbglReview<'a> {
         NbglReview { tx_type, ..self }
+    }
+
+    pub fn blind(self) -> NbglReview<'a> {
+        NbglReview {
+            blind: true,
+            ..self
+        }
     }
 
     pub fn titles(
@@ -408,7 +422,7 @@ impl<'a> NbglReview<'a> {
 
             // Show the review on the device.
             let sync_ret = ledger_secure_sdk_sys::ux_sync_review(
-                (&self.tx_type).into(),
+                self.tx_type.to_c_type(self.blind, false),
                 &tag_value_list as *const nbgl_contentTagValueList_t,
                 &icon as *const nbgl_icon_details_t,
                 self.title.as_ptr() as *const c_char,
@@ -874,6 +888,7 @@ impl NbglGenericReview {
 pub struct NbglStreamingReview {
     icon: nbgl_icon_details_t,
     tx_type: TransactionType,
+    blind: bool,
 }
 
 impl NbglStreamingReview {
@@ -881,11 +896,19 @@ impl NbglStreamingReview {
         NbglStreamingReview {
             icon: nbgl_icon_details_t::default(),
             tx_type: TransactionType::Transaction,
+            blind: false,
         }
     }
 
     pub fn tx_type(self, tx_type: TransactionType) -> NbglStreamingReview {
         NbglStreamingReview { tx_type, ..self }
+    }
+
+    pub fn blind(self) -> NbglStreamingReview {
+        NbglStreamingReview {
+            blind: true,
+            ..self
+        }
     }
 
     pub fn glyph(self, glyph: &NbglGlyph) -> NbglStreamingReview {
@@ -901,7 +924,7 @@ impl NbglStreamingReview {
             let subtitle = CString::new(subtitle).unwrap();
 
             let sync_ret = ux_sync_reviewStreamingStart(
-                (&self.tx_type).into(),
+                self.tx_type.to_c_type(self.blind, false),
                 &self.icon as *const nbgl_icon_details_t,
                 title.as_ptr() as *const c_char,
                 subtitle.as_ptr() as *const c_char,
