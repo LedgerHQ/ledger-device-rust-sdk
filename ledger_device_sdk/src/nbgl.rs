@@ -813,6 +813,10 @@ impl From<&NbglPageContent>
     }
 }
 
+/// A wrapper around the synchronous NBGL ux_sync_genericReview C API binding.
+/// Used to display custom built review screens. User can add different kind of
+/// contents (CenteredInfo, InfoLongPress, InfoButton, TagValueList, TagValueConfirm, InfosList)
+/// to the review screen using the add_content method.
 pub struct NbglGenericReview {
     content_list: Vec<NbglPageContent>,
 }
@@ -885,6 +889,9 @@ impl NbglGenericReview {
     }
 }
 
+
+/// A wrapper around the synchronous NBGL ux_sync_reviewStreaming (start, continue and finish)
+/// C API binding. Used to display streamed transaction review screens.
 pub struct NbglStreamingReview {
     icon: nbgl_icon_details_t,
     tx_type: TransactionType,
