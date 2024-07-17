@@ -363,7 +363,7 @@ dependencies = [
 
 [[package]]
 name = "ledger_secure_sdk_sys"
-version = "1.4.2"
+version = "1.4.3"
 dependencies = [
  "bindgen",
  "cc",

@@ -101,7 +101,7 @@ impl TransactionType {
         }
         tx_type
     }
-    
+
     pub fn to_message(&self, success: bool) -> nbgl_reviewStatusType_t {
         match self {
             TransactionType::Transaction => {
@@ -888,7 +888,6 @@ impl NbglGenericReview {
         }
     }
 }
-
 
 /// A wrapper around the synchronous NBGL ux_sync_reviewStreaming (start, continue and finish)
 /// C API binding. Used to display streamed transaction review screens.
