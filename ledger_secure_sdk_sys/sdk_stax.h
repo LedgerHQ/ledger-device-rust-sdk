@@ -1,5 +1,6 @@
 #define ST33K1M5
 #define HAVE_SPRINTF
+#define HAVE_SE_EINK_DISPLAY
 #define SCREEN_SIZE_WALLET
 #define HAVE_NBGL
 #define NBGL_USE_CASE

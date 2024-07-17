@@ -80,6 +80,55 @@ impl<'a> Into<nbgl_icon_details_t> for &NbglGlyph<'a> {
     }
 }
 
+pub enum TransactionType {
+    Transaction,
+    Message,
+    Operation,
+}
+
+impl TransactionType {
+    pub fn to_c_type(&self, blind: bool, skippable: bool) -> nbgl_operationType_t {
+        let mut tx_type = match self {
+            TransactionType::Transaction => TYPE_TRANSACTION.into(),
+            TransactionType::Message => TYPE_MESSAGE.into(),
+            TransactionType::Operation => TYPE_OPERATION.into(),
+        };
+        if blind {
+            tx_type |= BLIND_OPERATION;
+        }
+        if skippable {
+            tx_type |= SKIPPABLE_OPERATION;
+        }
+        tx_type
+    }
+
+    pub fn to_message(&self, success: bool) -> nbgl_reviewStatusType_t {
+        match self {
+            TransactionType::Transaction => {
+                if success {
+                    STATUS_TYPE_TRANSACTION_SIGNED
+                } else {
+                    STATUS_TYPE_TRANSACTION_REJECTED
+                }
+            }
+            TransactionType::Message => {
+                if success {
+                    STATUS_TYPE_MESSAGE_SIGNED
+                } else {
+                    STATUS_TYPE_MESSAGE_REJECTED
+                }
+            }
+            TransactionType::Operation => {
+                if success {
+                    STATUS_TYPE_OPERATION_SIGNED
+                } else {
+                    STATUS_TYPE_OPERATION_REJECTED
+                }
+            }
+        }
+    }
+}
+
 /// Initialize the global COMM_REF variable with the provided Comm instance.
 /// This function should be called from the main function of the application.
 /// The COMM_REF variable is used by the NBGL API to detect touch events and
@@ -290,6 +339,8 @@ pub struct NbglReview<'a> {
     subtitle: CString,
     finish_title: CString,
     glyph: Option<&'a NbglGlyph<'a>>,
+    tx_type: TransactionType,
+    blind: bool,
 }
 
 impl<'a> NbglReview<'a> {
@@ -299,6 +350,19 @@ impl<'a> NbglReview<'a> {
             subtitle: CString::new("").unwrap(),
             finish_title: CString::new("").unwrap(),
             glyph: None,
+            tx_type: TransactionType::Transaction,
+            blind: false,
+        }
+    }
+
+    pub fn tx_type(self, tx_type: TransactionType) -> NbglReview<'a> {
+        NbglReview { tx_type, ..self }
+    }
+
+    pub fn blind(self) -> NbglReview<'a> {
+        NbglReview {
+            blind: true,
+            ..self
         }
     }
 
@@ -358,7 +422,7 @@ impl<'a> NbglReview<'a> {
 
             // Show the review on the device.
             let sync_ret = ledger_secure_sdk_sys::ux_sync_review(
-                TYPE_TRANSACTION.into(),
+                self.tx_type.to_c_type(self.blind, false),
                 &tag_value_list as *const nbgl_contentTagValueList_t,
                 &icon as *const nbgl_icon_details_t,
                 self.title.as_ptr() as *const c_char,
@@ -369,11 +433,11 @@ impl<'a> NbglReview<'a> {
             // Return true if the user approved the transaction, false otherwise.
             match sync_ret {
                 ledger_secure_sdk_sys::UX_SYNC_RET_APPROVED => {
-                    ledger_secure_sdk_sys::ux_sync_reviewStatus(STATUS_TYPE_TRANSACTION_SIGNED);
+                    ledger_secure_sdk_sys::ux_sync_reviewStatus(self.tx_type.to_message(true));
                     return true;
                 }
                 _ => {
-                    ledger_secure_sdk_sys::ux_sync_reviewStatus(STATUS_TYPE_TRANSACTION_REJECTED);
+                    ledger_secure_sdk_sys::ux_sync_reviewStatus(self.tx_type.to_message(false));
                     return false;
                 }
             }
@@ -749,6 +813,10 @@ impl From<&NbglPageContent>
     }
 }
 
+/// A wrapper around the synchronous NBGL ux_sync_genericReview C API binding.
+/// Used to display custom built review screens. User can add different kind of
+/// contents (CenteredInfo, InfoLongPress, InfoButton, TagValueList, TagValueConfirm, InfosList)
+/// to the review screen using the add_content method.
 pub struct NbglGenericReview {
     content_list: Vec<NbglPageContent>,
 }
@@ -814,6 +882,131 @@ impl NbglGenericReview {
                         rejected_cstring.as_ptr() as *const c_char,
                         false,
                     );
+                    return false;
+                }
+            }
+        }
+    }
+}
+
+/// A wrapper around the synchronous NBGL ux_sync_reviewStreaming (start, continue and finish)
+/// C API binding. Used to display streamed transaction review screens.
+pub struct NbglStreamingReview {
+    icon: nbgl_icon_details_t,
+    tx_type: TransactionType,
+    blind: bool,
+}
+
+impl NbglStreamingReview {
+    pub fn new() -> NbglStreamingReview {
+        NbglStreamingReview {
+            icon: nbgl_icon_details_t::default(),
+            tx_type: TransactionType::Transaction,
+            blind: false,
+        }
+    }
+
+    pub fn tx_type(self, tx_type: TransactionType) -> NbglStreamingReview {
+        NbglStreamingReview { tx_type, ..self }
+    }
+
+    pub fn blind(self) -> NbglStreamingReview {
+        NbglStreamingReview {
+            blind: true,
+            ..self
+        }
+    }
+
+    pub fn glyph(self, glyph: &NbglGlyph) -> NbglStreamingReview {
+        NbglStreamingReview {
+            icon: glyph.into(),
+            ..self
+        }
+    }
+
+    pub fn start(&mut self, title: &str, subtitle: &str) -> bool {
+        unsafe {
+            let title = CString::new(title).unwrap();
+            let subtitle = CString::new(subtitle).unwrap();
+
+            let sync_ret = ux_sync_reviewStreamingStart(
+                self.tx_type.to_c_type(self.blind, false),
+                &self.icon as *const nbgl_icon_details_t,
+                title.as_ptr() as *const c_char,
+                subtitle.as_ptr() as *const c_char,
+            );
+
+            // Return true if the user approved the transaction, false otherwise.
+            match sync_ret {
+                UX_SYNC_RET_APPROVED => {
+                    return true;
+                }
+                _ => {
+                    ux_sync_reviewStatus(self.tx_type.to_message(false));
+                    return false;
+                }
+            }
+        }
+    }
+
+    pub fn continue_review(&mut self, fields: &[Field]) -> bool {
+        unsafe {
+            let v: Vec<CField> = fields
+                .iter()
+                .map(|f| CField {
+                    name: CString::new(f.name).unwrap(),
+                    value: CString::new(f.value).unwrap(),
+                })
+                .collect();
+
+            // Fill the tag_value_array with the fields converted to nbgl_contentTagValue_t
+            let mut tag_value_array: Vec<nbgl_contentTagValue_t> = Vec::new();
+            for field in v.iter() {
+                let val = nbgl_contentTagValue_t {
+                    item: field.name.as_ptr() as *const i8,
+                    value: field.value.as_ptr() as *const i8,
+                    ..Default::default()
+                };
+                tag_value_array.push(val);
+            }
+
+            // Create the tag_value_list with the tag_value_array.
+            let tag_value_list = nbgl_contentTagValueList_t {
+                pairs: tag_value_array.as_ptr() as *const nbgl_contentTagValue_t,
+                nbPairs: fields.len() as u8,
+                ..Default::default()
+            };
+
+            let sync_ret = ux_sync_reviewStreamingContinue(
+                &tag_value_list as *const nbgl_contentTagValueList_t,
+            );
+
+            // Return true if the user approved the transaction, false otherwise.
+            match sync_ret {
+                UX_SYNC_RET_APPROVED => {
+                    return true;
+                }
+                _ => {
+                    ux_sync_reviewStatus(self.tx_type.to_message(false));
+                    return false;
+                }
+            }
+        }
+    }
+
+    pub fn finish(&mut self, finish_title: &str) -> bool {
+        unsafe {
+            let finish_title = CString::new(finish_title).unwrap();
+            let sync_ret = ux_sync_reviewStreamingFinish(finish_title.as_ptr() as *const c_char);
+
+            // Return true if the user approved the transaction, false otherwise.
+            match sync_ret {
+                ledger_secure_sdk_sys::UX_SYNC_RET_APPROVED => {
+                    ux_sync_reviewStatus(self.tx_type.to_message(true));
+                    return true;
+                }
+                _ => {
+                    ux_sync_reviewStatus(self.tx_type.to_message(false));
                     return false;
                 }
             }
