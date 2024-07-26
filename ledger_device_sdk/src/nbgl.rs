@@ -308,7 +308,7 @@ impl<'a> NbglHomeAndSettings<'a> {
                     nbContents: if self.nb_settings > 0 { 1 } else { 0 },
                 };
 
-                match ledger_secure_sdk_sys::ux_sync_homeAndSettings(
+                match ux_sync_homeAndSettings(
                     info_contents[0],
                     &icon as *const nbgl_icon_details_t,
                     core::ptr::null(),
@@ -317,7 +317,7 @@ impl<'a> NbglHomeAndSettings<'a> {
                     &info_list as *const nbgl_contentInfoList_t,
                     core::ptr::null(),
                 ) {
-                    ledger_secure_sdk_sys::UX_SYNC_RET_APDU_RECEIVED => {
+                    UX_SYNC_RET_APDU_RECEIVED => {
                         if let Some(comm) = COMM_REF.as_mut() {
                             if let Some(value) = comm.check_event() {
                                 return value;
@@ -452,13 +452,13 @@ impl<'a> NbglReview<'a> {
 
             if self.blind {
                 if !show_blind_warning() {
-                    ledger_secure_sdk_sys::ux_sync_reviewStatus(self.tx_type.to_message(false));
+                    ux_sync_reviewStatus(self.tx_type.to_message(false));
                     return false;
                 }
             }
 
             // Show the review on the device.
-            let sync_ret = ledger_secure_sdk_sys::ux_sync_review(
+            let sync_ret = ux_sync_review(
                 self.tx_type.to_c_type(self.blind, false),
                 &tag_value_list as *const nbgl_contentTagValueList_t,
                 &icon as *const nbgl_icon_details_t,
@@ -469,12 +469,12 @@ impl<'a> NbglReview<'a> {
 
             // Return true if the user approved the transaction, false otherwise.
             match sync_ret {
-                ledger_secure_sdk_sys::UX_SYNC_RET_APPROVED => {
-                    ledger_secure_sdk_sys::ux_sync_reviewStatus(self.tx_type.to_message(true));
+                UX_SYNC_RET_APPROVED => {
+                    ux_sync_reviewStatus(self.tx_type.to_message(true));
                     return true;
                 }
                 _ => {
-                    ledger_secure_sdk_sys::ux_sync_reviewStatus(self.tx_type.to_message(false));
+                    ux_sync_reviewStatus(self.tx_type.to_message(false));
                     return false;
                 }
             }
@@ -907,18 +907,12 @@ impl NbglGenericReview {
 
             // Return true if the user approved the transaction, false otherwise.
             match sync_ret {
-                ledger_secure_sdk_sys::UX_SYNC_RET_APPROVED => {
-                    ledger_secure_sdk_sys::ux_sync_status(
-                        succeed_cstring.as_ptr() as *const c_char,
-                        true,
-                    );
+                UX_SYNC_RET_APPROVED => {
+                    ux_sync_status(succeed_cstring.as_ptr() as *const c_char, true);
                     return true;
                 }
                 _ => {
-                    ledger_secure_sdk_sys::ux_sync_status(
-                        rejected_cstring.as_ptr() as *const c_char,
-                        false,
-                    );
+                    ux_sync_status(rejected_cstring.as_ptr() as *const c_char, false);
                     return false;
                 }
             }
@@ -1045,7 +1039,7 @@ impl NbglStreamingReview {
 
             // Return true if the user approved the transaction, false otherwise.
             match sync_ret {
-                ledger_secure_sdk_sys::UX_SYNC_RET_APPROVED => {
+                UX_SYNC_RET_APPROVED => {
                     ux_sync_reviewStatus(self.tx_type.to_message(true));
                     return true;
                 }
@@ -1107,12 +1101,12 @@ impl<'a> NbglAddressReview<'a> {
 
             // Return true if the user approved the address, false otherwise.
             match sync_ret {
-                ledger_secure_sdk_sys::UX_SYNC_RET_APPROVED => {
-                    ledger_secure_sdk_sys::ux_sync_reviewStatus(STATUS_TYPE_ADDRESS_VERIFIED);
+                UX_SYNC_RET_APPROVED => {
+                    ux_sync_reviewStatus(STATUS_TYPE_ADDRESS_VERIFIED);
                     return true;
                 }
-                ledger_secure_sdk_sys::UX_SYNC_RET_REJECTED => {
-                    ledger_secure_sdk_sys::ux_sync_reviewStatus(STATUS_TYPE_ADDRESS_REJECTED);
+                UX_SYNC_RET_REJECTED => {
+                    ux_sync_reviewStatus(STATUS_TYPE_ADDRESS_REJECTED);
                     return false;
                 }
                 _ => {
@@ -1123,7 +1117,7 @@ impl<'a> NbglAddressReview<'a> {
     }
 }
 
-/// A wrapper around the synchronous NBGL ux_sync_status C API binding. 
+/// A wrapper around the synchronous NBGL ux_sync_status C API binding.
 /// Draws a generic choice page, described in a centered info (with configurable icon),
 /// thanks to a button and a footer at the bottom of the page.
 pub struct NbglChoice<'a> {
@@ -1189,18 +1183,15 @@ impl<'a> NbglChoice<'a> {
 
             // Return true if the user approved the transaction, false otherwise.
             match sync_ret {
-                ledger_secure_sdk_sys::UX_SYNC_RET_APPROVED => {
+                UX_SYNC_RET_APPROVED => {
                     if let Some(text) = self.confirmed_text {
-                        ledger_secure_sdk_sys::ux_sync_status(text.as_ptr() as *const c_char, true);
+                        ux_sync_status(text.as_ptr() as *const c_char, true);
                     }
                     return true;
                 }
                 _ => {
                     if let Some(text) = self.cancelled_text {
-                        ledger_secure_sdk_sys::ux_sync_status(
-                            text.as_ptr() as *const c_char,
-                            false,
-                        );
+                        ux_sync_status(text.as_ptr() as *const c_char, false);
                     }
                     return false;
                 }
