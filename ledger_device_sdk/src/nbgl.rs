@@ -6,6 +6,7 @@ use alloc::ffi::CString;
 use alloc::vec::Vec;
 use core::ffi::{c_char, c_int};
 use core::mem::transmute;
+use include_gif::include_gif;
 use ledger_secure_sdk_sys::*;
 
 #[no_mangle]
@@ -332,6 +333,35 @@ impl<'a> NbglHomeAndSettings<'a> {
     }
 }
 
+/// Private helper function to display a warning screen when a transaction
+/// is reviewed in "blind" mode. The user can choose to go back to safety
+/// or review the risk. If the user chooses to review the risk, a second screen
+/// is displayed with the option to accept the risk or reject the transaction.
+/// Used in NbglReview and NbglStreamingReview.
+fn show_blind_warning() -> bool {
+    const WARNING: NbglGlyph =
+        NbglGlyph::from_include(include_gif!("icons/Warning_64px.gif", NBGL));
+
+    let back_to_safety = NbglChoice::new().glyph(&WARNING).show(
+        "Security risk detected",
+        "It may not be safe to sign this transaction. To continue, you'll need to review the risk.",
+        "Back to safety",
+        "Review risk",
+    );
+
+    if !back_to_safety {
+        NbglChoice::new()
+            .show(
+                "The transaction cannot be trusted",
+                "Your Ledger cannot decode this transaction. If you sign it, you could be authorizing malicious actions that can drain your wallet.\n\nLearn more: ledger.com/e8",
+                "I accept the risk",
+                "Reject transaction"
+            )
+    } else {
+        false
+    }
+}
+
 /// A wrapper around the synchronous NBGL ux_sync_review C API binding.
 /// Used to display transaction review screens.
 pub struct NbglReview<'a> {
@@ -419,6 +449,13 @@ impl<'a> NbglReview<'a> {
                 Some(g) => g.into(),
                 None => nbgl_icon_details_t::default(),
             };
+
+            if self.blind {
+                if !show_blind_warning() {
+                    ledger_secure_sdk_sys::ux_sync_reviewStatus(self.tx_type.to_message(false));
+                    return false;
+                }
+            }
 
             // Show the review on the device.
             let sync_ret = ledger_secure_sdk_sys::ux_sync_review(
@@ -928,6 +965,13 @@ impl NbglStreamingReview {
         unsafe {
             let title = CString::new(title).unwrap();
             let subtitle = CString::new(subtitle).unwrap();
+
+            if self.blind {
+                if !show_blind_warning() {
+                    ux_sync_reviewStatus(self.tx_type.to_message(false));
+                    return false;
+                }
+            }
 
             let sync_ret = ux_sync_reviewStreamingStart(
                 self.tx_type.to_c_type(self.blind, false),
