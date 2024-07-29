@@ -6,6 +6,7 @@ use alloc::ffi::CString;
 use alloc::vec::Vec;
 use core::ffi::{c_char, c_int};
 use core::mem::transmute;
+use include_gif::include_gif;
 use ledger_secure_sdk_sys::*;
 
 #[no_mangle]
@@ -307,7 +308,7 @@ impl<'a> NbglHomeAndSettings<'a> {
                     nbContents: if self.nb_settings > 0 { 1 } else { 0 },
                 };
 
-                match ledger_secure_sdk_sys::ux_sync_homeAndSettings(
+                match ux_sync_homeAndSettings(
                     info_contents[0],
                     &icon as *const nbgl_icon_details_t,
                     core::ptr::null(),
@@ -316,7 +317,7 @@ impl<'a> NbglHomeAndSettings<'a> {
                     &info_list as *const nbgl_contentInfoList_t,
                     core::ptr::null(),
                 ) {
-                    ledger_secure_sdk_sys::UX_SYNC_RET_APDU_RECEIVED => {
+                    UX_SYNC_RET_APDU_RECEIVED => {
                         if let Some(comm) = COMM_REF.as_mut() {
                             if let Some(value) = comm.check_event() {
                                 return value;
@@ -329,6 +330,35 @@ impl<'a> NbglHomeAndSettings<'a> {
                 }
             }
         }
+    }
+}
+
+/// Private helper function to display a warning screen when a transaction
+/// is reviewed in "blind" mode. The user can choose to go back to safety
+/// or review the risk. If the user chooses to review the risk, a second screen
+/// is displayed with the option to accept the risk or reject the transaction.
+/// Used in NbglReview and NbglStreamingReview.
+fn show_blind_warning() -> bool {
+    const WARNING: NbglGlyph =
+        NbglGlyph::from_include(include_gif!("icons/Warning_64px.gif", NBGL));
+
+    let back_to_safety = NbglChoice::new().glyph(&WARNING).show(
+        "Security risk detected",
+        "It may not be safe to sign this transaction. To continue, you'll need to review the risk.",
+        "Back to safety",
+        "Review risk",
+    );
+
+    if !back_to_safety {
+        NbglChoice::new()
+            .show(
+                "The transaction cannot be trusted",
+                "Your Ledger cannot decode this transaction. If you sign it, you could be authorizing malicious actions that can drain your wallet.\n\nLearn more: ledger.com/e8",
+                "I accept the risk",
+                "Reject transaction"
+            )
+    } else {
+        false
     }
 }
 
@@ -420,8 +450,15 @@ impl<'a> NbglReview<'a> {
                 None => nbgl_icon_details_t::default(),
             };
 
+            if self.blind {
+                if !show_blind_warning() {
+                    ux_sync_reviewStatus(self.tx_type.to_message(false));
+                    return false;
+                }
+            }
+
             // Show the review on the device.
-            let sync_ret = ledger_secure_sdk_sys::ux_sync_review(
+            let sync_ret = ux_sync_review(
                 self.tx_type.to_c_type(self.blind, false),
                 &tag_value_list as *const nbgl_contentTagValueList_t,
                 &icon as *const nbgl_icon_details_t,
@@ -432,12 +469,12 @@ impl<'a> NbglReview<'a> {
 
             // Return true if the user approved the transaction, false otherwise.
             match sync_ret {
-                ledger_secure_sdk_sys::UX_SYNC_RET_APPROVED => {
-                    ledger_secure_sdk_sys::ux_sync_reviewStatus(self.tx_type.to_message(true));
+                UX_SYNC_RET_APPROVED => {
+                    ux_sync_reviewStatus(self.tx_type.to_message(true));
                     return true;
                 }
                 _ => {
-                    ledger_secure_sdk_sys::ux_sync_reviewStatus(self.tx_type.to_message(false));
+                    ux_sync_reviewStatus(self.tx_type.to_message(false));
                     return false;
                 }
             }
@@ -870,18 +907,12 @@ impl NbglGenericReview {
 
             // Return true if the user approved the transaction, false otherwise.
             match sync_ret {
-                ledger_secure_sdk_sys::UX_SYNC_RET_APPROVED => {
-                    ledger_secure_sdk_sys::ux_sync_status(
-                        succeed_cstring.as_ptr() as *const c_char,
-                        true,
-                    );
+                UX_SYNC_RET_APPROVED => {
+                    ux_sync_status(succeed_cstring.as_ptr() as *const c_char, true);
                     return true;
                 }
                 _ => {
-                    ledger_secure_sdk_sys::ux_sync_status(
-                        rejected_cstring.as_ptr() as *const c_char,
-                        false,
-                    );
+                    ux_sync_status(rejected_cstring.as_ptr() as *const c_char, false);
                     return false;
                 }
             }
@@ -928,6 +959,13 @@ impl NbglStreamingReview {
         unsafe {
             let title = CString::new(title).unwrap();
             let subtitle = CString::new(subtitle).unwrap();
+
+            if self.blind {
+                if !show_blind_warning() {
+                    ux_sync_reviewStatus(self.tx_type.to_message(false));
+                    return false;
+                }
+            }
 
             let sync_ret = ux_sync_reviewStreamingStart(
                 self.tx_type.to_c_type(self.blind, false),
@@ -1001,7 +1039,7 @@ impl NbglStreamingReview {
 
             // Return true if the user approved the transaction, false otherwise.
             match sync_ret {
-                ledger_secure_sdk_sys::UX_SYNC_RET_APPROVED => {
+                UX_SYNC_RET_APPROVED => {
                     ux_sync_reviewStatus(self.tx_type.to_message(true));
                     return true;
                 }
@@ -1063,16 +1101,99 @@ impl<'a> NbglAddressReview<'a> {
 
             // Return true if the user approved the address, false otherwise.
             match sync_ret {
-                ledger_secure_sdk_sys::UX_SYNC_RET_APPROVED => {
-                    ledger_secure_sdk_sys::ux_sync_reviewStatus(STATUS_TYPE_ADDRESS_VERIFIED);
+                UX_SYNC_RET_APPROVED => {
+                    ux_sync_reviewStatus(STATUS_TYPE_ADDRESS_VERIFIED);
                     return true;
                 }
-                ledger_secure_sdk_sys::UX_SYNC_RET_REJECTED => {
-                    ledger_secure_sdk_sys::ux_sync_reviewStatus(STATUS_TYPE_ADDRESS_REJECTED);
+                UX_SYNC_RET_REJECTED => {
+                    ux_sync_reviewStatus(STATUS_TYPE_ADDRESS_REJECTED);
                     return false;
                 }
                 _ => {
                     panic!("Unexpected return value from ux_sync_addressReview");
+                }
+            }
+        }
+    }
+}
+
+/// A wrapper around the synchronous NBGL ux_sync_status C API binding.
+/// Draws a generic choice page, described in a centered info (with configurable icon),
+/// thanks to a button and a footer at the bottom of the page.
+pub struct NbglChoice<'a> {
+    glyph: Option<&'a NbglGlyph<'a>>,
+    confirmed_text: Option<CString>,
+    cancelled_text: Option<CString>,
+}
+
+impl<'a> NbglChoice<'a> {
+    pub fn new() -> NbglChoice<'a> {
+        NbglChoice {
+            glyph: None,
+            confirmed_text: None,
+            cancelled_text: None,
+        }
+    }
+
+    pub fn glyph(self, glyph: &'a NbglGlyph) -> NbglChoice<'a> {
+        NbglChoice {
+            glyph: Some(glyph),
+            ..self
+        }
+    }
+
+    pub fn status_text(
+        self,
+        confirmed: Option<&'a str>,
+        cancelled: Option<&'a str>,
+    ) -> NbglChoice<'a> {
+        let confirmed_text = confirmed.map(|s| CString::new(s).unwrap());
+        let cancelled_text = cancelled.map(|s| CString::new(s).unwrap());
+        NbglChoice {
+            confirmed_text,
+            cancelled_text,
+            ..self
+        }
+    }
+
+    pub fn show(
+        self,
+        message: &str,
+        sub_message: &str,
+        confirm_text: &str,
+        cancel_text: &str,
+    ) -> bool {
+        unsafe {
+            let icon: nbgl_icon_details_t = match self.glyph {
+                Some(g) => g.into(),
+                None => nbgl_icon_details_t::default(),
+            };
+            let message = CString::new(message).unwrap();
+            let sub_message = CString::new(sub_message).unwrap();
+            let confirm_text = CString::new(confirm_text).unwrap();
+            let cancel_text = CString::new(cancel_text).unwrap();
+
+            let sync_ret = ux_sync_choice(
+                &icon as *const nbgl_icon_details_t,
+                message.as_ptr() as *const c_char,
+                sub_message.as_ptr() as *const c_char,
+                confirm_text.as_ptr() as *const c_char,
+                cancel_text.as_ptr() as *const c_char,
+            );
+
+            // Return true if the user approved the transaction, false otherwise.
+            match sync_ret {
+                UX_SYNC_RET_APPROVED => {
+                    if let Some(text) = self.confirmed_text {
+                        ux_sync_status(text.as_ptr() as *const c_char, true);
+                    }
+                    return true;
+                }
+                _ => {
+                    if let Some(text) = self.cancelled_text {
+                        ux_sync_status(text.as_ptr() as *const c_char, false);
+                    }
+                    return false;
                 }
             }
         }
