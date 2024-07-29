@@ -57,14 +57,6 @@ struct CliArgs {
     #[clap(value_name = "prebuilt ELF exe")]
     use_prebuilt: Option<PathBuf>,
 
-    #[clap(long)]
-    #[clap(help = concat!(
-        "Should the app.hex be placed next to the app.json, or next to the input exe?",
-        " ",
-        "Typically used with --use-prebuilt when the input exe is in a read-only location.",
-    ))]
-    hex_next_to_json: bool,
-
     #[clap(subcommand)]
     command: MainCommand,
 }
@@ -123,7 +115,7 @@ fn main() {
             load: a,
             remaining_args: r,
         } => {
-            build_app(d, a, cli.use_prebuilt, cli.hex_next_to_json, r);
+            build_app(d, a, cli.use_prebuilt, r);
         }
     }
 }
@@ -194,7 +186,6 @@ fn build_app(
     device: Device,
     is_load: bool,
     use_prebuilt: Option<PathBuf>,
-    hex_next_to_json: bool,
     remaining_args: Vec<String>,
 ) {
     let exe_path = match use_prebuilt {
@@ -273,26 +264,29 @@ fn build_app(
 
     let (this_pkg, metadata_ledger, metadata_device) =
         retrieve_metadata(device, None);
-    let current_dir = this_pkg
+
+    let package_path = this_pkg
         .manifest_path
         .parent()
         .expect("Could not find package's parent path");
 
-    let hex_file_abs = if hex_next_to_json {
-        current_dir
-    } else {
-        exe_path.parent().unwrap()
-    }
-    .join("app.hex");
+    /* exe_path = "exe_parent" + "exe_name" */
+    let exe_name = exe_path.file_name().unwrap();
+    let exe_parent = exe_path.parent().unwrap();
+
+    let hex_file_abs = exe_path
+        .parent()
+        .unwrap()
+        .join(exe_name)
+        .with_extension("hex");
+
+    let hex_file = hex_file_abs.strip_prefix(exe_parent).unwrap();
 
     export_binary(&exe_path, &hex_file_abs);
 
-    // app.json will be placed in the app's root directory
+    // app.json will be placed next to hex file
     let app_json_name = format!("app_{}.json", device.as_ref());
-    let app_json = current_dir.join(app_json_name);
-
-    // Find hex file path relative to 'app.json'
-    let hex_file = hex_file_abs.strip_prefix(current_dir).unwrap();
+    let app_json = exe_parent.join(app_json_name);
 
     // Retrieve real data size and SDK infos from ELF
     let infos = retrieve_infos(&exe_path).unwrap();
@@ -341,6 +335,11 @@ fn build_app(
     }
     serde_json::to_writer_pretty(file, &json).unwrap();
 
+    // Copy icon to the same directory as the app.json
+    let icon_path = package_path.join(&metadata_device.icon);
+    let icon_dest = exe_parent.join(&metadata_device.icon);
+    fs::copy(icon_path, icon_dest).unwrap();
+
     // Use ledgerctl to dump the APDU installation file.
     // Either dump to the location provided by the --out-dir cargo
     // argument if provided or use the default binary path.
@@ -366,13 +365,13 @@ fn build_app(
         .join(exe_filename.unwrap())
         .with_extension("apdu");
     dump_with_ledgerctl(
-        current_dir,
+        package_path,
         &app_json,
         apdu_file_path.to_str().unwrap(),
     );
 
     if is_load {
-        install_with_ledgerctl(current_dir, &app_json);
+        install_with_ledgerctl(package_path, &app_json);
     }
 }
 
