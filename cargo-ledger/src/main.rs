@@ -337,7 +337,9 @@ fn build_app(
 
     // Copy icon to the same directory as the app.json
     let icon_path = package_path.join(&metadata_device.icon);
-    let icon_dest = exe_parent.join(&metadata_device.icon);
+    let icon_dest =
+        exe_parent.join(&metadata_device.icon.split('/').last().unwrap());
+
     fs::copy(icon_path, icon_dest).unwrap();
 
     // Use ledgerctl to dump the APDU installation file.

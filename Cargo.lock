@@ -127,7 +127,7 @@ checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
 name = "cargo-ledger"
-version = "1.5.0"
+version = "1.5.1"
 dependencies = [
  "cargo_metadata",
  "clap",
@@ -426,7 +426,7 @@ dependencies = [
 
 [[package]]
 name = "include_gif"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "flate2",
  "image",
@@ -474,7 +474,7 @@ checksum = "03087c2bad5e1034e8cace5926dec053fb3790248370865f5117a7d0213354c8"
 
 [[package]]
 name = "ledger_device_sdk"
-version = "1.13.0"
+version = "1.13.1"
 dependencies = [
  "const-zero",
  "include_gif",
