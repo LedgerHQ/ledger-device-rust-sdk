@@ -1,12 +1,10 @@
 extern crate proc_macro;
 
+use image::*;
 use proc_macro::TokenStream;
-use std::collections::HashSet;
-use std::fs::File;
+use std::collections::HashMap;
 use std::io::Write;
 use syn::{parse_macro_input, Ident, LitStr};
-use image::*;
-use std::collections::HashMap;
 
 enum BppFormat {
     Bpp1 = 0,
@@ -63,7 +61,7 @@ fn generate_glyph(filename: LitStr, glyph_type: GlyphType) -> TokenStream {
         std::env::var("CARGO_MANIFEST_DIR").unwrap(),
         filename.value()
     );
-    let grayscale_image = ImageReader::open(path).unwrap().decode().unwrap().to_luma8();
+    let grayscale_image: GrayImage = open(path).unwrap().to_luma8();
     let mut vec_output = Vec::new();
 
     match glyph_type {
@@ -72,7 +70,9 @@ fn generate_glyph(filename: LitStr, glyph_type: GlyphType) -> TokenStream {
             write!(
                 &mut vec_output,
                 "(&{:?}, {}, {})",
-                packed, grayscale_image.width(), grayscale_image.height()
+                packed,
+                grayscale_image.width(),
+                grayscale_image.height()
             )
             .unwrap();
         }
@@ -81,7 +81,11 @@ fn generate_glyph(filename: LitStr, glyph_type: GlyphType) -> TokenStream {
             write!(
                 &mut vec_output,
                 "(&{:?}, {}, {}, {}, {})",
-                compressed_buffer, grayscale_image.width(), grayscale_image.height(), bpp, true
+                compressed_buffer,
+                grayscale_image.width(),
+                grayscale_image.height(),
+                bpp,
+                true
             )
             .unwrap();
         }
@@ -141,7 +145,7 @@ fn get_palette<'a>(img: &'a GrayImage) -> Vec<u8> {
     for &pixel in img.pixels() {
         *palette.entry(pixel[0]).or_insert(0) += 1;
     }
-    let mut palette: Vec<_> = palette.into_iter().collect();
+    let palette: Vec<_> = palette.into_iter().collect();
     // Collect all colors in a vector
     palette.into_iter().map(|(luma, _)| luma).collect()
 }
@@ -173,7 +177,6 @@ fn image_to_packed_buffer(frame: &GrayImage) -> (Vec<u8>, u8) {
 
     for x in (0..width).rev() {
         for y in 0..height {
-            let pixel_index = ((y * width) + x) as usize;
             let mut color: u16 = frame.get_pixel(x, y)[0] as u16;
             color = (color + half_threshold as u16) / base_threshold as u16;
             if color >= colors as u16 {
