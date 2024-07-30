@@ -1,8 +1,8 @@
 extern crate proc_macro;
 
+use image::*;
 use proc_macro::TokenStream;
-use std::collections::HashSet;
-use std::fs::File;
+use std::collections::HashMap;
 use std::io::Write;
 use syn::{parse_macro_input, Ident, LitStr};
 
@@ -56,38 +56,36 @@ pub fn include_gif(input: TokenStream) -> TokenStream {
 }
 
 fn generate_glyph(filename: LitStr, glyph_type: GlyphType) -> TokenStream {
-    let filename = filename.value();
-    let mut decoder = gif::DecodeOptions::new();
-    decoder.set_color_output(gif::ColorOutput::Indexed);
-
     let path = format!(
         "{}/{}",
         std::env::var("CARGO_MANIFEST_DIR").unwrap(),
-        filename
+        filename.value()
     );
-    let file = File::open(path).unwrap();
-    let mut decoder = decoder.read_info(file).unwrap();
-
-    let frame = decoder.read_next_frame().unwrap().unwrap().clone();
-    let palette = decoder.palette().unwrap();
+    let grayscale_image: GrayImage = open(path).unwrap().to_luma8();
     let mut vec_output = Vec::new();
 
     match glyph_type {
         GlyphType::Bagl => {
-            let packed = generate_bagl_glyph(&frame, &palette);
+            let packed = generate_bagl_glyph(&grayscale_image);
             write!(
                 &mut vec_output,
                 "(&{:?}, {}, {})",
-                packed, frame.width, frame.height
+                packed,
+                grayscale_image.width(),
+                grayscale_image.height()
             )
             .unwrap();
         }
         GlyphType::Nbgl => {
-            let (compressed_buffer, bpp) = generate_nbgl_glyph(&frame, &palette);
+            let (compressed_buffer, bpp) = generate_nbgl_glyph(&grayscale_image);
             write!(
                 &mut vec_output,
                 "(&{:?}, {}, {}, {}, {})",
-                compressed_buffer, frame.width, frame.height, bpp, true
+                compressed_buffer,
+                grayscale_image.width(),
+                grayscale_image.height(),
+                bpp,
+                true
             )
             .unwrap();
         }
@@ -97,34 +95,65 @@ fn generate_glyph(filename: LitStr, glyph_type: GlyphType) -> TokenStream {
     stream_output.parse().unwrap()
 }
 
-fn generate_bagl_glyph(frame: &gif::Frame, palette: &[u8]) -> Vec<u8> {
-    let dimensions = frame.width * frame.height;
-    let (size, remainder) = ((dimensions / 8) as usize, (dimensions % 8) as usize);
-
-    let mut packed = Vec::new();
-    for i in 0..size {
+// Convert a frame into a bagl glyph : pack 8 pixels in a single byte.
+// Each pixel is 1 bit, 0 for black, 1 for white.
+fn generate_bagl_glyph(frame: &GrayImage) -> Vec<u8> {
+    let width = frame.width() as usize;
+    let height = frame.height() as usize;
+    // Number of pixels to be packed into bytes
+    let size = width * height;
+    let mut packed = Vec::with_capacity(size / 8);
+    // Main loop, run through all pixels in the frame, by groups of 8
+    for i in 0..size / 8 {
         let mut byte = 0;
         for j in 0..8 {
-            let color = (palette[frame.buffer[8 * i + j] as usize * 3] != 0) as u8;
+            // Compute linear index
+            let idx = 8 * i + j;
+            // Get x and y coordinates from linear index
+            // Remainder of the division by width tells us how far we are on the x axis.
+            let x = idx % width;
+            // Integer division by width tells us how far we are on the y axis.
+            let y = idx / width;
+            let pixel = frame.get_pixel(x as u32, y as u32);
+            // If pixel is not black (0), set the corresponding bit in the byte.
+            let color = (pixel[0] != 0) as u8;
+            // Set the j-th bit of the byte to the color of the pixel.
             byte |= color << j;
         }
         packed.push(byte);
     }
-    let mut byte = 0;
-    for j in 0..remainder {
-        let color = (palette[frame.buffer[8 * size + j] as usize * 3] != 0) as u8;
-        byte |= color << j;
+    // Remainder handling
+    let remainder = size % 8;
+    if remainder != 0 {
+        let mut byte = 0;
+        for j in 0..remainder {
+            let x = (8 * (size / 8) + j) % width;
+            let y = (8 * (size / 8) + j) / width;
+            let pixel = frame.get_pixel(x as u32, y as u32);
+            let color = (pixel[0] != 0) as u8;
+            byte |= color << j;
+        }
+        packed.push(byte);
     }
-    packed.push(byte);
     packed
 }
 
-fn image_to_packed_buffer(frame: &gif::Frame, palette: &[u8]) -> (Vec<u8>, u8) {
-    let mut colors = palette.iter().collect::<HashSet<_>>().len() as u8;
+// Get the palette of colors of a grayscale image
+fn get_palette<'a>(img: &'a GrayImage) -> Vec<u8> {
+    let mut palette = HashMap::new();
+    // Count the number of occurrences of each color
+    for &pixel in img.pixels() {
+        *palette.entry(pixel[0]).or_insert(0) += 1;
+    }
+    let palette: Vec<_> = palette.into_iter().collect();
+    // Collect all colors in a vector
+    palette.into_iter().map(|(luma, _)| luma).collect()
+}
 
-    // Exit/Panic if number of colors > 16
+fn image_to_packed_buffer(frame: &GrayImage) -> (Vec<u8>, u8) {
+    let mut colors = get_palette(&frame).len() as u8;
     if colors > 16 {
-        panic!("Image has more than 16 colors");
+        colors = 16;
     }
     // Round number of colors to a power of 2
     if !(colors != 0 && colors.count_ones() == 1) {
@@ -138,8 +167,8 @@ fn image_to_packed_buffer(frame: &gif::Frame, palette: &[u8]) -> (Vec<u8>, u8) {
         _ => (),
     }
 
-    let width = frame.width;
-    let height = frame.height;
+    let width = frame.width();
+    let height = frame.height();
     let base_threshold = (256 / colors as u32) as u8;
     let half_threshold = base_threshold / 2;
     let mut current_byte = 0 as u16;
@@ -148,8 +177,7 @@ fn image_to_packed_buffer(frame: &gif::Frame, palette: &[u8]) -> (Vec<u8>, u8) {
 
     for x in (0..width).rev() {
         for y in 0..height {
-            let pixel_index = ((y * width) + x) as usize;
-            let mut color: u16 = palette[frame.buffer[pixel_index] as usize * 3] as u16;
+            let mut color: u16 = frame.get_pixel(x, y)[0] as u16;
             color = (color + half_threshold as u16) / base_threshold as u16;
             if color >= colors as u16 {
                 color = colors as u16 - 1;
@@ -169,8 +197,8 @@ fn image_to_packed_buffer(frame: &gif::Frame, palette: &[u8]) -> (Vec<u8>, u8) {
     (packed, bits_per_pixel)
 }
 
-fn generate_nbgl_glyph(frame: &gif::Frame, palette: &[u8]) -> (Vec<u8>, u8) {
-    let (packed, bpp) = image_to_packed_buffer(&frame, &palette);
+fn generate_nbgl_glyph(frame: &GrayImage) -> (Vec<u8>, u8) {
+    let (packed, bpp) = image_to_packed_buffer(&frame);
 
     let mut compressed_image: Vec<u8> = Vec::new();
     let mut full_uncompressed_size = packed.len();
@@ -206,10 +234,10 @@ fn generate_nbgl_glyph(frame: &gif::Frame, palette: &[u8]) -> (Vec<u8>, u8) {
 
     let len = compressed_image.len();
     let metadata: [u8; 8] = [
-        frame.width as u8,
-        (frame.width >> 8) as u8,
-        frame.height as u8,
-        (frame.height >> 8) as u8,
+        frame.width() as u8,
+        (frame.width() >> 8) as u8,
+        frame.height() as u8,
+        (frame.height() >> 8) as u8,
         bpp_format << 4 | 1, // 1 is gzip compression type. We only support gzip.
         len as u8,
         (len >> 8) as u8,
