@@ -6,7 +6,9 @@ use ledger_device_sdk as _;
 
 use include_gif::include_gif;
 use ledger_device_sdk::io::*;
-use ledger_device_sdk::nbgl::{init_comm, Field, NbglGlyph, NbglStreamingReview, TransactionType};
+use ledger_device_sdk::nbgl::{
+    init_comm, Field, NbglGlyph, NbglReviewStatus, NbglStreamingReview, StatusType, TransactionType,
+};
 use ledger_secure_sdk_sys::*;
 
 #[panic_handler]
@@ -33,7 +35,10 @@ extern "C" fn sample_main() {
         .glyph(&FERRIS)
         .tx_type(TransactionType::Message);
 
-    review.start("Example Title", "Example Subtitle");
+    if !review.start("Streaming example", "Example Subtitle") {
+        NbglReviewStatus::new().show(false);
+        return;
+    }
 
     let fields = [
         Field {
@@ -59,8 +64,12 @@ extern "C" fn sample_main() {
     ];
 
     for i in 0..fields.len() {
-        review.continue_review(&fields[i..i + 1]);
+        if !review.continue_review(&fields[i..i + 1]) {
+            NbglReviewStatus::new().show(false);
+            return;
+        }
     }
 
-    review.finish("Sign to send token\n");
+    let success = review.finish("Sign to send token\n");
+    NbglReviewStatus::new().show(success);
 }
