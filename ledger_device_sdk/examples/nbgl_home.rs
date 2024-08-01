@@ -11,6 +11,11 @@ use ledger_device_sdk::nvm::*;
 use ledger_device_sdk::NVMData;
 use ledger_secure_sdk_sys::*;
 
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! {
+    exit_app(1);
+}
+
 pub enum Instruction {
     GetVersion,
     GetAppName,

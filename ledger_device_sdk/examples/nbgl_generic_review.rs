@@ -8,7 +8,8 @@ use include_gif::include_gif;
 use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{
     init_comm, CenteredInfo, CenteredInfoStyle, Field, InfoButton, InfoLongPress, InfosList,
-    NbglGenericReview, NbglGlyph, NbglPageContent, TagValueConfirm, TagValueList, TuneIndex,
+    NbglGenericReview, NbglGlyph, NbglPageContent, NbglStatus, TagValueConfirm, TagValueList,
+    TuneIndex,
 };
 use ledger_secure_sdk_sys::*;
 
@@ -86,5 +87,11 @@ extern "C" fn sample_main() {
         .add_content(NbglPageContent::TagValueConfirm(tag_value_confirm))
         .add_content(NbglPageContent::InfosList(infos_list));
 
-    review.show("Reject Example", "Example Confirmed", "Example Rejected");
+    let success = review.show("Reject Example");
+    let status_text = if success {
+        "Example confirmed"
+    } else {
+        "Example rejected"
+    };
+    NbglStatus::new().text(status_text).show(success);
 }

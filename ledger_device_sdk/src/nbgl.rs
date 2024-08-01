@@ -87,6 +87,28 @@ pub enum TransactionType {
     Operation,
 }
 
+pub enum StatusType {
+    Transaction,
+    Message,
+    Operation,
+    Address,
+}
+
+impl StatusType {
+    fn transaction_type(&self) -> Option<TransactionType> {
+        match self {
+            StatusType::Transaction => Some(TransactionType::Transaction),
+            StatusType::Message => Some(TransactionType::Message),
+            StatusType::Operation => Some(TransactionType::Operation),
+            StatusType::Address => None,
+        }
+    }
+}
+
+trait ToMessage {
+    fn to_message(&self, success: bool) -> nbgl_reviewStatusType_t;
+}
+
 impl TransactionType {
     pub fn to_c_type(&self, blind: bool, skippable: bool) -> nbgl_operationType_t {
         let mut tx_type = match self {
@@ -102,30 +124,35 @@ impl TransactionType {
         }
         tx_type
     }
+}
 
-    pub fn to_message(&self, success: bool) -> nbgl_reviewStatusType_t {
+impl ToMessage for TransactionType {
+    fn to_message(&self, success: bool) -> nbgl_reviewStatusType_t {
+        match (self, success) {
+            (TransactionType::Transaction, true) => STATUS_TYPE_TRANSACTION_SIGNED,
+            (TransactionType::Transaction, false) => STATUS_TYPE_TRANSACTION_REJECTED,
+            (TransactionType::Message, true) => STATUS_TYPE_MESSAGE_SIGNED,
+            (TransactionType::Message, false) => STATUS_TYPE_MESSAGE_REJECTED,
+            (TransactionType::Operation, true) => STATUS_TYPE_OPERATION_SIGNED,
+            (TransactionType::Operation, false) => STATUS_TYPE_OPERATION_REJECTED,
+        }
+    }
+}
+
+impl ToMessage for StatusType {
+    fn to_message(&self, success: bool) -> nbgl_reviewStatusType_t {
         match self {
-            TransactionType::Transaction => {
+            StatusType::Address => {
                 if success {
-                    STATUS_TYPE_TRANSACTION_SIGNED
+                    STATUS_TYPE_ADDRESS_VERIFIED
                 } else {
-                    STATUS_TYPE_TRANSACTION_REJECTED
+                    STATUS_TYPE_ADDRESS_REJECTED
                 }
             }
-            TransactionType::Message => {
-                if success {
-                    STATUS_TYPE_MESSAGE_SIGNED
-                } else {
-                    STATUS_TYPE_MESSAGE_REJECTED
-                }
-            }
-            TransactionType::Operation => {
-                if success {
-                    STATUS_TYPE_OPERATION_SIGNED
-                } else {
-                    STATUS_TYPE_OPERATION_REJECTED
-                }
-            }
+            _ => self
+                .transaction_type()
+                .expect("Should be a transaction type")
+                .to_message(success),
         }
     }
 }
@@ -452,7 +479,6 @@ impl<'a> NbglReview<'a> {
 
             if self.blind {
                 if !show_blind_warning() {
-                    ux_sync_reviewStatus(self.tx_type.to_message(false));
                     return false;
                 }
             }
@@ -470,11 +496,9 @@ impl<'a> NbglReview<'a> {
             // Return true if the user approved the transaction, false otherwise.
             match sync_ret {
                 UX_SYNC_RET_APPROVED => {
-                    ux_sync_reviewStatus(self.tx_type.to_message(true));
                     return true;
                 }
                 _ => {
-                    ux_sync_reviewStatus(self.tx_type.to_message(false));
                     return false;
                 }
             }
@@ -884,7 +908,7 @@ impl NbglGenericReview {
             .collect()
     }
 
-    pub fn show(&mut self, reject_button_str: &str, succeed_str: &str, rejected_str: &str) -> bool {
+    pub fn show(&mut self, reject_button_str: &str) -> bool {
         unsafe {
             let c_content_list: Vec<nbgl_content_t> = self.to_c_content_list();
 
@@ -897,8 +921,6 @@ impl NbglGenericReview {
             };
 
             let reject_button_cstring = CString::new(reject_button_str).unwrap();
-            let succeed_cstring = CString::new(succeed_str).unwrap();
-            let rejected_cstring = CString::new(rejected_str).unwrap();
 
             let sync_ret = ux_sync_genericReview(
                 &content_struct as *const nbgl_genericContents_t,
@@ -908,11 +930,9 @@ impl NbglGenericReview {
             // Return true if the user approved the transaction, false otherwise.
             match sync_ret {
                 UX_SYNC_RET_APPROVED => {
-                    ux_sync_status(succeed_cstring.as_ptr() as *const c_char, true);
                     return true;
                 }
                 _ => {
-                    ux_sync_status(rejected_cstring.as_ptr() as *const c_char, false);
                     return false;
                 }
             }
@@ -962,7 +982,6 @@ impl NbglStreamingReview {
 
             if self.blind {
                 if !show_blind_warning() {
-                    ux_sync_reviewStatus(self.tx_type.to_message(false));
                     return false;
                 }
             }
@@ -980,7 +999,6 @@ impl NbglStreamingReview {
                     return true;
                 }
                 _ => {
-                    ux_sync_reviewStatus(self.tx_type.to_message(false));
                     return false;
                 }
             }
@@ -1025,7 +1043,6 @@ impl NbglStreamingReview {
                     return true;
                 }
                 _ => {
-                    ux_sync_reviewStatus(self.tx_type.to_message(false));
                     return false;
                 }
             }
@@ -1040,11 +1057,9 @@ impl NbglStreamingReview {
             // Return true if the user approved the transaction, false otherwise.
             match sync_ret {
                 UX_SYNC_RET_APPROVED => {
-                    ux_sync_reviewStatus(self.tx_type.to_message(true));
                     return true;
                 }
                 _ => {
-                    ux_sync_reviewStatus(self.tx_type.to_message(false));
                     return false;
                 }
             }
@@ -1102,11 +1117,9 @@ impl<'a> NbglAddressReview<'a> {
             // Return true if the user approved the address, false otherwise.
             match sync_ret {
                 UX_SYNC_RET_APPROVED => {
-                    ux_sync_reviewStatus(STATUS_TYPE_ADDRESS_VERIFIED);
                     return true;
                 }
                 UX_SYNC_RET_REJECTED => {
-                    ux_sync_reviewStatus(STATUS_TYPE_ADDRESS_REJECTED);
                     return false;
                 }
                 _ => {
@@ -1122,36 +1135,16 @@ impl<'a> NbglAddressReview<'a> {
 /// thanks to a button and a footer at the bottom of the page.
 pub struct NbglChoice<'a> {
     glyph: Option<&'a NbglGlyph<'a>>,
-    confirmed_text: Option<CString>,
-    cancelled_text: Option<CString>,
 }
 
 impl<'a> NbglChoice<'a> {
     pub fn new() -> NbglChoice<'a> {
-        NbglChoice {
-            glyph: None,
-            confirmed_text: None,
-            cancelled_text: None,
-        }
+        NbglChoice { glyph: None }
     }
 
     pub fn glyph(self, glyph: &'a NbglGlyph) -> NbglChoice<'a> {
         NbglChoice {
             glyph: Some(glyph),
-            ..self
-        }
-    }
-
-    pub fn status_text(
-        self,
-        confirmed: Option<&'a str>,
-        cancelled: Option<&'a str>,
-    ) -> NbglChoice<'a> {
-        let confirmed_text = confirmed.map(|s| CString::new(s).unwrap());
-        let cancelled_text = cancelled.map(|s| CString::new(s).unwrap());
-        NbglChoice {
-            confirmed_text,
-            cancelled_text,
             ..self
         }
     }
@@ -1184,18 +1177,89 @@ impl<'a> NbglChoice<'a> {
             // Return true if the user approved the transaction, false otherwise.
             match sync_ret {
                 UX_SYNC_RET_APPROVED => {
-                    if let Some(text) = self.confirmed_text {
-                        ux_sync_status(text.as_ptr() as *const c_char, true);
-                    }
                     return true;
                 }
                 _ => {
-                    if let Some(text) = self.cancelled_text {
-                        ux_sync_status(text.as_ptr() as *const c_char, false);
-                    }
                     return false;
                 }
             }
+        }
+    }
+}
+
+/// A wrapper around the synchronous NBGL ux_sync_reviewStatus C API binding.
+/// Draws a transient (3s) status page of the chosen type.
+pub struct NbglReviewStatus {
+    status_type: StatusType,
+}
+
+impl NbglReviewStatus {
+    pub fn new() -> NbglReviewStatus {
+        NbglReviewStatus {
+            status_type: StatusType::Transaction,
+        }
+    }
+
+    pub fn status_type(self, status_type: StatusType) -> NbglReviewStatus {
+        NbglReviewStatus { status_type }
+    }
+
+    pub fn show(&self, success: bool) {
+        unsafe {
+            ux_sync_reviewStatus(self.status_type.to_message(success));
+        }
+    }
+}
+
+/// A wrapper around the synchronous NBGL ux_sync_status C API binding.
+/// Draws a transient (3s) status page, either of success or failure, with the given message
+pub struct NbglStatus {
+    text: CString,
+}
+
+impl NbglStatus {
+    pub fn new() -> NbglStatus {
+        NbglStatus {
+            text: CString::new("").unwrap(),
+        }
+    }
+
+    pub fn text(self, text: &str) -> NbglStatus {
+        NbglStatus {
+            text: CString::new(text).unwrap(),
+        }
+    }
+
+    pub fn show(&self, success: bool) {
+        unsafe {
+            ux_sync_status(self.text.as_ptr() as *const c_char, success);
+        }
+    }
+}
+
+/// A wrapper around the asynchronous NBGL nbgl_useCaseSpinner C API binding.
+/// Draws a spinner page with the given parameters. The spinner will "turn" automatically every
+/// 800 ms, provided the IO event loop is running to process TickerEvents.
+pub struct NbglSpinner {
+    text: CString,
+}
+
+impl NbglSpinner {
+    pub fn new() -> NbglSpinner {
+        NbglSpinner {
+            text: CString::new("").unwrap(),
+        }
+    }
+
+    pub fn text(self, text: &str) -> NbglSpinner {
+        NbglSpinner {
+            text: CString::new(text).unwrap(),
+        }
+    }
+
+    pub fn show(&self) {
+        unsafe {
+            nbgl_useCaseSpinner(self.text.as_ptr() as *const c_char);
         }
     }
 }

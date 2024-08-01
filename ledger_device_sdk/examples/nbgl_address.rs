@@ -6,8 +6,15 @@ use ledger_device_sdk as _;
 
 use include_gif::include_gif;
 use ledger_device_sdk::io::*;
-use ledger_device_sdk::nbgl::{init_comm, NbglAddressReview, NbglGlyph};
+use ledger_device_sdk::nbgl::{
+    init_comm, NbglAddressReview, NbglGlyph, NbglReviewStatus, StatusType,
+};
 use ledger_secure_sdk_sys::*;
+
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! {
+    exit_app(1);
+}
 
 #[no_mangle]
 extern "C" fn sample_main() {
@@ -26,5 +33,11 @@ extern "C" fn sample_main() {
     const FERRIS: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
     // Display the address confirmation screen.
-    NbglAddressReview::new().glyph(&FERRIS).show(addr_hex);
+    let success = NbglAddressReview::new()
+        .glyph(&FERRIS)
+        .verify_str("Verify Address")
+        .show(addr_hex);
+    NbglReviewStatus::new()
+        .status_type(StatusType::Address)
+        .show(success);
 }
