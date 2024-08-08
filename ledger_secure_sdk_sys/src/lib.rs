@@ -63,7 +63,7 @@ unsafe impl critical_section::Impl for CriticalSection {
 #[no_mangle]
 #[cfg(all(feature = "heap", not(target_os = "nanos")))]
 extern "C" fn heap_init() {
-    const HEAP_SIZE: usize = 8192;
+    // HEAP_SIZE comes from heap_size.rs, which is defined via env var and build.rs
     static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
     unsafe { HEAP.init(HEAP_MEM.as_ptr() as usize, HEAP_SIZE) }
 }
@@ -73,3 +73,4 @@ extern "C" fn heap_init() {
 extern "C" fn heap_init() {}
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+include!(concat!(env!("OUT_DIR"), "/heap_size.rs"));

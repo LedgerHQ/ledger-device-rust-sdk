@@ -1,5 +1,6 @@
 extern crate cc;
 use glob::glob;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs::File, io::BufRead, io::BufReader, io::Read};
@@ -581,6 +582,17 @@ impl SDKBuilder {
             .write_to_file(out_path.join("bindings.rs"))
             .expect("Couldn't write bindings");
     }
+
+    fn generate_heap_size(&self) {
+        // Read the HEAP_SIZE environment variable, default to 8192 if not set
+        let heap_size = env::var("HEAP_SIZE").unwrap_or_else(|_| "8192".to_string());
+
+        // Generate the heap_size.rs file with the HEAP_SIZE value
+        let out_dir = env::var("OUT_DIR").unwrap();
+        let dest_path = Path::new(&out_dir).join("heap_size.rs");
+        fs::write(&dest_path, format!("pub const HEAP_SIZE: usize = {};", heap_size))
+            .expect("Unable to write file");
+    }
 }
 
 fn main() {
@@ -591,6 +603,7 @@ fn main() {
     sdk_builder.cxdefines();
     sdk_builder.build_c_sdk();
     sdk_builder.generate_bindings();
+    sdk_builder.generate_heap_size();
 }
 
 fn finalize_nanos_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
