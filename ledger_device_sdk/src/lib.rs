@@ -14,6 +14,7 @@ pub mod ble;
 pub mod ccid;
 pub mod ecc;
 pub mod hash;
+pub mod hmac;
 pub mod io;
 pub mod nvm;
 pub mod random;
