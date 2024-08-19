@@ -116,13 +116,41 @@ macro_rules! impl_hmac {
 
             fn new(key: &[u8]) -> Self {
                 let mut ctx: $typename = Default::default();
-                let _err = unsafe { $initfname(&mut ctx.ctx, key.as_ptr(), key.len()) };
+                let _err = unsafe { $initfname(&mut ctx.ctx, key.as_ptr(), key.len() as u32) };
                 ctx
             }
         }
     };
 }
 pub(crate) use impl_hmac;
+
+/// Same macro as impl_hmac. The only difference is that key.len() is not casted as usize
+/// because C SDK init fonction suffixed with _no_throw uses a size_t type for key length variable.
+macro_rules! impl_hmac_no_throw {
+    ($typename:ident, $ctxname:ident, $initfname:ident) => {
+        #[derive(Default)]
+        #[allow(non_camel_case_types)]
+        pub struct $typename {
+            ctx: $ctxname,
+        }
+        impl HMACInit for $typename {
+            fn as_ctx_mut(&mut self) -> &mut cx_hmac_t {
+                unsafe { mem::transmute::<&mut $ctxname, &mut cx_hmac_t>(&mut self.ctx) }
+            }
+
+            fn as_ctx(&self) -> &cx_hmac_t {
+                unsafe { mem::transmute::<&$ctxname, &cx_hmac_t>(&self.ctx) }
+            }
+
+            fn new(key: &[u8]) -> Self {
+                let mut ctx: $typename = Default::default();
+                let _err = unsafe { $initfname(&mut ctx.ctx, key.as_ptr(), key.len()) };
+                ctx
+            }
+        }
+    };
+}
+pub(crate) use impl_hmac_no_throw;
 
 #[cfg(test)]
 mod tests {

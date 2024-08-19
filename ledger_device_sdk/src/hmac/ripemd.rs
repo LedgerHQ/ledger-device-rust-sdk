@@ -2,8 +2,8 @@ use super::HMACInit;
 use core::mem;
 use ledger_secure_sdk_sys::{cx_hmac_ripemd160_init_no_throw, cx_hmac_ripemd160_t, cx_hmac_t};
 
-use super::impl_hmac;
-impl_hmac!(
+use super::impl_hmac_no_throw;
+impl_hmac_no_throw!(
     Ripemd160,
     cx_hmac_ripemd160_t,
     cx_hmac_ripemd160_init_no_throw
