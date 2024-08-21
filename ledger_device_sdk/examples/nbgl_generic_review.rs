@@ -8,10 +8,12 @@ use include_gif::include_gif;
 use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{
     init_comm, CenteredInfo, CenteredInfoStyle, Field, InfoButton, InfoLongPress, InfosList,
-    NbglGenericReview, NbglGlyph, NbglPageContent, NbglStatus, TagValueConfirm, TagValueList,
+    NbglGenericReview, NbglGlyph, NbglPageContent, NbglStatus, NbglChoice, TagValueConfirm, TagValueList,
     TuneIndex,
 };
 use ledger_secure_sdk_sys::*;
+
+use core::ops::Not;
 
 #[panic_handler]
 fn panic(_: &core::panic::PanicInfo) -> ! {
@@ -87,11 +89,31 @@ extern "C" fn sample_main() {
         .add_content(NbglPageContent::TagValueConfirm(tag_value_confirm))
         .add_content(NbglPageContent::InfosList(infos_list));
 
-    let success = review.show("Reject Example");
-    let status_text = if success {
-        "Example confirmed"
-    } else {
-        "Example rejected"
-    };
-    NbglStatus::new().text(status_text).show(success);
+    const IMPORTANT: NbglGlyph =
+    NbglGlyph::from_include(include_gif!("icons/Important_Circle_64px.png", NBGL));
+
+    let mut show_tx = true;
+    let mut status_text = "Example rejected";
+    while show_tx {
+        let confirm = review.show("Reject Example");
+        if confirm {
+            status_text = "Example confirmed";
+            show_tx = false;
+        } else {
+            show_tx = NbglChoice::new()
+                .glyph(&IMPORTANT)
+                .show(
+                    "Reject transaction?",
+                    "",
+                    "Yes, reject",
+                    "Go back to transaction",
+                )
+                // not() is used to invert the boolean value returned
+                // by the choice (since we want to return to showing the
+                // transaction if the user selects "Go back to transaction"
+                // which returns false).
+                .not();
+        }
+    }
+    NbglStatus::new().text(status_text).show(status_text == "Example confirmed");
 }
