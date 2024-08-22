@@ -5,11 +5,11 @@ use ledger_secure_sdk_sys::{
     cx_hmac_sha512_init_no_throw, cx_hmac_sha512_t, cx_hmac_t,
 };
 
-use super::{impl_hmac, impl_hmac_no_throw};
+use super::impl_hmac;
 impl_hmac!(Sha2_224, cx_hmac_sha256_t, cx_hmac_sha224_init);
-impl_hmac_no_throw!(Sha2_256, cx_hmac_sha256_t, cx_hmac_sha256_init_no_throw);
+impl_hmac!(Sha2_256, cx_hmac_sha256_t, cx_hmac_sha256_init_no_throw);
 impl_hmac!(Sha2_384, cx_hmac_sha512_t, cx_hmac_sha384_init);
-impl_hmac_no_throw!(Sha2_512, cx_hmac_sha512_t, cx_hmac_sha512_init_no_throw);
+impl_hmac!(Sha2_512, cx_hmac_sha512_t, cx_hmac_sha512_init_no_throw);
 
 #[cfg(test)]
 mod tests {
