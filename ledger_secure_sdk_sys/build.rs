@@ -536,6 +536,7 @@ impl SDKBuilder {
                     format!("-I{bsdk}/lib_nbgl/include/").as_str(),
                     format!("-I{bsdk}/lib_ux_sync/include/").as_str(),
                     format!("-I{bsdk}/lib_ux_nbgl/").as_str(),
+                    // format!("-I{bsdk}/qrcode/include/").as_str(),
                 ]);
                 bindings = bindings
                     .header(
@@ -553,6 +554,12 @@ impl SDKBuilder {
                     .header(
                         self.bolos_sdk
                             .join("lib_ux_nbgl/ux_nbgl.h")
+                            .to_str()
+                            .unwrap(),
+                    )
+                    .header(
+                        self.bolos_sdk
+                            .join("qrcode/include/qrcodegen.h")
                             .to_str()
                             .unwrap(),
                     )
@@ -724,6 +731,7 @@ fn configure_lib_nbgl(command: &mut cc::Build, bolos_sdk: &Path) {
         .file(bolos_sdk.join("lib_ux_sync/src/ux_sync.c"))
         .file(bolos_sdk.join("lib_bagl/src/bagl_fonts.c"))
         .file(bolos_sdk.join("src/os_printf.c"))
+        .file(bolos_sdk.join("qrcode/src/qrcodegen.c"))
         .files(
             glob(bolos_sdk.join("lib_nbgl/src/*.c").to_str().unwrap())
                 .unwrap()
