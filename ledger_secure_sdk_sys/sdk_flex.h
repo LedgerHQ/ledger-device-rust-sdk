@@ -1,6 +1,7 @@
 #define ST33K1M5
 #define HAVE_DISPLAY_FAST_MODE
 #define HAVE_SPRINTF
+#define NBGL_QRCODE
 #define HAVE_SE_EINK_DISPLAY
 #define SCREEN_SIZE_WALLET
 #define HAVE_NBGL

@@ -7,8 +7,7 @@ set -x
 LD=${LD:-rust-lld}
 # Needed because LLD gets behavior from argv[0]
 LD=${LD/-ld/-lld}
-LIBC_PATH=$(arm-none-eabi-gcc -print-sysroot)/lib
-${LD} "$@" --emit-relocs -L ${LIBC_PATH} -lc
+${LD} "$@" --emit-relocs
 
 echo RUST_LLD DONE
 
