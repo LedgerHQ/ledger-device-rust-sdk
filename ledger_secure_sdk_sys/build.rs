@@ -590,8 +590,11 @@ impl SDKBuilder {
         // Generate the heap_size.rs file with the HEAP_SIZE value
         let out_dir = env::var("OUT_DIR").unwrap();
         let dest_path = Path::new(&out_dir).join("heap_size.rs");
-        fs::write(&dest_path, format!("pub const HEAP_SIZE: usize = {};", heap_size))
-            .expect("Unable to write file");
+        fs::write(
+            &dest_path,
+            format!("pub const HEAP_SIZE: usize = {};", heap_size),
+        )
+        .expect("Unable to write file");
     }
 }
 
