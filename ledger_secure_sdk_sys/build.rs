@@ -290,7 +290,7 @@ fn header2define(headername: &str) -> Vec<(String, Option<String>)> {
 struct SDKBuilder {
     bolos_sdk: PathBuf,
     api_level: u32,
-    gcc_toolchain: String,
+    gcc_toolchain: PathBuf,
     device: Device,
     cxdefines: Vec<String>,
 }
@@ -300,7 +300,7 @@ impl SDKBuilder {
         SDKBuilder {
             bolos_sdk: PathBuf::new(),
             api_level: 0,
-            gcc_toolchain: "".to_string(),
+            gcc_toolchain: PathBuf::new(),
             device: Device::NanoS,
             cxdefines: Vec::new(),
         }
@@ -319,11 +319,11 @@ impl SDKBuilder {
             .trim();
 
         let gcc_toolchain = if sysroot.is_empty() {
-            String::from("/usr/include/")
+            String::from("/usr")
         } else {
-            format!("{sysroot}/include")
+            format!("{sysroot}")
         };
-        self.gcc_toolchain = gcc_toolchain;
+        self.gcc_toolchain = PathBuf::from(gcc_toolchain);
     }
 
     pub fn device(&mut self) {
@@ -413,7 +413,7 @@ impl SDKBuilder {
             .files(str2path(&self.bolos_sdk, &SDK_USB_FILES));
 
         command = command
-            .include(&self.gcc_toolchain)
+            .include(self.gcc_toolchain.join("include"))
             .include(self.bolos_sdk.join("include"))
             .include(self.bolos_sdk.join("lib_cxng/include"))
             .include(self.bolos_sdk.join("lib_stusb"))
@@ -461,14 +461,20 @@ impl SDKBuilder {
         }
 
         command.compile("ledger-secure-sdk");
+
+        /* Link with libc for unresolved symbols */
+        let gcc_tc = self.gcc_toolchain.display().to_string();
+        println!("cargo:rustc-link-lib=c");
+        println!("cargo:rustc-link-search={gcc_tc}/lib");
     }
 
     fn generate_bindings(&self) {
         let bsdk = self.bolos_sdk.display().to_string();
+        let gcc_tc = self.gcc_toolchain.display().to_string();
         let args = [
             "--target=thumbv6m-none-eabi".to_string(), // exact target is irrelevant for bindings
             "-fshort-enums".to_string(),
-            format!("-I{}", self.gcc_toolchain),
+            format!("-I{gcc_tc}/include"),
             format!("-I{bsdk}/include"),
             format!("-I{bsdk}/lib_cxng/include/"),
             format!("-I{bsdk}/lib_stusb/STM32_USB_Device_Library/Core/Inc/"),
@@ -724,6 +730,7 @@ fn configure_lib_nbgl(command: &mut cc::Build, bolos_sdk: &Path) {
         .file(bolos_sdk.join("lib_ux_sync/src/ux_sync.c"))
         .file(bolos_sdk.join("lib_bagl/src/bagl_fonts.c"))
         .file(bolos_sdk.join("src/os_printf.c"))
+        .file(bolos_sdk.join("qrcode/src/qrcodegen.c"))
         .files(
             glob(bolos_sdk.join("lib_nbgl/src/*.c").to_str().unwrap())
                 .unwrap()
