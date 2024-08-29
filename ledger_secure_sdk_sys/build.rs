@@ -462,8 +462,8 @@ impl SDKBuilder {
 
         command.compile("ledger-secure-sdk");
 
+        /* Link with libc for unresolved symbols */
         let gcc_tc = self.gcc_toolchain.display().to_string();
-
         println!("cargo:rustc-link-lib=c");
         println!("cargo:rustc-link-search={gcc_tc}/lib");
     }
