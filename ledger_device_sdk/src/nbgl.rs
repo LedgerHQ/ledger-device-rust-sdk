@@ -161,9 +161,9 @@ impl ToMessage for StatusType {
 /// This function should be called from the main function of the application.
 /// The COMM_REF variable is used by the NBGL API to detect touch events and
 /// APDU reception.
-pub fn init_comm(comm: &mut Comm) {
+pub fn init_comm(comm: &'static mut Comm) {
     unsafe {
-        COMM_REF = Some(transmute(comm));
+        COMM_REF = Some(comm);
     }
 }
 
