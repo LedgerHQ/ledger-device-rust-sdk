@@ -617,8 +617,6 @@ impl InfoButton {
 /// using the NbglGenericReview struct.
 pub struct TagValueList {
     pairs: Vec<nbgl_contentTagValue_t>,
-    items: Vec<CString>,
-    values: Vec<CString>,
     nb_max_lines_for_value: u8,
     small_case_for_value: bool,
     wrapping: bool,
@@ -632,8 +630,6 @@ impl TagValueList {
         wrapping: bool,
     ) -> TagValueList {
         let mut c_field_strings: Vec<nbgl_contentTagValue_t> = Vec::with_capacity(pairs.len());
-        let mut c_field_names: Vec<CString> = Vec::with_capacity(pairs.len());
-        let mut c_field_values: Vec<CString> = Vec::with_capacity(pairs.len());
         for field in pairs {
             let name = CString::new(field.name).unwrap();
             let value = CString::new(field.value).unwrap();
@@ -643,13 +639,9 @@ impl TagValueList {
                 ..Default::default()
             };
             c_field_strings.push(tag_value);
-            c_field_names.push(name);
-            c_field_values.push(value);
         }
         TagValueList {
             pairs: c_field_strings,
-            items: c_field_names,
-            values: c_field_values,
             nb_max_lines_for_value,
             small_case_for_value,
             wrapping,
@@ -705,7 +697,6 @@ impl TagValueConfirm {
 /// when using the NbglGenericReview struct.
 pub struct InfosList {
     info_types_cstrings: Vec<CString>,
-    info_contents_cstrings: Vec<CString>,
     info_types_ptr: Vec<*const c_char>,
     info_contents_ptr: Vec<*const c_char>,
 }
@@ -726,7 +717,6 @@ impl InfosList {
             info_contents_cstrings.iter().map(|s| s.as_ptr()).collect();
         InfosList {
             info_types_cstrings: info_types_cstrings,
-            info_contents_cstrings: info_contents_cstrings,
             info_types_ptr: info_types_ptr,
             info_contents_ptr: info_contents_ptr,
         }
