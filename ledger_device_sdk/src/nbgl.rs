@@ -975,7 +975,7 @@ impl NbglStreamingReview {
         }
     }
 
-    pub fn start(&mut self, title: &str, subtitle: &str) -> bool {
+    pub fn start(&self, title: &str, subtitle: &str) -> bool {
         unsafe {
             let title = CString::new(title).unwrap();
             let subtitle = CString::new(subtitle).unwrap();
@@ -1005,7 +1005,7 @@ impl NbglStreamingReview {
         }
     }
 
-    pub fn continue_review(&mut self, fields: &[Field]) -> bool {
+    pub fn continue_review(&self, fields: &[Field]) -> bool {
         unsafe {
             let v: Vec<CField> = fields
                 .iter()
@@ -1049,7 +1049,7 @@ impl NbglStreamingReview {
         }
     }
 
-    pub fn finish(&mut self, finish_title: &str) -> bool {
+    pub fn finish(&self, finish_title: &str) -> bool {
         unsafe {
             let finish_title = CString::new(finish_title).unwrap();
             let sync_ret = ux_sync_reviewStreamingFinish(finish_title.as_ptr() as *const c_char);
