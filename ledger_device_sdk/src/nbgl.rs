@@ -161,9 +161,9 @@ impl ToMessage for StatusType {
 /// This function should be called from the main function of the application.
 /// The COMM_REF variable is used by the NBGL API to detect touch events and
 /// APDU reception.
-pub fn init_comm(comm: &'static mut Comm) {
+pub fn init_comm(comm: &mut Comm) {
     unsafe {
-        COMM_REF = Some(comm);
+        COMM_REF = Some(transmute(comm));
     }
 }
 
@@ -174,10 +174,7 @@ pub fn init_comm(comm: &'static mut Comm) {
 pub extern "C" fn io_recv_and_process_event() -> bool {
     unsafe {
         if let Some(comm) = COMM_REF.as_mut() {
-            let apdu_received = comm.next_event_ahead::<ApduHeader>();
-            if apdu_received {
-                return true;
-            }
+            return comm.next_event_ahead::<ApduHeader>();
         }
     }
     false
@@ -185,6 +182,8 @@ pub extern "C" fn io_recv_and_process_event() -> bool {
 
 /// Callback triggered by the NBGL API when a setting switch is toggled.
 unsafe extern "C" fn settings_callback(token: c_int, _index: u8, _page: c_int) {
+    crate::testing::debug_print("settings_callback\n");
+
     let idx = token - FIRST_USER_TOKEN as i32;
     if idx < 0 || idx >= SETTINGS_SIZE as i32 {
         panic!("Invalid token.");
@@ -215,32 +214,43 @@ const INFO_FIELDS: [*const c_char; 2] = [
     "Developer\0".as_ptr() as *const c_char,
 ];
 
+unsafe extern "C" fn quit_callback() {
+    exit_app(0);
+}
+
 /// A wrapper around the synchronous NBGL ux_sync_homeAndSettings C API binding.
 /// Used to display the home screen of the application, with an optional glyph,
 /// information fields, and settings switches.  
-pub struct NbglHomeAndSettings<'a> {
-    glyph: Option<&'a NbglGlyph<'a>>,
-    // app_name, version, author
+pub struct NbglHomeAndSettings {
+    app_name: CString,
     info_contents: Vec<CString>,
+    info_contents_ptr: Vec<*const c_char>,
     setting_contents: Vec<[CString; 2]>,
     nb_settings: u8,
+    content: nbgl_content_t,
+    generic_contents: nbgl_genericContents_t,
+    info_list: nbgl_contentInfoList_t,
+    icon: nbgl_icon_details_t,
 }
 
-impl<'a> NbglHomeAndSettings<'a> {
-    pub fn new() -> NbglHomeAndSettings<'a> {
+impl<'a> NbglHomeAndSettings {
+    pub fn new() -> NbglHomeAndSettings {
         NbglHomeAndSettings {
-            glyph: None,
+            app_name: CString::new("").unwrap(),
             info_contents: Vec::default(),
+            info_contents_ptr: Vec::default(),
             setting_contents: Vec::default(),
             nb_settings: 0,
+            content: nbgl_content_t::default(),
+            generic_contents: nbgl_genericContents_t::default(),
+            info_list: nbgl_contentInfoList_t::default(),
+            icon: nbgl_icon_details_t::default(),
         }
     }
 
-    pub fn glyph(self, glyph: &'a NbglGlyph) -> NbglHomeAndSettings<'a> {
-        NbglHomeAndSettings {
-            glyph: Some(glyph),
-            ..self
-        }
+    pub fn glyph(self, glyph: &'a NbglGlyph) -> NbglHomeAndSettings {
+        let icon = glyph.into();
+        NbglHomeAndSettings { icon: icon, ..self }
     }
 
     pub fn infos(
@@ -248,12 +258,13 @@ impl<'a> NbglHomeAndSettings<'a> {
         app_name: &'a str,
         version: &'a str,
         author: &'a str,
-    ) -> NbglHomeAndSettings<'a> {
+    ) -> NbglHomeAndSettings {
         let mut v: Vec<CString> = Vec::new();
-        v.push(CString::new(app_name).unwrap());
         v.push(CString::new(version).unwrap());
         v.push(CString::new(author).unwrap());
+
         NbglHomeAndSettings {
+            app_name: CString::new(app_name).unwrap(),
             info_contents: v,
             ..self
         }
@@ -263,7 +274,7 @@ impl<'a> NbglHomeAndSettings<'a> {
         self,
         nvm_data: &'a mut AtomicStorage<[u8; SETTINGS_SIZE]>,
         settings_strings: &[[&'a str; 2]],
-    ) -> NbglHomeAndSettings<'a> {
+    ) -> NbglHomeAndSettings {
         unsafe {
             NVM_REF = Some(transmute(nvm_data));
         }
@@ -284,78 +295,57 @@ impl<'a> NbglHomeAndSettings<'a> {
         }
     }
 
-    pub fn show<T: TryFrom<ApduHeader>>(&mut self) -> Event<T>
-    where
-        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
-    {
+    pub fn show(&mut self) {
         unsafe {
-            loop {
-                let info_contents: Vec<*const c_char> = self
-                    .info_contents
-                    .iter()
-                    .map(|s| s.as_ptr())
-                    .collect::<Vec<_>>();
+            self.info_contents_ptr = self
+                .info_contents
+                .iter()
+                .map(|s| s.as_ptr())
+                .collect::<Vec<_>>();
 
-                let info_list: nbgl_contentInfoList_t = nbgl_contentInfoList_t {
-                    infoTypes: INFO_FIELDS.as_ptr() as *const *const c_char,
-                    infoContents: info_contents[1..].as_ptr() as *const *const c_char,
-                    nbInfos: INFO_FIELDS.len() as u8,
-                };
+            self.info_list = nbgl_contentInfoList_t {
+                infoTypes: INFO_FIELDS.as_ptr() as *const *const c_char,
+                infoContents: self.info_contents_ptr[..].as_ptr() as *const *const c_char,
+                nbInfos: INFO_FIELDS.len() as u8,
+            };
 
-                let icon: nbgl_icon_details_t = match self.glyph {
-                    Some(g) => g.into(),
-                    None => nbgl_icon_details_t::default(),
-                };
-
-                for (i, setting) in self.setting_contents.iter().enumerate() {
-                    SWITCH_ARRAY[i].text = setting[0].as_ptr();
-                    SWITCH_ARRAY[i].subText = setting[1].as_ptr();
-                    SWITCH_ARRAY[i].initState =
-                        NVM_REF.as_mut().unwrap().get_ref()[i] as nbgl_state_t;
-                    SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
-                    SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
-                }
-
-                let content: nbgl_content_t = nbgl_content_t {
-                    content: nbgl_content_u {
-                        switchesList: nbgl_pageSwitchesList_s {
-                            switches: &SWITCH_ARRAY as *const nbgl_contentSwitch_t,
-                            nbSwitches: self.nb_settings,
-                        },
-                    },
-                    contentActionCallback: Some(settings_callback),
-                    type_: SWITCHES_LIST,
-                };
-
-                let generic_contents: nbgl_genericContents_t = nbgl_genericContents_t {
-                    callbackCallNeeded: false,
-                    __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
-                        contentsList: &content as *const nbgl_content_t,
-                    },
-                    nbContents: if self.nb_settings > 0 { 1 } else { 0 },
-                };
-
-                match ux_sync_homeAndSettings(
-                    info_contents[0],
-                    &icon as *const nbgl_icon_details_t,
-                    core::ptr::null(),
-                    INIT_HOME_PAGE as u8,
-                    &generic_contents as *const nbgl_genericContents_t,
-                    &info_list as *const nbgl_contentInfoList_t,
-                    core::ptr::null(),
-                ) {
-                    UX_SYNC_RET_APDU_RECEIVED => {
-                        if let Some(comm) = COMM_REF.as_mut() {
-                            if let Some(value) = comm.check_event() {
-                                return value;
-                            }
-                        }
-                    }
-                    _ => {
-                        panic!("Unexpected return value from ux_sync_homeAndSettings");
-                    }
-                }
+            for (i, setting) in self.setting_contents.iter().enumerate() {
+                SWITCH_ARRAY[i].text = setting[0].as_ptr();
+                SWITCH_ARRAY[i].subText = setting[1].as_ptr();
+                SWITCH_ARRAY[i].initState = NVM_REF.as_mut().unwrap().get_ref()[i] as nbgl_state_t;
+                SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
+                SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
             }
+
+            self.content = nbgl_content_t {
+                content: nbgl_content_u {
+                    switchesList: nbgl_pageSwitchesList_s {
+                        switches: &SWITCH_ARRAY as *const nbgl_contentSwitch_t,
+                        nbSwitches: self.nb_settings,
+                    },
+                },
+                contentActionCallback: Some(settings_callback),
+                type_: SWITCHES_LIST,
+            };
+
+            self.generic_contents = nbgl_genericContents_t {
+                callbackCallNeeded: false,
+                __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
+                    contentsList: &self.content as *const nbgl_content_t,
+                },
+                nbContents: if self.nb_settings > 0 { 1 } else { 0 },
+            };
+
+            nbgl_useCaseHomeAndSettings(
+                self.app_name.as_ptr() as *const c_char,
+                &self.icon as *const nbgl_icon_details_t,
+                core::ptr::null(),
+                INIT_HOME_PAGE as u8,
+                &self.generic_contents as *const nbgl_genericContents_t,
+                &self.info_list as *const nbgl_contentInfoList_t,
+                core::ptr::null(),
+                Some(quit_callback),
+            );
         }
     }
 }

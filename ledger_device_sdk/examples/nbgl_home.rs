@@ -2,7 +2,7 @@
 #![no_main]
 
 // Force boot section to be embedded in
-use ledger_device_sdk as _;
+use ledger_device_sdk::{self as _, testing};
 
 use include_gif::include_gif;
 use ledger_device_sdk::io::*;
@@ -45,23 +45,39 @@ extern "C" fn sample_main() {
         NVMData::new(AtomicStorage::new(&[0u8; 10]));
 
     let mut comm = Comm::new();
-    // Initialize reference to Comm instance for NBGL
-    // API calls.
-    init_comm(&mut comm);
 
     // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
     const FERRIS: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
 
     let settings_strings = [["Switch title", "Switch subtitle"]];
+
+    testing::debug_print("Starting App\n");
+
     // Display the home screen.
-    NbglHomeAndSettings::new()
+    let mut home = NbglHomeAndSettings::new()
         .glyph(&FERRIS)
         .settings(unsafe { DATA.get_mut() }, &settings_strings)
         .infos(
             "Example App",
             env!("CARGO_PKG_VERSION"),
             env!("CARGO_PKG_AUTHORS"),
-        )
-        .show::<Instruction>();
+        );
+
+    home.show();
+
+    testing::debug_print("App started\n");
+
+    loop {
+        // Wait for an APDU command
+        match comm.next_command() {
+            Instruction::GetVersion => {
+                comm.reply_ok();
+            }
+            Instruction::GetAppName => {
+                comm.reply_ok();
+            }
+            _ => {}
+        }
+    }
 }
