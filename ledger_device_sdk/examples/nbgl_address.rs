@@ -23,21 +23,20 @@ extern "C" fn sample_main() {
     }
 
     let mut comm = Comm::new();
-    // Initialize reference to Comm instance for NBGL
-    // API calls.
-    init_comm(&mut comm);
 
     let addr_hex = "0x1234567890ABCDEF1234567890ABCDEF12345678";
 
     // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
     const FERRIS: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
+
     // Display the address confirmation screen.
-    let success = NbglAddressReview::new()
+    let success = NbglAddressReview::new(&mut comm)
         .glyph(&FERRIS)
         .verify_str("Verify Address")
         .show(addr_hex);
-    NbglReviewStatus::new()
+
+    NbglReviewStatus::new(&mut comm)
         .status_type(StatusType::Address)
         .show(success);
 }

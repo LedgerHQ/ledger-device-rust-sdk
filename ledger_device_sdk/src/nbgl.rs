@@ -18,6 +18,9 @@ static mut NVM_REF: Option<&mut AtomicStorage<[u8; SETTINGS_SIZE]>> = None;
 static mut SWITCH_ARRAY: [nbgl_contentSwitch_t; SETTINGS_SIZE] =
     [unsafe { const_zero!(nbgl_contentSwitch_t) }; SETTINGS_SIZE];
 
+static mut g_ret: u8 = 0;
+static mut g_ended: bool = false;
+
 pub struct Field<'a> {
     pub name: &'a str,
     pub value: &'a str,
@@ -1060,18 +1063,48 @@ impl NbglStreamingReview {
     }
 }
 
+unsafe extern "C" fn choice_callback(confirm: bool) {
+    crate::testing::debug_print("choice_callback\n");
+    if (confirm) {
+        crate::testing::debug_print("APPROVED\n");
+        g_ret = UX_SYNC_RET_APPROVED;
+    } else {
+        g_ret = UX_SYNC_RET_REJECTED;
+    }
+    g_ended = true;
+}
+
+enum FakeInstruction {
+    Foo,
+}
+
+impl TryFrom<ApduHeader> for FakeInstruction {
+    type Error = crate::io::StatusWords;
+
+    fn try_from(value: crate::io::ApduHeader) -> Result<Self, Self::Error> {
+        match value.ins {
+            255 => Ok(FakeInstruction::Foo),
+            _ => Err(crate::io::StatusWords::NothingReceived),
+        }
+    }
+}
+
 /// A wrapper around the synchronous NBGL ux_sync_addressReview C API binding.
 /// Used to display address confirmation screens.
 pub struct NbglAddressReview<'a> {
     glyph: Option<&'a NbglGlyph<'a>>,
     verify_str: CString,
+    address: CString,
+    comm: &'a mut Comm,
 }
 
 impl<'a> NbglAddressReview<'a> {
-    pub fn new() -> NbglAddressReview<'a> {
+    pub fn new(comm: &'a mut Comm) -> NbglAddressReview<'a> {
         NbglAddressReview {
             verify_str: CString::new("").unwrap(),
             glyph: None,
+            address: CString::new("").unwrap(),
+            comm: comm,
         }
     }
 
@@ -1089,6 +1122,25 @@ impl<'a> NbglAddressReview<'a> {
         }
     }
 
+    fn ux_sync_init(&self) {
+        unsafe {
+            g_ret = UX_SYNC_RET_ERROR;
+            g_ended = false;
+        }
+    }
+
+    fn ux_sync_wait(&mut self) -> u8 {
+        unsafe {
+            while (!g_ended) {
+                match self.comm.next_event() {
+                    crate::io::Event::Command(FakeInstruction::Foo) => {}
+                    _ => {}
+                }
+            }
+            return g_ret;
+        }
+    }
+
     pub fn show(&mut self, address: &str) -> bool {
         unsafe {
             let icon: nbgl_icon_details_t = match self.glyph {
@@ -1096,16 +1148,18 @@ impl<'a> NbglAddressReview<'a> {
                 None => nbgl_icon_details_t::default(),
             };
 
-            let address = CString::new(address).unwrap();
+            self.address = CString::new(address).unwrap();
 
-            // Show the address confirmation on the device.
-            let sync_ret = ux_sync_addressReview(
-                address.as_ptr(),
+            self.ux_sync_init();
+            nbgl_useCaseAddressReview(
+                self.address.as_ptr(),
                 core::ptr::null(),
                 &icon as *const nbgl_icon_details_t,
                 self.verify_str.as_ptr(),
                 core::ptr::null(),
+                Some(choice_callback),
             );
+            let sync_ret = self.ux_sync_wait();
 
             // Return true if the user approved the address, false otherwise.
             match sync_ret {
@@ -1182,24 +1236,50 @@ impl<'a> NbglChoice<'a> {
 
 /// A wrapper around the synchronous NBGL ux_sync_reviewStatus C API binding.
 /// Draws a transient (3s) status page of the chosen type.
-pub struct NbglReviewStatus {
+pub struct NbglReviewStatus<'a> {
     status_type: StatusType,
+    comm: &'a mut Comm,
 }
 
-impl NbglReviewStatus {
-    pub fn new() -> NbglReviewStatus {
+impl<'a> NbglReviewStatus<'a> {
+    pub fn new(comm: &'a mut Comm) -> NbglReviewStatus<'a> {
         NbglReviewStatus {
             status_type: StatusType::Transaction,
+            comm: comm,
         }
     }
 
-    pub fn status_type(self, status_type: StatusType) -> NbglReviewStatus {
-        NbglReviewStatus { status_type }
+    fn ux_sync_init(&self) {
+        unsafe {
+            g_ret = UX_SYNC_RET_ERROR;
+            g_ended = false;
+        }
     }
 
-    pub fn show(&self, success: bool) {
+    fn ux_sync_wait(&mut self) -> u8 {
         unsafe {
-            ux_sync_reviewStatus(self.status_type.to_message(success));
+            while (!g_ended) {
+                match self.comm.next_event() {
+                    crate::io::Event::Command(FakeInstruction::Foo) => {}
+                    _ => {}
+                }
+            }
+            return g_ret;
+        }
+    }
+
+    pub fn status_type(self, status_type: StatusType) -> NbglReviewStatus<'a> {
+        NbglReviewStatus {
+            status_type,
+            ..self
+        }
+    }
+
+    pub fn show(&mut self, success: bool) {
+        unsafe {
+            self.ux_sync_init();
+            nbgl_useCaseReviewStatus(self.status_type.to_message(success), Some(quit_callback));
+            self.ux_sync_wait();
         }
     }
 }
