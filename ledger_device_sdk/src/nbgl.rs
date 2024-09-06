@@ -13,7 +13,7 @@ use ledger_secure_sdk_sys::*;
 pub static mut G_ux_params: bolos_ux_params_t = unsafe { const_zero!(bolos_ux_params_t) };
 
 static mut COMM_REF: Option<&mut Comm> = None;
-const SETTINGS_SIZE: usize = 10;
+pub const SETTINGS_SIZE: usize = 10;
 static mut NVM_REF: Option<&mut AtomicStorage<[u8; SETTINGS_SIZE]>> = None;
 static mut SWITCH_ARRAY: [nbgl_contentSwitch_t; SETTINGS_SIZE] =
     [unsafe { const_zero!(nbgl_contentSwitch_t) }; SETTINGS_SIZE];
@@ -182,19 +182,27 @@ pub extern "C" fn io_recv_and_process_event() -> bool {
 
 /// Callback triggered by the NBGL API when a setting switch is toggled.
 unsafe extern "C" fn settings_callback(token: c_int, _index: u8, _page: c_int) {
-    crate::testing::debug_print("settings_callback\n");
-
     let idx = token - FIRST_USER_TOKEN as i32;
     if idx < 0 || idx >= SETTINGS_SIZE as i32 {
         panic!("Invalid token.");
     }
 
+    let setting_idx: usize = idx as usize;
+
+    match SWITCH_ARRAY[setting_idx].initState {
+        OFF_STATE => SWITCH_ARRAY[setting_idx].initState = ON_STATE,
+        ON_STATE => SWITCH_ARRAY[setting_idx].initState = OFF_STATE,
+        _ => panic!("Invalid state."),
+    }
+
     if let Some(data) = NVM_REF.as_mut() {
-        let setting_idx: usize = idx as usize;
         let mut switch_values: [u8; SETTINGS_SIZE] = data.get_ref().clone();
-        switch_values[setting_idx] = !switch_values[setting_idx];
+        if switch_values[setting_idx] == OFF_STATE {
+            switch_values[setting_idx] = ON_STATE;
+        } else {
+            switch_values[setting_idx] = OFF_STATE;
+        }
         data.update(&switch_values);
-        SWITCH_ARRAY[setting_idx].initState = switch_values[setting_idx] as nbgl_state_t;
     }
 }
 
@@ -312,7 +320,12 @@ impl<'a> NbglHomeAndSettings {
             for (i, setting) in self.setting_contents.iter().enumerate() {
                 SWITCH_ARRAY[i].text = setting[0].as_ptr();
                 SWITCH_ARRAY[i].subText = setting[1].as_ptr();
-                SWITCH_ARRAY[i].initState = NVM_REF.as_mut().unwrap().get_ref()[i] as nbgl_state_t;
+                let state = if let Some(data) = NVM_REF.as_mut() {
+                    data.get_ref()[i]
+                } else {
+                    OFF_STATE
+                };
+                SWITCH_ARRAY[i].initState = state;
                 SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
                 SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
             }

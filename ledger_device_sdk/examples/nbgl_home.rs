@@ -6,6 +6,7 @@ use ledger_device_sdk::{self as _, testing};
 
 use include_gif::include_gif;
 use ledger_device_sdk::io::*;
+use ledger_device_sdk::nbgl::SETTINGS_SIZE;
 use ledger_device_sdk::nbgl::{init_comm, NbglGlyph, NbglHomeAndSettings};
 use ledger_device_sdk::nvm::*;
 use ledger_device_sdk::NVMData;
@@ -39,10 +40,9 @@ extern "C" fn sample_main() {
         nbgl_refreshReset();
     }
 
-    const SETTINGS_SIZE: usize = 10;
     #[link_section = ".nvm_data"]
     static mut DATA: NVMData<AtomicStorage<[u8; SETTINGS_SIZE]>> =
-        NVMData::new(AtomicStorage::new(&[0u8; 10]));
+        NVMData::new(AtomicStorage::new(&[0u8; SETTINGS_SIZE]));
 
     let mut comm = Comm::new();
 
