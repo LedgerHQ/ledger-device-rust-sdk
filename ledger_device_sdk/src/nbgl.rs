@@ -190,12 +190,22 @@ unsafe extern "C" fn settings_callback(token: c_int, _index: u8, _page: c_int) {
         panic!("Invalid token.");
     }
 
+    let setting_idx: usize = idx as usize;
+
+    match SWITCH_ARRAY[setting_idx].initState {
+        OFF_STATE => SWITCH_ARRAY[setting_idx].initState = ON_STATE,
+        ON_STATE => SWITCH_ARRAY[setting_idx].initState = OFF_STATE,
+        _ => panic!("Invalid state."),
+    }
+
     if let Some(data) = NVM_REF.as_mut() {
-        let setting_idx: usize = idx as usize;
         let mut switch_values: [u8; SETTINGS_SIZE] = data.get_ref().clone();
-        switch_values[setting_idx] = !switch_values[setting_idx];
+        if switch_values[setting_idx] == OFF_STATE {
+            switch_values[setting_idx] = ON_STATE;
+        } else {
+            switch_values[setting_idx] = OFF_STATE;
+        }
         data.update(&switch_values);
-        SWITCH_ARRAY[setting_idx].initState = switch_values[setting_idx] as nbgl_state_t;
     }
 }
 
@@ -310,8 +320,12 @@ impl<'a> NbglHomeAndSettings<'a> {
                 for (i, setting) in self.setting_contents.iter().enumerate() {
                     SWITCH_ARRAY[i].text = setting[0].as_ptr();
                     SWITCH_ARRAY[i].subText = setting[1].as_ptr();
-                    SWITCH_ARRAY[i].initState =
-                        NVM_REF.as_mut().unwrap().get_ref()[i] as nbgl_state_t;
+                    let state = if let Some(data) = NVM_REF.as_mut() {
+                        data.get_ref()[i]
+                    } else {
+                        OFF_STATE
+                    };
+                    SWITCH_ARRAY[i].initState = state;
                     SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
                     SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
                 }
