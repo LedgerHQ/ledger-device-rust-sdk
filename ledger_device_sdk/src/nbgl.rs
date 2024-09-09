@@ -99,15 +99,6 @@ trait SyncNBGL: Sized {
     }
 }
 
-unsafe extern "C" fn action_callback(token: c_int, _index: u8, _page: c_int) {
-    if token == FIRST_USER_TOKEN as i32 {
-        ux_sync_setReturnCode(UX_SYNC_RET_APPROVED);
-    } else if token == (FIRST_USER_TOKEN + 1) as i32 {
-        ux_sync_setReturnCode(UX_SYNC_RET_REJECTED);
-    }
-    ux_sync_setEnded(true);
-}
-
 unsafe extern "C" fn choice_callback(confirm: bool) {
     G_RET = if confirm {
         SyncNbgl::UxSyncRetApproved.into()
@@ -119,6 +110,11 @@ unsafe extern "C" fn choice_callback(confirm: bool) {
 
 unsafe extern "C" fn quit_callback() {
     G_RET = SyncNbgl::UxSyncRetQuitted.into();
+    G_ENDED = true;
+}
+
+unsafe extern "C" fn rejected_callback() {
+    G_RET = SyncNbgl::UxSyncRetRejected.into();
     G_ENDED = true;
 }
 

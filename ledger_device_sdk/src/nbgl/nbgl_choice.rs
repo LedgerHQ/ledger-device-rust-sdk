@@ -1,11 +1,13 @@
 use super::*;
 
-/// A wrapper around the synchronous NBGL ux_sync_status C API binding.
+/// A wrapper around the asynchronous NBGL nbgl_useCaseChoice C API binding.
 /// Draws a generic choice page, described in a centered info (with configurable icon),
 /// thanks to a button and a footer at the bottom of the page.
 pub struct NbglChoice<'a> {
     glyph: Option<&'a NbglGlyph<'a>>,
 }
+
+impl SyncNBGL for NbglChoice<'_> {}
 
 impl<'a> NbglChoice<'a> {
     pub fn new() -> NbglChoice<'a> {
@@ -20,7 +22,7 @@ impl<'a> NbglChoice<'a> {
     }
 
     pub fn show(
-        self,
+        &mut self,
         message: &str,
         sub_message: &str,
         confirm_text: &str,
@@ -36,17 +38,20 @@ impl<'a> NbglChoice<'a> {
             let confirm_text = CString::new(confirm_text).unwrap();
             let cancel_text = CString::new(cancel_text).unwrap();
 
-            let sync_ret = ux_sync_choice(
+            self.ux_sync_init();
+            nbgl_useCaseChoice(
                 &icon as *const nbgl_icon_details_t,
                 message.as_ptr() as *const c_char,
                 sub_message.as_ptr() as *const c_char,
                 confirm_text.as_ptr() as *const c_char,
                 cancel_text.as_ptr() as *const c_char,
+                Some(choice_callback),
             );
+            let sync_ret = self.ux_sync_wait(false);
 
             // Return true if the user approved the transaction, false otherwise.
             match sync_ret {
-                UX_SYNC_RET_APPROVED => {
+                SyncNbgl::UxSyncRetApproved => {
                     return true;
                 }
                 _ => {

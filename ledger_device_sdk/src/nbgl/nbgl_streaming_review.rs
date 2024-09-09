@@ -1,12 +1,14 @@
 use super::*;
 
-/// A wrapper around the synchronous NBGL ux_sync_reviewStreaming (start, continue and finish)
+/// A wrapper around the asynchronous NBGL nbgl_useCaseReviewStreamingStart/Continue/Finish)
 /// C API binding. Used to display streamed transaction review screens.
 pub struct NbglStreamingReview {
     icon: nbgl_icon_details_t,
     tx_type: TransactionType,
     blind: bool,
 }
+
+impl SyncNBGL for NbglStreamingReview {}
 
 impl NbglStreamingReview {
     pub fn new() -> NbglStreamingReview {
@@ -46,16 +48,19 @@ impl NbglStreamingReview {
                 }
             }
 
-            let sync_ret = ux_sync_reviewStreamingStart(
+            self.ux_sync_init();
+            nbgl_useCaseReviewStreamingStart(
                 self.tx_type.to_c_type(self.blind, false),
                 &self.icon as *const nbgl_icon_details_t,
                 title.as_ptr() as *const c_char,
                 subtitle.as_ptr() as *const c_char,
+                Some(choice_callback),
             );
+            let sync_ret = self.ux_sync_wait(false);
 
             // Return true if the user approved the transaction, false otherwise.
             match sync_ret {
-                UX_SYNC_RET_APPROVED => {
+                SyncNbgl::UxSyncRetApproved => {
                     return true;
                 }
                 _ => {
@@ -93,13 +98,16 @@ impl NbglStreamingReview {
                 ..Default::default()
             };
 
-            let sync_ret = ux_sync_reviewStreamingContinue(
+            self.ux_sync_init();
+            nbgl_useCaseReviewStreamingContinue(
                 &tag_value_list as *const nbgl_contentTagValueList_t,
+                Some(choice_callback),
             );
+            let sync_ret = self.ux_sync_wait(false);
 
             // Return true if the user approved the transaction, false otherwise.
             match sync_ret {
-                UX_SYNC_RET_APPROVED => {
+                SyncNbgl::UxSyncRetApproved => {
                     return true;
                 }
                 _ => {
@@ -112,11 +120,17 @@ impl NbglStreamingReview {
     pub fn finish(&mut self, finish_title: &str) -> bool {
         unsafe {
             let finish_title = CString::new(finish_title).unwrap();
-            let sync_ret = ux_sync_reviewStreamingFinish(finish_title.as_ptr() as *const c_char);
+
+            self.ux_sync_init();
+            nbgl_useCaseReviewStreamingFinish(
+                finish_title.as_ptr() as *const c_char,
+                Some(choice_callback),
+            );
+            let sync_ret = self.ux_sync_wait(false);
 
             // Return true if the user approved the transaction, false otherwise.
             match sync_ret {
-                UX_SYNC_RET_APPROVED => {
+                SyncNbgl::UxSyncRetApproved => {
                     return true;
                 }
                 _ => {

@@ -1,6 +1,6 @@
 use super::*;
 
-/// A wrapper around the synchronous NBGL ux_sync_addressReview C API binding.
+/// A wrapper around the asynchronous NBGL nbgl_useCaseAddressReview C API binding.
 /// Used to display address confirmation screens.
 pub struct NbglAddressReview<'a> {
     glyph: Option<&'a NbglGlyph<'a>>,

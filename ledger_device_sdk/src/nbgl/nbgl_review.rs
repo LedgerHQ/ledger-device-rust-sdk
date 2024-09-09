@@ -1,6 +1,6 @@
 use super::*;
 
-/// A wrapper around the synchronous NBGL ux_sync_review C API binding.
+/// A wrapper around the asynchronous NBGL nbgl_useCaseReview C API binding.
 /// Used to display transaction review screens.
 pub struct NbglReview<'a> {
     title: CString,
@@ -10,6 +10,8 @@ pub struct NbglReview<'a> {
     tx_type: TransactionType,
     blind: bool,
 }
+
+impl SyncNBGL for NbglReview<'_> {}
 
 impl<'a> NbglReview<'a> {
     pub fn new() -> NbglReview<'a> {
@@ -95,18 +97,21 @@ impl<'a> NbglReview<'a> {
             }
 
             // Show the review on the device.
-            let sync_ret = ux_sync_review(
+            self.ux_sync_init();
+            nbgl_useCaseReview(
                 self.tx_type.to_c_type(self.blind, false),
                 &tag_value_list as *const nbgl_contentTagValueList_t,
                 &icon as *const nbgl_icon_details_t,
                 self.title.as_ptr() as *const c_char,
                 self.subtitle.as_ptr() as *const c_char,
                 self.finish_title.as_ptr() as *const c_char,
+                Some(choice_callback),
             );
+            let sync_ret = self.ux_sync_wait(false);
 
             // Return true if the user approved the transaction, false otherwise.
             match sync_ret {
-                UX_SYNC_RET_APPROVED => {
+                SyncNbgl::UxSyncRetApproved => {
                     return true;
                 }
                 _ => {

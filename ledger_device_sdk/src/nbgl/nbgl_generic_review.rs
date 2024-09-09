@@ -217,6 +217,15 @@ impl InfosList {
     }
 }
 
+unsafe extern "C" fn action_callback(token: c_int, _index: u8, _page: c_int) {
+    if token == FIRST_USER_TOKEN as i32 {
+        G_RET = SyncNbgl::UxSyncRetApproved.into();
+    } else if token == (FIRST_USER_TOKEN + 1) as i32 {
+        G_RET = SyncNbgl::UxSyncRetRejected.into();
+    }
+    G_ENDED = true;
+}
+
 /// Represents the different types of content that can be displayed
 /// on the device when using the NbglGenericReview add_content method.
 pub enum NbglPageContent {
@@ -358,13 +367,15 @@ impl From<&NbglPageContent>
     }
 }
 
-/// A wrapper around the synchronous NBGL ux_sync_genericReview C API binding.
+/// A wrapper around the asynchronous NBGL nbgl_useCaseGenericReview C API binding.
 /// Used to display custom built review screens. User can add different kind of
 /// contents (CenteredInfo, InfoLongPress, InfoButton, TagValueList, TagValueConfirm, InfosList)
 /// to the review screen using the add_content method.
 pub struct NbglGenericReview {
     content_list: Vec<NbglPageContent>,
 }
+
+impl SyncNBGL for NbglGenericReview {}
 
 impl NbglGenericReview {
     pub fn new() -> NbglGenericReview {
@@ -406,14 +417,17 @@ impl NbglGenericReview {
 
             let reject_button_cstring = CString::new(reject_button_str).unwrap();
 
-            let sync_ret = ux_sync_genericReview(
+            self.ux_sync_init();
+            nbgl_useCaseGenericReview(
                 &content_struct as *const nbgl_genericContents_t,
                 reject_button_cstring.as_ptr() as *const c_char,
+                Some(rejected_callback),
             );
+            let sync_ret = self.ux_sync_wait(false);
 
             // Return true if the user approved the transaction, false otherwise.
             match sync_ret {
-                UX_SYNC_RET_APPROVED => {
+                SyncNbgl::UxSyncRetApproved => {
                     return true;
                 }
                 _ => {
