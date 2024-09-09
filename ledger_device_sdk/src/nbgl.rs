@@ -10,7 +10,7 @@ use include_gif::include_gif;
 use ledger_secure_sdk_sys::*;
 
 #[no_mangle]
-pub static mut G_ux_params: bolos_ux_params_t = unsafe { const_zero!(bolos_ux_params_t) };
+static mut G_ux_params: bolos_ux_params_t = unsafe { const_zero!(bolos_ux_params_t) };
 
 pub mod nbgl_address_review;
 pub mod nbgl_choice;
@@ -265,19 +265,6 @@ pub fn init_comm(comm: &mut Comm) {
     unsafe {
         COMM_REF = Some(transmute(comm));
     }
-}
-
-/// IO function used in the synchronous NBGL C library to process
-/// events (touch, buttons, etc.) or detect if an APDU was received.
-/// It returns true if an APDU was received, false otherwise.
-#[no_mangle]
-pub extern "C" fn io_recv_and_process_event() -> bool {
-    unsafe {
-        if let Some(comm) = COMM_REF.as_mut() {
-            return comm.next_event_ahead::<ApduHeader>();
-        }
-    }
-    false
 }
 
 /// Private helper function to display a warning screen when a transaction
