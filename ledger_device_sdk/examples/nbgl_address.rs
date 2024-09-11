@@ -40,4 +40,5 @@ extern "C" fn sample_main() {
     NbglReviewStatus::new()
         .status_type(StatusType::Address)
         .show(success);
+    exit_app(0);
 }
