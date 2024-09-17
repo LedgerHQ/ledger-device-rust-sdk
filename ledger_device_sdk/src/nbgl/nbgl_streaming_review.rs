@@ -42,12 +42,6 @@ impl NbglStreamingReview {
             let title = CString::new(title).unwrap();
             let subtitle = CString::new(subtitle).unwrap();
 
-            if self.blind {
-                if !show_blind_warning() {
-                    return false;
-                }
-            }
-
             self.ux_sync_init();
             nbgl_useCaseReviewStreamingStart(
                 self.tx_type.to_c_type(self.blind, false),

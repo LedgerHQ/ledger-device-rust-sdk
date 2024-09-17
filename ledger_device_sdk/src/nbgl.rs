@@ -267,35 +267,6 @@ pub fn init_comm(comm: &mut Comm) {
     }
 }
 
-/// Private helper function to display a warning screen when a transaction
-/// is reviewed in "blind" mode. The user can choose to go back to safety
-/// or review the risk. If the user chooses to review the risk, a second screen
-/// is displayed with the option to accept the risk or reject the transaction.
-/// Used in NbglReview and NbglStreamingReview.
-fn show_blind_warning() -> bool {
-    const WARNING: NbglGlyph =
-        NbglGlyph::from_include(include_gif!("icons/Warning_64px.gif", NBGL));
-
-    let back_to_safety = NbglChoice::new().glyph(&WARNING).show(
-        "Security risk detected",
-        "It may not be safe to sign this transaction. To continue, you'll need to review the risk.",
-        "Back to safety",
-        "Review risk",
-    );
-
-    if !back_to_safety {
-        NbglChoice::new()
-            .show(
-                "The transaction cannot be trusted",
-                "Your Ledger cannot decode this transaction. If you sign it, you could be authorizing malicious actions that can drain your wallet.\n\nLearn more: ledger.com/e8",
-                "I accept the risk",
-                "Reject transaction"
-            )
-    } else {
-        false
-    }
-}
-
 #[derive(Copy, Clone)]
 pub enum TuneIndex {
     Reserved,

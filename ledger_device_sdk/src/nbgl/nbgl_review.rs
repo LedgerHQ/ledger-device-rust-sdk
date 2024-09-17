@@ -90,12 +90,6 @@ impl<'a> NbglReview<'a> {
                 None => nbgl_icon_details_t::default(),
             };
 
-            if self.blind {
-                if !show_blind_warning() {
-                    return false;
-                }
-            }
-
             // Show the review on the device.
             self.ux_sync_init();
             nbgl_useCaseReview(
