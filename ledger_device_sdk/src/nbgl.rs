@@ -6,7 +6,6 @@ use alloc::ffi::CString;
 use alloc::vec::Vec;
 use core::ffi::{c_char, c_int};
 use core::mem::transmute;
-use include_gif::include_gif;
 use ledger_secure_sdk_sys::*;
 
 #[no_mangle]
@@ -210,15 +209,12 @@ trait ToMessage {
 }
 
 impl TransactionType {
-    pub fn to_c_type(&self, blind: bool, skippable: bool) -> nbgl_operationType_t {
+    fn to_c_type(&self, skippable: bool) -> nbgl_operationType_t {
         let mut tx_type = match self {
             TransactionType::Transaction => TYPE_TRANSACTION.into(),
             TransactionType::Message => TYPE_MESSAGE.into(),
             TransactionType::Operation => TYPE_OPERATION.into(),
         };
-        if blind {
-            tx_type |= BLIND_OPERATION;
-        }
         if skippable {
             tx_type |= SKIPPABLE_OPERATION;
         }
