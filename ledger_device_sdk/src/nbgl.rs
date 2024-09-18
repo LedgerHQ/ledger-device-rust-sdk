@@ -6,7 +6,6 @@ use alloc::ffi::CString;
 use alloc::vec::Vec;
 use core::ffi::{c_char, c_int};
 use core::mem::transmute;
-use include_gif::include_gif;
 use ledger_secure_sdk_sys::*;
 
 #[no_mangle]
@@ -210,15 +209,12 @@ trait ToMessage {
 }
 
 impl TransactionType {
-    pub fn to_c_type(&self, blind: bool, skippable: bool) -> nbgl_operationType_t {
+    fn to_c_type(&self, skippable: bool) -> nbgl_operationType_t {
         let mut tx_type = match self {
             TransactionType::Transaction => TYPE_TRANSACTION.into(),
             TransactionType::Message => TYPE_MESSAGE.into(),
             TransactionType::Operation => TYPE_OPERATION.into(),
         };
-        if blind {
-            tx_type |= BLIND_OPERATION;
-        }
         if skippable {
             tx_type |= SKIPPABLE_OPERATION;
         }
@@ -264,35 +260,6 @@ impl ToMessage for StatusType {
 pub fn init_comm(comm: &mut Comm) {
     unsafe {
         COMM_REF = Some(transmute(comm));
-    }
-}
-
-/// Private helper function to display a warning screen when a transaction
-/// is reviewed in "blind" mode. The user can choose to go back to safety
-/// or review the risk. If the user chooses to review the risk, a second screen
-/// is displayed with the option to accept the risk or reject the transaction.
-/// Used in NbglReview and NbglStreamingReview.
-fn show_blind_warning() -> bool {
-    const WARNING: NbglGlyph =
-        NbglGlyph::from_include(include_gif!("icons/Warning_64px.gif", NBGL));
-
-    let back_to_safety = NbglChoice::new().glyph(&WARNING).show(
-        "Security risk detected",
-        "It may not be safe to sign this transaction. To continue, you'll need to review the risk.",
-        "Back to safety",
-        "Review risk",
-    );
-
-    if !back_to_safety {
-        NbglChoice::new()
-            .show(
-                "The transaction cannot be trusted",
-                "Your Ledger cannot decode this transaction. If you sign it, you could be authorizing malicious actions that can drain your wallet.\n\nLearn more: ledger.com/e8",
-                "I accept the risk",
-                "Reject transaction"
-            )
-    } else {
-        false
     }
 }
 
