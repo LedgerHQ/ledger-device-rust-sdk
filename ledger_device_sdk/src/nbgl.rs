@@ -278,26 +278,6 @@ pub enum TuneIndex {
     TapNext,
 }
 
-impl TryFrom<u8> for TuneIndex {
-    type Error = ();
-    fn try_from(index: u8) -> Result<TuneIndex, ()> {
-        Ok(match index {
-            TUNE_RESERVED => TuneIndex::Reserved,
-            TUNE_BOOT => TuneIndex::Boot,
-            TUNE_CHARGING => TuneIndex::Charging,
-            TUNE_LEDGER_MOMENT => TuneIndex::LedgerMoment,
-            TUNE_ERROR => TuneIndex::Error,
-            TUNE_NEUTRAL => TuneIndex::Neutral,
-            TUNE_LOCK => TuneIndex::Lock,
-            TUNE_SUCCESS => TuneIndex::Success,
-            TUNE_LOOK_AT_ME => TuneIndex::LookAtMe,
-            TUNE_TAP_CASUAL => TuneIndex::TapCasual,
-            TUNE_TAP_NEXT => TuneIndex::TapNext,
-            _ => return Err(()),
-        })
-    }
-}
-
 // Direct translation of the C original. This was done to
 // avoid compiling `os_io_seproxyhal.c` which includes many other things
 #[no_mangle]
