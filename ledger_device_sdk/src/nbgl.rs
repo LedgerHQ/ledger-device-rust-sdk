@@ -312,7 +312,7 @@ extern "C" fn io_seproxyhal_play_tune(tune_index: u8) {
     let sound_setting =
         unsafe { os_setting_get(OS_SETTING_PIEZO_SOUND.into(), core::ptr::null_mut(), 0) };
 
-    if ((sound_setting & 2) == 1) && (tune_index < TUNE_TAP_CASUAL) {
+    if ((sound_setting & 2) == 2) && (tune_index < TUNE_TAP_CASUAL) {
         return;
     }
 
