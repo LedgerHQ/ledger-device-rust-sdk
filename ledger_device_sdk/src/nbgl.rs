@@ -1,4 +1,4 @@
-use crate::io::{ApduHeader, Comm, Event, Reply};
+use crate::io::{ApduHeader, Comm};
 use crate::nvm::*;
 use const_zero::const_zero;
 extern crate alloc;
@@ -32,10 +32,6 @@ pub use nbgl_status::*;
 pub use nbgl_streaming_review::*;
 
 static mut COMM_REF: Option<&mut Comm> = None;
-pub const SETTINGS_SIZE: usize = 10;
-static mut NVM_REF: Option<&mut AtomicStorage<[u8; SETTINGS_SIZE]>> = None;
-static mut SWITCH_ARRAY: [nbgl_contentSwitch_t; SETTINGS_SIZE] =
-    [unsafe { const_zero!(nbgl_contentSwitch_t) }; SETTINGS_SIZE];
 
 #[derive(Copy, Clone)]
 enum SyncNbgl {

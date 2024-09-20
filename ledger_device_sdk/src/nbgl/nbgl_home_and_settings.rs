@@ -1,5 +1,10 @@
 use super::*;
 
+pub const SETTINGS_SIZE: usize = 10;
+static mut NVM_REF: Option<&mut AtomicStorage<[u8; SETTINGS_SIZE]>> = None;
+static mut SWITCH_ARRAY: [nbgl_contentSwitch_t; SETTINGS_SIZE] =
+    [unsafe { const_zero!(nbgl_contentSwitch_t) }; SETTINGS_SIZE];
+
 /// Callback triggered by the NBGL API when a setting switch is toggled.
 unsafe extern "C" fn settings_callback(token: c_int, _index: u8, _page: c_int) {
     let idx = token - FIRST_USER_TOKEN as i32;
@@ -47,7 +52,9 @@ pub struct NbglHomeAndSettings {
     icon: nbgl_icon_details_t,
 }
 
-impl SyncNBGL for NbglHomeAndSettings {}
+unsafe extern "C" fn quit_callback() {
+    exit_app(0);
+}
 
 impl<'a> NbglHomeAndSettings {
     pub fn new() -> NbglHomeAndSettings {
@@ -111,83 +118,62 @@ impl<'a> NbglHomeAndSettings {
         }
     }
 
-    pub fn show<T: TryFrom<ApduHeader>>(&mut self) -> Event<T>
-    where
-        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
-    {
+    pub fn show(&mut self) {
         unsafe {
-            loop {
-                self.info_contents_ptr = self
-                    .info_contents
-                    .iter()
-                    .map(|s| s.as_ptr())
-                    .collect::<Vec<_>>();
+            self.info_contents_ptr = self
+                .info_contents
+                .iter()
+                .map(|s| s.as_ptr())
+                .collect::<Vec<_>>();
 
-                self.info_list = nbgl_contentInfoList_t {
-                    infoTypes: INFO_FIELDS.as_ptr() as *const *const c_char,
-                    infoContents: self.info_contents_ptr[..].as_ptr() as *const *const c_char,
-                    nbInfos: INFO_FIELDS.len() as u8,
+            self.info_list = nbgl_contentInfoList_t {
+                infoTypes: INFO_FIELDS.as_ptr() as *const *const c_char,
+                infoContents: self.info_contents_ptr[..].as_ptr() as *const *const c_char,
+                nbInfos: INFO_FIELDS.len() as u8,
+            };
+
+            for (i, setting) in self.setting_contents.iter().enumerate() {
+                SWITCH_ARRAY[i].text = setting[0].as_ptr();
+                SWITCH_ARRAY[i].subText = setting[1].as_ptr();
+                let state = if let Some(data) = NVM_REF.as_mut() {
+                    data.get_ref()[i]
+                } else {
+                    OFF_STATE
                 };
-
-                for (i, setting) in self.setting_contents.iter().enumerate() {
-                    SWITCH_ARRAY[i].text = setting[0].as_ptr();
-                    SWITCH_ARRAY[i].subText = setting[1].as_ptr();
-                    let state = if let Some(data) = NVM_REF.as_mut() {
-                        data.get_ref()[i]
-                    } else {
-                        OFF_STATE
-                    };
-                    SWITCH_ARRAY[i].initState = state;
-                    SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
-                    SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
-                }
-
-                self.content = nbgl_content_t {
-                    content: nbgl_content_u {
-                        switchesList: nbgl_pageSwitchesList_s {
-                            switches: &SWITCH_ARRAY as *const nbgl_contentSwitch_t,
-                            nbSwitches: self.nb_settings,
-                        },
-                    },
-                    contentActionCallback: Some(settings_callback),
-                    type_: SWITCHES_LIST,
-                };
-
-                self.generic_contents = nbgl_genericContents_t {
-                    callbackCallNeeded: false,
-                    __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
-                        contentsList: &self.content as *const nbgl_content_t,
-                    },
-                    nbContents: if self.nb_settings > 0 { 1 } else { 0 },
-                };
-
-                self.ux_sync_init();
-                nbgl_useCaseHomeAndSettings(
-                    self.app_name.as_ptr() as *const c_char,
-                    &self.icon as *const nbgl_icon_details_t,
-                    core::ptr::null(),
-                    INIT_HOME_PAGE as u8,
-                    &self.generic_contents as *const nbgl_genericContents_t,
-                    &self.info_list as *const nbgl_contentInfoList_t,
-                    core::ptr::null(),
-                    Some(quit_callback),
-                );
-                match self.ux_sync_wait(true) {
-                    SyncNbgl::UxSyncRetApduReceived => {
-                        if let Some(comm) = COMM_REF.as_mut() {
-                            if let Some(value) = comm.check_event() {
-                                return value;
-                            }
-                        }
-                    }
-                    SyncNbgl::UxSyncRetQuitted => {
-                        exit_app(0);
-                    }
-                    _ => {
-                        panic!("Unexpected return value from ux_sync_homeAndSettings");
-                    }
-                }
+                SWITCH_ARRAY[i].initState = state;
+                SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
+                SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
             }
+
+            self.content = nbgl_content_t {
+                content: nbgl_content_u {
+                    switchesList: nbgl_pageSwitchesList_s {
+                        switches: &SWITCH_ARRAY as *const nbgl_contentSwitch_t,
+                        nbSwitches: self.nb_settings,
+                    },
+                },
+                contentActionCallback: Some(settings_callback),
+                type_: SWITCHES_LIST,
+            };
+
+            self.generic_contents = nbgl_genericContents_t {
+                callbackCallNeeded: false,
+                __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
+                    contentsList: &self.content as *const nbgl_content_t,
+                },
+                nbContents: if self.nb_settings > 0 { 1 } else { 0 },
+            };
+
+            nbgl_useCaseHomeAndSettings(
+                self.app_name.as_ptr() as *const c_char,
+                &self.icon as *const nbgl_icon_details_t,
+                core::ptr::null(),
+                INIT_HOME_PAGE as u8,
+                &self.generic_contents as *const nbgl_genericContents_t,
+                &self.info_list as *const nbgl_contentInfoList_t,
+                core::ptr::null(),
+                Some(quit_callback),
+            );
         }
     }
 }

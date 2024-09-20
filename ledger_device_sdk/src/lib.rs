@@ -25,8 +25,6 @@ pub mod testing;
 
 #[cfg(any(target_os = "stax", target_os = "flex"))]
 pub mod nbgl;
-#[cfg(any(target_os = "stax", target_os = "flex"))]
-pub mod nbgl2;
 #[cfg(not(any(target_os = "stax", target_os = "flex")))]
 pub mod ui;
 
