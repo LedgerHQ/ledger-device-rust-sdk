@@ -278,33 +278,35 @@ pub enum TuneIndex {
     TapNext,
 }
 
-impl TryFrom<u8> for TuneIndex {
-    type Error = ();
-    fn try_from(index: u8) -> Result<TuneIndex, ()> {
-        Ok(match index {
-            TUNE_RESERVED => TuneIndex::Reserved,
-            TUNE_BOOT => TuneIndex::Boot,
-            TUNE_CHARGING => TuneIndex::Charging,
-            TUNE_LEDGER_MOMENT => TuneIndex::LedgerMoment,
-            TUNE_ERROR => TuneIndex::Error,
-            TUNE_NEUTRAL => TuneIndex::Neutral,
-            TUNE_LOCK => TuneIndex::Lock,
-            TUNE_SUCCESS => TuneIndex::Success,
-            TUNE_LOOK_AT_ME => TuneIndex::LookAtMe,
-            TUNE_TAP_CASUAL => TuneIndex::TapCasual,
-            TUNE_TAP_NEXT => TuneIndex::TapNext,
-            _ => return Err(()),
-        })
-    }
-}
-
-// this is a mock that does nothing yet, but should become a direct translation
-// of the C original. This was done to avoid compiling `os_io_seproxyhal.c` which
-// includes many other things
+// Direct translation of the C original. This was done to
+// avoid compiling `os_io_seproxyhal.c` which includes many other things
 #[no_mangle]
 extern "C" fn io_seproxyhal_play_tune(tune_index: u8) {
-    let index = TuneIndex::try_from(tune_index);
-    if index.is_err() {
+    let mut buffer = [0u8; 4];
+    let mut spi_buffer = [0u8; 128];
+
+    if tune_index >= NB_TUNES {
         return;
     }
+
+    let sound_setting =
+        unsafe { os_setting_get(OS_SETTING_PIEZO_SOUND.into(), core::ptr::null_mut(), 0) };
+
+    if ((sound_setting & 2) == 2) && (tune_index < TUNE_TAP_CASUAL) {
+        return;
+    }
+
+    if ((sound_setting & 1) == 1) && (tune_index >= TUNE_TAP_CASUAL) {
+        return;
+    }
+
+    if seph::is_status_sent() {
+        seph::seph_recv(&mut spi_buffer, 0);
+    }
+
+    buffer[0] = SEPROXYHAL_TAG_PLAY_TUNE as u8;
+    buffer[1] = 0;
+    buffer[2] = 1;
+    buffer[3] = tune_index;
+    seph::seph_send(&buffer);
 }
