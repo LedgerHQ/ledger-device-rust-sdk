@@ -1,4 +1,4 @@
-use crate::io::{ApduHeader, Comm};
+use crate::io::{ApduHeader, Comm, Event, Reply};
 use crate::nvm::*;
 use const_zero::const_zero;
 extern crate alloc;
