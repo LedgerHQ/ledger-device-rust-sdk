@@ -52,10 +52,6 @@ pub struct NbglHomeAndSettings {
     icon: nbgl_icon_details_t,
 }
 
-unsafe extern "C" fn quit_callback() {
-    exit_app(0);
-}
-
 impl SyncNBGL for NbglHomeAndSettings {}
 
 unsafe extern "C" fn quit_cb() {
