@@ -120,6 +120,10 @@ impl<'a> NbglHomeAndSettings {
         }
     }
 
+    /// Show the home screen and settings page.
+    /// This function will block until an APDU is received or the user quits the app.
+    /// DEPRECATED as it constraints to refresh screen for every received APDU.
+    /// Use `display` instead.
     pub fn show<T: TryFrom<ApduHeader>>(&mut self) -> Event<T>
     where
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
@@ -200,6 +204,8 @@ impl<'a> NbglHomeAndSettings {
         }
     }
 
+    /// Show the home screen and settings page.
+    /// This function returns immediately after the screen is displayed.
     pub fn display(&mut self) {
         unsafe {
             self.info_contents_ptr = self
