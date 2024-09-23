@@ -21,7 +21,7 @@ unsafe extern "C" fn settings_callback(token: c_int, _index: u8, _page: c_int) {
     }
 
     if let Some(data) = NVM_REF.as_mut() {
-        let mut switch_values: [u8; SETTINGS_SIZE] = data.get_ref().clone();
+        let mut switch_values: [u8; SETTINGS_SIZE] = *data.get_ref();
         if switch_values[setting_idx] == OFF_STATE {
             switch_values[setting_idx] = ON_STATE;
         } else {
@@ -58,6 +58,12 @@ unsafe extern "C" fn quit_cb() {
     exit_app(0);
 }
 
+impl<'a> Default for NbglHomeAndSettings {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'a> NbglHomeAndSettings {
     pub fn new() -> NbglHomeAndSettings {
         NbglHomeAndSettings {
@@ -75,7 +81,7 @@ impl<'a> NbglHomeAndSettings {
 
     pub fn glyph(self, glyph: &'a NbglGlyph) -> NbglHomeAndSettings {
         let icon = glyph.into();
-        NbglHomeAndSettings { icon: icon, ..self }
+        NbglHomeAndSettings { icon, ..self }
     }
 
     pub fn infos(
@@ -84,9 +90,10 @@ impl<'a> NbglHomeAndSettings {
         version: &'a str,
         author: &'a str,
     ) -> NbglHomeAndSettings {
-        let mut v: Vec<CString> = Vec::new();
-        v.push(CString::new(version).unwrap());
-        v.push(CString::new(author).unwrap());
+        let v: Vec<CString> = vec![
+            CString::new(version).unwrap(),
+            CString::new(author).unwrap(),
+        ];
 
         NbglHomeAndSettings {
             app_name: CString::new(app_name).unwrap(),
@@ -137,8 +144,8 @@ impl<'a> NbglHomeAndSettings {
                     .collect::<Vec<_>>();
 
                 self.info_list = nbgl_contentInfoList_t {
-                    infoTypes: INFO_FIELDS.as_ptr() as *const *const c_char,
-                    infoContents: self.info_contents_ptr[..].as_ptr() as *const *const c_char,
+                    infoTypes: INFO_FIELDS.as_ptr(),
+                    infoContents: self.info_contents_ptr[..].as_ptr(),
                     nbInfos: INFO_FIELDS.len() as u8,
                 };
 
@@ -215,8 +222,8 @@ impl<'a> NbglHomeAndSettings {
                 .collect::<Vec<_>>();
 
             self.info_list = nbgl_contentInfoList_t {
-                infoTypes: INFO_FIELDS.as_ptr() as *const *const c_char,
-                infoContents: self.info_contents_ptr[..].as_ptr() as *const *const c_char,
+                infoTypes: INFO_FIELDS.as_ptr(),
+                infoContents: self.info_contents_ptr[..].as_ptr(),
                 nbInfos: INFO_FIELDS.len() as u8,
             };
 
