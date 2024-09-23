@@ -3,7 +3,7 @@ use crate::nvm::*;
 use const_zero::const_zero;
 extern crate alloc;
 use alloc::ffi::CString;
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use core::ffi::{c_char, c_int};
 use core::mem::transmute;
 use ledger_secure_sdk_sys::*;
@@ -32,10 +32,6 @@ pub use nbgl_status::*;
 pub use nbgl_streaming_review::*;
 
 static mut COMM_REF: Option<&mut Comm> = None;
-pub const SETTINGS_SIZE: usize = 10;
-static mut NVM_REF: Option<&mut AtomicStorage<[u8; SETTINGS_SIZE]>> = None;
-static mut SWITCH_ARRAY: [nbgl_contentSwitch_t; SETTINGS_SIZE] =
-    [unsafe { const_zero!(nbgl_contentSwitch_t) }; SETTINGS_SIZE];
 
 #[derive(Copy, Clone)]
 enum SyncNbgl {
