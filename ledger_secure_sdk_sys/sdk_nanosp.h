@@ -17,3 +17,4 @@
 #define HAVE_SE_BUTTON
 #define HAVE_BAGL
 #define HAVE_SE_SCREEN
+#define HAVE_BLS
