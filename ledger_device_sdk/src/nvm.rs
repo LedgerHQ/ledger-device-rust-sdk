@@ -13,13 +13,13 @@
 //! update:
 //!
 //! ```
-//! use ledger_device_sdk::PIC;
+//! use ledger_device_sdk::NVMData;
 //! use ledger_device_sdk::nvm::AtomicStorage;
 //!
 //! // This is necessary to store the object in NVM and not in RAM
 //! #[link_section=".nvm_data"]
-//! static mut COUNTER: PIC<AtomicStorage<i32>> =
-//!     PIC::new(AtomicStorage::new(&3));
+//! static mut COUNTER: NVMData<AtomicStorage<i32>> =
+//!     NVMData::new(AtomicStorage::new(&3));
 //! ```
 //!
 //! In the program, `COUNTER` must not be used directly. It is a static variable
