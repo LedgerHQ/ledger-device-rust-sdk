@@ -38,6 +38,11 @@ const INFO_FIELDS: [*const c_char; 2] = [
     "Developer\0".as_ptr() as *const c_char,
 ];
 
+pub enum PageIndex {
+    Settings(u8),
+    Home,
+}
+
 /// Used to display the home screen of the application, with an optional glyph,
 /// information fields, and settings switches.  
 pub struct NbglHomeAndSettings {
@@ -50,7 +55,7 @@ pub struct NbglHomeAndSettings {
     generic_contents: nbgl_genericContents_t,
     info_list: nbgl_contentInfoList_t,
     icon: nbgl_icon_details_t,
-    start_page: u8,
+    start_page: PageIndex,
 }
 
 impl SyncNBGL for NbglHomeAndSettings {}
@@ -77,7 +82,7 @@ impl<'a> NbglHomeAndSettings {
             generic_contents: nbgl_genericContents_t::default(),
             info_list: nbgl_contentInfoList_t::default(),
             icon: nbgl_icon_details_t::default(),
-            start_page: INIT_HOME_PAGE as u8,
+            start_page: PageIndex::Home,
         }
     }
 
@@ -129,7 +134,7 @@ impl<'a> NbglHomeAndSettings {
         }
     }
 
-    pub fn set_page(self, page: u8) -> NbglHomeAndSettings {
+    pub fn set_page(self, page: PageIndex) -> NbglHomeAndSettings {
         NbglHomeAndSettings {
             start_page: page,
             ..self
@@ -195,7 +200,10 @@ impl<'a> NbglHomeAndSettings {
                     self.app_name.as_ptr() as *const c_char,
                     &self.icon as *const nbgl_icon_details_t,
                     core::ptr::null(),
-                    self.start_page,
+                    match self.start_page {
+                        PageIndex::Home => INIT_HOME_PAGE as u8,
+                        PageIndex::Settings(idx) => idx,
+                    },
                     &self.generic_contents as *const nbgl_genericContents_t,
                     &self.info_list as *const nbgl_contentInfoList_t,
                     core::ptr::null(),
@@ -272,7 +280,10 @@ impl<'a> NbglHomeAndSettings {
                 self.app_name.as_ptr() as *const c_char,
                 &self.icon as *const nbgl_icon_details_t,
                 core::ptr::null(),
-                self.start_page,
+                match self.start_page {
+                    PageIndex::Home => INIT_HOME_PAGE as u8,
+                    PageIndex::Settings(idx) => idx,
+                },
                 &self.generic_contents as *const nbgl_genericContents_t,
                 &self.info_list as *const nbgl_contentInfoList_t,
                 core::ptr::null(),
