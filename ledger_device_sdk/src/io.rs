@@ -1,4 +1,4 @@
-#[cfg(target_os = "nanox")]
+#[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
 use crate::ble;
 #[cfg(not(any(target_os = "stax", target_os = "flex")))]
 use ledger_secure_sdk_sys::buttons::{get_button_event, ButtonEvent, ButtonsState};
@@ -196,7 +196,7 @@ impl Comm {
             APDU_USB_CCID => {
                 ccid::send(&self.apdu_buffer[..self.tx]);
             }
-            #[cfg(target_os = "nanox")]
+            #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
             APDU_BLE => {
                 ble::send(&self.apdu_buffer[..self.tx]);
             }
@@ -387,7 +387,7 @@ impl Comm {
             }
             seph::Events::CAPDUEvent => seph::handle_capdu_event(&mut self.apdu_buffer, spi_buffer),
 
-            #[cfg(target_os = "nanox")]
+            #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
             seph::Events::BleReceive => ble::receive(&mut self.apdu_buffer, spi_buffer),
 
             seph::Events::TickerEvent => {

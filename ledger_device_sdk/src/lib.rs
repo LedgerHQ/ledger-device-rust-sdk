@@ -7,7 +7,7 @@
 #![feature(generic_const_exprs)]
 #![feature(cfg_version)]
 
-#[cfg(target_os = "nanox")]
+#[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
 pub mod ble;
 
 #[cfg(feature = "ccid")]
