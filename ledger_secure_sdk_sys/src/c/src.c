@@ -327,7 +327,7 @@ int c_main(void) {
         
     #ifdef HAVE_BLE
         memset(&G_io_asynch_ux_callback, 0, sizeof(G_io_asynch_ux_callback));
-        LEDGER_BLE_init();
+        BLE_power(1, NULL);
     #endif
 
     #if !defined(HAVE_BOLOS) && defined(HAVE_PENDING_REVIEW_SCREEN)

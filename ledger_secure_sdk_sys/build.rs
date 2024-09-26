@@ -570,6 +570,12 @@ impl SDKBuilder {
                             .to_str()
                             .unwrap(),
                     )
+                    .header(
+                        self.bolos_sdk
+                            .join("lib_blewbxx_impl/include/ledger_ble.h")
+                            .to_str()
+                            .unwrap(),
+                    )
             }
             _ => (),
         }
@@ -745,6 +751,19 @@ fn finalize_flex_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
 
     command
         .target("thumbv8m.main-none-eabi")
+        .file(bolos_sdk.join("src/ledger_protocol.c"))
+        .file(bolos_sdk.join("lib_blewbxx/core/auto/ble_gap_aci.c"))
+        .file(bolos_sdk.join("lib_blewbxx/core/auto/ble_gatt_aci.c"))
+        .file(bolos_sdk.join("lib_blewbxx/core/auto/ble_hal_aci.c"))
+        .file(bolos_sdk.join("lib_blewbxx/core/auto/ble_hci_le.c"))
+        .file(bolos_sdk.join("lib_blewbxx/core/auto/ble_l2cap_aci.c"))
+        .file(bolos_sdk.join("lib_blewbxx/core/template/osal.c"))
+        .file(bolos_sdk.join("lib_blewbxx_impl/src/ledger_ble.c"))
+        .include(bolos_sdk.join("lib_blewbxx/include"))
+        .include(bolos_sdk.join("lib_blewbxx/core"))
+        .include(bolos_sdk.join("lib_blewbxx/core/auto"))
+        .include(bolos_sdk.join("lib_blewbxx/core/template"))
+        .include(bolos_sdk.join("lib_blewbxx_impl/include"))
         .include(bolos_sdk.join("target/flex/include/"))
         .flag("-fropi")
         .flag("-frwpi")
