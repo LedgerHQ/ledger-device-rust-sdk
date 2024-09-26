@@ -300,10 +300,12 @@ int c_main(void) {
         c[2] = 1;
         c[3] = SEPROXYHAL_TAG_MCU_TYPE_PROTECT;
         io_seproxyhal_spi_send(c, 4);
-    #ifdef HAVE_BLE
+    #endif
+
+     #ifdef HAVE_BLE
         unsigned int plane = G_io_app.plane_mode;
     #endif
-    #endif
+
         memset(&G_io_app, 0, sizeof(G_io_app));
 
     #ifdef HAVE_BLE
