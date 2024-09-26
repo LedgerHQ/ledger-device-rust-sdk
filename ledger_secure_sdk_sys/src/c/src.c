@@ -11,6 +11,7 @@
 #include "checks.h"
 #ifdef HAVE_BLE
   #include "ledger_ble.h"
+  bolos_ux_asynch_callback_t G_io_asynch_ux_callback;
 #endif
 
 extern void sample_main();
@@ -302,7 +303,7 @@ int c_main(void) {
         io_seproxyhal_spi_send(c, 4);
     #endif
 
-     #ifdef HAVE_BLE
+    #ifdef HAVE_BLE
         unsigned int plane = G_io_app.plane_mode;
     #endif
 
@@ -323,15 +324,16 @@ int c_main(void) {
     #ifdef HAVE_CCID
         io_usb_ccid_set_card_inserted(1);
     #endif
-
+        
     #ifdef HAVE_BLE
+        memset(&G_io_asynch_ux_callback, 0, sizeof(G_io_asynch_ux_callback));
         LEDGER_BLE_init();
     #endif
 
     #if !defined(HAVE_BOLOS) && defined(HAVE_PENDING_REVIEW_SCREEN)
         check_audited_app();
     #endif // !defined(HAVE_BOLOS) && defined(HAVE_PENDING_REVIEW_SCREEN)
-
+        
         heap_init();
         sample_main();
       }
