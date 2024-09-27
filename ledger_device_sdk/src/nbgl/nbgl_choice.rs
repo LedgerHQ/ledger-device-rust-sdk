@@ -22,7 +22,7 @@ impl<'a> NbglChoice<'a> {
     }
 
     pub fn show(
-        &mut self,
+        &self,
         message: &str,
         sub_message: &str,
         confirm_text: &str,

@@ -19,7 +19,7 @@ impl<'a> NbglReviewStatus {
         NbglReviewStatus { status_type }
     }
 
-    pub fn show(&mut self, success: bool) {
+    pub fn show(&self, success: bool) {
         unsafe {
             self.ux_sync_init();
             nbgl_useCaseReviewStatus(self.status_type.to_message(success), Some(quit_callback));

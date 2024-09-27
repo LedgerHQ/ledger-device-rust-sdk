@@ -31,7 +31,7 @@ impl<'a> NbglAddressReview<'a> {
         }
     }
 
-    pub fn show(&mut self, address: &str) -> bool {
+    pub fn show(&self, address: &str) -> bool {
         unsafe {
             let icon: nbgl_icon_details_t = match self.glyph {
                 Some(g) => g.into(),

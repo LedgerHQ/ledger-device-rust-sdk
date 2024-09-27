@@ -21,7 +21,7 @@ impl NbglStatus {
         }
     }
 
-    pub fn show(&mut self, success: bool) {
+    pub fn show(&self, success: bool) {
         unsafe {
             self.ux_sync_init();
             nbgl_useCaseStatus(
