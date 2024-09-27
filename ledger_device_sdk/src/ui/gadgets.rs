@@ -366,10 +366,10 @@ impl<'a> Menu<'a> {
 pub enum PageStyle {
     #[default]
     PictureNormal, // Picture (should be 16x16) with two lines of text (page layout depends on device).
-    PictureBold, // Icon on top with one line of text on the bottom.
-    BoldNormal,  // One line of bold text and one line of normal text.
-    Normal,         // 2 lines of centered text.
-    BoldCenteredNormal,  // 2 lines of centered text, where the first one is bold
+    PictureBold,        // Icon on top with one line of text on the bottom.
+    BoldNormal,         // One line of bold text and one line of normal text.
+    Normal,             // 2 lines of centered text.
+    BoldCenteredNormal, // 2 lines of centered text, where the first one is bold
 }
 
 #[derive(Copy, Clone, Default)]
