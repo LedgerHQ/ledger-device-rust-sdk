@@ -730,7 +730,7 @@ pub struct Field<'a> {
 }
 
 impl<'a> Field<'a> {
-    pub fn event_loop(&self, incoming_direction: ButtonEvent) -> ButtonEvent {
+    pub fn event_loop(&self, incoming_direction: ButtonEvent, is_first_field: bool) -> ButtonEvent {
         let mut buttons = ButtonsState::new();
         let chunk_max_lines = layout::MAX_LINES - 1;
         let page_count = 1 + self.value.len() / (chunk_max_lines * MAX_CHAR_PER_LINE);
@@ -778,8 +778,10 @@ impl<'a> Field<'a> {
                 .trim_end_matches(' ');
             chunks[0] = Label::from(header).bold();
 
-            LEFT_ARROW.display();
-            RIGHT_ARROW.display();
+            if !is_first_field {
+                bagls::LEFT_ARROW.display();
+            }
+            bagls::RIGHT_ARROW.display();
 
             chunks.place(Location::Middle, Layout::Centered, false);
 
@@ -824,7 +826,7 @@ pub struct MultiFieldReview<'a> {
     fields: &'a [Field<'a>],
     review_message: &'a [&'a str],
     review_glyph: Option<&'a Glyph<'a>>,
-    validation_message: &'a str,
+    validation_message: [&'a str; 2],
     validation_glyph: Option<&'a Glyph<'a>>,
     cancel_message: &'a str,
     cancel_glyph: Option<&'a Glyph<'a>>,
@@ -853,7 +855,7 @@ impl<'a> MultiFieldReview<'a> {
         fields: &'a [Field<'a>],
         review_message: &'a [&'a str],
         review_glyph: Option<&'a Glyph<'a>>,
-        validation_message: &'a str,
+        validation_message: [&'a str; 2],
         validation_glyph: Option<&'a Glyph<'a>>,
         cancel_message: &'a str,
         cancel_glyph: Option<&'a Glyph<'a>>,
@@ -870,27 +872,25 @@ impl<'a> MultiFieldReview<'a> {
     }
 
     pub fn show(&self) -> bool {
-        let first_page = match self.review_message.len() {
-            0 => Page::new(PageStyle::PictureNormal, ["", ""], self.review_glyph),
-            1 => Page::new(
+        let first_page_opt = match self.review_message.len() {
+            0 => None,
+            1 => Some(Page::new(
                 PageStyle::PictureBold,
                 [self.review_message[0], ""],
                 self.review_glyph,
-            ),
-            _ => Page::new(
+            )),
+            _ => Some(Page::new(
                 PageStyle::PictureNormal,
                 [self.review_message[0], self.review_message[1]],
                 self.review_glyph,
-            ),
+            )),
         };
 
-        clear_screen();
-        first_page.place_and_wait();
-        crate::ui::screen_util::screen_update();
+        display_first_page(&first_page_opt);
 
         let validation_page = Page::new(
             PageStyle::PictureBold,
-            [self.validation_message, ""],
+            self.validation_message,
             self.validation_glyph,
         );
         let cancel_page = Page::new(
@@ -904,9 +904,10 @@ impl<'a> MultiFieldReview<'a> {
 
         loop {
             match cur_page {
-                cancel if cancel == self.fields.len() => {
+                cancel if cancel == self.fields.len() + 1 => {
                     let mut buttons = ButtonsState::new();
                     clear_screen();
+                    bagls::LEFT_ARROW.display();
                     cancel_page.place();
                     crate::ui::screen_util::screen_update();
                     loop {
@@ -915,24 +916,31 @@ impl<'a> MultiFieldReview<'a> {
                                 cur_page = cur_page.saturating_sub(1);
                                 break;
                             }
-                            Some(ButtonEvent::RightButtonRelease) => {
-                                cur_page += 1;
-                                break;
-                            }
                             Some(ButtonEvent::BothButtonsRelease) => return false,
                             _ => (),
                         }
                     }
                 }
-                validation if validation == self.fields.len() + 1 => {
+                validation if validation == self.fields.len() => {
                     let mut buttons = ButtonsState::new();
                     clear_screen();
+                    bagls::LEFT_ARROW.display();
+                    bagls::RIGHT_ARROW.display();
                     validation_page.place();
                     crate::ui::screen_util::screen_update();
                     loop {
                         match get_event(&mut buttons) {
                             Some(ButtonEvent::LeftButtonRelease) => {
                                 cur_page = cur_page.saturating_sub(1);
+                                if cur_page == 0 && self.fields.is_empty() {
+                                    display_first_page(&first_page_opt);
+                                } else {
+                                    direction = ButtonEvent::LeftButtonRelease;
+                                }
+                                break;
+                            }
+                            Some(ButtonEvent::RightButtonRelease) => {
+                                cur_page += 1;
                                 break;
                             }
                             Some(ButtonEvent::BothButtonsRelease) => return true,
@@ -941,10 +949,12 @@ impl<'a> MultiFieldReview<'a> {
                     }
                 }
                 _ => {
-                    direction = self.fields[cur_page].event_loop(direction);
+                    direction = self.fields[cur_page]
+                        .event_loop(direction, cur_page == 0 && first_page_opt.is_none());
                     match direction {
                         ButtonEvent::LeftButtonRelease => {
                             if cur_page == 0 {
+                                display_first_page(&first_page_opt);
                                 direction = ButtonEvent::RightButtonRelease;
                             } else {
                                 cur_page -= 1;
@@ -958,5 +968,24 @@ impl<'a> MultiFieldReview<'a> {
                 }
             }
         }
+    }
+}
+
+fn display_first_page(page_opt: &Option<Page>) {
+    match page_opt {
+        Some(page) => {
+            clear_screen();
+            bagls::RIGHT_ARROW.display();
+            page.place();
+            crate::ui::screen_util::screen_update();
+
+            let mut buttons = ButtonsState::new();
+            loop {
+                if let Some(ButtonEvent::RightButtonRelease) = get_event(&mut buttons) {
+                    return;
+                }
+            }
+        }
+        None => (),
     }
 }
