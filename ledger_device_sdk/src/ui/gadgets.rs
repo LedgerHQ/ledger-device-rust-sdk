@@ -461,8 +461,9 @@ impl<'a> Page<'a> {
                     self.label[0].place(Location::Bottom, Layout::Centered, true);
                 } else {
                     icon_x = 57;
-                    icon_y = 17;
-                    self.label[0].place(Location::Custom(35), Layout::Centered, true);
+                    icon_y = 10;
+                    self.label[0].place(Location::Custom(28), Layout::Centered, true);
+                    self.label[1].place(Location::Custom(42), Layout::Centered, true);
                 }
                 if let Some(glyph) = self.glyph {
                     let icon = Icon::from(glyph);
