@@ -134,7 +134,7 @@ impl<'a> NbglHomeAndSettings {
         }
     }
 
-    pub fn set_page(self, page: PageIndex) -> NbglHomeAndSettings {
+    pub fn set_start_page(self, page: PageIndex) -> NbglHomeAndSettings {
         NbglHomeAndSettings {
             start_page: page,
             ..self

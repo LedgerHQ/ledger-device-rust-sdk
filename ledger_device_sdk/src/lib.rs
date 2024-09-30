@@ -150,7 +150,7 @@ impl<T> NVMData<T> {
     }
 
     #[cfg(not(target_os = "nanos"))]
-    pub fn get_mut(&mut self) -> &mut T {
+    pub fn get_mut(&self) -> &mut T {
         unsafe {
             let pic_addr = self.get_addr();
             &mut *pic_addr.cast()
@@ -158,7 +158,7 @@ impl<T> NVMData<T> {
     }
 
     #[cfg(not(target_os = "nanos"))]
-    pub fn get_ref(&mut self) -> &T {
+    pub fn get_ref(&self) -> &T {
         unsafe {
             let pic_addr = self.get_addr();
             &*pic_addr.cast()
