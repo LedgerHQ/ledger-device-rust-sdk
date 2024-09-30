@@ -779,9 +779,9 @@ impl<'a> Field<'a> {
             chunks[0] = Label::from(header).bold();
 
             if !is_first_field {
-                bagls::LEFT_ARROW.display();
+                LEFT_ARROW.display();
             }
-            bagls::RIGHT_ARROW.display();
+            RIGHT_ARROW.display();
 
             chunks.place(Location::Middle, Layout::Centered, false);
 
@@ -907,7 +907,7 @@ impl<'a> MultiFieldReview<'a> {
                 cancel if cancel == self.fields.len() + 1 => {
                     let mut buttons = ButtonsState::new();
                     clear_screen();
-                    bagls::LEFT_ARROW.display();
+                    LEFT_ARROW.display();
                     cancel_page.place();
                     crate::ui::screen_util::screen_update();
                     loop {
@@ -924,8 +924,8 @@ impl<'a> MultiFieldReview<'a> {
                 validation if validation == self.fields.len() => {
                     let mut buttons = ButtonsState::new();
                     clear_screen();
-                    bagls::LEFT_ARROW.display();
-                    bagls::RIGHT_ARROW.display();
+                    LEFT_ARROW.display();
+                    RIGHT_ARROW.display();
                     validation_page.place();
                     crate::ui::screen_util::screen_update();
                     loop {
@@ -975,7 +975,7 @@ fn display_first_page(page_opt: &Option<Page>) {
     match page_opt {
         Some(page) => {
             clear_screen();
-            bagls::RIGHT_ARROW.display();
+            RIGHT_ARROW.display();
             page.place();
             crate::ui::screen_util::screen_update();
 
