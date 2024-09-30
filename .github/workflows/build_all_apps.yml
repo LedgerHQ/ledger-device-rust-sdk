@@ -56,26 +56,37 @@ jobs:
                 cd ${{ matrix.repo }}-${{ matrix.branch }}
                 build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
                 cd $build_directory
+
+                # Determine if the project is a workspace and get the workspace root path
+                if cargo metadata --no-deps --format-version 1 | jq -e '.workspace_members | length > 0' > /dev/null; then
+                    echo "Workspace detected. Retrieving workspace root path."
+                    workspace_root=$(cargo metadata --no-deps --format-version 1 | jq -r '.workspace_root')
+                    cargo_toml_path="$workspace_root/Cargo.toml"
+                else
+                    echo "No workspace detected. Using Cargo.toml in the current directory."
+                    cargo_toml_path="$(pwd)/Cargo.toml"
+                fi
+
                 # Patch ledger_device_sdk
-                if grep -Fxq "[patch.crates-io.ledger_device_sdk]" Cargo.toml; then
+                if grep -Fxq "[patch.crates-io.ledger_device_sdk]" $cargo_toml_path; then
                     echo "The patch already exists in the file."
                     exit 1
                 else
                     echo "" >> Cargo.toml 
-                    echo "[patch.crates-io.ledger_device_sdk]" >> Cargo.toml
+                    echo "[patch.crates-io.ledger_device_sdk]" >> $cargo_toml_path
                     path=\"$GITHUB_WORKSPACE/sdk/ledger_device_sdk\"
-                    echo "path=$path" >> Cargo.toml
+                    echo "path=$path" >> $cargo_toml_path
                     echo "Patch added to Cargo.toml"
                 fi
                 # Patch ledger_secure_sdk_sys
-                if grep -Fxq "[patch.crates-io.ledger_secure_sdk_sys]" Cargo.toml; then
+                if grep -Fxq "[patch.crates-io.ledger_secure_sdk_sys]" $cargo_toml_path; then
                     echo "The patch already exists in the file."
                     exit 1
                 else
                     echo "" >> Cargo.toml 
-                    echo "[patch.crates-io.ledger_secure_sdk_sys]" >> Cargo.toml
+                    echo "[patch.crates-io.ledger_secure_sdk_sys]" >> $cargo_toml_path
                     path=\"$GITHUB_WORKSPACE/sdk/ledger_secure_sdk_sys\"
-                    echo "path=$path" >> Cargo.toml
+                    echo "path=$path" >> $cargo_toml_path
                     echo "Patch added to Cargo.toml"
                 fi
                 
