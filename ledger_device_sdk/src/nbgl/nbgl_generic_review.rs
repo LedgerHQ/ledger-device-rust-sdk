@@ -111,8 +111,8 @@ impl InfoButton {
 /// using the NbglGenericReview struct.
 pub struct TagValueList {
     pairs: Vec<nbgl_contentTagValue_t>,
-    items: Vec<CString>,
-    values: Vec<CString>,
+    _items: Vec<CString>,
+    _values: Vec<CString>,
     nb_max_lines_for_value: u8,
     small_case_for_value: bool,
     wrapping: bool,
@@ -142,8 +142,8 @@ impl TagValueList {
         }
         TagValueList {
             pairs: c_field_strings,
-            items: c_field_names,
-            values: c_field_values,
+            _items: c_field_names,
+            _values: c_field_values,
             nb_max_lines_for_value,
             small_case_for_value,
             wrapping,
@@ -199,7 +199,7 @@ impl TagValueConfirm {
 /// when using the NbglGenericReview struct.
 pub struct InfosList {
     info_types_cstrings: Vec<CString>,
-    info_contents_cstrings: Vec<CString>,
+    _info_contents_cstrings: Vec<CString>,
     info_types_ptr: Vec<*const c_char>,
     info_contents_ptr: Vec<*const c_char>,
 }
@@ -220,7 +220,7 @@ impl InfosList {
             info_contents_cstrings.iter().map(|s| s.as_ptr()).collect();
         InfosList {
             info_types_cstrings: info_types_cstrings,
-            info_contents_cstrings: info_contents_cstrings,
+            _info_contents_cstrings: info_contents_cstrings,
             info_types_ptr: info_types_ptr,
             info_contents_ptr: info_contents_ptr,
         }
@@ -413,7 +413,7 @@ impl NbglGenericReview {
             .collect()
     }
 
-    pub fn show(&mut self, reject_button_str: &str) -> bool {
+    pub fn show(&self, reject_button_str: &str) -> bool {
         unsafe {
             let c_content_list: Vec<nbgl_content_t> = self.to_c_content_list();
 

@@ -77,7 +77,7 @@ trait SyncNBGL: Sized {
         }
     }
 
-    fn ux_sync_wait(&mut self, exit_on_apdu: bool) -> SyncNbgl {
+    fn ux_sync_wait(&self, exit_on_apdu: bool) -> SyncNbgl {
         unsafe {
             if let Some(comm) = COMM_REF.as_mut() {
                 while !G_ENDED {

@@ -66,7 +66,7 @@ impl<'a> NbglReview<'a> {
         }
     }
 
-    pub fn show(&mut self, fields: &[Field]) -> bool {
+    pub fn show(&self, fields: &[Field]) -> bool {
         unsafe {
             let v: Vec<CField> = fields
                 .iter()
