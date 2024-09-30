@@ -72,7 +72,7 @@ jobs:
                     echo "The patch already exists in the file."
                     exit 1
                 else
-                    echo "" >> Cargo.toml 
+                    echo "" >> $cargo_toml_path 
                     echo "[patch.crates-io.ledger_device_sdk]" >> $cargo_toml_path
                     path=\"$GITHUB_WORKSPACE/sdk/ledger_device_sdk\"
                     echo "path=$path" >> $cargo_toml_path
@@ -83,7 +83,7 @@ jobs:
                     echo "The patch already exists in the file."
                     exit 1
                 else
-                    echo "" >> Cargo.toml 
+                    echo "" >> $cargo_toml_path 
                     echo "[patch.crates-io.ledger_secure_sdk_sys]" >> $cargo_toml_path
                     path=\"$GITHUB_WORKSPACE/sdk/ledger_secure_sdk_sys\"
                     echo "path=$path" >> $cargo_toml_path
