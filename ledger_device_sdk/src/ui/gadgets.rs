@@ -855,6 +855,26 @@ impl<'a> MultiFieldReview<'a> {
         fields: &'a [Field<'a>],
         review_message: &'a [&'a str],
         review_glyph: Option<&'a Glyph<'a>>,
+        validation_message: &'a str,
+        validation_glyph: Option<&'a Glyph<'a>>,
+        cancel_message: &'a str,
+        cancel_glyph: Option<&'a Glyph<'a>>,
+    ) -> Self {
+        Self::new_with_validation_messages(
+            fields,
+            review_message,
+            review_glyph,
+            [validation_message, ""],
+            validation_glyph,
+            cancel_message,
+            cancel_glyph,
+        )
+    }
+
+    pub fn new_with_validation_messages(
+        fields: &'a [Field<'a>],
+        review_message: &'a [&'a str],
+        review_glyph: Option<&'a Glyph<'a>>,
         validation_message: [&'a str; 2],
         validation_glyph: Option<&'a Glyph<'a>>,
         cancel_message: &'a str,
