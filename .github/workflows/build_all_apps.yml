@@ -27,6 +27,8 @@ jobs:
                       branch: 'develop'
                     - repo: 'app-starknet'
                       branch: 'develop'
+                    - repo: 'app-alephium'
+                      branch: 'develop'
                     - repo: 'app-boilerplate-rust'
                       branch: 'main'
 
