@@ -581,6 +581,13 @@ fn handle_bolos_apdu(com: &mut Comm, ins: u8) {
                 );
                 com.apdu_buffer[com.tx] = len as u8;
                 com.tx += (1 + len) as usize;
+
+                // to be fixed within io tasks
+                // return OS flags to notify of platform's global state (pin lock etc)
+                com.apdu_buffer[com.tx] = 1; // flags length
+                com.tx += 1;
+                com.apdu_buffer[com.tx] = os_flags() as u8;
+                com.tx += 1;
             }
             com.reply_ok();
         }
