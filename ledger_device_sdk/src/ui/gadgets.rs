@@ -603,7 +603,8 @@ impl<'a> MultiPageMenu<'a> {
                         // pin lock management
                         let (_res, ins) = UxEvent::block_and_get_event::<Temp>(self.comm);
                         if let Some(_e) = ins {
-                            self.comm.reply::<io::StatusWords>(io::StatusWords::Unknown);
+                            self.comm
+                                .reply::<io::StatusWords>(io::StatusWords::DeviceLocked);
                         }
                         // notify Ticker event only when redisplay is required
                         return EventOrPageIndex::Event(io::Event::Ticker);

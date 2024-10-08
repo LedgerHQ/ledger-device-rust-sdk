@@ -23,6 +23,7 @@ pub enum StatusWords {
     UserCancelled = 0x6e04,
     Unknown = 0x6d00,
     Panic = 0xe000,
+    DeviceLocked = 0x5515,
 }
 
 #[derive(Debug)]
