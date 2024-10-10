@@ -600,6 +600,14 @@ impl SDKBuilder {
         // Read the HEAP_SIZE environment variable, default to 8192 if not set
         let heap_size = env::var("HEAP_SIZE").unwrap_or_else(|_| "8192".to_string());
 
+        assert!(
+            match heap_size.as_str() {
+                "2048" | "4096" | "8192" | "16384" | "24576" => true,
+                _ => false,
+            },
+            "Invalid heap size: {heap_size}; Authorized sizes are 2048, 4096, 8192, 16384, 24576"
+        );
+
         // Generate the heap_size.rs file with the HEAP_SIZE value
         let out_dir = env::var("OUT_DIR").unwrap();
         let dest_path = Path::new(&out_dir).join("heap_size.rs");
