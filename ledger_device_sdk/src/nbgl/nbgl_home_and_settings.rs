@@ -161,6 +161,9 @@ impl<'a> NbglHomeAndSettings {
                     infoTypes: INFO_FIELDS.as_ptr(),
                     infoContents: self.info_contents_ptr[..].as_ptr(),
                     nbInfos: INFO_FIELDS.len() as u8,
+                    infoExtensions: core::ptr::null(),
+                    token: 0,
+                    withExtensions: false,
                 };
 
                 for (i, setting) in self.setting_contents.iter().enumerate() {
@@ -242,6 +245,9 @@ impl<'a> NbglHomeAndSettings {
                 infoTypes: INFO_FIELDS.as_ptr(),
                 infoContents: self.info_contents_ptr[..].as_ptr(),
                 nbInfos: INFO_FIELDS.len() as u8,
+                infoExtensions: core::ptr::null(),
+                token: 0,
+                withExtensions: false,
             };
 
             for (i, setting) in self.setting_contents.iter().enumerate() {
