@@ -336,9 +336,8 @@ int c_main(int arg0) {
       #if !defined(HAVE_BOLOS) && defined(HAVE_PENDING_REVIEW_SCREEN)
           check_audited_app();
       #endif // !defined(HAVE_BOLOS) && defined(HAVE_PENDING_REVIEW_SCREEN)
+          heap_init();
         }
-          
-        heap_init();
         sample_main(arg0);
       }
       CATCH(EXCEPTION_IO_RESET) {
