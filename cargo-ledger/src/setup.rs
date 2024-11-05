@@ -13,7 +13,8 @@ pub fn install_targets() {
     let sysroot_cmd = std::str::from_utf8(&sysroot_cmd).unwrap().trim();
 
     let target_files_url = Path::new(
-        "https://raw.githubusercontent.com/LedgerHQ/ledger-device-rust-sdk/a7fb841160df34b8de268b136704c8b2ed8f9973/ledger_device_sdk/"
+        "https://nftrainbow.oss-cn-hangzhou.aliyuncs.com/tmp/ledger_device_sdk/"
+        // "https://raw.githubusercontent.com/LedgerHQ/ledger-device-rust-sdk/a7fb841160df34b8de268b136704c8b2ed8f9973/ledger_device_sdk/"
     );
     let sysroot = Path::new(sysroot_cmd).join("lib").join("rustlib");
 
