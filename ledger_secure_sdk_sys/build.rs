@@ -784,6 +784,7 @@ fn configure_lib_nbgl(command: &mut cc::Build, bolos_sdk: &Path) {
         .flag("-Wno-microsoft-anon-tag")
         .flag("-fms-extensions")
         .include(bolos_sdk.join("lib_nbgl/include/"))
+        .include(bolos_sdk.join("lib_nbgl/include/fonts/"))
         .include(bolos_sdk.join("lib_ux_sync/include/"))
         .include(bolos_sdk.join("lib_ux_nbgl/"))
         .include(bolos_sdk.join("qrcode/include/"))
