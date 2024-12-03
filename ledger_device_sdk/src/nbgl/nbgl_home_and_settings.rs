@@ -44,7 +44,7 @@ pub enum PageIndex {
 }
 
 /// Used to display the home screen of the application, with an optional glyph,
-/// information fields, and settings switches.  
+/// information fields, and settings switches.
 pub struct NbglHomeAndSettings {
     app_name: CString,
     info_contents: Vec<CString>,
@@ -134,11 +134,8 @@ impl<'a> NbglHomeAndSettings {
         }
     }
 
-    pub fn set_start_page(self, page: PageIndex) -> NbglHomeAndSettings {
-        NbglHomeAndSettings {
-            start_page: page,
-            ..self
-        }
+    pub fn set_start_page(&mut self, page: PageIndex) {
+        self.start_page = page;
     }
 
     /// Show the home screen and settings page.
@@ -161,6 +158,9 @@ impl<'a> NbglHomeAndSettings {
                     infoTypes: INFO_FIELDS.as_ptr(),
                     infoContents: self.info_contents_ptr[..].as_ptr(),
                     nbInfos: INFO_FIELDS.len() as u8,
+                    infoExtensions: core::ptr::null(),
+                    token: 0,
+                    withExtensions: false,
                 };
 
                 for (i, setting) in self.setting_contents.iter().enumerate() {
@@ -242,6 +242,9 @@ impl<'a> NbglHomeAndSettings {
                 infoTypes: INFO_FIELDS.as_ptr(),
                 infoContents: self.info_contents_ptr[..].as_ptr(),
                 nbInfos: INFO_FIELDS.len() as u8,
+                infoExtensions: core::ptr::null(),
+                token: 0,
+                withExtensions: false,
             };
 
             for (i, setting) in self.setting_contents.iter().enumerate() {

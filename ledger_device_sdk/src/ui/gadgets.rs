@@ -557,16 +557,23 @@ impl<'a> MultiPageMenu<'a> {
     where
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
+        self.show_from(0)
+    }
+
+    pub fn show_from<T: TryFrom<ApduHeader>>(&mut self, page_index: usize) -> EventOrPageIndex<T>
+    where
+        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
+    {
         clear_screen();
 
-        self.pages[0].place();
+        self.pages[page_index].place();
 
         LEFT_ARROW.display();
         RIGHT_ARROW.display();
 
         crate::ui::screen_util::screen_update();
 
-        let mut index = 0;
+        let mut index = page_index;
 
         loop {
             match self.comm.next_event() {
