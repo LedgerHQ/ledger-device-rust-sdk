@@ -5,7 +5,7 @@ use ledger_secure_sdk_sys::{
     libargs_t, os_lib_end, CHECK_ADDRESS, GET_PRINTABLE_AMOUNT, SIGN_TRANSACTION,
 };
 
-mod string;
+pub mod string;
 use string::CustomString;
 
 pub struct CheckAddressParams {
@@ -24,6 +24,22 @@ impl Default for CheckAddressParams {
             ref_address: [0; 64],
             ref_address_len: 0,
             result: core::ptr::null_mut(),
+        }
+    }
+}
+
+pub struct PrintableAmountParams {
+    pub amount: [u8; 16],
+    pub amount_len: usize,
+    pub amount_str: *mut i8,
+}
+
+impl Default for PrintableAmountParams {
+    fn default() -> Self {
+        PrintableAmountParams {
+            amount: [0; 16],
+            amount_len: 0,
+            amount_str: core::ptr::null_mut(),
         }
     }
 }
@@ -114,7 +130,7 @@ pub fn get_check_address_params(arg0: u32) -> CheckAddressParams {
         }
 
         debug_print("GET_DPATH \n");
-        for i in 1..check_address_params.dpath_len * 4 {
+        for i in 1..1 + check_address_params.dpath_len * 4 {
             check_address_params.dpath[i - 1] = *(params.address_parameters.add(i));
         }
 
@@ -144,6 +160,45 @@ pub fn get_check_address_params(arg0: u32) -> CheckAddressParams {
             .result as *const i32 as *mut i32);
 
         check_address_params
+    }
+}
+
+pub fn get_printable_amount_params(arg0: u32) -> PrintableAmountParams {
+    unsafe {
+        debug_print("GET_PRINTABLE_AMOUNT_PARAMS\n");
+
+        let mut libarg: libargs_t = libargs_t::default();
+
+        let arg = arg0 as *const u32;
+
+        libarg.id = *arg;
+        libarg.command = *arg.add(1);
+        libarg.unused = *arg.add(2);
+
+        libarg.__bindgen_anon_1 = *(arg.add(3) as *const libargs_s__bindgen_ty_1);
+
+        let params: get_printable_amount_parameters_t =
+            *(libarg.__bindgen_anon_1.get_printable_amount
+                as *const get_printable_amount_parameters_t);
+
+        let mut printable_amount_params: PrintableAmountParams = Default::default();
+
+        debug_print("GET_AMOUNT_LENGTH\n");
+        printable_amount_params.amount_len = params.amount_length as usize;
+
+        debug_print("GET_AMOUNT\n");
+        for i in 0..printable_amount_params.amount_len {
+            printable_amount_params.amount[16 - printable_amount_params.amount_len + i] =
+                *(params.amount.add(i));
+        }
+
+        debug_print("GET_AMOUNT_STR\n");
+        printable_amount_params.amount_str = (&(*(libarg.__bindgen_anon_1.get_printable_amount
+            as *mut get_printable_amount_parameters_t))
+            .printable_amount as *const i8
+            as *mut i8);
+
+        printable_amount_params
     }
 }
 
