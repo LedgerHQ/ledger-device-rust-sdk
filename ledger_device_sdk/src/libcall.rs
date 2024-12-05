@@ -13,6 +13,7 @@ pub struct CheckAddressParams {
     pub dpath_len: usize,
     pub ref_address: [u8; 64],
     pub ref_address_len: usize,
+    pub result: *mut i32,
 }
 
 impl Default for CheckAddressParams {
@@ -22,6 +23,7 @@ impl Default for CheckAddressParams {
             dpath_len: 0,
             ref_address: [0; 64],
             ref_address_len: 0,
+            result: core::ptr::null_mut(),
         }
     }
 }
@@ -68,49 +70,47 @@ pub fn get_command(arg0: u32) -> LibCallCommand {
 }
 
 pub fn get_check_address_params(arg0: u32) -> CheckAddressParams {
-    debug_print("GET_CHECK_ADDRESS_PARAMS\n");
-
-    let mut libarg: libargs_t = libargs_t::default();
-
-    let arg = arg0 as *const u32;
-
-    libarg.id = unsafe { *arg };
-    libarg.command = unsafe { *arg.add(1) };
-    libarg.unused = unsafe { *arg.add(2) };
-
-    debug_print("libarg content:\n");
-    let id = CustomString::<8>::from(libarg.id);
-    debug_print(id.as_str());
-    debug_print("\n");
-    let cmd = CustomString::<8>::from(libarg.command);
-    debug_print(cmd.as_str());
-    debug_print("\n");
-    let unused = CustomString::<8>::from(libarg.unused);
-    debug_print(unused.as_str());
-    debug_print("\n");
-
-    libarg.__bindgen_anon_1 = unsafe { *(arg.add(3) as *const libargs_s__bindgen_ty_1) };
-
-    let params: check_address_parameters_t =
-        unsafe { *(libarg.__bindgen_anon_1.check_address as *const check_address_parameters_t) };
-
-    let mut check_address_params: CheckAddressParams = Default::default();
-
     unsafe {
+        debug_print("GET_CHECK_ADDRESS_PARAMS\n");
+
+        let mut libarg: libargs_t = libargs_t::default();
+
+        let arg = arg0 as *const u32;
+
+        libarg.id = *arg;
+        libarg.command = *arg.add(1);
+        libarg.unused = *arg.add(2);
+
+        debug_print("libarg content:\n");
+        let id = CustomString::<8>::from(libarg.id);
+        debug_print(id.as_str());
+        debug_print("\n");
+        let cmd = CustomString::<8>::from(libarg.command);
+        debug_print(cmd.as_str());
+        debug_print("\n");
+        let unused = CustomString::<8>::from(libarg.unused);
+        debug_print(unused.as_str());
+        debug_print("\n");
+
+        libarg.__bindgen_anon_1 = *(arg.add(3) as *const libargs_s__bindgen_ty_1);
+
+        let params: check_address_parameters_t =
+            *(libarg.__bindgen_anon_1.check_address as *const check_address_parameters_t);
+
+        let mut check_address_params: CheckAddressParams = Default::default();
+
         debug_print("Display address_parameters\n");
         for i in 0..10 {
             let s = CustomString::<2>::from(*((params.address_parameters as *const u8).add(i)));
             debug_print(s.as_str());
         }
-    }
-    debug_print("\n");
+        debug_print("\n");
 
-    unsafe {
         debug_print("GET_DPATH_LENGTH\n");
-        check_address_params.dpath_len = *params.address_parameters as usize;
+        check_address_params.dpath_len = *(params.address_parameters as *const u8) as usize;
 
-        if check_address_params.dpath_len == 21 {
-            debug_print("dpath_len is 21\n");
+        if check_address_params.dpath_len == 5 {
+            debug_print("dpath_len is 5\n");
         }
 
         debug_print("GET_DPATH \n");
@@ -121,17 +121,30 @@ pub fn get_check_address_params(arg0: u32) -> CheckAddressParams {
         debug_print("GET_REF_ADDRESS\n");
         let mut address_length = 0usize;
         while *(params.address_to_check.wrapping_add(address_length)) != '\0' as i8 {
+            check_address_params.ref_address[address_length] =
+                *(params.address_to_check.wrapping_add(address_length)) as u8;
             address_length += 1;
         }
-
         check_address_params.ref_address_len = address_length;
 
-        for i in 0..address_length {
-            check_address_params.ref_address[i] = *(params.address_to_check.wrapping_add(i)) as u8;
-        }
-    }
+        // "EFr6nRvgKKeteKoEH7hudt8UHYiu94Liq2yMM7x2AU9U"
+        debug_print("Display ref address\n");
 
-    check_address_params
+        let mut s = CustomString::<44>::new();
+        s.arr.copy_from_slice(
+            &check_address_params.ref_address[..check_address_params.ref_address_len],
+        );
+        s.len = check_address_params.ref_address_len;
+        debug_print(s.as_str());
+        debug_print("\n");
+
+        //(*(libarg.__bindgen_anon_1.check_address as *mut check_address_parameters_t)).result = 1;
+        check_address_params.result = (&(*(libarg.__bindgen_anon_1.check_address
+            as *mut check_address_parameters_t))
+            .result as *const i32 as *mut i32);
+
+        check_address_params
+    }
 }
 
 //     match libarg.command {
