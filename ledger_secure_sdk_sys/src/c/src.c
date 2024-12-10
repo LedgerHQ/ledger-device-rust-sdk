@@ -9,6 +9,7 @@
 #include "os_nvm.h"
 #include "os_pic.h"
 #include "checks.h"
+#include "swap_lib_calls.h"
 #ifdef HAVE_BLE
   #include "ledger_ble.h"
   bolos_ux_asynch_callback_t G_io_asynch_ux_callback;
@@ -281,7 +282,9 @@ int c_main(int arg0) {
 
   link_pass_ram(data_len, sidata_src, data);
 
-  if (arg0 == 0) {
+  libargs_t *args = (libargs_t *) arg0;
+  
+  if (args == NULL || args->command == SIGN_TRANSACTION) {
     size_t bss_len;
     SYMBOL_ABSOLUTE_VALUE(bss_len, _bss_len);
     struct SectionDst* bss;
@@ -295,7 +298,7 @@ int c_main(int arg0) {
   for(;;) {
     BEGIN_TRY {
       TRY {
-        if (arg0 == 0) {
+        if (args == NULL || args->command == SIGN_TRANSACTION) { 
           // below is a 'manual' implementation of `io_seproxyhal_init`
       #ifdef HAVE_MCU_PROTECT
           unsigned char c[4];

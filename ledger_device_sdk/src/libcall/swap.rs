@@ -4,6 +4,8 @@ use ledger_secure_sdk_sys::{
     libargs_s__bindgen_ty_1, libargs_t,
 };
 
+use super::string::CustomString;
+
 pub struct CheckAddressParams {
     pub dpath: [u8; 64],
     pub dpath_len: usize,
@@ -36,6 +38,30 @@ impl Default for PrintableAmountParams {
             amount: [0; 16],
             amount_len: 0,
             amount_str: core::ptr::null_mut(),
+        }
+    }
+}
+
+pub struct CreateTxParams {
+    pub amount: [u8; 16],
+    pub amount_len: usize,
+    pub fee_amount: [u8; 16],
+    pub fee_amount_len: usize,
+    pub dest_address: [u8; 64],
+    pub dest_address_len: usize,
+    pub result: *mut u8,
+}
+
+impl Default for CreateTxParams {
+    fn default() -> Self {
+        CreateTxParams {
+            amount: [0; 16],
+            amount_len: 0,
+            fee_amount: [0; 16],
+            fee_amount_len: 0,
+            dest_address: [0; 64],
+            dest_address_len: 0,
+            result: core::ptr::null_mut(),
         }
     }
 }
@@ -107,6 +133,11 @@ pub fn get_printable_amount_params(arg0: u32) -> PrintableAmountParams {
         debug_print("GET_AMOUNT_LENGTH\n");
         printable_amount_params.amount_len = params.amount_length as usize;
 
+        let s = CustomString::<2>::from(printable_amount_params.amount_len as u8);
+        debug_print("AMOUNT LENGTH: \n");
+        debug_print(s.as_str());
+        debug_print("\n");
+
         debug_print("GET_AMOUNT\n");
         for i in 0..printable_amount_params.amount_len {
             printable_amount_params.amount[16 - printable_amount_params.amount_len + i] =
@@ -119,5 +150,63 @@ pub fn get_printable_amount_params(arg0: u32) -> PrintableAmountParams {
             .printable_amount as *const i8 as *mut i8;
 
         printable_amount_params
+    }
+}
+
+pub fn sign_tx_params(arg0: u32) -> CreateTxParams {
+    unsafe {
+        debug_print("SIGN_TX_PARAMS\n");
+
+        let mut libarg: libargs_t = libargs_t::default();
+
+        let arg = arg0 as *const u32;
+
+        libarg.id = *arg;
+        libarg.command = *arg.add(1);
+        libarg.unused = *arg.add(2);
+
+        libarg.__bindgen_anon_1 = *(arg.add(3) as *const libargs_s__bindgen_ty_1);
+
+        let params: create_transaction_parameters_t =
+            *(libarg.__bindgen_anon_1.create_transaction as *const create_transaction_parameters_t);
+
+        let mut create_tx_params: CreateTxParams = Default::default();
+
+        debug_print("GET_AMOUNT_LENGTH\n");
+        create_tx_params.amount_len = params.amount_length as usize;
+
+        let s = CustomString::<2>::from(create_tx_params.amount_len as u8);
+        debug_print("AMOUNT LENGTH: \n");
+        debug_print(s.as_str());
+        debug_print("\n");
+
+        debug_print("GET_AMOUNT\n");
+        for i in 0..create_tx_params.amount_len {
+            create_tx_params.amount[16 - create_tx_params.amount_len + i] = *(params.amount.add(i));
+        }
+
+        debug_print("GET_FEE_AMOUNT_LENGTH\n");
+        create_tx_params.fee_amount_len = params.fee_amount_length as usize;
+
+        debug_print("GET_FEE_AMOUNT\n");
+        for i in 0..create_tx_params.fee_amount_len {
+            create_tx_params.fee_amount[16 - create_tx_params.fee_amount_len + i] =
+                *(params.fee_amount.add(i));
+        }
+
+        debug_print("GET_DEST_ADDRESS\n");
+        let mut dest_address_length = 0usize;
+        while *(params.destination_address.wrapping_add(dest_address_length)) != '\0' as i8 {
+            create_tx_params.dest_address[dest_address_length] =
+                *(params.destination_address.wrapping_add(dest_address_length)) as u8;
+            dest_address_length += 1;
+        }
+        create_tx_params.dest_address_len = dest_address_length;
+
+        create_tx_params.result = &(*(libarg.__bindgen_anon_1.create_transaction
+            as *mut create_transaction_parameters_t))
+            .result as *const u8 as *mut u8;
+
+        create_tx_params
     }
 }
