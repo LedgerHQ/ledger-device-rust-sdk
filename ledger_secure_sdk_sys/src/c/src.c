@@ -333,6 +333,7 @@ int c_main(int arg0) {
 
   link_pass_ram(data_len, sidata_src, data);
   
+  // if libcall, does not reset bss as it is shared with the calling app
   if (arg0 == 0)
     c_reset_bss();
 
@@ -342,6 +343,7 @@ int c_main(int arg0) {
   for(;;) {
     BEGIN_TRY {
       TRY {
+        // if libcall, does not start io and memory allocator
         if (arg0 == 0)
           c_boot_std();
         sample_main(arg0);

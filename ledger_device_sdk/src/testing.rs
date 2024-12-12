@@ -1,8 +1,11 @@
-use core::arch::asm;
 use core::panic::PanicInfo;
+
+#[cfg(feature = "debug")]
+use core::arch::asm;
 
 /// Debug 'print' function that uses ARM semihosting
 /// Prints only strings with no formatting
+#[cfg(feature = "debug")]
 pub fn debug_print(s: &str) {
     let p = s.as_bytes().as_ptr();
     for i in 0..s.len() {
@@ -16,6 +19,8 @@ pub fn debug_print(s: &str) {
         }
     }
 }
+#[cfg(not(feature = "debug"))]
+pub fn debug_print(_s: &str) {}
 
 pub fn to_hex(m: u32) -> [u8; 8] {
     let mut hex = [0u8; 8];

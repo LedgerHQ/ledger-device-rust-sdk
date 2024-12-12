@@ -7,7 +7,7 @@ use ledger_secure_sdk_sys::*;
 
 #[cfg(feature = "ccid")]
 use crate::ccid;
-use crate::{seph, testing};
+use crate::seph;
 use core::convert::{Infallible, TryFrom};
 use core::ops::{Index, IndexMut};
 

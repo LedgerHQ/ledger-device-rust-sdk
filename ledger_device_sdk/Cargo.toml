@@ -24,6 +24,7 @@ const-zero = "0.1.1"
 ledger_secure_sdk_sys = { path = "../ledger_secure_sdk_sys", version = "1.5.3" }
 
 [features]
+debug = []
 speculos = []
 ccid = []
 heap = [ "ledger_secure_sdk_sys/heap" ]
