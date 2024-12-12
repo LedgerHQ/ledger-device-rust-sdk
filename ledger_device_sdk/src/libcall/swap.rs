@@ -1,3 +1,4 @@
+use crate::nbgl::NbglSpinner;
 use crate::testing::debug_print;
 use ledger_secure_sdk_sys::{
     check_address_parameters_t, create_transaction_parameters_t, get_printable_amount_parameters_t,
@@ -153,6 +154,11 @@ pub fn get_printable_amount_params(arg0: u32) -> PrintableAmountParams {
     }
 }
 
+extern "C" {
+    fn c_reset_bss();
+    fn c_boot_std();
+}
+
 pub fn sign_tx_params(arg0: u32) -> CreateTxParams {
     unsafe {
         debug_print("SIGN_TX_PARAMS\n");
@@ -172,29 +178,19 @@ pub fn sign_tx_params(arg0: u32) -> CreateTxParams {
 
         let mut create_tx_params: CreateTxParams = Default::default();
 
-        debug_print("GET_AMOUNT_LENGTH\n");
         create_tx_params.amount_len = params.amount_length as usize;
 
-        let s = CustomString::<2>::from(create_tx_params.amount_len as u8);
-        debug_print("AMOUNT LENGTH: \n");
-        debug_print(s.as_str());
-        debug_print("\n");
-
-        debug_print("GET_AMOUNT\n");
         for i in 0..create_tx_params.amount_len {
             create_tx_params.amount[16 - create_tx_params.amount_len + i] = *(params.amount.add(i));
         }
 
-        debug_print("GET_FEE_AMOUNT_LENGTH\n");
         create_tx_params.fee_amount_len = params.fee_amount_length as usize;
 
-        debug_print("GET_FEE_AMOUNT\n");
         for i in 0..create_tx_params.fee_amount_len {
             create_tx_params.fee_amount[16 - create_tx_params.fee_amount_len + i] =
                 *(params.fee_amount.add(i));
         }
 
-        debug_print("GET_DEST_ADDRESS\n");
         let mut dest_address_length = 0usize;
         while *(params.destination_address.wrapping_add(dest_address_length)) != '\0' as i8 {
             create_tx_params.dest_address[dest_address_length] =
@@ -206,6 +202,12 @@ pub fn sign_tx_params(arg0: u32) -> CreateTxParams {
         create_tx_params.result = &(*(libarg.__bindgen_anon_1.create_transaction
             as *mut create_transaction_parameters_t))
             .result as *const u8 as *mut u8;
+
+        /* Reset BSS and complete application boot */
+        c_reset_bss();
+        c_boot_std();
+
+        NbglSpinner::new().text("Signing").show();
 
         create_tx_params
     }

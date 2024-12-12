@@ -426,7 +426,6 @@ impl SDKBuilder {
             .include(self.bolos_sdk.join("lib_cxng/include"))
             .include(self.bolos_sdk.join("lib_stusb"))
             .include(self.bolos_sdk.join("lib_stusb_impl"))
-            .include(self.bolos_sdk.join("lib_standard_app"))
             .include(
                 self.bolos_sdk
                     .join("lib_stusb/STM32_USB_Device_Library/Core/Inc"),
