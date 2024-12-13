@@ -575,10 +575,6 @@ impl Comm {
     pub fn append(&mut self, m: &[u8]) {
         self.apdu_buffer[self.tx..self.tx + m.len()].copy_from_slice(m);
         self.tx += m.len();
-        // for c in m.iter() {
-        //     self.apdu_buffer[self.tx] = *c;
-        //     self.tx += 1;
-        // }
     }
 }
 
