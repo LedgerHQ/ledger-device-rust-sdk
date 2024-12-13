@@ -1,3 +1,4 @@
+#[cfg(any(target_os = "stax", target_os = "flex"))]
 use crate::nbgl::NbglSpinner;
 use crate::testing::debug_print;
 use ledger_secure_sdk_sys::{
@@ -201,6 +202,7 @@ pub fn sign_tx_params(arg0: u32) -> CreateTxParams {
         c_reset_bss();
         c_boot_std();
 
+        #[cfg(any(target_os = "stax", target_os = "flex"))]
         NbglSpinner::new().text("Signing").show();
 
         create_tx_params
