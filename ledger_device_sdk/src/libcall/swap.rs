@@ -206,3 +206,29 @@ pub fn sign_tx_params(arg0: u32) -> CreateTxParams {
         create_tx_params
     }
 }
+
+pub enum SwapResult<'a> {
+    CheckAddressResult(&'a mut CheckAddressParams, i32),
+    PrintableAmountResult(&'a mut PrintableAmountParams, &'a str),
+    CreateTxResult(&'a mut CreateTxParams, u8),
+}
+
+pub fn swap_return(res: SwapResult) {
+    unsafe {
+        match res {
+            SwapResult::CheckAddressResult(&mut ref p, r) => {
+                *(p.result) = r;
+            }
+            SwapResult::PrintableAmountResult(&mut ref p, s) => {
+                for (i, c) in s.chars().enumerate() {
+                    *(p.amount_str.add(i)) = c as i8;
+                }
+                *(p.amount_str.add(s.len())) = '\0' as i8;
+            }
+            SwapResult::CreateTxResult(&mut ref p, r) => {
+                *(p.result) = r;
+            }
+        }
+        ledger_secure_sdk_sys::os_lib_end();
+    }
+}
