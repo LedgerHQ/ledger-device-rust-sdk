@@ -30,3 +30,7 @@ ccid = []
 heap = [ "ledger_secure_sdk_sys/heap" ]
 
 default = [ "heap" ]
+
+[lints.rust.unexpected_cfgs]
+level = "warn" 
+check-cfg = ['cfg(target_os, values("stax", "flex", "nanos", "nanox", "nanosplus"))']
