@@ -14,7 +14,7 @@
   bolos_ux_asynch_callback_t G_io_asynch_ux_callback;
 #endif
 
-extern void sample_main();
+extern void sample_main(int arg0);
 extern void heap_init();
 
 struct SectionSrc;
@@ -258,7 +258,59 @@ void link_pass_nvram(
 uint8_t G_io_apdu_buffer[260];
 #endif
 
-int c_main(void) {
+void c_reset_bss() {
+  size_t bss_len;
+  SYMBOL_ABSOLUTE_VALUE(bss_len, _bss_len);
+  struct SectionDst* bss;
+  SYMBOL_SBREL_ADDRESS(bss, _bss);
+  memset(bss, 0, bss_len);
+}
+
+void c_boot_std() {
+    // below is a 'manual' implementation of `io_seproxyhal_init`
+#ifdef HAVE_MCU_PROTECT
+    unsigned char c[4];
+    c[0] = SEPROXYHAL_TAG_MCU;
+    c[1] = 0;
+    c[2] = 1;
+    c[3] = SEPROXYHAL_TAG_MCU_TYPE_PROTECT;
+    io_seproxyhal_spi_send(c, 4);
+#endif
+
+#ifdef HAVE_BLE
+    unsigned int plane = G_io_app.plane_mode;
+#endif
+
+    memset(&G_io_app, 0, sizeof(G_io_app));
+
+#ifdef HAVE_BLE
+    G_io_app.plane_mode = plane;
+#endif
+    G_io_app.apdu_state = APDU_IDLE;
+    G_io_app.apdu_length = 0;
+    G_io_app.apdu_media = IO_APDU_MEDIA_NONE;
+
+    G_io_app.ms = 0;
+    io_usb_hid_init();
+
+    USB_power(0);
+    USB_power(1);
+#ifdef HAVE_CCID
+    io_usb_ccid_set_card_inserted(1);
+#endif
+          
+#ifdef HAVE_BLE
+    memset(&G_io_asynch_ux_callback, 0, sizeof(G_io_asynch_ux_callback));
+    BLE_power(1, NULL);
+#endif
+
+#if !defined(HAVE_BOLOS) && defined(HAVE_PENDING_REVIEW_SCREEN)
+    check_audited_app();
+#endif // !defined(HAVE_BOLOS) && defined(HAVE_PENDING_REVIEW_SCREEN)
+    heap_init();
+}
+
+int c_main(int arg0) {
   __asm volatile("cpsie i");
 
   // Update pointers for pic(), only issuing nvm_write() if we actually changed a pointer in the block.
@@ -280,12 +332,10 @@ int c_main(void) {
   __asm volatile("mov %[result],r9" : [result] "=r" (data));
 
   link_pass_ram(data_len, sidata_src, data);
-
-  size_t bss_len;
-  SYMBOL_ABSOLUTE_VALUE(bss_len, _bss_len);
-  struct SectionDst* bss;
-  SYMBOL_SBREL_ADDRESS(bss, _bss);
-  memset(bss, 0, bss_len);
+  
+  // if libcall, does not reset bss as it is shared with the calling app
+  if (arg0 == 0)
+    c_reset_bss();
 
   // formerly known as 'os_boot()'
   try_context_set(NULL);
@@ -293,49 +343,10 @@ int c_main(void) {
   for(;;) {
     BEGIN_TRY {
       TRY {
-        // below is a 'manual' implementation of `io_seproxyhal_init`
-    #ifdef HAVE_MCU_PROTECT
-        unsigned char c[4];
-        c[0] = SEPROXYHAL_TAG_MCU;
-        c[1] = 0;
-        c[2] = 1;
-        c[3] = SEPROXYHAL_TAG_MCU_TYPE_PROTECT;
-        io_seproxyhal_spi_send(c, 4);
-    #endif
-
-    #ifdef HAVE_BLE
-        unsigned int plane = G_io_app.plane_mode;
-    #endif
-
-        memset(&G_io_app, 0, sizeof(G_io_app));
-
-    #ifdef HAVE_BLE
-        G_io_app.plane_mode = plane;
-    #endif
-        G_io_app.apdu_state = APDU_IDLE;
-        G_io_app.apdu_length = 0;
-        G_io_app.apdu_media = IO_APDU_MEDIA_NONE;
-
-        G_io_app.ms = 0;
-        io_usb_hid_init();
-
-        USB_power(0);
-        USB_power(1);
-    #ifdef HAVE_CCID
-        io_usb_ccid_set_card_inserted(1);
-    #endif
-        
-    #ifdef HAVE_BLE
-        memset(&G_io_asynch_ux_callback, 0, sizeof(G_io_asynch_ux_callback));
-        BLE_power(1, NULL);
-    #endif
-
-    #if !defined(HAVE_BOLOS) && defined(HAVE_PENDING_REVIEW_SCREEN)
-        check_audited_app();
-    #endif // !defined(HAVE_BOLOS) && defined(HAVE_PENDING_REVIEW_SCREEN)
-        
-        heap_init();
-        sample_main();
+        // if libcall, does not start io and memory allocator
+        if (arg0 == 0)
+          c_boot_std();
+        sample_main(arg0);
       }
       CATCH(EXCEPTION_IO_RESET) {
         continue;

@@ -170,7 +170,7 @@ impl Comm {
     /// Send the currently held APDU
     // This is private. Users should call reply to set the satus word and
     // transmit the response.
-    fn apdu_send(&mut self) {
+    fn apdu_send(&mut self, is_swap: bool) {
         if !sys_seph::is_status_sent() {
             sys_seph::send_general_status()
         }
@@ -202,6 +202,13 @@ impl Comm {
                 ble::send(&self.apdu_buffer[..self.tx]);
             }
             _ => (),
+        }
+        if is_swap {
+            if !sys_seph::is_status_sent() {
+                sys_seph::send_general_status()
+            }
+            sys_seph::seph_recv(&mut spi_buffer, 0);
+            seph::handle_event(&mut self.apdu_buffer, &spi_buffer);
         }
         self.tx = 0;
         self.rx = 0;
@@ -506,13 +513,27 @@ impl Comm {
         self.apdu_buffer[self.tx + 1] = sw as u8;
         self.tx += 2;
         // Transmit the response
-        self.apdu_send();
+        self.apdu_send(false);
+    }
+
+    pub fn swap_reply<T: Into<Reply>>(&mut self, reply: T) {
+        let sw = reply.into().0;
+        // Append status word
+        self.apdu_buffer[self.tx] = (sw >> 8) as u8;
+        self.apdu_buffer[self.tx + 1] = sw as u8;
+        self.tx += 2;
+        // Transmit the response
+        self.apdu_send(true);
     }
 
     /// Set the Status Word of the response to `StatusWords::OK` (which is equal
     /// to `0x9000`, and transmit the response.
     pub fn reply_ok(&mut self) {
         self.reply(StatusWords::Ok);
+    }
+
+    pub fn swap_reply_ok(&mut self) {
+        self.swap_reply(StatusWords::Ok);
     }
 
     /// Return APDU Metadata
@@ -552,10 +573,8 @@ impl Comm {
     }
 
     pub fn append(&mut self, m: &[u8]) {
-        for c in m.iter() {
-            self.apdu_buffer[self.tx] = *c;
-            self.tx += 1;
-        }
+        self.apdu_buffer[self.tx..self.tx + m.len()].copy_from_slice(m);
+        self.tx += m.len();
     }
 }
 
