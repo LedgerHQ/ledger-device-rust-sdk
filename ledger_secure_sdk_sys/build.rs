@@ -408,13 +408,6 @@ impl SDKBuilder {
             // Let cc::Build determine CC from the environment variable
         }
 
-        // Test if the file  lib_cxng/src/cx_exported_functions.c exists
-        // If it does, add it to the list of files to compile
-        let cxng_src = self.bolos_sdk.join("lib_cxng/src/cx_exported_functions.c");
-        if cxng_src.exists() {
-            command.file(cxng_src);
-        }
-
         command
             .files(&AUX_C_FILES)
             .files(str2path(&self.bolos_sdk, &SDK_C_FILES))
