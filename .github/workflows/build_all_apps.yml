@@ -29,6 +29,8 @@ jobs:
                       branch: 'develop'
                     - repo: 'app-boilerplate-rust'
                       branch: 'main'
+                    - repo: 'app-near'
+                      branch: 'y333_241015/add_swap_support'
 
         runs-on: ubuntu-latest
         container:
