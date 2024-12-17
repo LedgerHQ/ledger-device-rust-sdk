@@ -65,7 +65,7 @@ unsafe impl critical_section::Impl for CriticalSection {
 extern "C" fn heap_init() {
     // HEAP_SIZE comes from heap_size.rs, which is defined via env var and build.rs
     static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
-    unsafe { HEAP.init(HEAP_MEM.as_ptr() as usize, HEAP_SIZE) }
+    unsafe { HEAP.init(&raw mut HEAP_MEM as usize, HEAP_SIZE) }
 }
 
 #[no_mangle]

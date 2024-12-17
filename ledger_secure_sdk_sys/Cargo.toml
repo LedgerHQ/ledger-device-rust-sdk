@@ -18,6 +18,7 @@ critical-section = { version = "1.1.2", optional = true }
 
 [features]
 heap = ["dep:embedded-alloc", "dep:critical-section"]
+ccid = []
 
 [lints.rust.unexpected_cfgs]
 level = "warn"
