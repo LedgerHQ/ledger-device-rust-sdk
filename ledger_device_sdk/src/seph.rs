@@ -112,8 +112,8 @@ pub fn handle_usb_event(event: u8) {
     match Events::from(event) {
         Events::USBEventReset => {
             unsafe {
-                USBD_LL_SetSpeed(&mut USBD_Device, 1 /*USBD_SPEED_FULL*/);
-                USBD_LL_Reset(&mut USBD_Device);
+                USBD_LL_SetSpeed(&raw mut USBD_Device, 1 /*USBD_SPEED_FULL*/);
+                USBD_LL_Reset(&raw mut USBD_Device);
 
                 if G_io_app.apdu_media != IO_APDU_MEDIA_NONE {
                     return;
@@ -124,13 +124,13 @@ pub fn handle_usb_event(event: u8) {
             }
         }
         Events::USBEventSOF => unsafe {
-            USBD_LL_SOF(&mut USBD_Device);
+            USBD_LL_SOF(&raw mut USBD_Device);
         },
         Events::USBEventSuspend => unsafe {
-            USBD_LL_Suspend(&mut USBD_Device);
+            USBD_LL_Suspend(&raw mut USBD_Device);
         },
         Events::USBEventResume => unsafe {
-            USBD_LL_Resume(&mut USBD_Device);
+            USBD_LL_Resume(&raw mut USBD_Device);
         },
         _ => (),
     }
@@ -140,13 +140,13 @@ pub fn handle_usb_ep_xfer_event(apdu_buffer: &mut [u8], buffer: &[u8]) {
     let endpoint = buffer[3] & 0x7f;
     match UsbEp::from(buffer[4]) {
         UsbEp::USBEpXFERSetup => unsafe {
-            USBD_LL_SetupStage(&mut USBD_Device, &buffer[6]);
+            USBD_LL_SetupStage(&raw mut USBD_Device, &buffer[6]);
         },
         UsbEp::USBEpXFERIn => {
             if (endpoint as u32) < IO_USB_MAX_ENDPOINTS {
                 unsafe {
                     G_io_app.usb_ep_timeouts[endpoint as usize].timeout = 0;
-                    USBD_LL_DataInStage(&mut USBD_Device, endpoint, &buffer[6]);
+                    USBD_LL_DataInStage(&raw mut USBD_Device, endpoint, &buffer[6]);
                 }
             }
         }
@@ -158,7 +158,7 @@ pub fn handle_usb_ep_xfer_event(apdu_buffer: &mut [u8], buffer: &[u8]) {
                         buf: apdu_buffer.as_mut_ptr(),
                         len: 260,
                     };
-                    USBD_LL_DataOutStage(&mut USBD_Device, endpoint, &buffer[6], &mut apdu_buf);
+                    USBD_LL_DataOutStage(&raw mut USBD_Device, endpoint, &buffer[6], &mut apdu_buf);
                 }
             }
         }
@@ -167,19 +167,21 @@ pub fn handle_usb_ep_xfer_event(apdu_buffer: &mut [u8], buffer: &[u8]) {
 }
 
 pub fn handle_capdu_event(apdu_buffer: &mut [u8], buffer: &[u8]) {
-    let io_app = unsafe { &mut G_io_app };
-    if io_app.apdu_state == APDU_IDLE {
-        let max = (apdu_buffer.len() - 3).min(buffer.len() - 3);
-        let size = u16::from_be_bytes([buffer[1], buffer[2]]) as usize;
+    let io_app = &raw mut G_io_app;
+    unsafe {
+        if (*io_app).apdu_state == APDU_IDLE {
+            let max = (apdu_buffer.len() - 3).min(buffer.len() - 3);
+            let size = u16::from_be_bytes([buffer[1], buffer[2]]) as usize;
 
-        io_app.apdu_media = IO_APDU_MEDIA_RAW;
-        io_app.apdu_state = APDU_RAW;
+            (*io_app).apdu_media = IO_APDU_MEDIA_RAW;
+            (*io_app).apdu_state = APDU_RAW;
 
-        let len = size.min(max);
+            let len = size.min(max);
 
-        io_app.apdu_length = len as u16;
+            (*io_app).apdu_length = len as u16;
 
-        apdu_buffer[..len].copy_from_slice(&buffer[3..len + 3]);
+            apdu_buffer[..len].copy_from_slice(&buffer[3..len + 3]);
+        }
     }
 }
 

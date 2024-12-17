@@ -1,6 +1,6 @@
 [package]
 name = "ledger_secure_sdk_sys"
-version = "1.6.0"
+version = "1.6.1"
 authors = ["yhql", "agrojean-ledger", "yogh333"]
 edition = "2021"
 license.workspace = true
@@ -18,3 +18,8 @@ critical-section = { version = "1.1.2", optional = true }
 
 [features]
 heap = ["dep:embedded-alloc", "dep:critical-section"]
+ccid = []
+
+[lints.rust.unexpected_cfgs]
+level = "warn"
+check-cfg = ['cfg(target_os, values("stax", "flex", "nanos", "nanox", "nanosplus"))']
