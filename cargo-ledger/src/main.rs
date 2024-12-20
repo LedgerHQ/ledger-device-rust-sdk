@@ -32,13 +32,14 @@ struct NanosMetadata {
 struct LedgerMetadata {
     curve: Vec<String>,
     path: Vec<String>,
-    flags: String,
+    flags: Option<String>,
     name: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 struct DeviceMetadata {
     icon: String,
+    flags: Option<String>,
 }
 
 #[derive(Parser, Debug)]
@@ -167,7 +168,7 @@ fn retrieve_metadata(
         let ledger_metadata = LedgerMetadata {
             curve: nanos_metadata.curve,
             path: nanos_metadata.path,
-            flags: nanos_metadata.flags,
+            flags: Some(nanos_metadata.flags),
             name: nanos_metadata.name,
         };
 
@@ -176,6 +177,7 @@ fn retrieve_metadata(
                 Device::Nanos => nanos_metadata.icon,
                 _ => nanos_metadata.icon_small,
             },
+            flags: None,
         };
 
         (this_pkg.clone(), ledger_metadata, device_metadata)
@@ -291,14 +293,21 @@ fn build_app(
     // Retrieve real data size and SDK infos from ELF
     let infos = retrieve_infos(&exe_path).unwrap();
 
-    // Modify flags to enable BLE if targeting Nano X
-    let flags = match device {
-        Device::Nanos | Device::Nanosplus => metadata_ledger.flags,
-        Device::Nanox | Device::Stax | Device::Flex => {
-            let base = u32::from_str_radix(metadata_ledger.flags.as_str(), 16)
-                .unwrap_or(0);
-            format!("0x{:x}", base | 0x200)
-        }
+    let flags = match metadata_device.flags {
+        Some(flags) => flags,
+        None => match metadata_ledger.flags {
+            Some(flags) => match device {
+                // Modify flags to enable BLE if targeting Nano X
+                Device::Nanos | Device::Nanosplus => flags,
+                Device::Nanox | Device::Stax | Device::Flex => {
+                    let base =
+                        u32::from_str_radix(flags.trim_start_matches("0x"), 16)
+                            .unwrap_or(0);
+                    format!("0x{:x}", base | 0x200)
+                }
+            },
+            None => String::from("0x00"),
+        },
     };
 
     // Target ID according to target, in case it
