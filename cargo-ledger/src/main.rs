@@ -272,7 +272,7 @@ fn build_app(
                     format!("0x{:x}", base | 0x200)
                 }
             },
-            None => String::from("0x00"),
+            None => String::from("0x000"),
         },
     };
 
