@@ -16,18 +16,6 @@ use utils::*;
 mod setup;
 mod utils;
 
-/// Structure for retrocompatibility, when the cargo manifest file
-/// contains a single `[package.metadata.nanos]` section
-#[derive(Debug, Deserialize)]
-struct NanosMetadata {
-    curve: Vec<String>,
-    path: Vec<String>,
-    flags: String,
-    icon: String,
-    icon_small: String,
-    name: Option<String>,
-}
-
 #[derive(Debug, Deserialize)]
 struct LedgerMetadata {
     curve: Vec<String>,
@@ -124,7 +112,7 @@ fn main() {
 fn retrieve_metadata(
     device: Device,
     manifest_path: Option<&str>,
-) -> (Package, LedgerMetadata, DeviceMetadata) {
+) -> Result<(Package, LedgerMetadata, DeviceMetadata), ()> {
     let mut cmd = cargo_metadata::MetadataCommand::new();
 
     // Only used during tests
@@ -155,32 +143,10 @@ fn retrieve_metadata(
             serde_json::from_value(metadata_device)
                 .expect("Could not deserialize device medatada");
 
-        (this_pkg.clone(), ledger_metadata, device_metadata)
+        Ok((this_pkg.clone(), ledger_metadata, device_metadata))
     } else {
-        println!("WARNING: 'package.metadata.ledger' section is missing in Cargo.toml, trying 'package.metadata.nanos'");
-        let nanos_section = this_pkg.metadata.get("nanos").expect(
-            "No appropriate [package.metadata.<ledger|nanos>] section found.",
-        );
-
-        let nanos_metadata: NanosMetadata =
-            serde_json::from_value(nanos_section.clone())
-                .expect("Could not deserialize medatada.nanos");
-        let ledger_metadata = LedgerMetadata {
-            curve: nanos_metadata.curve,
-            path: nanos_metadata.path,
-            flags: Some(nanos_metadata.flags),
-            name: nanos_metadata.name,
-        };
-
-        let device_metadata = DeviceMetadata {
-            icon: match device {
-                Device::Nanos => nanos_metadata.icon,
-                _ => nanos_metadata.icon_small,
-            },
-            flags: None,
-        };
-
-        (this_pkg.clone(), ledger_metadata, device_metadata)
+        println!("No metadata found for device: {}", device);
+        Err(())
     }
 }
 
@@ -265,7 +231,7 @@ fn build_app(
     };
 
     let (this_pkg, metadata_ledger, metadata_device) =
-        retrieve_metadata(device, None);
+        retrieve_metadata(device, None).unwrap();
 
     let package_path = this_pkg
         .manifest_path
