@@ -29,6 +29,8 @@ jobs:
                       branch: 'develop'
                     - repo: 'app-boilerplate-rust'
                       branch: 'main'
+                    - repo: 'app-near'
+                      branch: 'develop'
 
         runs-on: ubuntu-latest
         container:

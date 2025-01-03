@@ -20,7 +20,7 @@ unsafe extern "C" fn settings_callback(token: c_int, _index: u8, _page: c_int) {
         _ => panic!("Invalid state."),
     }
 
-    if let Some(data) = NVM_REF.as_mut() {
+    if let Some(data) = (*(&raw mut NVM_REF)).as_mut() {
         let mut switch_values: [u8; SETTINGS_SIZE] = *data.get_ref();
         if switch_values[setting_idx] == OFF_STATE {
             switch_values[setting_idx] = ON_STATE;
@@ -166,7 +166,7 @@ impl<'a> NbglHomeAndSettings {
                 for (i, setting) in self.setting_contents.iter().enumerate() {
                     SWITCH_ARRAY[i].text = setting[0].as_ptr();
                     SWITCH_ARRAY[i].subText = setting[1].as_ptr();
-                    let state = if let Some(data) = NVM_REF.as_mut() {
+                    let state = if let Some(data) = (*(&raw mut NVM_REF)).as_mut() {
                         data.get_ref()[i]
                     } else {
                         OFF_STATE
@@ -179,7 +179,7 @@ impl<'a> NbglHomeAndSettings {
                 self.content = nbgl_content_t {
                     content: nbgl_content_u {
                         switchesList: nbgl_pageSwitchesList_s {
-                            switches: &SWITCH_ARRAY as *const nbgl_contentSwitch_t,
+                            switches: &raw const SWITCH_ARRAY as *const nbgl_contentSwitch_t,
                             nbSwitches: self.nb_settings,
                         },
                     },
@@ -211,7 +211,7 @@ impl<'a> NbglHomeAndSettings {
                 );
                 match self.ux_sync_wait(true) {
                     SyncNbgl::UxSyncRetApduReceived => {
-                        if let Some(comm) = COMM_REF.as_mut() {
+                        if let Some(comm) = (*(&raw mut COMM_REF)).as_mut() {
                             if let Some(value) = comm.check_event() {
                                 return value;
                             }
@@ -250,7 +250,7 @@ impl<'a> NbglHomeAndSettings {
             for (i, setting) in self.setting_contents.iter().enumerate() {
                 SWITCH_ARRAY[i].text = setting[0].as_ptr();
                 SWITCH_ARRAY[i].subText = setting[1].as_ptr();
-                let state = if let Some(data) = NVM_REF.as_mut() {
+                let state = if let Some(data) = (*(&raw mut NVM_REF)).as_mut() {
                     data.get_ref()[i]
                 } else {
                     OFF_STATE
@@ -263,7 +263,7 @@ impl<'a> NbglHomeAndSettings {
             self.content = nbgl_content_t {
                 content: nbgl_content_u {
                     switchesList: nbgl_pageSwitchesList_s {
-                        switches: &SWITCH_ARRAY as *const nbgl_contentSwitch_t,
+                        switches: &raw const SWITCH_ARRAY as *const nbgl_contentSwitch_t,
                         nbSwitches: self.nb_settings,
                     },
                 },
