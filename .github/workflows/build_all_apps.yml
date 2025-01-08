@@ -91,6 +91,17 @@ jobs:
                     echo "path=$path" >> $cargo_toml_path
                     echo "Patch added to Cargo.toml"
                 fi
+                # Patch include_gif
+                if grep -Fxq "[patch.crates-io.include_gif]" $cargo_toml_path; then
+                    echo "The patch already exists in the file."
+                    exit 1
+                else
+                    echo "" >> $cargo_toml_path 
+                    echo "[patch.crates-io.include_gif]" >> $cargo_toml_path
+                    path=\"$GITHUB_WORKSPACE/sdk/include_gif\"
+                    echo "path=$path" >> $cargo_toml_path
+                    echo "Patch added to Cargo.toml"
+                fi
                 
             - name: Build
               run: |
@@ -100,8 +111,9 @@ jobs:
                 cd $build_directory
                 for device in $devices; do
                     # Required as patch has a different version from what is locked in Cargo.lock
-                    cargo +$RUST_NIGHTLY update ledger_device_sdk
+                    cargo +$RUST_NIGHTLY update include_gif
                     cargo +$RUST_NIGHTLY update ledger_secure_sdk_sys
+                    cargo +$RUST_NIGHTLY update ledger_device_sdk
                     echo "Build for "$device
                     cargo ledger build $device
                 done
