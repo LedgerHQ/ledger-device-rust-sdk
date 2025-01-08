@@ -432,6 +432,14 @@ impl Comm {
         }
 
         if unsafe { G_io_app.apdu_state } != APDU_IDLE && unsafe { G_io_app.apdu_length } > 0 {
+            unsafe {
+                if os_perso_is_pin_set() == BOLOS_TRUE.try_into().unwrap()
+                    && os_global_pin_is_validated() != BOLOS_TRUE.try_into().unwrap()
+                {
+                    self.reply(StatusWords::DeviceLocked);
+                    return None;
+                }
+            }
             self.rx = unsafe { G_io_app.apdu_length as usize };
             self.event_pending = true;
             return self.check_event();
