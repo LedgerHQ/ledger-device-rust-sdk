@@ -34,6 +34,17 @@ pub fn send_general_status() {
     }
 }
 
+/// Function to ensure a I/O channel is not timeouting waiting
+/// for operations after a long time without SEPH packet exchanges
+pub fn heartbeat() {
+    send_general_status();
+    let mut spi_buffer = [0u8; 128];
+    seph_recv(&mut spi_buffer, 0);
+    while is_status_sent() {
+        seph_recv(&mut spi_buffer, 0);
+    }
+}
+
 #[repr(u8)]
 pub enum SephTags {
     ScreenDisplayStatus = SEPROXYHAL_TAG_SCREEN_DISPLAY_STATUS as u8,
