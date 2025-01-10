@@ -136,8 +136,8 @@ pub struct ApduHeader {
 
 impl Comm {
     /// Creates a new [`Comm`] instance, which accepts any CLA APDU by default.
-    pub const fn new() -> Self {
-        Self {
+    pub fn new() -> Self {
+        let mut c = Comm {
             apdu_buffer: [0u8; 260],
             rx: 0,
             tx: 0,
@@ -145,7 +145,13 @@ impl Comm {
             #[cfg(not(any(target_os = "stax", target_os = "flex")))]
             buttons: ButtonsState::new(),
             expected_cla: None,
+        };
+
+        #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
+        {
+            ble::set_recv_buffer(&mut c.apdu_buffer);
         }
+        c
     }
 
     /// Defines [`Comm::expected_cla`] in order to reply automatically [`StatusWords::BadCla`] when
@@ -396,7 +402,7 @@ impl Comm {
             seph::Events::CAPDUEvent => seph::handle_capdu_event(&mut self.apdu_buffer, spi_buffer),
 
             #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
-            seph::Events::BleReceive => ble::receive(&mut self.apdu_buffer[self.rx..], spi_buffer),
+            seph::Events::BleReceive => ble::receive(spi_buffer),
 
             seph::Events::TickerEvent => {
                 #[cfg(any(target_os = "stax", target_os = "flex"))]
