@@ -396,7 +396,7 @@ impl Comm {
             seph::Events::CAPDUEvent => seph::handle_capdu_event(&mut self.apdu_buffer, spi_buffer),
 
             #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
-            seph::Events::BleReceive => ble::receive(&mut self.apdu_buffer, spi_buffer),
+            seph::Events::BleReceive => ble::receive(&mut self.apdu_buffer[self.rx..], spi_buffer),
 
             seph::Events::TickerEvent => {
                 #[cfg(any(target_os = "stax", target_os = "flex"))]
