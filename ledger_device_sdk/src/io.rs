@@ -174,7 +174,7 @@ impl Comm {
         if !sys_seph::is_status_sent() {
             sys_seph::send_general_status()
         }
-        let mut spi_buffer = [0u8; 128];
+        let mut spi_buffer = [0u8; 256];
         while sys_seph::is_status_sent() {
             sys_seph::seph_recv(&mut spi_buffer, 0);
             seph::handle_event(&mut self.apdu_buffer, &spi_buffer);
@@ -260,7 +260,7 @@ impl Comm {
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
-        let mut spi_buffer = [0u8; 128];
+        let mut spi_buffer = [0u8; 256];
 
         unsafe {
             G_io_app.apdu_state = APDU_IDLE;
@@ -289,7 +289,7 @@ impl Comm {
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
-        let mut spi_buffer = [0u8; 128];
+        let mut spi_buffer = [0u8; 256];
 
         // Signal end of command stream from SE to MCU
         // And prepare reception
@@ -353,7 +353,7 @@ impl Comm {
         None
     }
 
-    pub fn process_event<T>(&mut self, spi_buffer: &mut [u8; 128]) -> Option<Event<T>>
+    pub fn process_event<T>(&mut self, spi_buffer: &mut [u8; 256]) -> Option<Event<T>>
     where
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
@@ -422,7 +422,7 @@ impl Comm {
         None
     }
 
-    pub fn decode_event<T>(&mut self, spi_buffer: &mut [u8; 128]) -> Option<Event<T>>
+    pub fn decode_event<T>(&mut self, spi_buffer: &mut [u8; 256]) -> Option<Event<T>>
     where
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
@@ -439,7 +439,7 @@ impl Comm {
         None
     }
 
-    fn detect_apdu<T>(&mut self, spi_buffer: &mut [u8; 128]) -> bool
+    fn detect_apdu<T>(&mut self, spi_buffer: &mut [u8; 256]) -> bool
     where
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
