@@ -2,7 +2,7 @@
 
 use ledger_secure_sdk_sys::*;
 
-#[cfg(target_os = "nanox")]
+#[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
 use crate::ble;
 
 #[repr(u8)]
@@ -198,7 +198,7 @@ pub fn handle_event(apdu_buffer: &mut [u8], spi_buffer: &[u8]) {
                 handle_usb_ep_xfer_event(apdu_buffer, spi_buffer);
             }
         }
-        #[cfg(target_os = "nanox")]
+        #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
         Events::BleReceive => ble::receive(apdu_buffer, spi_buffer),
         Events::CAPDUEvent => handle_capdu_event(apdu_buffer, spi_buffer),
         Events::TickerEvent => { /* unsafe{ G_io_app.ms += 100; } */ }
