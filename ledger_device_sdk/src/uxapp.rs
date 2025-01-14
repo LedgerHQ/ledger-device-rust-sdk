@@ -55,7 +55,7 @@ impl UxEvent {
             if unsafe { os_sched_is_running(TASK_SUBTASKS_START as u32) }
                 != BOLOS_TRUE.try_into().unwrap()
             {
-                let mut spi_buffer = [0u8; 128];
+                let mut spi_buffer = [0u8; 256];
                 sys_seph::send_general_status();
                 sys_seph::seph_recv(&mut spi_buffer, 0);
                 UxEvent::Event.request();
