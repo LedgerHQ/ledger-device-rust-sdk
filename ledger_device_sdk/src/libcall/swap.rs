@@ -30,6 +30,7 @@ pub struct PrintableAmountParams {
     pub amount: [u8; 16],
     pub amount_len: usize,
     pub amount_str: *mut i8,
+    pub is_fee: bool,
 }
 
 impl Default for PrintableAmountParams {
@@ -38,6 +39,7 @@ impl Default for PrintableAmountParams {
             amount: [0; 16],
             amount_len: 0,
             amount_str: core::ptr::null_mut(),
+            is_fee: false,
         }
     }
 }
@@ -129,6 +131,9 @@ pub fn get_printable_amount_params(arg0: u32) -> PrintableAmountParams {
                 as *const get_printable_amount_parameters_t);
 
         let mut printable_amount_params: PrintableAmountParams = Default::default();
+
+        debug_print("==> GET_IS_FEE\n");
+        printable_amount_params.is_fee = params.is_fee == true;
 
         debug_print("==> GET_AMOUNT_LENGTH\n");
         printable_amount_params.amount_len = params.amount_length as usize;
