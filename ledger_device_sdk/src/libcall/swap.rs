@@ -6,10 +6,14 @@ use ledger_secure_sdk_sys::{
     libargs_s__bindgen_ty_1, libargs_t, MAX_PRINTABLE_AMOUNT_SIZE,
 };
 
+const DPATH_STAGE_SIZE: usize = 16;
+const ADDRESS_BUF_SIZE: usize = 64;
+const AMOUNT_BUF_SIZE: usize = 16;
+
 pub struct CheckAddressParams {
-    pub dpath: [u8; 64],
+    pub dpath: [u8; DPATH_STAGE_SIZE * 4],
     pub dpath_len: usize,
-    pub ref_address: [u8; 64],
+    pub ref_address: [u8; ADDRESS_BUF_SIZE],
     pub ref_address_len: usize,
     pub result: *mut i32,
 }
@@ -17,9 +21,9 @@ pub struct CheckAddressParams {
 impl Default for CheckAddressParams {
     fn default() -> Self {
         CheckAddressParams {
-            dpath: [0; 64],
+            dpath: [0; DPATH_STAGE_SIZE * 4],
             dpath_len: 0,
-            ref_address: [0; 64],
+            ref_address: [0; ADDRESS_BUF_SIZE],
             ref_address_len: 0,
             result: core::ptr::null_mut(),
         }
@@ -27,7 +31,7 @@ impl Default for CheckAddressParams {
 }
 
 pub struct PrintableAmountParams {
-    pub amount: [u8; 16],
+    pub amount: [u8; AMOUNT_BUF_SIZE],
     pub amount_len: usize,
     pub amount_str: *mut i8,
     pub is_fee: bool,
@@ -36,7 +40,7 @@ pub struct PrintableAmountParams {
 impl Default for PrintableAmountParams {
     fn default() -> Self {
         PrintableAmountParams {
-            amount: [0; 16],
+            amount: [0; AMOUNT_BUF_SIZE],
             amount_len: 0,
             amount_str: core::ptr::null_mut(),
             is_fee: false,
@@ -45,11 +49,11 @@ impl Default for PrintableAmountParams {
 }
 
 pub struct CreateTxParams {
-    pub amount: [u8; 16],
+    pub amount: [u8; AMOUNT_BUF_SIZE],
     pub amount_len: usize,
-    pub fee_amount: [u8; 16],
+    pub fee_amount: [u8; AMOUNT_BUF_SIZE],
     pub fee_amount_len: usize,
-    pub dest_address: [u8; 64],
+    pub dest_address: [u8; ADDRESS_BUF_SIZE],
     pub dest_address_len: usize,
     pub result: *mut u8,
 }
@@ -57,11 +61,11 @@ pub struct CreateTxParams {
 impl Default for CreateTxParams {
     fn default() -> Self {
         CreateTxParams {
-            amount: [0; 16],
+            amount: [0; AMOUNT_BUF_SIZE],
             amount_len: 0,
-            fee_amount: [0; 16],
+            fee_amount: [0; AMOUNT_BUF_SIZE],
             fee_amount_len: 0,
-            dest_address: [0; 64],
+            dest_address: [0; ADDRESS_BUF_SIZE],
             dest_address_len: 0,
             result: core::ptr::null_mut(),
         }
@@ -88,7 +92,7 @@ pub fn get_check_address_params(arg0: u32) -> CheckAddressParams {
 
     debug_print("==> GET_DPATH_LENGTH\n");
     check_address_params.dpath_len =
-        16usize.min(unsafe { *(params.address_parameters as *const u8) as usize });
+        DPATH_STAGE_SIZE.min(unsafe { *(params.address_parameters as *const u8) as usize });
 
     debug_print("==> GET_DPATH \n");
     for i in 1..1 + check_address_params.dpath_len * 4 {
@@ -98,7 +102,7 @@ pub fn get_check_address_params(arg0: u32) -> CheckAddressParams {
     debug_print("==> GET_REF_ADDRESS\n");
     let mut address_length = 0usize;
     let mut c = unsafe { *(params.address_to_check.add(address_length)) };
-    while c != '\0' as i8 && address_length < 64 {
+    while c != '\0' as i8 && address_length < ADDRESS_BUF_SIZE {
         check_address_params.ref_address[address_length] = c as u8;
         address_length += 1;
         c = unsafe { *(params.address_to_check.add(address_length)) };
@@ -136,11 +140,11 @@ pub fn get_printable_amount_params(arg0: u32) -> PrintableAmountParams {
     printable_amount_params.is_fee = params.is_fee == true;
 
     debug_print("==> GET_AMOUNT_LENGTH\n");
-    printable_amount_params.amount_len = 16usize.min(params.amount_length as usize);
+    printable_amount_params.amount_len = AMOUNT_BUF_SIZE.min(params.amount_length as usize);
 
     debug_print("==> GET_AMOUNT\n");
     for i in 0..printable_amount_params.amount_len {
-        printable_amount_params.amount[16 - printable_amount_params.amount_len + i] =
+        printable_amount_params.amount[AMOUNT_BUF_SIZE - printable_amount_params.amount_len + i] =
             unsafe { *(params.amount.add(i)) };
     }
 
@@ -178,23 +182,23 @@ pub fn sign_tx_params(arg0: u32) -> CreateTxParams {
     let mut create_tx_params: CreateTxParams = Default::default();
 
     debug_print("==> GET_AMOUNT\n");
-    create_tx_params.amount_len = 16usize.min(params.amount_length as usize);
+    create_tx_params.amount_len = AMOUNT_BUF_SIZE.min(params.amount_length as usize);
     for i in 0..create_tx_params.amount_len {
-        create_tx_params.amount[16 - create_tx_params.amount_len + i] =
+        create_tx_params.amount[AMOUNT_BUF_SIZE - create_tx_params.amount_len + i] =
             unsafe { *(params.amount.add(i)) };
     }
 
     debug_print("==> GET_FEE\n");
-    create_tx_params.fee_amount_len = 16usize.min(params.fee_amount_length as usize);
+    create_tx_params.fee_amount_len = AMOUNT_BUF_SIZE.min(params.fee_amount_length as usize);
     for i in 0..create_tx_params.fee_amount_len {
-        create_tx_params.fee_amount[16 - create_tx_params.fee_amount_len + i] =
+        create_tx_params.fee_amount[AMOUNT_BUF_SIZE - create_tx_params.fee_amount_len + i] =
             unsafe { *(params.fee_amount.add(i)) };
     }
 
     debug_print("==> GET_DESTINATION_ADDRESS\n");
     let mut dest_address_length = 0usize;
     let mut c = unsafe { *params.destination_address.add(dest_address_length) };
-    while c != '\0' as i8 && dest_address_length < 64 {
+    while c != '\0' as i8 && dest_address_length < ADDRESS_BUF_SIZE {
         create_tx_params.dest_address[dest_address_length] = c as u8;
         dest_address_length += 1;
         c = unsafe { *params.destination_address.add(dest_address_length) };
