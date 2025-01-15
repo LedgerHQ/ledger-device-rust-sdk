@@ -10,6 +10,7 @@
   "linker": "link_wrap.sh",
   "linker-flavor": "ld.lld",
   "llvm-target": "thumbv6m-none-eabi",
+  "llvm-floatabi": "hard",
   "panic-strategy": "abort",
   "pre-link-args": {
     "ld.lld": [
