@@ -3,7 +3,7 @@ use crate::nbgl::NbglSpinner;
 use crate::testing::debug_print;
 use ledger_secure_sdk_sys::{
     check_address_parameters_t, create_transaction_parameters_t, get_printable_amount_parameters_t,
-    libargs_s__bindgen_ty_1, libargs_t,
+    libargs_s__bindgen_ty_1, libargs_t, MAX_PRINTABLE_AMOUNT_SIZE,
 };
 
 pub struct CheckAddressParams {
@@ -88,7 +88,8 @@ pub fn get_check_address_params(arg0: u32) -> CheckAddressParams {
         let mut check_address_params: CheckAddressParams = Default::default();
 
         debug_print("==> GET_DPATH_LENGTH\n");
-        check_address_params.dpath_len = *(params.address_parameters as *const u8) as usize;
+        check_address_params.dpath_len =
+            16usize.min(*(params.address_parameters as *const u8) as usize);
 
         debug_print("==> GET_DPATH \n");
         for i in 1..1 + check_address_params.dpath_len * 4 {
@@ -97,10 +98,11 @@ pub fn get_check_address_params(arg0: u32) -> CheckAddressParams {
 
         debug_print("==> GET_REF_ADDRESS\n");
         let mut address_length = 0usize;
-        while *(params.address_to_check.wrapping_add(address_length)) != '\0' as i8 {
-            check_address_params.ref_address[address_length] =
-                *(params.address_to_check.wrapping_add(address_length)) as u8;
+        let mut c = *(params.address_to_check.add(address_length));
+        while c != '\0' as i8 && address_length < 64 {
+            check_address_params.ref_address[address_length] = c as u8;
             address_length += 1;
+            c = *(params.address_to_check.add(address_length));
         }
         check_address_params.ref_address_len = address_length;
 
@@ -136,7 +138,7 @@ pub fn get_printable_amount_params(arg0: u32) -> PrintableAmountParams {
         printable_amount_params.is_fee = params.is_fee == true;
 
         debug_print("==> GET_AMOUNT_LENGTH\n");
-        printable_amount_params.amount_len = params.amount_length as usize;
+        printable_amount_params.amount_len = 16usize.min(params.amount_length as usize);
 
         debug_print("==> GET_AMOUNT\n");
         for i in 0..printable_amount_params.amount_len {
@@ -178,13 +180,13 @@ pub fn sign_tx_params(arg0: u32) -> CreateTxParams {
         let mut create_tx_params: CreateTxParams = Default::default();
 
         debug_print("==> GET_AMOUNT\n");
-        create_tx_params.amount_len = params.amount_length as usize;
+        create_tx_params.amount_len = 16usize.min(params.amount_length as usize);
         for i in 0..create_tx_params.amount_len {
             create_tx_params.amount[16 - create_tx_params.amount_len + i] = *(params.amount.add(i));
         }
 
         debug_print("==> GET_FEE\n");
-        create_tx_params.fee_amount_len = params.fee_amount_length as usize;
+        create_tx_params.fee_amount_len = 16usize.min(params.fee_amount_length as usize);
         for i in 0..create_tx_params.fee_amount_len {
             create_tx_params.fee_amount[16 - create_tx_params.fee_amount_len + i] =
                 *(params.fee_amount.add(i));
@@ -192,10 +194,11 @@ pub fn sign_tx_params(arg0: u32) -> CreateTxParams {
 
         debug_print("==> GET_DESTINATION_ADDRESS\n");
         let mut dest_address_length = 0usize;
-        while *(params.destination_address.wrapping_add(dest_address_length)) != '\0' as i8 {
-            create_tx_params.dest_address[dest_address_length] =
-                *(params.destination_address.wrapping_add(dest_address_length)) as u8;
+        let mut c = *params.destination_address.add(dest_address_length);
+        while c != '\0' as i8 && dest_address_length < 64 {
+            create_tx_params.dest_address[dest_address_length] = c as u8;
             dest_address_length += 1;
+            c = *params.destination_address.add(dest_address_length);
         }
         create_tx_params.dest_address_len = dest_address_length;
 
@@ -227,10 +230,12 @@ pub fn swap_return(res: SwapResult) {
                 *(p.result) = r;
             }
             SwapResult::PrintableAmountResult(&mut ref p, s) => {
-                for (i, c) in s.chars().enumerate() {
-                    *(p.amount_str.add(i)) = c as i8;
+                if s.len() < (MAX_PRINTABLE_AMOUNT_SIZE - 1).try_into().unwrap() {
+                    for (i, c) in s.chars().enumerate() {
+                        *(p.amount_str.add(i)) = c as i8;
+                    }
+                    *(p.amount_str.add(s.len())) = '\0' as i8;
                 }
-                *(p.amount_str.add(s.len())) = '\0' as i8;
             }
             SwapResult::CreateTxResult(&mut ref p, r) => {
                 *(p.result) = r;
