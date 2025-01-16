@@ -608,11 +608,7 @@ impl<'a> MultiPageMenu<'a> {
                 io::Event::Ticker => {
                     if UxEvent::Event.request() != BOLOS_UX_OK {
                         // pin lock management
-                        let (_res, ins) = UxEvent::block_and_get_event::<Temp>(self.comm);
-                        if let Some(_e) = ins {
-                            self.comm
-                                .reply::<io::StatusWords>(io::StatusWords::DeviceLocked);
-                        }
+                        UxEvent::block_and_get_event::<Temp>(self.comm);
                         // notify Ticker event only when redisplay is required
                         return EventOrPageIndex::Event(io::Event::Ticker);
                     }
