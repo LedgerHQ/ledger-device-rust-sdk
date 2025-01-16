@@ -239,6 +239,8 @@ pub fn swap_return(res: SwapResult) {
                     unsafe { *(p.amount_str.add(i)) = c as i8 };
                 }
                 unsafe { *(p.amount_str.add(s.len())) = '\0' as i8 };
+            } else {
+                unsafe { *(p.amount_str) = '\0' as i8 };
             }
         }
         SwapResult::CreateTxResult(&mut ref p, r) => {
