@@ -177,7 +177,7 @@ impl Comm {
         let mut spi_buffer = [0u8; 256];
         while sys_seph::is_status_sent() {
             sys_seph::seph_recv(&mut spi_buffer, 0);
-            seph::handle_event(&mut self.apdu_buffer, &spi_buffer);
+            seph::handle_event(&mut self.apdu_buffer, &mut spi_buffer);
         }
 
         match unsafe { G_io_app.apdu_state } {
@@ -208,7 +208,7 @@ impl Comm {
                 sys_seph::send_general_status()
             }
             sys_seph::seph_recv(&mut spi_buffer, 0);
-            seph::handle_event(&mut self.apdu_buffer, &spi_buffer);
+            seph::handle_event(&mut self.apdu_buffer, &mut spi_buffer);
         }
         self.tx = 0;
         self.rx = 0;
