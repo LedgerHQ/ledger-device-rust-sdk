@@ -8,8 +8,8 @@ use include_gif::include_gif;
 use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{
     init_comm, CenteredInfo, CenteredInfoStyle, Field, InfoButton, InfoLongPress, InfosList,
-    NbglGenericReview, NbglGlyph, NbglPageContent, NbglStatus, NbglChoice, TagValueConfirm, TagValueList,
-    TuneIndex,
+    NbglChoice, NbglGenericReview, NbglGlyph, NbglPageContent, NbglStatus, TagValueConfirm,
+    TagValueList, TuneIndex,
 };
 use ledger_secure_sdk_sys::*;
 
@@ -90,7 +90,7 @@ extern "C" fn sample_main() {
         .add_content(NbglPageContent::InfosList(infos_list));
 
     const IMPORTANT: NbglGlyph =
-    NbglGlyph::from_include(include_gif!("icons/Important_Circle_64px.png", NBGL));
+        NbglGlyph::from_include(include_gif!("icons/Important_Circle_64px.png", NBGL));
 
     let mut show_tx = true;
     let mut status_text = "Example rejected";
@@ -115,5 +115,7 @@ extern "C" fn sample_main() {
                 .not();
         }
     }
-    NbglStatus::new().text(status_text).show(status_text == "Example confirmed");
+    NbglStatus::new()
+        .text(status_text)
+        .show(status_text == "Example confirmed");
 }
