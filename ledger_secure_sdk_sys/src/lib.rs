@@ -38,7 +38,7 @@ pub fn pic_rs_mut<T>(x: &mut T) -> &mut T {
 #[cfg(all(feature = "heap", not(target_os = "nanos")))]
 use critical_section::RawRestoreState;
 #[cfg(all(feature = "heap", not(target_os = "nanos")))]
-use embedded_alloc::LlffHeap as Heap;
+use embedded_alloc::Heap;
 
 #[cfg(all(feature = "heap", not(target_os = "nanos")))]
 #[global_allocator]
