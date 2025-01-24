@@ -436,22 +436,21 @@ impl SDKBuilder {
             }
         }
 
-        let mut png_list: Vec<String> = Vec::new();
+        let mut cmd = Command::new(icon2glyph.as_os_str());
+        cmd.arg("--glyphcheader")
+            .arg(dest_path.join("glyphs.h").as_os_str())
+            .arg("--glyphcfile")
+            .arg(dest_path.join("glyphs.c").as_os_str());
+
         for folder in glyph_folders.iter() {
             for file in std::fs::read_dir(folder).unwrap() {
                 let path = file.unwrap().path();
                 let path_str = path.to_str().unwrap().to_string();
-                png_list.push(path_str);
+                cmd.arg(path_str);
             }
         }
 
-        let _ = Command::new(icon2glyph.as_os_str())
-            .arg("--glyphcheader")
-            .arg(dest_path.join("glyphs.h").as_os_str())
-            .arg("--glyphcfile")
-            .arg(dest_path.join("glyphs.c").as_os_str())
-            .args(png_list)
-            .output();
+        let _ = cmd.output();
     }
 
     pub fn build_c_sdk(&self) {
@@ -589,17 +588,14 @@ impl SDKBuilder {
             }
             Device::Stax | Device::Flex => {
                 let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-                if Device::Stax == self.device {
-                    let glyphs = out_path.join("glyphs_stax");
-                    let include_path = glyphs.to_str().unwrap();
-                    let s = "-I".to_string() + include_path;
-                    bindings = bindings.clang_args([s.as_str()]);
-                } else {
-                    let glyphs = out_path.join("glyphs_flex");
-                    let include_path = glyphs.to_str().unwrap();
-                    let s = "-I".to_string() + include_path;
-                    bindings = bindings.clang_args([s.as_str()]);
-                }
+                let mut include_path = "-I".to_string();
+                let glyphs = match self.device {
+                    Device::Stax => out_path.join("glyphs_stax"),
+                    Device::Flex => out_path.join("glyphs_flex"),
+                    _ => panic!("Invalid device"),
+                };
+                include_path += glyphs.to_str().unwrap();
+                bindings = bindings.clang_args([include_path.as_str()]);
 
                 bindings = bindings.clang_args([
                     format!("-I{bsdk}/lib_nbgl/include/").as_str(),
