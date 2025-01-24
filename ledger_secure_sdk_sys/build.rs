@@ -400,6 +400,59 @@ impl SDKBuilder {
         self.cxdefines = cxdefines;
     }
 
+    pub fn generate_glyphs(&self) {
+        if self.device == Device::NanoS {
+            return;
+        }
+
+        let icon2glyph = self.bolos_sdk.join("lib_nbgl/tools/icon2glyph.py");
+
+        let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+        let dest_path = match self.device {
+            Device::Flex => out_path.join("glyphs_flex"),
+            Device::Stax => out_path.join("glyphs_stax"),
+            Device::NanoSPlus => out_path.join("glyphs_nanosplus"),
+            Device::NanoX => out_path.join("glyphs_nanox"),
+            Device::NanoS => panic!("Nano S does not support glyphs"),
+        };
+        if !dest_path.exists() {
+            fs::create_dir_all(&dest_path).ok();
+        }
+
+        let mut glyph_folders: Vec<PathBuf> = Vec::new();
+        match self.device {
+            Device::Flex => {
+                glyph_folders.push(self.bolos_sdk.join("lib_nbgl/glyphs/wallet"));
+                glyph_folders.push(self.bolos_sdk.join("lib_nbgl/glyphs/64px"));
+                glyph_folders.push(self.bolos_sdk.join("lib_nbgl/glyphs/40px"));
+            }
+            Device::Stax => {
+                glyph_folders.push(self.bolos_sdk.join("lib_nbgl/glyphs/wallet"));
+                glyph_folders.push(self.bolos_sdk.join("lib_nbgl/glyphs/64px"));
+                glyph_folders.push(self.bolos_sdk.join("lib_nbgl/glyphs/32px"));
+            }
+            _ => {
+                glyph_folders.push(self.bolos_sdk.join("lib_nbgl/glyphs/nano"));
+            }
+        }
+
+        let mut cmd = Command::new(icon2glyph.as_os_str());
+        cmd.arg("--glyphcheader")
+            .arg(dest_path.join("glyphs.h").as_os_str())
+            .arg("--glyphcfile")
+            .arg(dest_path.join("glyphs.c").as_os_str());
+
+        for folder in glyph_folders.iter() {
+            for file in std::fs::read_dir(folder).unwrap() {
+                let path = file.unwrap().path();
+                let path_str = path.to_str().unwrap().to_string();
+                cmd.arg(path_str);
+            }
+        }
+
+        let _ = cmd.output();
+    }
+
     pub fn build_c_sdk(&self) {
         let mut command = cc::Build::new();
         if env::var_os("CC").is_none() {
@@ -534,11 +587,15 @@ impl SDKBuilder {
                 )
             }
             Device::Stax | Device::Flex => {
-                if Device::Stax == self.device {
-                    bindings = bindings.clang_args(["-I./src/c/glyphs_stax"]);
-                } else {
-                    bindings = bindings.clang_args(["-I./src/c/glyphs_flex"]);
-                }
+                let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+                let mut include_path = "-I".to_string();
+                let glyphs = match self.device {
+                    Device::Stax => out_path.join("glyphs_stax"),
+                    Device::Flex => out_path.join("glyphs_flex"),
+                    _ => panic!("Invalid device"),
+                };
+                include_path += glyphs.to_str().unwrap();
+                bindings = bindings.clang_args([include_path.as_str()]);
 
                 bindings = bindings.clang_args([
                     format!("-I{bsdk}/lib_nbgl/include/").as_str(),
@@ -618,6 +675,7 @@ fn main() {
     sdk_builder.device();
     sdk_builder.bolos_sdk().unwrap();
     sdk_builder.cxdefines();
+    sdk_builder.generate_glyphs();
     sdk_builder.build_c_sdk();
     sdk_builder.generate_bindings();
     sdk_builder.generate_heap_size();
@@ -721,6 +779,7 @@ fn finalize_stax_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
         command.define(define.as_str(), value.as_deref());
     }
 
+    let glyphs_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("glyphs_stax");
     command
         .target("thumbv8m.main-none-eabi")
         .file(bolos_sdk.join("src/ledger_protocol.c"))
@@ -739,8 +798,8 @@ fn finalize_stax_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
         .include(bolos_sdk.join("target/stax/include/"))
         .flag("-fropi")
         .flag("-frwpi")
-        .include("./src/c/glyphs_stax/")
-        .file("./src/c/glyphs_stax/glyphs.c");
+        .include(&glyphs_path)
+        .file(glyphs_path.join("glyphs.c"));
     configure_lib_nbgl(command, bolos_sdk);
 }
 
@@ -750,6 +809,7 @@ fn finalize_flex_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
         command.define(define.as_str(), value.as_deref());
     }
 
+    let glyphs_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("glyphs_flex");
     command
         .target("thumbv8m.main-none-eabi")
         .file(bolos_sdk.join("src/ledger_protocol.c"))
@@ -768,8 +828,8 @@ fn finalize_flex_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
         .include(bolos_sdk.join("target/flex/include/"))
         .flag("-fropi")
         .flag("-frwpi")
-        .include("./src/c/glyphs_flex/")
-        .file("./src/c/glyphs_flex/glyphs.c");
+        .include(&glyphs_path)
+        .file(glyphs_path.join("glyphs.c"));
     configure_lib_nbgl(command, bolos_sdk);
 }
 
