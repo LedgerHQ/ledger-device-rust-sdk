@@ -31,3 +31,6 @@
 #define HAVE_BLE_APDU
 #define BLE_COMMAND_TIMEOUT_MS 2000
 #define BLE_SEGMENT_SIZE 32
+
+#define HAVE_PRINTF
+#define PRINTF mcu_usb_printf

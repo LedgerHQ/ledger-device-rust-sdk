@@ -361,3 +361,13 @@ int c_main(int arg0) {
   }
   return 0;
 }
+
+void mcu_usb_prints(const char *str, unsigned int charcount)
+{
+    unsigned char buf[4];
+    buf[0] = SEPROXYHAL_TAG_PRINTF;
+    buf[1] = charcount >> 8;
+    buf[2] = charcount;
+    io_seproxyhal_spi_send(buf, 3);
+    io_seproxyhal_spi_send((const uint8_t *) str, charcount);
+}
