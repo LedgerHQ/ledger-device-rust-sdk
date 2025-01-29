@@ -49,7 +49,7 @@ extern "C" fn sample_main() {
         .glyph(&FERRIS)
         .show(&my_field);
 
-    NbglSpinner::new().text("Please wait...").show();
+    NbglSpinner::new().show("Please wait...");
 
     // Simulate an idle state of the app where it just
     // waits for some event to happen (such as APDU reception), going through
