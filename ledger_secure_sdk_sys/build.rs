@@ -599,19 +599,12 @@ impl SDKBuilder {
 
                 bindings = bindings.clang_args([
                     format!("-I{bsdk}/lib_nbgl/include/").as_str(),
-                    format!("-I{bsdk}/lib_ux_sync/include/").as_str(),
                     format!("-I{bsdk}/lib_ux_nbgl/").as_str(),
                 ]);
                 bindings = bindings
                     .header(
                         self.bolos_sdk
                             .join("lib_nbgl/include/nbgl_use_case.h")
-                            .to_str()
-                            .unwrap(),
-                    )
-                    .header(
-                        self.bolos_sdk
-                            .join("lib_ux_sync/include/ux_sync.h")
                             .to_str()
                             .unwrap(),
                     )
@@ -839,12 +832,10 @@ fn configure_lib_nbgl(command: &mut cc::Build, bolos_sdk: &Path) {
         .flag("-fms-extensions")
         .include(bolos_sdk.join("lib_nbgl/include/"))
         .include(bolos_sdk.join("lib_nbgl/include/fonts/"))
-        .include(bolos_sdk.join("lib_ux_sync/include/"))
         .include(bolos_sdk.join("lib_ux_nbgl/"))
         .include(bolos_sdk.join("qrcode/include/"))
         .include(bolos_sdk.join("lib_bagl/include/"))
         .file(bolos_sdk.join("lib_ux_nbgl/ux.c"))
-        .file(bolos_sdk.join("lib_ux_sync/src/ux_sync.c"))
         .file(bolos_sdk.join("lib_bagl/src/bagl_fonts.c"))
         .file(bolos_sdk.join("src/os_printf.c"))
         .file(bolos_sdk.join("qrcode/src/qrcodegen.c"))
