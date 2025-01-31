@@ -217,7 +217,7 @@ pub fn sign_tx_params(arg0: u32) -> CreateTxParams {
     }
 
     #[cfg(any(target_os = "stax", target_os = "flex"))]
-    NbglSpinner::new().text("Signing").show();
+    NbglSpinner::new().show("Signing");
 
     create_tx_params
 }
