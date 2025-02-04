@@ -279,6 +279,7 @@ void c_boot_std() {
     io_seproxyhal_spi_send(c, 4);
 #endif
 
+#ifndef TARGET_NANOS
     // Warn UX layer of io reset to avoid unwanted pin lock
     memset(&G_ux_params, 0, sizeof(G_ux_params));
     G_ux_params.ux_id = BOLOS_UX_IO_RESET;
@@ -291,6 +292,7 @@ void c_boot_std() {
             break;
         }
     }
+#endif
 
 #ifdef HAVE_BLE
     unsigned int plane = G_io_app.plane_mode;
