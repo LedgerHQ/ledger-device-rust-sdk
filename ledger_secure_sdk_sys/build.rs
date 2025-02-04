@@ -319,7 +319,8 @@ impl SDKBuilder {
             .trim();
 
         let gcc_toolchain = if sysroot.is_empty() {
-            String::from("/usr")
+            // path for Debian-based systems
+            String::from("/usr/lib/arm-none-eabi")
         } else {
             format!("{sysroot}")
         };
