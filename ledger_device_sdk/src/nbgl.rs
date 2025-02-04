@@ -8,9 +8,6 @@ use core::ffi::{c_char, c_int};
 use core::mem::transmute;
 use ledger_secure_sdk_sys::*;
 
-#[no_mangle]
-static mut G_ux_params: bolos_ux_params_t = unsafe { const_zero!(bolos_ux_params_t) };
-
 pub mod nbgl_address_review;
 pub mod nbgl_choice;
 pub mod nbgl_generic_review;
