@@ -51,6 +51,20 @@ enum Device {
     NanoX,
     Stax,
     Flex,
+    Unknown,
+}
+
+impl From<&str> for Device {
+    fn from(s: &str) -> Self {
+        match s {
+            "nanos" => Device::NanoS,
+            "nanosplus" => Device::NanoSPlus,
+            "nanox" => Device::NanoX,
+            "stax" => Device::Stax,
+            "flex" => Device::Flex,
+            _s => Device::Unknown,
+        }
+    }
 }
 
 impl std::fmt::Display for Device {
@@ -61,13 +75,13 @@ impl std::fmt::Display for Device {
             Device::NanoX => write!(f, "nanox"),
             Device::Stax => write!(f, "stax"),
             Device::Flex => write!(f, "flex"),
+            Device::Unknown => write!(f, "unknown"),
         }
     }
 }
 
 #[derive(Default)]
-struct SDKInfo {
-    pub bolos_sdk: PathBuf,
+struct CSDKInfo {
     pub api_level: Option<u32>,
     pub target_id: String,
     pub target_name: String,
@@ -76,20 +90,18 @@ struct SDKInfo {
     pub c_sdk_version: String,
 }
 
-impl SDKInfo {
+impl CSDKInfo {
     pub fn new() -> Self {
-        SDKInfo::default()
+        CSDKInfo::default()
     }
 }
 
-fn retrieve_sdk_info(device: &Device, path: &Path) -> Result<SDKInfo, SDKBuildError> {
-    let mut sdk_info = SDKInfo::new();
-    sdk_info.bolos_sdk = path.to_path_buf();
-    (sdk_info.api_level, sdk_info.c_sdk_name) = retrieve_makefile_infos(&sdk_info.bolos_sdk)?;
-    (sdk_info.target_id, sdk_info.target_name) =
-        retrieve_target_file_infos(device, &sdk_info.bolos_sdk)?;
-    (sdk_info.c_sdk_hash, sdk_info.c_sdk_version) = retrieve_sdk_git_info(&sdk_info.bolos_sdk);
-    Ok(sdk_info)
+fn retrieve_sdk_info(device: &Device, path: &PathBuf) -> Result<CSDKInfo, SDKBuildError> {
+    let mut csdk_info = CSDKInfo::new();
+    (csdk_info.api_level, csdk_info.c_sdk_name) = retrieve_makefile_infos(path)?;
+    (csdk_info.target_id, csdk_info.target_name) = retrieve_target_file_infos(device, path)?;
+    (csdk_info.c_sdk_hash, csdk_info.c_sdk_version) = retrieve_sdk_git_info(path);
+    Ok(csdk_info)
 }
 
 fn retrieve_sdk_git_info(bolos_sdk: &Path) -> (String, String) {
@@ -230,6 +242,7 @@ fn clone_sdk(device: &Device) -> PathBuf {
             Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
             "API_LEVEL_22",
         ),
+        Device::Unknown => panic!("Unknown device"),
     };
 
     let out_dir = env::var("OUT_DIR").unwrap();
@@ -249,6 +262,7 @@ fn clone_sdk(device: &Device) -> PathBuf {
 
 #[derive(Debug)]
 enum SDKBuildError {
+    UnknownDevice,
     InvalidAPILevel,
     MissingSDKName,
     TargetFileNotFound,
@@ -306,7 +320,7 @@ impl SDKBuilder {
         }
     }
 
-    pub fn gcc_toolchain(&mut self) {
+    pub fn gcc_toolchain(&mut self) -> Result<(), SDKBuildError> {
         // Find out where the arm toolchain is located
         let output = Command::new("arm-none-eabi-gcc")
             .arg("-print-sysroot")
@@ -325,36 +339,35 @@ impl SDKBuilder {
             format!("{sysroot}")
         };
         self.gcc_toolchain = PathBuf::from(gcc_toolchain);
+        Ok(())
     }
 
-    pub fn device(&mut self) {
+    pub fn device(&mut self) -> Result<(), SDKBuildError> {
         // determine device
-        let device = match env::var_os("CARGO_CFG_TARGET_OS").unwrap().to_str().unwrap() {
-            "nanos" => Device::NanoS,
-            "nanosplus" => Device::NanoSPlus,
-            "nanox" => Device::NanoX,
-            "stax" => Device::Stax,
-            "flex" => Device::Flex,
-            target_name => panic!(
-                "invalid target `{target_name}`, expected one of `nanos`, `nanox`, `nanosplus`. Run with `-Z build-std=core --target=./<target name>.json`"
-            ),
-        };
-        self.device = device;
-        // export TARGET into env for 'infos.rs'
-        println!("cargo:rustc-env=TARGET={}", self.device);
-        println!("cargo:warning=Device is {:?}", self.device);
+        self.device = env::var_os("CARGO_CFG_TARGET_OS")
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .into();
+
+        if self.device == Device::Unknown {
+            return Err(SDKBuildError::UnknownDevice);
+        } else {
+            // export TARGET into env for 'infos.rs'
+            println!("cargo:rustc-env=TARGET={}", self.device);
+            println!("cargo:warning=Device is {:?}", self.device);
+            Ok(())
+        }
     }
 
     pub fn bolos_sdk(&mut self) -> Result<(), SDKBuildError> {
         println!("cargo:rerun-if-env-changed=LEDGER_SDK_PATH");
-        let sdk_path = match env::var("LEDGER_SDK_PATH") {
+        self.bolos_sdk = match env::var("LEDGER_SDK_PATH") {
             Err(_) => clone_sdk(&self.device),
             Ok(path) => PathBuf::from(path),
         };
 
-        let sdk_info = retrieve_sdk_info(&self.device, &sdk_path)?;
-
-        self.bolos_sdk = sdk_info.bolos_sdk;
+        let sdk_info = retrieve_sdk_info(&self.device, &self.bolos_sdk)?;
 
         match sdk_info.api_level {
             Some(api_level) => {
@@ -415,6 +428,7 @@ impl SDKBuilder {
             Device::NanoSPlus => out_path.join("glyphs_nanosplus"),
             Device::NanoX => out_path.join("glyphs_nanox"),
             Device::NanoS => panic!("Nano S does not support glyphs"),
+            Device::Unknown => panic!("Unknown device"),
         };
         if !dest_path.exists() {
             fs::create_dir_all(&dest_path).ok();
@@ -508,6 +522,7 @@ impl SDKBuilder {
             Device::NanoSPlus => finalize_nanosplus_configuration(&mut command, &self.bolos_sdk),
             Device::Stax => finalize_stax_configuration(&mut command, &self.bolos_sdk),
             Device::Flex => finalize_flex_configuration(&mut command, &self.bolos_sdk),
+            Device::Unknown => panic!("Unknown device"),
         };
 
         // Add the defines found in the Makefile.conf.cx to our build command.
@@ -578,6 +593,7 @@ impl SDKBuilder {
             Device::NanoSPlus => ("nanos2", "sdk_nanosp.h"),
             Device::Stax => ("stax", "sdk_stax.h"),
             Device::Flex => ("flex", "sdk_flex.h"),
+            Device::Unknown => panic!("Unknown device"),
         };
         bindings = bindings.clang_arg(format!("-I{bsdk}/target/{include_path}/include/"));
         bindings = bindings.header(header);
@@ -677,11 +693,12 @@ impl SDKBuilder {
 
 fn main() {
     let mut sdk_builder = SDKBuilder::new();
-    sdk_builder.gcc_toolchain();
-    sdk_builder.device();
+    sdk_builder.gcc_toolchain().unwrap();
+    sdk_builder.device().unwrap();
     sdk_builder.bolos_sdk().unwrap();
     sdk_builder.cxdefines();
     sdk_builder.generate_glyphs();
+
     sdk_builder.build_c_sdk();
     sdk_builder.generate_bindings();
     sdk_builder.generate_heap_size();
