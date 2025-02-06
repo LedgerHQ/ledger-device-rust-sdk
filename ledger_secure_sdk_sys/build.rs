@@ -521,7 +521,8 @@ impl SDKBuilder {
         let mut path = self.bolos_sdk.display().to_string();
         match self.device {
             Device::NanoS => {
-                path = self.gcc_toolchain.display().to_string().push_str("/lib");
+                path = self.gcc_toolchain.display().to_string();
+                path.push_str("/lib");
             }
             Device::NanoX => {
                 path.push_str("/arch/st33/lib");
