@@ -518,9 +518,21 @@ impl SDKBuilder {
         command.compile("ledger-secure-sdk");
 
         /* Link with libc for unresolved symbols */
-        let gcc_tc = self.gcc_toolchain.display().to_string();
+        let mut path = self.bolos_sdk.display().to_string();
+        match self.device {
+            Device::NanoS => {
+                path = self.gcc_toolchain.display().to_string();
+                path.push_str("/lib");
+            }
+            Device::NanoX => {
+                path.push_str("/arch/st33/lib");
+            }
+            Device::NanoSPlus | Device::Flex | Device::Stax => {
+                path.push_str("/arch/st33k1/lib");
+            }
+        };
         println!("cargo:rustc-link-lib=c");
-        println!("cargo:rustc-link-search={gcc_tc}/lib");
+        println!("cargo:rustc-link-search={path}");
     }
 
     fn generate_bindings(&self) {
