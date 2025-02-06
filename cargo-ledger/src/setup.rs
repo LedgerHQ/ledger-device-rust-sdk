@@ -1,19 +1,39 @@
 use std::path::Path;
 use std::process::Command;
+use std::str::from_utf8;
 
 pub fn install_targets() {
-    println!("[ ] Checking for installed custom targets...");
+    println!("[ ] Install custom targets...");
     // Check if target files are installed
+    let mut args: Vec<String> = vec![];
+    match std::env::var("RUST_NIGHTLY") {
+        Ok(version) => {
+            println!(
+                "Install custom targets for nightly toolchain: {}",
+                version
+            );
+            args.push(format!("+{}", version));
+        }
+        Err(_) => {
+            let rustup_cmd =
+                Command::new("rustup").arg("default").output().unwrap();
+            println!(
+                "Install custom targets for default toolchain {}",
+                from_utf8(rustup_cmd.stdout.as_slice()).unwrap()
+            );
+        }
+    }
+    args.push(String::from("--print"));
+    args.push(String::from("sysroot"));
     let sysroot_cmd = Command::new("rustc")
-        .arg("--print")
-        .arg("sysroot")
+        .args(&args)
         .output()
         .expect("failed to call rustc")
         .stdout;
     let sysroot_cmd = std::str::from_utf8(&sysroot_cmd).unwrap().trim();
 
     let target_files_url = Path::new(
-        "https://raw.githubusercontent.com/LedgerHQ/ledger-device-rust-sdk/y333/nbgl_support_for_nanos/cargo-ledger/custom_files"
+        "https://raw.githubusercontent.com/LedgerHQ/ledger-device-rust-sdk/y333/nbgl_support_for_nanos/ledger_secure_sdk_sys"
     );
     let sysroot = Path::new(sysroot_cmd).join("lib").join("rustlib");
 
