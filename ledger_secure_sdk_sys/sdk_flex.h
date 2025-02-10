@@ -1,19 +1,19 @@
-#define HAVE_SPRINTF
-#define HAVE_LOCAL_APDU_BUFFER
+// Standard Defines
 #define IO_HID_EP_LENGTH 64
-#define USB_SEGMENT_SIZE 64
-#define OS_IO_SEPROXYHAL
+#define HAVE_SPRINTF
+#define HAVE_SNPRINTF_FORMAT_U
 #define HAVE_IO_USB
 #define HAVE_L4_USBLIB
+#define IO_USB_MAX_ENDPOINTS 4
 #define HAVE_USB_APDU
-#define __IO volatile
-#define IO_USB_MAX_ENDPOINTS 6
+#define USB_SEGMENT_SIZE 64
+#define OS_IO_SEPROXYHAL
+#define HAVE_LOCAL_APDU_BUFFER
 #define IO_SEPROXYHAL_BUFFER_SIZE_B 300
+#define __IO volatile
 #define main _start
 
-#define NBGL_QRCODE
-
-// from Makefile.defines
+// NBGL
 #define HAVE_BAGL_FONT_INTER_REGULAR_28PX
 #define HAVE_BAGL_FONT_INTER_SEMIBOLD_28PX
 #define HAVE_BAGL_FONT_INTER_MEDIUM_36PX
@@ -27,7 +27,30 @@
 #define SCREEN_SIZE_WALLET
 #define HAVE_FAST_HOLD_TO_APPROVE
 
+// WEB USB
+//#define HAVE_WEBUSB 
+//#define WEBUSB_URL_SIZE_B 
+//#define WEBUSB_URL
+
+// BLE SUPPORT
 #define HAVE_BLE
 #define HAVE_BLE_APDU
 #define BLE_COMMAND_TIMEOUT_MS 2000
 #define BLE_SEGMENT_SIZE 32
+#define HAVE_INAPP_BLE_PAIRING
+
+// NFC SUPPORT
+//#define HAVE_NFC
+//#define HAVE_NFC_READER
+
+// APP STORAGE
+//#define HAVE_APP_STORAGE
+
+// NBGL QRCODE
+#define NBGL_QRCODE 
+
+// NBGL KEYBOARD
+//#define NBGL_KEYBOARD
+
+// NBGL KEYPAD
+//#define NBGL_KEYPAD

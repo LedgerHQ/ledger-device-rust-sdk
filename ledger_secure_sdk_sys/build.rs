@@ -66,8 +66,7 @@ impl std::fmt::Display for Device {
 }
 
 #[derive(Default)]
-struct SDKInfo {
-    pub bolos_sdk: PathBuf,
+struct CSDKInfo {
     pub api_level: Option<u32>,
     pub target_id: String,
     pub target_name: String,
@@ -76,23 +75,21 @@ struct SDKInfo {
     pub c_sdk_version: String,
 }
 
-impl SDKInfo {
+impl CSDKInfo {
     pub fn new() -> Self {
-        SDKInfo::default()
+        CSDKInfo::default()
     }
 }
 
-fn retrieve_sdk_info(device: &Device, path: &Path) -> Result<SDKInfo, SDKBuildError> {
-    let mut sdk_info = SDKInfo::new();
-    sdk_info.bolos_sdk = path.to_path_buf();
-    (sdk_info.api_level, sdk_info.c_sdk_name) = retrieve_makefile_infos(&sdk_info.bolos_sdk)?;
-    (sdk_info.target_id, sdk_info.target_name) =
-        retrieve_target_file_infos(device, &sdk_info.bolos_sdk)?;
-    (sdk_info.c_sdk_hash, sdk_info.c_sdk_version) = retrieve_sdk_git_info(&sdk_info.bolos_sdk);
-    Ok(sdk_info)
+fn retrieve_csdk_info(device: &Device, path: &PathBuf) -> Result<CSDKInfo, SDKBuildError> {
+    let mut csdk_info = CSDKInfo::new();
+    (csdk_info.api_level, csdk_info.c_sdk_name) = retrieve_makefile_infos(path)?;
+    (csdk_info.target_id, csdk_info.target_name) = retrieve_target_file_infos(device, path)?;
+    (csdk_info.c_sdk_hash, csdk_info.c_sdk_version) = retrieve_csdk_git_info(path);
+    Ok(csdk_info)
 }
 
-fn retrieve_sdk_git_info(bolos_sdk: &Path) -> (String, String) {
+fn retrieve_csdk_git_info(bolos_sdk: &Path) -> (String, String) {
     let c_sdk_hash = match Command::new("git")
         .arg("-C")
         .arg(bolos_sdk)
@@ -120,7 +117,6 @@ fn retrieve_sdk_git_info(bolos_sdk: &Path) -> (String, String) {
         .arg(bolos_sdk)
         .arg("describe")
         .arg("--tags")
-        .arg("--exact-match")
         .arg("--match")
         .arg("v[0-9]*")
         .arg("--dirty")
@@ -128,10 +124,10 @@ fn retrieve_sdk_git_info(bolos_sdk: &Path) -> (String, String) {
         .ok()
     {
         Some(output) => {
-            if output.stdout.is_empty() {
-                "None".to_string()
-            } else {
+            if output.status.success() {
                 String::from_utf8(output.stdout).unwrap_or("None".to_string())
+            } else {
+                String::from_utf8(output.stderr).unwrap_or("None".to_string())
             }
         }
         None => "None".to_string(),
@@ -140,24 +136,35 @@ fn retrieve_sdk_git_info(bolos_sdk: &Path) -> (String, String) {
 }
 
 fn retrieve_makefile_infos(bolos_sdk: &Path) -> Result<(Option<u32>, String), SDKBuildError> {
-    let makefile_defines =
+    let makefile =
         File::open(bolos_sdk.join("Makefile.defines")).expect("Could not find Makefile.defines");
     let mut api_level: Option<u32> = None;
-    let mut sdk_name: Option<String> = None;
-    for line in BufReader::new(makefile_defines).lines().flatten() {
+    for line in BufReader::new(makefile).lines().flatten() {
         if let Some(value) = line.split(":=").nth(1).map(str::trim) {
             if line.contains("API_LEVEL") && api_level.is_none() {
                 api_level = Some(value.parse().map_err(|_| SDKBuildError::InvalidAPILevel)?);
-            } else if line.contains("SDK_NAME") && sdk_name.is_none() {
-                sdk_name = Some(value.to_string().replace('\"', ""));
             }
         }
-
-        if api_level.is_some() && sdk_name.is_some() {
-            // Both keys found, break out of the loop
+        if api_level.is_some() {
+            // Key found, break out of the loop
             break;
         }
     }
+    let makefile =
+        File::open(bolos_sdk.join("Makefile.target")).expect("Could not find Makefile.defines");
+    let mut sdk_name: Option<String> = None;
+    for line in BufReader::new(makefile).lines().flatten() {
+        if let Some(value) = line.split(":=").nth(1).map(str::trim) {
+            if line.contains("SDK_NAME") && sdk_name.is_none() {
+                sdk_name = Some(value.to_string().replace('\"', ""));
+            }
+        }
+        if sdk_name.is_some() {
+            // Key found, break out of the loop
+            break;
+        }
+    }
+
     let sdk_name = sdk_name.ok_or(SDKBuildError::MissingSDKName)?;
     Ok((api_level, sdk_name))
 }
@@ -186,7 +193,10 @@ fn retrieve_target_file_infos(
                     .map_err(|_| SDKBuildError::MissingTargetId)?
                     .to_string(),
             );
-        } else if target_name.is_none() && line.contains("TARGET_") {
+        } else if target_name.is_none()
+            && line.contains("#define TARGET_")
+            && !line.contains("#define TARGET_ID")
+        {
             target_name = Some(
                 line.split_whitespace()
                     .nth(1)
@@ -249,6 +259,7 @@ fn clone_sdk(device: &Device) -> PathBuf {
 
 #[derive(Debug)]
 enum SDKBuildError {
+    UnsupportedDevice,
     InvalidAPILevel,
     MissingSDKName,
     TargetFileNotFound,
@@ -292,6 +303,7 @@ struct SDKBuilder {
     api_level: u32,
     gcc_toolchain: PathBuf,
     device: Device,
+    glyphs_folders: Vec<PathBuf>,
     cxdefines: Vec<String>,
 }
 
@@ -302,11 +314,12 @@ impl SDKBuilder {
             api_level: 0,
             gcc_toolchain: PathBuf::new(),
             device: Device::NanoS,
+            glyphs_folders: Vec::new(),
             cxdefines: Vec::new(),
         }
     }
 
-    pub fn gcc_toolchain(&mut self) {
+    pub fn gcc_toolchain(&mut self) -> Result<(), SDKBuildError> {
         // Find out where the arm toolchain is located
         let output = Command::new("arm-none-eabi-gcc")
             .arg("-print-sysroot")
@@ -325,37 +338,40 @@ impl SDKBuilder {
             format!("{sysroot}")
         };
         self.gcc_toolchain = PathBuf::from(gcc_toolchain);
+        Ok(())
     }
 
-    pub fn device(&mut self) {
+    pub fn device(&mut self) -> Result<(), SDKBuildError> {
         // determine device
-        let device = match env::var_os("CARGO_CFG_TARGET_OS").unwrap().to_str().unwrap() {
+        self.device = match env::var_os("CARGO_CFG_TARGET_OS")
+            .unwrap()
+            .to_str()
+            .unwrap()
+        {
             "nanos" => Device::NanoS,
             "nanosplus" => Device::NanoSPlus,
             "nanox" => Device::NanoX,
             "stax" => Device::Stax,
             "flex" => Device::Flex,
-            target_name => panic!(
-                "invalid target `{target_name}`, expected one of `nanos`, `nanox`, `nanosplus`. Run with `-Z build-std=core --target=./<target name>.json`"
-            ),
+            _ => {
+                return Err(SDKBuildError::UnsupportedDevice);
+            }
         };
-        self.device = device;
+
         // export TARGET into env for 'infos.rs'
         println!("cargo:rustc-env=TARGET={}", self.device);
         println!("cargo:warning=Device is {:?}", self.device);
+        Ok(())
     }
 
     pub fn bolos_sdk(&mut self) -> Result<(), SDKBuildError> {
         println!("cargo:rerun-if-env-changed=LEDGER_SDK_PATH");
-        let sdk_path = match env::var("LEDGER_SDK_PATH") {
+        self.bolos_sdk = match env::var("LEDGER_SDK_PATH") {
             Err(_) => clone_sdk(&self.device),
             Ok(path) => PathBuf::from(path),
         };
 
-        let sdk_info = retrieve_sdk_info(&self.device, &sdk_path)?;
-
-        self.bolos_sdk = sdk_info.bolos_sdk;
-
+        let sdk_info = retrieve_csdk_info(&self.device, &self.bolos_sdk)?;
         match sdk_info.api_level {
             Some(api_level) => {
                 self.api_level = api_level;
@@ -369,6 +385,31 @@ impl SDKBuilder {
                 }
             }
         }
+
+        // set glyphs folders
+        match self.device {
+            Device::Flex => {
+                self.glyphs_folders
+                    .push(self.bolos_sdk.join("lib_nbgl/glyphs/wallet"));
+                self.glyphs_folders
+                    .push(self.bolos_sdk.join("lib_nbgl/glyphs/64px"));
+                self.glyphs_folders
+                    .push(self.bolos_sdk.join("lib_nbgl/glyphs/40px"));
+            }
+            Device::Stax => {
+                self.glyphs_folders
+                    .push(self.bolos_sdk.join("lib_nbgl/glyphs/wallet"));
+                self.glyphs_folders
+                    .push(self.bolos_sdk.join("lib_nbgl/glyphs/64px"));
+                self.glyphs_folders
+                    .push(self.bolos_sdk.join("lib_nbgl/glyphs/32px"));
+            }
+            _ => {
+                self.glyphs_folders
+                    .push(self.bolos_sdk.join("lib_nbgl/glyphs/nano"));
+            }
+        }
+
         // Export other SDK infos into env for 'infos.rs'
         println!("cargo:rustc-env=TARGET_ID={}", sdk_info.target_id);
         println!("cargo:warning=TARGET_ID is {}", sdk_info.target_id);
@@ -383,7 +424,7 @@ impl SDKBuilder {
         Ok(())
     }
 
-    fn cxdefines(&mut self) {
+    fn cxdefines(&mut self) -> Result<(), SDKBuildError> {
         let mut makefile = File::open(self.bolos_sdk.join("Makefile.conf.cx"))
             .expect("Could not find Makefile.conf.cx");
         let mut content = String::new();
@@ -399,42 +440,20 @@ impl SDKBuilder {
 
         cxdefines.push("NATIVE_LITTLE_ENDIAN".to_string());
         self.cxdefines = cxdefines;
+        Ok(())
     }
 
-    pub fn generate_glyphs(&self) {
+    pub fn generate_glyphs(&self) -> Result<(), SDKBuildError> {
         if self.device == Device::NanoS {
-            return;
+            return Err(SDKBuildError::UnsupportedDevice);
         }
 
         let icon2glyph = self.bolos_sdk.join("lib_nbgl/tools/icon2glyph.py");
 
         let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-        let dest_path = match self.device {
-            Device::Flex => out_path.join("glyphs_flex"),
-            Device::Stax => out_path.join("glyphs_stax"),
-            Device::NanoSPlus => out_path.join("glyphs_nanosplus"),
-            Device::NanoX => out_path.join("glyphs_nanox"),
-            Device::NanoS => panic!("Nano S does not support glyphs"),
-        };
+        let dest_path = out_path.join("glyphs");
         if !dest_path.exists() {
             fs::create_dir_all(&dest_path).ok();
-        }
-
-        let mut glyph_folders: Vec<PathBuf> = Vec::new();
-        match self.device {
-            Device::Flex => {
-                glyph_folders.push(self.bolos_sdk.join("lib_nbgl/glyphs/wallet"));
-                glyph_folders.push(self.bolos_sdk.join("lib_nbgl/glyphs/64px"));
-                glyph_folders.push(self.bolos_sdk.join("lib_nbgl/glyphs/40px"));
-            }
-            Device::Stax => {
-                glyph_folders.push(self.bolos_sdk.join("lib_nbgl/glyphs/wallet"));
-                glyph_folders.push(self.bolos_sdk.join("lib_nbgl/glyphs/64px"));
-                glyph_folders.push(self.bolos_sdk.join("lib_nbgl/glyphs/32px"));
-            }
-            _ => {
-                glyph_folders.push(self.bolos_sdk.join("lib_nbgl/glyphs/nano"));
-            }
         }
 
         let mut cmd = Command::new(icon2glyph.as_os_str());
@@ -443,7 +462,7 @@ impl SDKBuilder {
             .arg("--glyphcfile")
             .arg(dest_path.join("glyphs.c").as_os_str());
 
-        for folder in glyph_folders.iter() {
+        for folder in self.glyphs_folders.iter() {
             for file in std::fs::read_dir(folder).unwrap() {
                 let path = file.unwrap().path();
                 let path_str = path.to_str().unwrap().to_string();
@@ -452,6 +471,7 @@ impl SDKBuilder {
         }
 
         let _ = cmd.output();
+        Ok(())
     }
 
     pub fn build_c_sdk(&self) {
@@ -484,13 +504,20 @@ impl SDKBuilder {
             .debug(true)
             .flag("-Oz")
             .flag("-fomit-frame-pointer")
+            .flag("-momit-leaf-frame-pointer")
             .flag("-fno-common")
+            .flag("-mlittle-endian")
+            .flag("-std=gnu99")
             .flag("-fdata-sections")
             .flag("-ffunction-sections")
-            .flag("-mthumb")
-            .flag("-fno-jump-tables")
+            .flag("-funsigned-char")
             .flag("-fshort-enums")
             .flag("-mno-unaligned-access")
+            .flag("-fropi")
+            .flag("-mthumb")
+            .flag("-fno-jump-tables")
+            .flag("-nostdlib")
+            .flag("-nodefaultlibs")
             .flag("-Wno-unused-command-line-argument")
             .clone();
 
@@ -587,52 +614,53 @@ impl SDKBuilder {
             bindings = bindings.header(header);
         }
 
+        // BAGL or NBGL bindings
         match self.device {
             Device::NanoS => {
                 bindings = bindings.header(self.bolos_sdk.join("include/bagl.h").to_str().unwrap())
             }
-            Device::NanoX => {
+            Device::NanoSPlus | Device::NanoX | Device::Stax | Device::Flex => {
+                if ((self.device == Device::NanoX || self.device == Device::NanoSPlus)
+                    && env::var_os("CARGO_FEATURE_NBGL").is_some())
+                    || self.device == Device::Stax
+                    || self.device == Device::Flex
+                {
+                    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+                    let mut include_path = "-I".to_string();
+                    let glyphs = out_path.join("glyphs");
+                    include_path += glyphs.to_str().unwrap();
+                    bindings = bindings.clang_args([include_path.as_str()]);
+
+                    bindings = bindings.clang_args([
+                        format!("-I{bsdk}/lib_nbgl/include/").as_str(),
+                        format!("-I{bsdk}/lib_ux_nbgl/").as_str(),
+                    ]);
+                    bindings = bindings
+                        .header(
+                            self.bolos_sdk
+                                .join("lib_nbgl/include/nbgl_use_case.h")
+                                .to_str()
+                                .unwrap(),
+                        )
+                        .header(
+                            self.bolos_sdk
+                                .join("lib_ux_nbgl/ux_nbgl.h")
+                                .to_str()
+                                .unwrap(),
+                        );
+                }
+            }
+        }
+
+        // BLE bindings
+        match self.device {
+            Device::NanoX | Device::Flex | Device::Stax => {
                 bindings = bindings.header(
                     self.bolos_sdk
                         .join("lib_blewbxx_impl/include/ledger_ble.h")
                         .to_str()
                         .unwrap(),
                 )
-            }
-            Device::Stax | Device::Flex => {
-                let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-                let mut include_path = "-I".to_string();
-                let glyphs = match self.device {
-                    Device::Stax => out_path.join("glyphs_stax"),
-                    Device::Flex => out_path.join("glyphs_flex"),
-                    _ => panic!("Invalid device"),
-                };
-                include_path += glyphs.to_str().unwrap();
-                bindings = bindings.clang_args([include_path.as_str()]);
-
-                bindings = bindings.clang_args([
-                    format!("-I{bsdk}/lib_nbgl/include/").as_str(),
-                    format!("-I{bsdk}/lib_ux_nbgl/").as_str(),
-                ]);
-                bindings = bindings
-                    .header(
-                        self.bolos_sdk
-                            .join("lib_nbgl/include/nbgl_use_case.h")
-                            .to_str()
-                            .unwrap(),
-                    )
-                    .header(
-                        self.bolos_sdk
-                            .join("lib_ux_nbgl/ux_nbgl.h")
-                            .to_str()
-                            .unwrap(),
-                    )
-                    .header(
-                        self.bolos_sdk
-                            .join("lib_blewbxx_impl/include/ledger_ble.h")
-                            .to_str()
-                            .unwrap(),
-                    )
             }
             _ => (),
         }
@@ -677,11 +705,11 @@ impl SDKBuilder {
 
 fn main() {
     let mut sdk_builder = SDKBuilder::new();
-    sdk_builder.gcc_toolchain();
-    sdk_builder.device();
+    sdk_builder.gcc_toolchain().unwrap();
+    sdk_builder.device().unwrap();
     sdk_builder.bolos_sdk().unwrap();
-    sdk_builder.cxdefines();
-    sdk_builder.generate_glyphs();
+    sdk_builder.cxdefines().unwrap();
+    sdk_builder.generate_glyphs().unwrap();
     sdk_builder.build_c_sdk();
     sdk_builder.generate_bindings();
     sdk_builder.generate_heap_size();
@@ -696,8 +724,6 @@ fn finalize_nanos_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
     command
         .target("thumbv6m-none-eabi")
         .define("ST31", None)
-        .define("BAGL_HEIGHT", Some("32"))
-        .define("BAGL_WIDTH", Some("128"))
         .include(bolos_sdk.join("target/nanos/include"))
         .flag("-fropi");
 }
@@ -711,8 +737,6 @@ fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
     command
         .target("thumbv6m-none-eabi")
         .define("ST33", None)
-        .define("BAGL_HEIGHT", Some("64"))
-        .define("BAGL_WIDTH", Some("128"))
         .file(bolos_sdk.join("src/ledger_protocol.c"))
         .file(bolos_sdk.join("lib_blewbxx/core/auto/ble_gap_aci.c"))
         .file(bolos_sdk.join("lib_blewbxx/core/auto/ble_gatt_aci.c"))
@@ -731,7 +755,17 @@ fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
         .flag("-ffixed-r9")
         .flag("-fropi")
         .flag("-frwpi");
-    configure_lib_bagl(command, bolos_sdk);
+
+    if env::var_os("CARGO_FEATURE_NBGL").is_some() {
+        println!("cargo:warning=NBGL is built");
+        command.define("HAVE_NBGL", None);
+        command.define("NBGL_STEP", None);
+        command.define("NBGL_USE_CASE", None);
+        configure_lib_nbgl(command, bolos_sdk);
+    } else {
+        println!("cargo:warning=BAGL is built");
+        command.define("HAVE_BAGL", None);
+    }
 }
 
 fn finalize_nanosplus_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
@@ -743,39 +777,19 @@ fn finalize_nanosplus_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
     command
         .target("thumbv8m.main-none-eabi")
         .define("ST33K1M5", None)
-        .define("BAGL_HEIGHT", Some("64"))
-        .define("BAGL_WIDTH", Some("128"))
         .include(bolos_sdk.join("target/nanos2/include"))
         .flag("-fropi")
         .flag("-frwpi");
-    configure_lib_bagl(command, bolos_sdk);
-}
 
-fn configure_lib_bagl(command: &mut cc::Build, bolos_sdk: &Path) {
-    if env::var_os("CARGO_FEATURE_LIB_BAGL").is_some() {
-        command
-            .define("HAVE_BAGL", None)
-            // Just include all the fonts for now; we can shrink the X and S+ images later.
-            .define("HAVE_BAGL_FONT_LUCIDA_CONSOLE_8PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16_22PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_REGULAR_8_11PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_REGULAR_10_13PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_REGULAR_11_14PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_REGULAR_13_18PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_REGULAR_22_30PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_SEMIBOLD_8_11PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_EXTRABOLD_11PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_REGULAR_11PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_SEMIBOLD_10_13PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_SEMIBOLD_11_16PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_SEMIBOLD_13_18PX", None)
-            .define("HAVE_BAGL_FONT_SYMBOLS_0", None)
-            .define("HAVE_BAGL_FONT_SYMBOLS_1", None)
-            .include(bolos_sdk.join("lib_bagl/src/"))
-            .file(bolos_sdk.join("lib_bagl/src/bagl.c"))
-            .file(bolos_sdk.join("lib_bagl/src/bagl_fonts.c"))
-            .file(bolos_sdk.join("lib_bagl/src/bagl_glyphs.c"));
+    if env::var_os("CARGO_FEATURE_NBGL").is_some() {
+        println!("cargo:warning=NBGL is built");
+        command.define("HAVE_NBGL", None);
+        command.define("NBGL_STEP", None);
+        command.define("NBGL_USE_CASE", None);
+        configure_lib_nbgl(command, bolos_sdk);
+    } else {
+        println!("cargo:warning=BAGL is built");
+        command.define("HAVE_BAGL", None);
     }
 }
 
@@ -785,7 +799,6 @@ fn finalize_stax_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
         command.define(define.as_str(), value.as_deref());
     }
 
-    let glyphs_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("glyphs_stax");
     command
         .target("thumbv8m.main-none-eabi")
         .file(bolos_sdk.join("src/ledger_protocol.c"))
@@ -803,9 +816,7 @@ fn finalize_stax_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
         .include(bolos_sdk.join("lib_blewbxx_impl/include"))
         .include(bolos_sdk.join("target/stax/include/"))
         .flag("-fropi")
-        .flag("-frwpi")
-        .include(&glyphs_path)
-        .file(glyphs_path.join("glyphs.c"));
+        .flag("-frwpi");
     configure_lib_nbgl(command, bolos_sdk);
 }
 
@@ -815,7 +826,6 @@ fn finalize_flex_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
         command.define(define.as_str(), value.as_deref());
     }
 
-    let glyphs_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("glyphs_flex");
     command
         .target("thumbv8m.main-none-eabi")
         .file(bolos_sdk.join("src/ledger_protocol.c"))
@@ -833,13 +843,12 @@ fn finalize_flex_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
         .include(bolos_sdk.join("lib_blewbxx_impl/include"))
         .include(bolos_sdk.join("target/flex/include/"))
         .flag("-fropi")
-        .flag("-frwpi")
-        .include(&glyphs_path)
-        .file(glyphs_path.join("glyphs.c"));
+        .flag("-frwpi");
     configure_lib_nbgl(command, bolos_sdk);
 }
 
 fn configure_lib_nbgl(command: &mut cc::Build, bolos_sdk: &Path) {
+    let glyphs_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("glyphs");
     command
         .flag("-Wno-microsoft-anon-tag")
         .flag("-fms-extensions")
@@ -857,5 +866,7 @@ fn configure_lib_nbgl(command: &mut cc::Build, bolos_sdk: &Path) {
                 .unwrap()
                 .map(|x| x.unwrap())
                 .collect::<Vec<PathBuf>>(),
-        );
+        )
+        .include(&glyphs_path)
+        .file(glyphs_path.join("glyphs.c"));
 }
