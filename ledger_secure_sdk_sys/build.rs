@@ -504,13 +504,20 @@ impl SDKBuilder {
             .debug(true)
             .flag("-Oz")
             .flag("-fomit-frame-pointer")
+            .flag("-momit-leaf-frame-pointer")
             .flag("-fno-common")
+            .flag("-mlittle-endian")
+            .flag("-std=gnu99")
             .flag("-fdata-sections")
             .flag("-ffunction-sections")
-            .flag("-mthumb")
-            .flag("-fno-jump-tables")
+            .flag("-funsigned-char")
             .flag("-fshort-enums")
             .flag("-mno-unaligned-access")
+            .flag("-fropi")
+            .flag("-mthumb")
+            .flag("-fno-jump-tables")
+            .flag("-nostdlib")
+            .flag("-nodefaultlibs")
             .flag("-Wno-unused-command-line-argument")
             .clone();
 
@@ -607,48 +614,53 @@ impl SDKBuilder {
             bindings = bindings.header(header);
         }
 
+        // BAGL or NBGL bindings
         match self.device {
             Device::NanoS => {
                 bindings = bindings.header(self.bolos_sdk.join("include/bagl.h").to_str().unwrap())
             }
-            Device::NanoX => {
+            Device::NanoSPlus | Device::NanoX | Device::Stax | Device::Flex => {
+                if ((self.device == Device::NanoX || self.device == Device::NanoSPlus)
+                    && env::var_os("CARGO_FEATURE_NBGL").is_some())
+                    || self.device == Device::Stax
+                    || self.device == Device::Flex
+                {
+                    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+                    let mut include_path = "-I".to_string();
+                    let glyphs = out_path.join("glyphs");
+                    include_path += glyphs.to_str().unwrap();
+                    bindings = bindings.clang_args([include_path.as_str()]);
+
+                    bindings = bindings.clang_args([
+                        format!("-I{bsdk}/lib_nbgl/include/").as_str(),
+                        format!("-I{bsdk}/lib_ux_nbgl/").as_str(),
+                    ]);
+                    bindings = bindings
+                        .header(
+                            self.bolos_sdk
+                                .join("lib_nbgl/include/nbgl_use_case.h")
+                                .to_str()
+                                .unwrap(),
+                        )
+                        .header(
+                            self.bolos_sdk
+                                .join("lib_ux_nbgl/ux_nbgl.h")
+                                .to_str()
+                                .unwrap(),
+                        );
+                }
+            }
+        }
+
+        // BLE bindings
+        match self.device {
+            Device::NanoX | Device::Flex | Device::Stax => {
                 bindings = bindings.header(
                     self.bolos_sdk
                         .join("lib_blewbxx_impl/include/ledger_ble.h")
                         .to_str()
                         .unwrap(),
                 )
-            }
-            Device::Stax | Device::Flex => {
-                let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-                let mut include_path = "-I".to_string();
-                let glyphs = out_path.join("glyphs");
-                include_path += glyphs.to_str().unwrap();
-                bindings = bindings.clang_args([include_path.as_str()]);
-
-                bindings = bindings.clang_args([
-                    format!("-I{bsdk}/lib_nbgl/include/").as_str(),
-                    format!("-I{bsdk}/lib_ux_nbgl/").as_str(),
-                ]);
-                bindings = bindings
-                    .header(
-                        self.bolos_sdk
-                            .join("lib_nbgl/include/nbgl_use_case.h")
-                            .to_str()
-                            .unwrap(),
-                    )
-                    .header(
-                        self.bolos_sdk
-                            .join("lib_ux_nbgl/ux_nbgl.h")
-                            .to_str()
-                            .unwrap(),
-                    )
-                    .header(
-                        self.bolos_sdk
-                            .join("lib_blewbxx_impl/include/ledger_ble.h")
-                            .to_str()
-                            .unwrap(),
-                    )
             }
             _ => (),
         }
@@ -712,8 +724,6 @@ fn finalize_nanos_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
     command
         .target("thumbv6m-none-eabi")
         .define("ST31", None)
-        .define("BAGL_HEIGHT", Some("32"))
-        .define("BAGL_WIDTH", Some("128"))
         .include(bolos_sdk.join("target/nanos/include"))
         .flag("-fropi");
 }
@@ -727,8 +737,6 @@ fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
     command
         .target("thumbv6m-none-eabi")
         .define("ST33", None)
-        .define("BAGL_HEIGHT", Some("64"))
-        .define("BAGL_WIDTH", Some("128"))
         .file(bolos_sdk.join("src/ledger_protocol.c"))
         .file(bolos_sdk.join("lib_blewbxx/core/auto/ble_gap_aci.c"))
         .file(bolos_sdk.join("lib_blewbxx/core/auto/ble_gatt_aci.c"))
@@ -747,7 +755,17 @@ fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
         .flag("-ffixed-r9")
         .flag("-fropi")
         .flag("-frwpi");
-    configure_lib_bagl(command, bolos_sdk);
+
+    if env::var_os("CARGO_FEATURE_NBGL").is_some() {
+        println!("cargo:warning=NBGL is built");
+        command.define("HAVE_NBGL", None);
+        command.define("NBGL_STEP", None);
+        command.define("NBGL_USE_CASE", None);
+        configure_lib_nbgl(command, bolos_sdk);
+    } else {
+        println!("cargo:warning=BAGL is built");
+        command.define("HAVE_BAGL", None);
+    }
 }
 
 fn finalize_nanosplus_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
@@ -759,41 +777,19 @@ fn finalize_nanosplus_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
     command
         .target("thumbv8m.main-none-eabi")
         .define("ST33K1M5", None)
-        .define("BAGL_HEIGHT", Some("64"))
-        .define("BAGL_WIDTH", Some("128"))
         .include(bolos_sdk.join("target/nanos2/include"))
         .flag("-fropi")
         .flag("-frwpi");
-    configure_lib_bagl(command, bolos_sdk);
-}
 
-fn configure_lib_bagl(command: &mut cc::Build, bolos_sdk: &Path) {
-    println!("cargo:warning=TEST if LIB_BAGL is built");
-    if env::var_os("CARGO_FEATURE_LIB_BAGL").is_some() {
-        println!("cargo:warning=LIB_BAGL is built");
-        command
-            .define("HAVE_BAGL", None)
-            // Just include all the fonts for now; we can shrink the X and S+ images later.
-            .define("HAVE_BAGL_FONT_LUCIDA_CONSOLE_8PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16_22PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_REGULAR_8_11PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_REGULAR_10_13PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_REGULAR_11_14PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_REGULAR_13_18PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_REGULAR_22_30PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_SEMIBOLD_8_11PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_EXTRABOLD_11PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_REGULAR_11PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_SEMIBOLD_10_13PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_SEMIBOLD_11_16PX", None)
-            .define("HAVE_BAGL_FONT_OPEN_SANS_SEMIBOLD_13_18PX", None)
-            .define("HAVE_BAGL_FONT_SYMBOLS_0", None)
-            .define("HAVE_BAGL_FONT_SYMBOLS_1", None)
-            .include(bolos_sdk.join("lib_bagl/src/"))
-            .file(bolos_sdk.join("lib_bagl/src/bagl.c"))
-            .file(bolos_sdk.join("lib_bagl/src/bagl_fonts.c"))
-            .file(bolos_sdk.join("lib_bagl/src/bagl_glyphs.c"));
+    if env::var_os("CARGO_FEATURE_NBGL").is_some() {
+        println!("cargo:warning=NBGL is built");
+        command.define("HAVE_NBGL", None);
+        command.define("NBGL_STEP", None);
+        command.define("NBGL_USE_CASE", None);
+        configure_lib_nbgl(command, bolos_sdk);
+    } else {
+        println!("cargo:warning=BAGL is built");
+        command.define("HAVE_BAGL", None);
     }
 }
 
@@ -803,7 +799,6 @@ fn finalize_stax_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
         command.define(define.as_str(), value.as_deref());
     }
 
-    let glyphs_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("glyphs");
     command
         .target("thumbv8m.main-none-eabi")
         .file(bolos_sdk.join("src/ledger_protocol.c"))
@@ -821,9 +816,7 @@ fn finalize_stax_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
         .include(bolos_sdk.join("lib_blewbxx_impl/include"))
         .include(bolos_sdk.join("target/stax/include/"))
         .flag("-fropi")
-        .flag("-frwpi")
-        .include(&glyphs_path)
-        .file(glyphs_path.join("glyphs.c"));
+        .flag("-frwpi");
     configure_lib_nbgl(command, bolos_sdk);
 }
 
@@ -833,7 +826,6 @@ fn finalize_flex_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
         command.define(define.as_str(), value.as_deref());
     }
 
-    let glyphs_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("glyphs");
     command
         .target("thumbv8m.main-none-eabi")
         .file(bolos_sdk.join("src/ledger_protocol.c"))
@@ -851,13 +843,12 @@ fn finalize_flex_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
         .include(bolos_sdk.join("lib_blewbxx_impl/include"))
         .include(bolos_sdk.join("target/flex/include/"))
         .flag("-fropi")
-        .flag("-frwpi")
-        .include(&glyphs_path)
-        .file(glyphs_path.join("glyphs.c"));
+        .flag("-frwpi");
     configure_lib_nbgl(command, bolos_sdk);
 }
 
 fn configure_lib_nbgl(command: &mut cc::Build, bolos_sdk: &Path) {
+    let glyphs_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("glyphs");
     command
         .flag("-Wno-microsoft-anon-tag")
         .flag("-fms-extensions")
@@ -875,5 +866,7 @@ fn configure_lib_nbgl(command: &mut cc::Build, bolos_sdk: &Path) {
                 .unwrap()
                 .map(|x| x.unwrap())
                 .collect::<Vec<PathBuf>>(),
-        );
+        )
+        .include(&glyphs_path)
+        .file(glyphs_path.join("glyphs.c"));
 }
