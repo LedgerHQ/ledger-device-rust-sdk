@@ -519,6 +519,7 @@ impl SDKBuilder {
             .flag("-nostdlib")
             .flag("-nodefaultlibs")
             .flag("-Wno-unused-command-line-argument")
+            .define("main", "_start")
             .clone();
 
         // #[cfg(feature = "ccid")]
