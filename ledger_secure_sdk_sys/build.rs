@@ -574,7 +574,6 @@ impl SDKBuilder {
             format!("-I{bsdk}/lib_stusb/STM32_USB_Device_Library/Core/Inc/"),
             format!("-I{bsdk}/lib_stusb/"),
         ];
-
         let headers = str2path(
             &self.bolos_sdk,
             &[
@@ -736,7 +735,6 @@ fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
 
     command
         .target("thumbv6m-none-eabi")
-        .define("ST33", None)
         .file(bolos_sdk.join("src/ledger_protocol.c"))
         .file(bolos_sdk.join("lib_blewbxx/core/auto/ble_gap_aci.c"))
         .file(bolos_sdk.join("lib_blewbxx/core/auto/ble_gatt_aci.c"))
@@ -776,7 +774,6 @@ fn finalize_nanosplus_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
 
     command
         .target("thumbv8m.main-none-eabi")
-        .define("ST33K1M5", None)
         .include(bolos_sdk.join("target/nanos2/include"))
         .flag("-fropi")
         .flag("-frwpi");

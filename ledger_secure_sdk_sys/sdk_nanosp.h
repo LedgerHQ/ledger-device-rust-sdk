@@ -25,16 +25,16 @@
 #define HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16PX
 #define SCREEN_SIZE_NANO
 
-// WEB USB
+// WEB USB (not supported in Rust SDK)
 //#define HAVE_WEBUSB 
 //#define WEBUSB_URL_SIZE_B 
 //#define WEBUSB_URL
 
-// APP STORAGE
+// APP STORAGE (feature dependent)
 //#define HAVE_APP_STORAGE
 
-// NBGL KEYBOARD
+// NBGL KEYBOARD (feature dependent)
 //#define NBGL_KEYBOARD
 
-// NBGL KEYPAD
+// NBGL KEYPAD (feature dependent)
 //#define NBGL_KEYPAD

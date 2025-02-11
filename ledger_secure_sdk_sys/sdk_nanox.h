@@ -13,9 +13,6 @@
 #define __IO volatile
 #define main _start
 
-#define HAVE_SEPROXYHAL_MCU
-#define HAVE_MCU_PROTECT
-
 #define HAVE_SE_BUTTON
 #define HAVE_SE_SCREEN
 #define HAVE_FONTS
@@ -28,10 +25,8 @@
 #define HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16PX
 #define SCREEN_SIZE_NANO
 
-// WEB USB
-//#define HAVE_WEBUSB 
-//#define WEBUSB_URL_SIZE_B 
-//#define WEBUSB_URL
+#define HAVE_SEPROXYHAL_MCU
+#define HAVE_MCU_PROTECT
 
 // BLE SUPPORT  
 #define HAVE_BLE
@@ -40,11 +35,16 @@
 #define BLE_SEGMENT_SIZE 32
 #define HAVE_INAPP_BLE_PAIRING
 
-// APP STORAGE
+// WEB USB (not supported in Rust SDK)
+//#define HAVE_WEBUSB 
+//#define WEBUSB_URL_SIZE_B 
+//#define WEBUSB_URL
+
+// APP STORAGE (feature dependent)
 //#define HAVE_APP_STORAGE
 
-// NBGL KEYBOARD
+// NBGL KEYBOARD (feature dependent)
 //#define NBGL_KEYBOARD
 
-// NBGL KEYPAD
+// NBGL KEYPAD (feature dependent)
 //#define NBGL_KEYPAD

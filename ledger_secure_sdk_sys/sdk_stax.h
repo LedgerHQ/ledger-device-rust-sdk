@@ -26,31 +26,30 @@
 #define NBGL_USE_CASE
 #define SCREEN_SIZE_WALLET
 
-// WEB USB
-//#define HAVE_WEBUSB 
-//#define WEBUSB_URL_SIZE_B 
-//#define WEBUSB_URL
-
-// BLE SUPPORT  
+// BLE SUPPORT
 #define HAVE_BLE
 #define HAVE_BLE_APDU
 #define BLE_COMMAND_TIMEOUT_MS 2000
 #define BLE_SEGMENT_SIZE 32
 #define HAVE_INAPP_BLE_PAIRING
 
-// NFC SUPPORT
+// WEB USB (not supported in Rust SDK)
+//#define HAVE_WEBUSB 
+//#define WEBUSB_URL_SIZE_B 
+//#define WEBUSB_URL
+
+// NFC SUPPORT (feature dependent)
 //#define HAVE_NFC
 //#define HAVE_NFC_READER
 
-// APP STORAGE
+// APP STORAGE (feature dependent)
 //#define HAVE_APP_STORAGE
 
-// NBGL QRCODE
+// NBGL QRCODE (feature dependent)
 #define NBGL_QRCODE
 
-// NBGL KEYBOARD
+// NBGL KEYBOARD (feature dependent)
 //#define NBGL_KEYBOARD
 
-// NBGL KEYPAD
+// NBGL KEYPAD (feature dependent)
 //#define NBGL_KEYPAD
-
