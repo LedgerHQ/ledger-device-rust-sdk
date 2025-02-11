@@ -3,6 +3,7 @@ use glob::glob;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::Instant;
 use std::{env, fs::File, io::BufRead, io::BufReader, io::Read};
 
 #[cfg(feature = "ccid")]
@@ -474,7 +475,7 @@ impl SDKBuilder {
         Ok(())
     }
 
-    pub fn build_c_sdk(&self) {
+    pub fn build_c_sdk(&self) -> Result<(), SDKBuildError> {
         let mut command = cc::Build::new();
         if env::var_os("CC").is_none() {
             command.compiler("clang");
@@ -561,9 +562,10 @@ impl SDKBuilder {
         };
         println!("cargo:rustc-link-lib=c");
         println!("cargo:rustc-link-search={path}");
+        Ok(())
     }
 
-    fn generate_bindings(&self) {
+    fn generate_bindings(&self) -> Result<(), SDKBuildError> {
         let bsdk = self.bolos_sdk.display().to_string();
         let gcc_tc = self.gcc_toolchain.display().to_string();
         let args = [
@@ -679,9 +681,11 @@ impl SDKBuilder {
         bindings
             .write_to_file(out_path.join("bindings.rs"))
             .expect("Couldn't write bindings");
+
+        Ok(())
     }
 
-    fn generate_heap_size(&self) {
+    fn generate_heap_size(&self) -> Result<(), SDKBuildError> {
         // Read the HEAP_SIZE environment variable, default to 8192 if not set
         let heap_size = env::var("HEAP_SIZE").unwrap_or_else(|_| "8192".to_string());
 
@@ -700,19 +704,26 @@ impl SDKBuilder {
             format!("pub const HEAP_SIZE: usize = {};", heap_size),
         )
         .expect("Unable to write file");
+        Ok(())
     }
 }
 
 fn main() {
+    let start = Instant::now();
     let mut sdk_builder = SDKBuilder::new();
     sdk_builder.gcc_toolchain().unwrap();
     sdk_builder.device().unwrap();
     sdk_builder.bolos_sdk().unwrap();
     sdk_builder.cxdefines().unwrap();
     sdk_builder.generate_glyphs().unwrap();
-    sdk_builder.build_c_sdk();
-    sdk_builder.generate_bindings();
-    sdk_builder.generate_heap_size();
+    sdk_builder.build_c_sdk().unwrap();
+    sdk_builder.generate_bindings().unwrap();
+    sdk_builder.generate_heap_size().unwrap();
+    let end = start.elapsed();
+    println!(
+        "cargo:warning=Total build.rs time: {} seconds",
+        end.as_secs()
+    );
 }
 
 fn finalize_nanos_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
