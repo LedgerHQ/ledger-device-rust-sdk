@@ -6,10 +6,6 @@ use std::process::Command;
 use std::time::Instant;
 use std::{env, fs::File, io::BufRead, io::BufReader, io::Read};
 
-#[cfg(feature = "ccid")]
-const DEFINES_CCID: [(&str, Option<&str>); 2] =
-    [("HAVE_USB_CLASS_CCID", None), ("HAVE_CCID", None)];
-
 const AUX_C_FILES: [&str; 2] = ["./src/c/src.c", "./src/c/sjlj.s"];
 
 const SDK_C_FILES: [&str; 8] = [
@@ -30,19 +26,6 @@ const SDK_USB_FILES: [&str; 6] = [
     "lib_stusb/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c",
     "lib_stusb_impl/usbd_impl.c",
     "lib_stusb/STM32_USB_Device_Library/Class/HID/Src/usbd_hid.c",
-];
-
-#[cfg(feature = "ccid")]
-const CCID_FILES: [&str; 9] = [
-    "lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_cmd.c",
-    "lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_core.c",
-    "lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_if.c",
-    "lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_cmd.c",
-    "lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_core.c",
-    "lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_if.c",
-    "lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_cmd.c",
-    "lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_core.c",
-    "lib_stusb/STM32_USB_Device_Library/Class/CCID/src/usbd_ccid_if.c",
 ];
 
 const CFLAGS_NANOS: [&str; 11] = [
@@ -597,14 +580,6 @@ impl SDKBuilder<'_> {
             .debug(true)
             .define("main", "_start")
             .clone();
-
-        // #[cfg(feature = "ccid")]
-        // {
-        //     for (define, value) in DEFINES_CCID {
-        //         command.define(define, value);
-        //     }
-        //     command.files(str2path(&self.bolos_sdk, &CCID_FILES));
-        // }
 
         // Set the #defines
         for (define, value) in &self.device.defines {
