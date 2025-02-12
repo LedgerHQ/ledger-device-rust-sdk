@@ -266,6 +266,8 @@ void c_reset_bss() {
   memset(bss, 0, bss_len);
 }
 
+bolos_ux_params_t G_ux_params;
+
 void c_boot_std() {
     // below is a 'manual' implementation of `io_seproxyhal_init`
 #ifdef HAVE_MCU_PROTECT
@@ -275,6 +277,21 @@ void c_boot_std() {
     c[2] = 1;
     c[3] = SEPROXYHAL_TAG_MCU_TYPE_PROTECT;
     io_seproxyhal_spi_send(c, 4);
+#endif
+
+#ifndef TARGET_NANOS
+    // Warn UX layer of io reset to avoid unwanted pin lock
+    memset(&G_ux_params, 0, sizeof(G_ux_params));
+    G_ux_params.ux_id = BOLOS_UX_IO_RESET;
+
+    // If the app has just been booted from the UX, multiple os_ux calls may be necessary
+    // to ensure UX layer has take the BOLOS_UX_IO_RESET instruction into account.
+    for (uint8_t i = 0; i < 2; i++) {
+        os_ux(&G_ux_params);
+        if (os_sched_last_status(TASK_BOLOS_UX) == BOLOS_UX_OK) {
+            break;
+        }
+    }
 #endif
 
 #ifdef HAVE_BLE
