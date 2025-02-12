@@ -26,7 +26,6 @@ ledger_secure_sdk_sys = { path = "../ledger_secure_sdk_sys", version = "1.6.7" }
 [features]
 debug = []
 speculos = []
-ccid = []
 heap = [ "ledger_secure_sdk_sys/heap" ]
 
 default = [ "heap" ]
