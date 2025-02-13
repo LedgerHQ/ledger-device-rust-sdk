@@ -411,7 +411,7 @@ impl SDKBuilder<'_> {
             },
             "nanosplus" => Device {
                 name: DeviceName::NanoSPlus,
-                defines: header2define("sdk_nanosp.h"),
+                defines: header2define("sdk_nanos2.h"),
                 cflags: Vec::from(CFLAGS_NANOSPLUS),
             },
             "nanox" => Device {
@@ -663,14 +663,10 @@ impl SDKBuilder<'_> {
             .use_core();
 
         // Target specific files
-        let (include_path, header) = match self.device.name {
-            DeviceName::NanoS => ("nanos", "sdk_nanos.h"),
-            DeviceName::NanoX => ("nanox", "sdk_nanox.h"),
-            DeviceName::NanoSPlus => ("nanos2", "sdk_nanosp.h"),
-            DeviceName::Stax => ("stax", "sdk_stax.h"),
-            DeviceName::Flex => ("flex", "sdk_flex.h"),
-        };
-        bindings = bindings.clang_arg(format!("-I{bsdk}/target/{include_path}/include/"));
+        let csdk_target_name = self.device.name.to_string();
+        let header = format!("sdk_{csdk_target_name}.h");
+
+        bindings = bindings.clang_arg(format!("-I{bsdk}/target/{csdk_target_name}/include/"));
         bindings = bindings.header(header);
 
         // SDK headers to bind against
