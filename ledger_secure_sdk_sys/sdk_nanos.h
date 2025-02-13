@@ -8,3 +8,4 @@
 #define __IO volatile
 #define IO_USB_MAX_ENDPOINTS 6
 #define IO_SEPROXYHAL_BUFFER_SIZE_B 128
+#define ST31

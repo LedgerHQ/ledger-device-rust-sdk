@@ -105,6 +105,7 @@ enum DeviceName {
 #[derive(Debug, Default)]
 struct Device<'a> {
     pub name: DeviceName,
+    pub target: &'a str,
     pub defines: Vec<(String, Option<String>)>,
     pub cflags: Vec<&'a str>,
 }
@@ -406,26 +407,55 @@ impl SDKBuilder<'_> {
         {
             "nanos" => Device {
                 name: DeviceName::NanoS,
+                target: "thumbv6m-none-eabi",
                 defines: header2define("sdk_nanos.h"),
                 cflags: Vec::from(CFLAGS_NANOS),
             },
             "nanosplus" => Device {
                 name: DeviceName::NanoSPlus,
-                defines: header2define("sdk_nanos2.h"),
+                target: "thumbv8m.main-none-eabi",
+                defines: {
+                    let mut v = header2define("sdk_nanos2.h");
+                    if env::var_os("CARGO_FEATURE_NBGL").is_some() {
+                        println!("cargo:warning=NBGL is built");
+                        v.push((String::from("HAVE_NBGL"), None));
+                        v.push((String::from("NBGL_STEP"), None));
+                        v.push((String::from("NBGL_USE_CASE"), None));
+                    } else {
+                        println!("cargo:warning=BAGL is built");
+                        v.push((String::from("HAVE_BAGL"), None));
+                    }
+                    v
+                },
                 cflags: Vec::from(CFLAGS_NANOSPLUS),
             },
             "nanox" => Device {
                 name: DeviceName::NanoX,
-                defines: header2define("sdk_nanox.h"),
+                target: "thumbv6m-none-eabi",
+                defines: {
+                    let mut v = header2define("sdk_nanox.h");
+                    if env::var_os("CARGO_FEATURE_NBGL").is_some() {
+                        println!("cargo:warning=NBGL is built");
+                        v.push((String::from("HAVE_NBGL"), None));
+                        v.push((String::from("NBGL_STEP"), None));
+                        v.push((String::from("NBGL_USE_CASE"), None));
+                    } else {
+                        println!("cargo:warning=BAGL is built");
+                        v.push((String::from("HAVE_BAGL"), None));
+                    }
+                    v
+                },
                 cflags: Vec::from(CFLAGS_NANOX),
             },
             "stax" => Device {
                 name: DeviceName::Stax,
+                target: "thumbv8m.main-none-eabi",
                 defines: header2define("sdk_stax.h"),
                 cflags: Vec::from(CFLAGS_STAX),
             },
             "flex" => Device {
                 name: DeviceName::Flex,
+                target: "thumbv8m.main-none-eabi",
                 defines: header2define("sdk_flex.h"),
                 cflags: Vec::from(CFLAGS_FLEX),
             },
@@ -591,15 +621,20 @@ impl SDKBuilder<'_> {
             command.flag(cflag);
         }
 
-        match self.device.name {
-            DeviceName::NanoS => finalize_nanos_configuration(&mut command, &self.bolos_sdk),
-            DeviceName::NanoX => finalize_nanox_configuration(&mut command, &self.bolos_sdk),
-            DeviceName::NanoSPlus => {
-                finalize_nanosplus_configuration(&mut command, &self.bolos_sdk)
+        command.target(self.device.target).include(
+            self.bolos_sdk
+                .join(format!("target/{}/include", self.device.name)),
+        );
+
+        // Configure BLE and NBGL
+        for s in self.device.defines.iter() {
+            if s.0 == "HAVE_BLE" {
+                configure_lib_ble(&mut command, &self.bolos_sdk);
             }
-            DeviceName::Stax => finalize_stax_configuration(&mut command, &self.bolos_sdk),
-            DeviceName::Flex => finalize_flex_configuration(&mut command, &self.bolos_sdk),
-        };
+            if s.0 == "HAVE_NBGL" {
+                configure_lib_nbgl(&mut command, &self.bolos_sdk);
+            }
+        }
 
         // Add the defines found in the Makefile.conf.cx to our build command.
         for define in self.cxdefines.iter() {
@@ -783,67 +818,6 @@ fn main() {
         "cargo:warning=Total build.rs time: {} seconds",
         end.as_secs()
     );
-}
-
-fn finalize_nanos_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
-    command
-        .target("thumbv6m-none-eabi")
-        .define("ST31", None)
-        .include(bolos_sdk.join("target/nanos/include"));
-}
-
-fn finalize_nanox_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
-    command
-        .target("thumbv6m-none-eabi")
-        .include(bolos_sdk.join("target/nanox/include"));
-
-    configure_lib_ble(command, bolos_sdk);
-
-    if env::var_os("CARGO_FEATURE_NBGL").is_some() {
-        println!("cargo:warning=NBGL is built");
-        command.define("HAVE_NBGL", None);
-        command.define("NBGL_STEP", None);
-        command.define("NBGL_USE_CASE", None);
-        configure_lib_nbgl(command, bolos_sdk);
-    } else {
-        println!("cargo:warning=BAGL is built");
-        command.define("HAVE_BAGL", None);
-    }
-}
-
-fn finalize_nanosplus_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
-    command
-        .target("thumbv8m.main-none-eabi")
-        .include(bolos_sdk.join("target/nanos2/include"));
-
-    if env::var_os("CARGO_FEATURE_NBGL").is_some() {
-        println!("cargo:warning=NBGL is built");
-        command.define("HAVE_NBGL", None);
-        command.define("NBGL_STEP", None);
-        command.define("NBGL_USE_CASE", None);
-        configure_lib_nbgl(command, bolos_sdk);
-    } else {
-        println!("cargo:warning=BAGL is built");
-        command.define("HAVE_BAGL", None);
-    }
-}
-
-fn finalize_stax_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
-    command
-        .target("thumbv8m.main-none-eabi")
-        .include(bolos_sdk.join("target/stax/include/"));
-
-    configure_lib_ble(command, bolos_sdk);
-    configure_lib_nbgl(command, bolos_sdk);
-}
-
-fn finalize_flex_configuration(command: &mut cc::Build, bolos_sdk: &Path) {
-    command
-        .target("thumbv8m.main-none-eabi")
-        .include(bolos_sdk.join("target/flex/include/"));
-
-    configure_lib_ble(command, bolos_sdk);
-    configure_lib_nbgl(command, bolos_sdk);
 }
 
 fn configure_lib_ble(command: &mut cc::Build, bolos_sdk: &Path) {
