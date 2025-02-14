@@ -106,6 +106,7 @@ enum DeviceName {
 #[derive(Debug, Default)]
 struct Device<'a> {
     pub name: DeviceName,
+    pub c_sdk: PathBuf,
     pub target: &'a str,
     pub defines: Vec<(String, Option<String>)>,
     pub cflags: Vec<&'a str>,
@@ -276,8 +277,8 @@ fn retrieve_target_file_infos(
 }
 
 /// Fetch the appropriate C SDK to build
-fn clone_sdk(device: &Device) -> PathBuf {
-    let (repo_url, sdk_branch) = match device.name {
+fn clone_sdk(devicename: &DeviceName) -> PathBuf {
+    let (repo_url, sdk_branch) = match devicename {
         DeviceName::NanoS => (
             Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
             "API_LEVEL_LNS",
@@ -357,7 +358,6 @@ fn header2define(headername: &str) -> Vec<(String, Option<String>)> {
 }
 
 struct SDKBuilder<'a> {
-    bolos_sdk: PathBuf,
     api_level: u32,
     gcc_toolchain: PathBuf,
     device: Device<'a>,
@@ -368,7 +368,6 @@ struct SDKBuilder<'a> {
 impl SDKBuilder<'_> {
     pub fn new() -> Self {
         SDKBuilder {
-            bolos_sdk: PathBuf::new(),
             api_level: 0,
             gcc_toolchain: PathBuf::new(),
             device: Device::default(),
@@ -400,6 +399,7 @@ impl SDKBuilder<'_> {
     }
 
     pub fn device(&mut self) -> Result<(), SDKBuildError> {
+        println!("cargo:rerun-if-env-changed=LEDGER_SDK_PATH");
         // determine device
         self.device = match env::var_os("CARGO_CFG_TARGET_OS")
             .unwrap()
@@ -408,12 +408,14 @@ impl SDKBuilder<'_> {
         {
             "nanos" => Device {
                 name: DeviceName::NanoS,
+                c_sdk: Default::default(),
                 target: "thumbv6m-none-eabi",
                 defines: header2define("csdk_nanos.h"),
                 cflags: Vec::from(CFLAGS_NANOS),
             },
             "nanosplus" => Device {
                 name: DeviceName::NanoSPlus,
+                c_sdk: Default::default(),
                 target: "thumbv8m.main-none-eabi",
                 defines: {
                     let mut v = header2define("csdk_nanos2.h");
@@ -432,6 +434,7 @@ impl SDKBuilder<'_> {
             },
             "nanox" => Device {
                 name: DeviceName::NanoX,
+                c_sdk: Default::default(),
                 target: "thumbv6m-none-eabi",
                 defines: {
                     let mut v = header2define("csdk_nanox.h");
@@ -450,12 +453,14 @@ impl SDKBuilder<'_> {
             },
             "stax" => Device {
                 name: DeviceName::Stax,
+                c_sdk: Default::default(),
                 target: "thumbv8m.main-none-eabi",
                 defines: header2define("csdk_stax.h"),
                 cflags: Vec::from(CFLAGS_STAX),
             },
             "flex" => Device {
                 name: DeviceName::Flex,
+                c_sdk: Default::default(),
                 target: "thumbv8m.main-none-eabi",
                 defines: header2define("csdk_flex.h"),
                 cflags: Vec::from(CFLAGS_FLEX),
@@ -465,6 +470,12 @@ impl SDKBuilder<'_> {
             }
         };
 
+        // set the C SDK path
+        self.device.c_sdk = match env::var("LEDGER_SDK_PATH") {
+            Err(_) => clone_sdk(&self.device.name),
+            Ok(path) => PathBuf::from(path),
+        };
+
         // export TARGET into env for 'infos.rs'
         println!("cargo:rustc-env=TARGET={}", self.device.name);
         println!("cargo:warning=Device is {:?}", self.device.name);
@@ -472,13 +483,8 @@ impl SDKBuilder<'_> {
     }
 
     pub fn bolos_sdk(&mut self) -> Result<(), SDKBuildError> {
-        println!("cargo:rerun-if-env-changed=LEDGER_SDK_PATH");
-        self.bolos_sdk = match env::var("LEDGER_SDK_PATH") {
-            Err(_) => clone_sdk(&self.device),
-            Ok(path) => PathBuf::from(path),
-        };
-
-        let sdk_info = retrieve_csdk_info(&self.device, &self.bolos_sdk)?;
+        // Retrieve the C SDK infos
+        let sdk_info = retrieve_csdk_info(&self.device, &self.device.c_sdk)?;
         match sdk_info.api_level {
             Some(api_level) => {
                 self.api_level = api_level;
@@ -497,23 +503,23 @@ impl SDKBuilder<'_> {
         match self.device.name {
             DeviceName::Flex => {
                 self.glyphs_folders
-                    .push(self.bolos_sdk.join("lib_nbgl/glyphs/wallet"));
+                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/wallet"));
                 self.glyphs_folders
-                    .push(self.bolos_sdk.join("lib_nbgl/glyphs/64px"));
+                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/64px"));
                 self.glyphs_folders
-                    .push(self.bolos_sdk.join("lib_nbgl/glyphs/40px"));
+                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/40px"));
             }
             DeviceName::Stax => {
                 self.glyphs_folders
-                    .push(self.bolos_sdk.join("lib_nbgl/glyphs/wallet"));
+                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/wallet"));
                 self.glyphs_folders
-                    .push(self.bolos_sdk.join("lib_nbgl/glyphs/64px"));
+                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/64px"));
                 self.glyphs_folders
-                    .push(self.bolos_sdk.join("lib_nbgl/glyphs/32px"));
+                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/32px"));
             }
             _ => {
                 self.glyphs_folders
-                    .push(self.bolos_sdk.join("lib_nbgl/glyphs/nano"));
+                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/nano"));
             }
         }
 
@@ -532,7 +538,7 @@ impl SDKBuilder<'_> {
     }
 
     fn cxdefines(&mut self) -> Result<(), SDKBuildError> {
-        let mut makefile = File::open(self.bolos_sdk.join("Makefile.conf.cx"))
+        let mut makefile = File::open(self.device.c_sdk.join("Makefile.conf.cx"))
             .expect("Could not find Makefile.conf.cx");
         let mut content = String::new();
         makefile.read_to_string(&mut content).unwrap();
@@ -555,7 +561,7 @@ impl SDKBuilder<'_> {
             return Err(SDKBuildError::UnsupportedDevice);
         }
 
-        let icon2glyph = self.bolos_sdk.join("lib_nbgl/tools/icon2glyph.py");
+        let icon2glyph = self.device.c_sdk.join("lib_nbgl/tools/icon2glyph.py");
 
         let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
         let dest_path = out_path.join("glyphs");
@@ -591,21 +597,23 @@ impl SDKBuilder<'_> {
 
         command
             .files(&AUX_C_FILES)
-            .files(str2path(&self.bolos_sdk, &SDK_C_FILES))
-            .files(str2path(&self.bolos_sdk, &SDK_USB_FILES));
+            .files(str2path(&self.device.c_sdk, &SDK_C_FILES))
+            .files(str2path(&self.device.c_sdk, &SDK_USB_FILES));
 
         command = command
             .include(self.gcc_toolchain.join("include"))
-            .include(self.bolos_sdk.join("include"))
-            .include(self.bolos_sdk.join("lib_cxng/include"))
-            .include(self.bolos_sdk.join("lib_stusb"))
-            .include(self.bolos_sdk.join("lib_stusb_impl"))
+            .include(self.device.c_sdk.join("include"))
+            .include(self.device.c_sdk.join("lib_cxng/include"))
+            .include(self.device.c_sdk.join("lib_stusb"))
+            .include(self.device.c_sdk.join("lib_stusb_impl"))
             .include(
-                self.bolos_sdk
+                self.device
+                    .c_sdk
                     .join("lib_stusb/STM32_USB_Device_Library/Core/Inc"),
             )
             .include(
-                self.bolos_sdk
+                self.device
+                    .c_sdk
                     .join("lib_stusb/STM32_USB_Device_Library/Class/HID/Inc"),
             )
             .debug(true)
@@ -623,17 +631,18 @@ impl SDKBuilder<'_> {
         }
 
         command.target(self.device.target).include(
-            self.bolos_sdk
+            self.device
+                .c_sdk
                 .join(format!("target/{}/include", self.device.name)),
         );
 
         // Configure BLE and NBGL
         for s in self.device.defines.iter() {
             if s.0 == "HAVE_BLE" {
-                configure_lib_ble(&mut command, &self.bolos_sdk);
+                configure_lib_ble(&mut command, &self.device.c_sdk);
             }
             if s.0 == "HAVE_NBGL" {
-                configure_lib_nbgl(&mut command, &self.bolos_sdk);
+                configure_lib_nbgl(&mut command, &self.device.c_sdk);
             }
         }
 
@@ -644,8 +653,8 @@ impl SDKBuilder<'_> {
 
         command.compile("ledger-secure-sdk");
 
-        /* Link with libc for unresolved symbols */
-        let mut path = self.bolos_sdk.display().to_string();
+        /* Link with libc, libm and libgcc */
+        let mut path = self.device.c_sdk.display().to_string();
         match self.device.name {
             DeviceName::NanoS => {
                 path = self.gcc_toolchain.display().to_string();
@@ -666,7 +675,7 @@ impl SDKBuilder<'_> {
     }
 
     fn generate_bindings(&self) -> Result<(), SDKBuildError> {
-        let bsdk = self.bolos_sdk.display().to_string();
+        let bsdk = self.device.c_sdk.display().to_string();
         let gcc_tc = self.gcc_toolchain.display().to_string();
         let args = [
             "--target=thumbv6m-none-eabi".to_string(), // exact target is irrelevant for bindings
@@ -678,7 +687,7 @@ impl SDKBuilder<'_> {
             format!("-I{bsdk}/lib_stusb/"),
         ];
         let headers = str2path(
-            &self.bolos_sdk,
+            &self.device.c_sdk,
             &[
                 "lib_cxng/include/libcxng.h", /* cxlib */
                 "include/os.h",               /* syscalls */
@@ -715,7 +724,8 @@ impl SDKBuilder<'_> {
         // BAGL or NBGL bindings
         match self.device.name {
             DeviceName::NanoS => {
-                bindings = bindings.header(self.bolos_sdk.join("include/bagl.h").to_str().unwrap())
+                bindings =
+                    bindings.header(self.device.c_sdk.join("include/bagl.h").to_str().unwrap())
             }
             DeviceName::NanoSPlus | DeviceName::NanoX | DeviceName::Stax | DeviceName::Flex => {
                 if ((self.device.name == DeviceName::NanoX
@@ -736,13 +746,15 @@ impl SDKBuilder<'_> {
                     ]);
                     bindings = bindings
                         .header(
-                            self.bolos_sdk
+                            self.device
+                                .c_sdk
                                 .join("lib_nbgl/include/nbgl_use_case.h")
                                 .to_str()
                                 .unwrap(),
                         )
                         .header(
-                            self.bolos_sdk
+                            self.device
+                                .c_sdk
                                 .join("lib_ux_nbgl/ux_nbgl.h")
                                 .to_str()
                                 .unwrap(),
@@ -755,7 +767,8 @@ impl SDKBuilder<'_> {
         match self.device.name {
             DeviceName::NanoX | DeviceName::Flex | DeviceName::Stax => {
                 bindings = bindings.header(
-                    self.bolos_sdk
+                    self.device
+                        .c_sdk
                         .join("lib_blewbxx_impl/include/ledger_ble.h")
                         .to_str()
                         .unwrap(),
