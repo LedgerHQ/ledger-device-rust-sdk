@@ -803,6 +803,23 @@ impl SDKBuilder<'_> {
         .expect("Unable to write file");
         Ok(())
     }
+
+    fn copy_linker_script(&self) -> Result<(), SDKBuildError> {
+        let out_dir = PathBuf::from(env::var_os("OUT_DIR").unwrap());
+        // extend the library search path
+        println!("cargo:rustc-link-search={}", out_dir.display());
+        // copy
+        let linkerscript = match self.device.name {
+            DeviceName::NanoS => "nanos_layout.ld",
+            DeviceName::NanoX => "nanox_layout.ld",
+            DeviceName::NanoSPlus => "nanosplus_layout.ld",
+            DeviceName::Stax => "stax_flex_layout.ld",
+            DeviceName::Flex => "stax_flex_layout.ld",
+        };
+        std::fs::copy(linkerscript, out_dir.join(linkerscript)).unwrap();
+        std::fs::copy("link.ld", out_dir.join("link.ld")).unwrap();
+        Ok(())
+    }
 }
 
 fn main() {
@@ -816,6 +833,7 @@ fn main() {
     sdk_builder.build_c_sdk().unwrap();
     sdk_builder.generate_bindings().unwrap();
     sdk_builder.generate_heap_size().unwrap();
+    sdk_builder.copy_linker_script().unwrap();
     let end = start.elapsed();
     println!(
         "cargo:warning=Total build.rs time: {} seconds",
