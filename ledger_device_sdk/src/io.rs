@@ -5,8 +5,6 @@ use ledger_secure_sdk_sys::buttons::{get_button_event, ButtonEvent, ButtonsState
 use ledger_secure_sdk_sys::seph as sys_seph;
 use ledger_secure_sdk_sys::*;
 
-#[cfg(feature = "ccid")]
-use crate::ccid;
 use crate::seph;
 use core::convert::{Infallible, TryFrom};
 use core::ops::{Index, IndexMut};
@@ -192,10 +190,6 @@ impl Comm {
                 let len = (self.tx as u16).to_be_bytes();
                 sys_seph::seph_send(&[sys_seph::SephTags::RawAPDU as u8, len[0], len[1]]);
                 sys_seph::seph_send(&self.apdu_buffer[..self.tx]);
-            }
-            #[cfg(feature = "ccid")]
-            APDU_USB_CCID => {
-                ccid::send(&self.apdu_buffer[..self.tx]);
             }
             #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
             APDU_BLE => {

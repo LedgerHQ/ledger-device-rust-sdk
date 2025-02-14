@@ -253,11 +253,6 @@ void link_pass_nvram(
   nvm_write(nvram_prev_val_ptr, &nvram_current, sizeof(void*));
 }
 
-#ifdef HAVE_CCID
- #include "usbd_ccid_if.h"
-uint8_t G_io_apdu_buffer[260];
-#endif
-
 void c_reset_bss() {
   size_t bss_len;
   SYMBOL_ABSOLUTE_VALUE(bss_len, _bss_len);
@@ -312,9 +307,6 @@ void c_boot_std() {
 
     USB_power(0);
     USB_power(1);
-#ifdef HAVE_CCID
-    io_usb_ccid_set_card_inserted(1);
-#endif
           
 #ifdef HAVE_BLE
     memset(&G_io_asynch_ux_callback, 0, sizeof(G_io_asynch_ux_callback));

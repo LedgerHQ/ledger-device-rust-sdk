@@ -10,8 +10,6 @@
 #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
 pub mod ble;
 
-#[cfg(feature = "ccid")]
-pub mod ccid;
 pub mod ecc;
 pub mod hash;
 pub mod hmac;
