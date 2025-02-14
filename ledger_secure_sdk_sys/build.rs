@@ -8,7 +8,7 @@ use std::{env, fs::File, io::BufRead, io::BufReader, io::Read};
 
 const AUX_C_FILES: [&str; 2] = ["./src/c/src.c", "./src/c/sjlj.s"];
 
-const SDK_C_FILES: [&str; 8] = [
+const SDK_C_FILES: [&str; 9] = [
     "src/os_io_usb.c",
     "src/pic.c",
     "src/checks.c",
@@ -17,6 +17,7 @@ const SDK_C_FILES: [&str; 8] = [
     "src/svc_call.s",
     "src/svc_cx_call.s",
     "src/syscalls.c",
+    "src/os_printf.c",
 ];
 
 const SDK_USB_FILES: [&str; 6] = [
@@ -658,6 +659,8 @@ impl SDKBuilder<'_> {
             }
         };
         println!("cargo:rustc-link-lib=c");
+        println!("cargo:rustc-link-lib=m");
+        println!("cargo:rustc-link-lib=gcc");
         println!("cargo:rustc-link-search={path}");
         Ok(())
     }
@@ -846,8 +849,6 @@ fn configure_lib_nbgl(command: &mut cc::Build, bolos_sdk: &Path) {
         .include(bolos_sdk.join("qrcode/include/"))
         .include(bolos_sdk.join("lib_bagl/include/"))
         .file(bolos_sdk.join("lib_ux_nbgl/ux.c"))
-        .file(bolos_sdk.join("lib_bagl/src/bagl_fonts.c"))
-        .file(bolos_sdk.join("src/os_printf.c"))
         .file(bolos_sdk.join("qrcode/src/qrcodegen.c"))
         .files(
             glob(bolos_sdk.join("lib_nbgl/src/*.c").to_str().unwrap())
