@@ -112,6 +112,7 @@ struct Device<'a> {
     pub cflags: Vec<&'a str>,
     pub glyphs_folders: Vec<PathBuf>,
     pub arm_libs: String,
+    pub linker_script: &'a str,
 }
 
 impl std::fmt::Display for DeviceName {
@@ -207,6 +208,7 @@ impl SDKBuilder<'_> {
                 cflags: Vec::from(CFLAGS_NANOS),
                 glyphs_folders: Vec::new(),
                 arm_libs: Default::default(),
+                linker_script: "nanos_layout.ld",
             },
             "nanosplus" => Device {
                 name: DeviceName::NanoSPlus,
@@ -228,6 +230,7 @@ impl SDKBuilder<'_> {
                 cflags: Vec::from(CFLAGS_NANOSPLUS),
                 glyphs_folders: Vec::new(),
                 arm_libs: Default::default(),
+                linker_script: "nanosplus_layout.ld",
             },
             "nanox" => Device {
                 name: DeviceName::NanoX,
@@ -249,6 +252,7 @@ impl SDKBuilder<'_> {
                 cflags: Vec::from(CFLAGS_NANOX),
                 glyphs_folders: Vec::new(),
                 arm_libs: Default::default(),
+                linker_script: "nanox_layout.ld",
             },
             "stax" => Device {
                 name: DeviceName::Stax,
@@ -258,6 +262,7 @@ impl SDKBuilder<'_> {
                 cflags: Vec::from(CFLAGS_STAX),
                 glyphs_folders: Vec::new(),
                 arm_libs: Default::default(),
+                linker_script: "stax_layout.ld",
             },
             "flex" => Device {
                 name: DeviceName::Flex,
@@ -267,6 +272,7 @@ impl SDKBuilder<'_> {
                 cflags: Vec::from(CFLAGS_FLEX),
                 glyphs_folders: Vec::new(),
                 arm_libs: Default::default(),
+                linker_script: "flex_layout.ld",
             },
             _ => {
                 return Err(SDKBuildError::UnsupportedDevice);
@@ -613,14 +619,11 @@ impl SDKBuilder<'_> {
         // extend the library search path
         println!("cargo:rustc-link-search={}", out_dir.display());
         // copy
-        let linkerscript = match self.device.name {
-            DeviceName::NanoS => "nanos_layout.ld",
-            DeviceName::NanoX => "nanox_layout.ld",
-            DeviceName::NanoSPlus => "nanosplus_layout.ld",
-            DeviceName::Stax => "stax_flex_layout.ld",
-            DeviceName::Flex => "stax_flex_layout.ld",
-        };
-        std::fs::copy(linkerscript, out_dir.join(linkerscript)).unwrap();
+        std::fs::copy(
+            self.device.linker_script,
+            out_dir.join(self.device.linker_script),
+        )
+        .unwrap();
         std::fs::copy("link.ld", out_dir.join("link.ld")).unwrap();
         Ok(())
     }
