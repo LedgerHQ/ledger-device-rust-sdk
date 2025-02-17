@@ -142,207 +142,6 @@ impl CSDKInfo {
     }
 }
 
-fn retrieve_csdk_info(device: &Device, path: &PathBuf) -> Result<CSDKInfo, SDKBuildError> {
-    let mut csdk_info = CSDKInfo::new();
-    (csdk_info.api_level, csdk_info.c_sdk_name) = retrieve_makefile_infos(path)?;
-    (csdk_info.target_id, csdk_info.target_name) = retrieve_target_file_infos(device, path)?;
-    (csdk_info.c_sdk_hash, csdk_info.c_sdk_version) = retrieve_csdk_git_info(path);
-    Ok(csdk_info)
-}
-
-fn retrieve_csdk_git_info(c_sdk: &Path) -> (String, String) {
-    let c_sdk_hash = match Command::new("git")
-        .arg("-C")
-        .arg(c_sdk)
-        .arg("describe")
-        .arg("--always")
-        .arg("--dirty")
-        .arg("--exclude")
-        .arg("*")
-        .arg("--abbrev=40")
-        .output()
-        .ok()
-    {
-        Some(output) => {
-            if output.stdout.is_empty() {
-                "None".to_string()
-            } else {
-                String::from_utf8(output.stdout).unwrap_or("None".to_string())
-            }
-        }
-        None => "None".to_string(),
-    };
-
-    let c_sdk_version = match Command::new("git")
-        .arg("-C")
-        .arg(c_sdk)
-        .arg("describe")
-        .arg("--tags")
-        .arg("--match")
-        .arg("v[0-9]*")
-        .arg("--dirty")
-        .output()
-        .ok()
-    {
-        Some(output) => {
-            if output.status.success() {
-                String::from_utf8(output.stdout).unwrap_or("None".to_string())
-            } else {
-                String::from_utf8(output.stderr).unwrap_or("None".to_string())
-            }
-        }
-        None => "None".to_string(),
-    };
-    (c_sdk_hash, c_sdk_version)
-}
-
-fn retrieve_makefile_infos(c_sdk: &Path) -> Result<(Option<u32>, String), SDKBuildError> {
-    let makefile =
-        File::open(c_sdk.join("Makefile.defines")).expect("Could not find Makefile.defines");
-    let mut api_level: Option<u32> = None;
-    for line in BufReader::new(makefile).lines().flatten() {
-        if let Some(value) = line.split(":=").nth(1).map(str::trim) {
-            if line.contains("API_LEVEL") && api_level.is_none() {
-                api_level = Some(value.parse().map_err(|_| SDKBuildError::InvalidAPILevel)?);
-            }
-        }
-        if api_level.is_some() {
-            // Key found, break out of the loop
-            break;
-        }
-    }
-    let makefile =
-        File::open(c_sdk.join("Makefile.target")).expect("Could not find Makefile.defines");
-    let mut sdk_name: Option<String> = None;
-    for line in BufReader::new(makefile).lines().flatten() {
-        if let Some(value) = line.split(":=").nth(1).map(str::trim) {
-            if line.contains("SDK_NAME") && sdk_name.is_none() {
-                sdk_name = Some(value.to_string().replace('\"', ""));
-            }
-        }
-        if sdk_name.is_some() {
-            // Key found, break out of the loop
-            break;
-        }
-    }
-
-    let sdk_name = sdk_name.ok_or(SDKBuildError::MissingSDKName)?;
-    Ok((api_level, sdk_name))
-}
-
-fn retrieve_target_file_infos(
-    device: &Device,
-    c_sdk: &Path,
-) -> Result<(String, String), SDKBuildError> {
-    let prefix = if device.name == DeviceName::NanoS {
-        "".to_string()
-    } else {
-        format!("target/{}/", device.name)
-    };
-    let target_file_path = c_sdk.join(format!("{}include/bolos_target.h", prefix));
-    let target_file =
-        File::open(target_file_path).map_err(|_| SDKBuildError::TargetFileNotFound)?;
-    let mut target_id: Option<String> = None;
-    let mut target_name: Option<String> = None;
-
-    for line in BufReader::new(target_file).lines().flatten() {
-        if target_id.is_none() && line.contains("#define TARGET_ID") {
-            target_id = Some(
-                line.split_whitespace()
-                    .nth(2)
-                    .ok_or("err")
-                    .map_err(|_| SDKBuildError::MissingTargetId)?
-                    .to_string(),
-            );
-        } else if target_name.is_none()
-            && line.contains("#define TARGET_")
-            && !line.contains("#define TARGET_ID")
-        {
-            target_name = Some(
-                line.split_whitespace()
-                    .nth(1)
-                    .ok_or("err")
-                    .map_err(|_| SDKBuildError::MissingTargetName)?
-                    .to_string(),
-            );
-        }
-
-        if target_id.is_some() && target_name.is_some() {
-            // Both tokens found, break out of the loop
-            break;
-        }
-    }
-
-    let target_id = target_id.ok_or(SDKBuildError::MissingTargetId)?;
-    let target_name = target_name.ok_or(SDKBuildError::MissingTargetName)?;
-    Ok((target_id, target_name))
-}
-
-/// Fetch the appropriate C SDK to build
-fn clone_sdk(devicename: &DeviceName) -> PathBuf {
-    let (repo_url, sdk_branch) = match devicename {
-        DeviceName::NanoS => (
-            Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_LNS",
-        ),
-        DeviceName::NanoX => (
-            Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_22",
-        ),
-        DeviceName::NanoSPlus => (
-            Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_22",
-        ),
-        DeviceName::Stax => (
-            Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_22",
-        ),
-        DeviceName::Flex => (
-            Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_22",
-        ),
-    };
-
-    let out_dir = env::var("OUT_DIR").unwrap();
-    let c_sdk = Path::new(out_dir.as_str()).join("ledger-secure-sdk");
-    if !c_sdk.exists() {
-        Command::new("git")
-            .arg("clone")
-            .arg(repo_url.to_str().unwrap())
-            .arg("-b")
-            .arg(sdk_branch)
-            .arg(c_sdk.as_path())
-            .output()
-            .ok();
-    }
-    c_sdk
-}
-
-pub fn generate_glyphs(c_sdk: &PathBuf, glyphs_folders: &[PathBuf]) {
-    let icon2glyph = c_sdk.join("lib_nbgl/tools/icon2glyph.py");
-
-    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let dest_path = out_path.join("glyphs");
-    if !dest_path.exists() {
-        fs::create_dir_all(&dest_path).ok();
-    }
-
-    let mut cmd = Command::new(icon2glyph.as_os_str());
-    cmd.arg("--glyphcheader")
-        .arg(dest_path.join("glyphs.h").as_os_str())
-        .arg("--glyphcfile")
-        .arg(dest_path.join("glyphs.c").as_os_str());
-
-    for folder in glyphs_folders.iter() {
-        for file in std::fs::read_dir(folder).unwrap() {
-            let path = file.unwrap().path();
-            let path_str = path.to_str().unwrap().to_string();
-            cmd.arg(path_str);
-        }
-    }
-    let _ = cmd.output();
-}
-
 #[derive(Debug)]
 enum SDKBuildError {
     UnsupportedDevice,
@@ -351,37 +150,6 @@ enum SDKBuildError {
     TargetFileNotFound,
     MissingTargetId,
     MissingTargetName,
-}
-
-/// Helper function to concatenate all paths in pathlist to c_sdk's path
-fn str2path(c_sdk: &Path, pathlist: &[&str]) -> Vec<PathBuf> {
-    pathlist
-        .iter()
-        .map(|p| c_sdk.join(p))
-        .collect::<Vec<PathBuf>>()
-}
-
-/// Get all #define from a header file
-fn header2define(headername: &str) -> Vec<(String, Option<String>)> {
-    let mut headerfile = File::open(headername).unwrap();
-    let mut header = String::new();
-    headerfile.read_to_string(&mut header).unwrap();
-
-    header
-        .lines()
-        .filter_map(|line| {
-            if line.trim_start().starts_with("#define") {
-                let parts: Vec<&str> = line.split_whitespace().collect();
-                match parts.len() {
-                    2 => Some((parts[1].to_string(), None)),
-                    3 => Some((parts[1].to_string(), Some(parts[2].to_string()))),
-                    _ => None,
-                }
-            } else {
-                None
-            }
-        })
-        .collect()
 }
 
 struct SDKBuilder<'a> {
@@ -876,6 +644,10 @@ fn main() {
     );
 }
 
+// --------------------------------------------------
+// Helper functions
+// --------------------------------------------------
+
 fn configure_lib_ble(command: &mut cc::Build, c_sdk: &Path) {
     command
         .file(c_sdk.join("src/ledger_protocol.c"))
@@ -911,4 +683,236 @@ fn configure_lib_nbgl(command: &mut cc::Build, c_sdk: &Path) {
         )
         .include(&glyphs_path)
         .file(glyphs_path.join("glyphs.c"));
+}
+
+fn retrieve_csdk_info(device: &Device, path: &PathBuf) -> Result<CSDKInfo, SDKBuildError> {
+    let mut csdk_info = CSDKInfo::new();
+    (csdk_info.api_level, csdk_info.c_sdk_name) = retrieve_makefile_infos(path)?;
+    (csdk_info.target_id, csdk_info.target_name) = retrieve_target_file_infos(device, path)?;
+    (csdk_info.c_sdk_hash, csdk_info.c_sdk_version) = retrieve_csdk_git_info(path);
+    Ok(csdk_info)
+}
+
+fn retrieve_csdk_git_info(c_sdk: &Path) -> (String, String) {
+    let c_sdk_hash = match Command::new("git")
+        .arg("-C")
+        .arg(c_sdk)
+        .arg("describe")
+        .arg("--always")
+        .arg("--dirty")
+        .arg("--exclude")
+        .arg("*")
+        .arg("--abbrev=40")
+        .output()
+        .ok()
+    {
+        Some(output) => {
+            if output.stdout.is_empty() {
+                "None".to_string()
+            } else {
+                String::from_utf8(output.stdout).unwrap_or("None".to_string())
+            }
+        }
+        None => "None".to_string(),
+    };
+
+    let c_sdk_version = match Command::new("git")
+        .arg("-C")
+        .arg(c_sdk)
+        .arg("describe")
+        .arg("--tags")
+        .arg("--match")
+        .arg("v[0-9]*")
+        .arg("--dirty")
+        .output()
+        .ok()
+    {
+        Some(output) => {
+            if output.status.success() {
+                String::from_utf8(output.stdout).unwrap_or("None".to_string())
+            } else {
+                String::from_utf8(output.stderr).unwrap_or("None".to_string())
+            }
+        }
+        None => "None".to_string(),
+    };
+    (c_sdk_hash, c_sdk_version)
+}
+
+fn retrieve_makefile_infos(c_sdk: &Path) -> Result<(Option<u32>, String), SDKBuildError> {
+    let makefile =
+        File::open(c_sdk.join("Makefile.defines")).expect("Could not find Makefile.defines");
+    let mut api_level: Option<u32> = None;
+    for line in BufReader::new(makefile).lines().flatten() {
+        if let Some(value) = line.split(":=").nth(1).map(str::trim) {
+            if line.contains("API_LEVEL") && api_level.is_none() {
+                api_level = Some(value.parse().map_err(|_| SDKBuildError::InvalidAPILevel)?);
+            }
+        }
+        if api_level.is_some() {
+            // Key found, break out of the loop
+            break;
+        }
+    }
+    let makefile =
+        File::open(c_sdk.join("Makefile.target")).expect("Could not find Makefile.defines");
+    let mut sdk_name: Option<String> = None;
+    for line in BufReader::new(makefile).lines().flatten() {
+        if let Some(value) = line.split(":=").nth(1).map(str::trim) {
+            if line.contains("SDK_NAME") && sdk_name.is_none() {
+                sdk_name = Some(value.to_string().replace('\"', ""));
+            }
+        }
+        if sdk_name.is_some() {
+            // Key found, break out of the loop
+            break;
+        }
+    }
+
+    let sdk_name = sdk_name.ok_or(SDKBuildError::MissingSDKName)?;
+    Ok((api_level, sdk_name))
+}
+
+fn retrieve_target_file_infos(
+    device: &Device,
+    c_sdk: &Path,
+) -> Result<(String, String), SDKBuildError> {
+    let prefix = if device.name == DeviceName::NanoS {
+        "".to_string()
+    } else {
+        format!("target/{}/", device.name)
+    };
+    let target_file_path = c_sdk.join(format!("{}include/bolos_target.h", prefix));
+    let target_file =
+        File::open(target_file_path).map_err(|_| SDKBuildError::TargetFileNotFound)?;
+    let mut target_id: Option<String> = None;
+    let mut target_name: Option<String> = None;
+
+    for line in BufReader::new(target_file).lines().flatten() {
+        if target_id.is_none() && line.contains("#define TARGET_ID") {
+            target_id = Some(
+                line.split_whitespace()
+                    .nth(2)
+                    .ok_or("err")
+                    .map_err(|_| SDKBuildError::MissingTargetId)?
+                    .to_string(),
+            );
+        } else if target_name.is_none()
+            && line.contains("#define TARGET_")
+            && !line.contains("#define TARGET_ID")
+        {
+            target_name = Some(
+                line.split_whitespace()
+                    .nth(1)
+                    .ok_or("err")
+                    .map_err(|_| SDKBuildError::MissingTargetName)?
+                    .to_string(),
+            );
+        }
+
+        if target_id.is_some() && target_name.is_some() {
+            // Both tokens found, break out of the loop
+            break;
+        }
+    }
+
+    let target_id = target_id.ok_or(SDKBuildError::MissingTargetId)?;
+    let target_name = target_name.ok_or(SDKBuildError::MissingTargetName)?;
+    Ok((target_id, target_name))
+}
+
+/// Fetch the appropriate C SDK to build
+fn clone_sdk(devicename: &DeviceName) -> PathBuf {
+    let (repo_url, sdk_branch) = match devicename {
+        DeviceName::NanoS => (
+            Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
+            "API_LEVEL_LNS",
+        ),
+        DeviceName::NanoX => (
+            Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
+            "API_LEVEL_22",
+        ),
+        DeviceName::NanoSPlus => (
+            Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
+            "API_LEVEL_22",
+        ),
+        DeviceName::Stax => (
+            Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
+            "API_LEVEL_22",
+        ),
+        DeviceName::Flex => (
+            Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
+            "API_LEVEL_22",
+        ),
+    };
+
+    let out_dir = env::var("OUT_DIR").unwrap();
+    let c_sdk = Path::new(out_dir.as_str()).join("ledger-secure-sdk");
+    if !c_sdk.exists() {
+        Command::new("git")
+            .arg("clone")
+            .arg(repo_url.to_str().unwrap())
+            .arg("-b")
+            .arg(sdk_branch)
+            .arg(c_sdk.as_path())
+            .output()
+            .ok();
+    }
+    c_sdk
+}
+
+pub fn generate_glyphs(c_sdk: &PathBuf, glyphs_folders: &[PathBuf]) {
+    let icon2glyph = c_sdk.join("lib_nbgl/tools/icon2glyph.py");
+
+    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let dest_path = out_path.join("glyphs");
+    if !dest_path.exists() {
+        fs::create_dir_all(&dest_path).ok();
+    }
+
+    let mut cmd = Command::new(icon2glyph.as_os_str());
+    cmd.arg("--glyphcheader")
+        .arg(dest_path.join("glyphs.h").as_os_str())
+        .arg("--glyphcfile")
+        .arg(dest_path.join("glyphs.c").as_os_str());
+
+    for folder in glyphs_folders.iter() {
+        for file in std::fs::read_dir(folder).unwrap() {
+            let path = file.unwrap().path();
+            let path_str = path.to_str().unwrap().to_string();
+            cmd.arg(path_str);
+        }
+    }
+    let _ = cmd.output();
+}
+
+/// Helper function to concatenate all paths in pathlist to c_sdk's path
+fn str2path(c_sdk: &Path, pathlist: &[&str]) -> Vec<PathBuf> {
+    pathlist
+        .iter()
+        .map(|p| c_sdk.join(p))
+        .collect::<Vec<PathBuf>>()
+}
+
+/// Get all #define from a header file
+fn header2define(headername: &str) -> Vec<(String, Option<String>)> {
+    let mut headerfile = File::open(headername).unwrap();
+    let mut header = String::new();
+    headerfile.read_to_string(&mut header).unwrap();
+
+    header
+        .lines()
+        .filter_map(|line| {
+            if line.trim_start().starts_with("#define") {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                match parts.len() {
+                    2 => Some((parts[1].to_string(), None)),
+                    3 => Some((parts[1].to_string(), Some(parts[2].to_string()))),
+                    _ => None,
+                }
+            } else {
+                None
+            }
+        })
+        .collect()
 }
