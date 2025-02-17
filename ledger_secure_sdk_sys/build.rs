@@ -148,10 +148,10 @@ fn retrieve_csdk_info(device: &Device, path: &PathBuf) -> Result<CSDKInfo, SDKBu
     Ok(csdk_info)
 }
 
-fn retrieve_csdk_git_info(bolos_sdk: &Path) -> (String, String) {
+fn retrieve_csdk_git_info(c_sdk: &Path) -> (String, String) {
     let c_sdk_hash = match Command::new("git")
         .arg("-C")
-        .arg(bolos_sdk)
+        .arg(c_sdk)
         .arg("describe")
         .arg("--always")
         .arg("--dirty")
@@ -173,7 +173,7 @@ fn retrieve_csdk_git_info(bolos_sdk: &Path) -> (String, String) {
 
     let c_sdk_version = match Command::new("git")
         .arg("-C")
-        .arg(bolos_sdk)
+        .arg(c_sdk)
         .arg("describe")
         .arg("--tags")
         .arg("--match")
@@ -194,9 +194,9 @@ fn retrieve_csdk_git_info(bolos_sdk: &Path) -> (String, String) {
     (c_sdk_hash, c_sdk_version)
 }
 
-fn retrieve_makefile_infos(bolos_sdk: &Path) -> Result<(Option<u32>, String), SDKBuildError> {
+fn retrieve_makefile_infos(c_sdk: &Path) -> Result<(Option<u32>, String), SDKBuildError> {
     let makefile =
-        File::open(bolos_sdk.join("Makefile.defines")).expect("Could not find Makefile.defines");
+        File::open(c_sdk.join("Makefile.defines")).expect("Could not find Makefile.defines");
     let mut api_level: Option<u32> = None;
     for line in BufReader::new(makefile).lines().flatten() {
         if let Some(value) = line.split(":=").nth(1).map(str::trim) {
@@ -210,7 +210,7 @@ fn retrieve_makefile_infos(bolos_sdk: &Path) -> Result<(Option<u32>, String), SD
         }
     }
     let makefile =
-        File::open(bolos_sdk.join("Makefile.target")).expect("Could not find Makefile.defines");
+        File::open(c_sdk.join("Makefile.target")).expect("Could not find Makefile.defines");
     let mut sdk_name: Option<String> = None;
     for line in BufReader::new(makefile).lines().flatten() {
         if let Some(value) = line.split(":=").nth(1).map(str::trim) {
@@ -230,14 +230,14 @@ fn retrieve_makefile_infos(bolos_sdk: &Path) -> Result<(Option<u32>, String), SD
 
 fn retrieve_target_file_infos(
     device: &Device,
-    bolos_sdk: &Path,
+    c_sdk: &Path,
 ) -> Result<(String, String), SDKBuildError> {
     let prefix = if device.name == DeviceName::NanoS {
         "".to_string()
     } else {
         format!("target/{}/", device.name)
     };
-    let target_file_path = bolos_sdk.join(format!("{}include/bolos_target.h", prefix));
+    let target_file_path = c_sdk.join(format!("{}include/bolos_target.h", prefix));
     let target_file =
         File::open(target_file_path).map_err(|_| SDKBuildError::TargetFileNotFound)?;
     let mut target_id: Option<String> = None;
@@ -302,18 +302,18 @@ fn clone_sdk(devicename: &DeviceName) -> PathBuf {
     };
 
     let out_dir = env::var("OUT_DIR").unwrap();
-    let bolos_sdk = Path::new(out_dir.as_str()).join("ledger-secure-sdk");
-    if !bolos_sdk.exists() {
+    let c_sdk = Path::new(out_dir.as_str()).join("ledger-secure-sdk");
+    if !c_sdk.exists() {
         Command::new("git")
             .arg("clone")
             .arg(repo_url.to_str().unwrap())
             .arg("-b")
             .arg(sdk_branch)
-            .arg(bolos_sdk.as_path())
+            .arg(c_sdk.as_path())
             .output()
             .ok();
     }
-    bolos_sdk
+    c_sdk
 }
 
 #[derive(Debug)]
@@ -326,11 +326,11 @@ enum SDKBuildError {
     MissingTargetName,
 }
 
-/// Helper function to concatenate all paths in pathlist to bolos_sdk's path
-fn str2path(bolos_sdk: &Path, pathlist: &[&str]) -> Vec<PathBuf> {
+/// Helper function to concatenate all paths in pathlist to c_sdk's path
+fn str2path(c_sdk: &Path, pathlist: &[&str]) -> Vec<PathBuf> {
     pathlist
         .iter()
-        .map(|p| bolos_sdk.join(p))
+        .map(|p| c_sdk.join(p))
         .collect::<Vec<PathBuf>>()
 }
 
@@ -482,8 +482,8 @@ impl SDKBuilder<'_> {
         Ok(())
     }
 
-    pub fn bolos_sdk(&mut self) -> Result<(), SDKBuildError> {
-        // Retrieve the C SDK infos
+    pub fn get_info(&mut self) -> Result<(), SDKBuildError> {
+        // Retrieve the C SDK information
         let sdk_info = retrieve_csdk_info(&self.device, &self.device.c_sdk)?;
         match sdk_info.api_level {
             Some(api_level) => {
@@ -840,7 +840,7 @@ fn main() {
     let mut sdk_builder = SDKBuilder::new();
     sdk_builder.gcc_toolchain().unwrap();
     sdk_builder.device().unwrap();
-    sdk_builder.bolos_sdk().unwrap();
+    sdk_builder.get_info().unwrap();
     sdk_builder.cxdefines().unwrap();
     sdk_builder.generate_glyphs().unwrap();
     sdk_builder.build_c_sdk().unwrap();
@@ -854,35 +854,35 @@ fn main() {
     );
 }
 
-fn configure_lib_ble(command: &mut cc::Build, bolos_sdk: &Path) {
+fn configure_lib_ble(command: &mut cc::Build, c_sdk: &Path) {
     command
-        .file(bolos_sdk.join("src/ledger_protocol.c"))
-        .file(bolos_sdk.join("lib_blewbxx/core/auto/ble_gap_aci.c"))
-        .file(bolos_sdk.join("lib_blewbxx/core/auto/ble_gatt_aci.c"))
-        .file(bolos_sdk.join("lib_blewbxx/core/auto/ble_hal_aci.c"))
-        .file(bolos_sdk.join("lib_blewbxx/core/auto/ble_hci_le.c"))
-        .file(bolos_sdk.join("lib_blewbxx/core/auto/ble_l2cap_aci.c"))
-        .file(bolos_sdk.join("lib_blewbxx/core/template/osal.c"))
-        .file(bolos_sdk.join("lib_blewbxx_impl/src/ledger_ble.c"))
-        .include(bolos_sdk.join("lib_blewbxx/include"))
-        .include(bolos_sdk.join("lib_blewbxx/core"))
-        .include(bolos_sdk.join("lib_blewbxx/core/auto"))
-        .include(bolos_sdk.join("lib_blewbxx/core/template"))
-        .include(bolos_sdk.join("lib_blewbxx_impl/include"));
+        .file(c_sdk.join("src/ledger_protocol.c"))
+        .file(c_sdk.join("lib_blewbxx/core/auto/ble_gap_aci.c"))
+        .file(c_sdk.join("lib_blewbxx/core/auto/ble_gatt_aci.c"))
+        .file(c_sdk.join("lib_blewbxx/core/auto/ble_hal_aci.c"))
+        .file(c_sdk.join("lib_blewbxx/core/auto/ble_hci_le.c"))
+        .file(c_sdk.join("lib_blewbxx/core/auto/ble_l2cap_aci.c"))
+        .file(c_sdk.join("lib_blewbxx/core/template/osal.c"))
+        .file(c_sdk.join("lib_blewbxx_impl/src/ledger_ble.c"))
+        .include(c_sdk.join("lib_blewbxx/include"))
+        .include(c_sdk.join("lib_blewbxx/core"))
+        .include(c_sdk.join("lib_blewbxx/core/auto"))
+        .include(c_sdk.join("lib_blewbxx/core/template"))
+        .include(c_sdk.join("lib_blewbxx_impl/include"));
 }
 
-fn configure_lib_nbgl(command: &mut cc::Build, bolos_sdk: &Path) {
+fn configure_lib_nbgl(command: &mut cc::Build, c_sdk: &Path) {
     let glyphs_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("glyphs");
     command
-        .include(bolos_sdk.join("lib_nbgl/include/"))
-        .include(bolos_sdk.join("lib_nbgl/include/fonts/"))
-        .include(bolos_sdk.join("lib_ux_nbgl/"))
-        .include(bolos_sdk.join("qrcode/include/"))
-        .include(bolos_sdk.join("lib_bagl/include/"))
-        .file(bolos_sdk.join("lib_ux_nbgl/ux.c"))
-        .file(bolos_sdk.join("qrcode/src/qrcodegen.c"))
+        .include(c_sdk.join("lib_nbgl/include/"))
+        .include(c_sdk.join("lib_nbgl/include/fonts/"))
+        .include(c_sdk.join("lib_ux_nbgl/"))
+        .include(c_sdk.join("qrcode/include/"))
+        .include(c_sdk.join("lib_bagl/include/"))
+        .file(c_sdk.join("lib_ux_nbgl/ux.c"))
+        .file(c_sdk.join("qrcode/src/qrcodegen.c"))
         .files(
-            glob(bolos_sdk.join("lib_nbgl/src/*.c").to_str().unwrap())
+            glob(c_sdk.join("lib_nbgl/src/*.c").to_str().unwrap())
                 .unwrap()
                 .map(|x| x.unwrap())
                 .collect::<Vec<PathBuf>>(),
