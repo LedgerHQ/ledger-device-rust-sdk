@@ -110,6 +110,7 @@ struct Device<'a> {
     pub target: &'a str,
     pub defines: Vec<(String, Option<String>)>,
     pub cflags: Vec<&'a str>,
+    pub glyphs_folders: Vec<PathBuf>,
 }
 
 impl std::fmt::Display for DeviceName {
@@ -316,6 +317,31 @@ fn clone_sdk(devicename: &DeviceName) -> PathBuf {
     c_sdk
 }
 
+pub fn generate_glyphs(c_sdk: &PathBuf, glyphs_folders: &[PathBuf]) {
+    let icon2glyph = c_sdk.join("lib_nbgl/tools/icon2glyph.py");
+
+    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let dest_path = out_path.join("glyphs");
+    if !dest_path.exists() {
+        fs::create_dir_all(&dest_path).ok();
+    }
+
+    let mut cmd = Command::new(icon2glyph.as_os_str());
+    cmd.arg("--glyphcheader")
+        .arg(dest_path.join("glyphs.h").as_os_str())
+        .arg("--glyphcfile")
+        .arg(dest_path.join("glyphs.c").as_os_str());
+
+    for folder in glyphs_folders.iter() {
+        for file in std::fs::read_dir(folder).unwrap() {
+            let path = file.unwrap().path();
+            let path_str = path.to_str().unwrap().to_string();
+            cmd.arg(path_str);
+        }
+    }
+    let _ = cmd.output();
+}
+
 #[derive(Debug)]
 enum SDKBuildError {
     UnsupportedDevice,
@@ -361,7 +387,6 @@ struct SDKBuilder<'a> {
     api_level: u32,
     gcc_toolchain: PathBuf,
     device: Device<'a>,
-    glyphs_folders: Vec<PathBuf>,
     cxdefines: Vec<String>,
 }
 
@@ -371,7 +396,6 @@ impl SDKBuilder<'_> {
             api_level: 0,
             gcc_toolchain: PathBuf::new(),
             device: Device::default(),
-            glyphs_folders: Vec::new(),
             cxdefines: Vec::new(),
         }
     }
@@ -412,6 +436,7 @@ impl SDKBuilder<'_> {
                 target: "thumbv6m-none-eabi",
                 defines: header2define("csdk_nanos.h"),
                 cflags: Vec::from(CFLAGS_NANOS),
+                glyphs_folders: Vec::new(),
             },
             "nanosplus" => Device {
                 name: DeviceName::NanoSPlus,
@@ -431,6 +456,7 @@ impl SDKBuilder<'_> {
                     v
                 },
                 cflags: Vec::from(CFLAGS_NANOSPLUS),
+                glyphs_folders: Vec::new(),
             },
             "nanox" => Device {
                 name: DeviceName::NanoX,
@@ -450,6 +476,7 @@ impl SDKBuilder<'_> {
                     v
                 },
                 cflags: Vec::from(CFLAGS_NANOX),
+                glyphs_folders: Vec::new(),
             },
             "stax" => Device {
                 name: DeviceName::Stax,
@@ -457,6 +484,7 @@ impl SDKBuilder<'_> {
                 target: "thumbv8m.main-none-eabi",
                 defines: header2define("csdk_stax.h"),
                 cflags: Vec::from(CFLAGS_STAX),
+                glyphs_folders: Vec::new(),
             },
             "flex" => Device {
                 name: DeviceName::Flex,
@@ -464,6 +492,7 @@ impl SDKBuilder<'_> {
                 target: "thumbv8m.main-none-eabi",
                 defines: header2define("csdk_flex.h"),
                 cflags: Vec::from(CFLAGS_FLEX),
+                glyphs_folders: Vec::new(),
             },
             _ => {
                 return Err(SDKBuildError::UnsupportedDevice);
@@ -475,6 +504,37 @@ impl SDKBuilder<'_> {
             Err(_) => clone_sdk(&self.device.name),
             Ok(path) => PathBuf::from(path),
         };
+
+        // set glyphs folders
+        match self.device.name {
+            DeviceName::Flex => {
+                self.device
+                    .glyphs_folders
+                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/wallet"));
+                self.device
+                    .glyphs_folders
+                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/64px"));
+                self.device
+                    .glyphs_folders
+                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/40px"));
+            }
+            DeviceName::Stax => {
+                self.device
+                    .glyphs_folders
+                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/wallet"));
+                self.device
+                    .glyphs_folders
+                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/64px"));
+                self.device
+                    .glyphs_folders
+                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/32px"));
+            }
+            _ => {
+                self.device
+                    .glyphs_folders
+                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/nano"));
+            }
+        }
 
         // export TARGET into env for 'infos.rs'
         println!("cargo:rustc-env=TARGET={}", self.device.name);
@@ -496,30 +556,6 @@ impl SDKBuilder<'_> {
                 if self.device.name != DeviceName::NanoS {
                     return Err(SDKBuildError::InvalidAPILevel);
                 }
-            }
-        }
-
-        // set glyphs folders
-        match self.device.name {
-            DeviceName::Flex => {
-                self.glyphs_folders
-                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/wallet"));
-                self.glyphs_folders
-                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/64px"));
-                self.glyphs_folders
-                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/40px"));
-            }
-            DeviceName::Stax => {
-                self.glyphs_folders
-                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/wallet"));
-                self.glyphs_folders
-                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/64px"));
-                self.glyphs_folders
-                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/32px"));
-            }
-            _ => {
-                self.glyphs_folders
-                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/nano"));
             }
         }
 
@@ -556,38 +592,12 @@ impl SDKBuilder<'_> {
         Ok(())
     }
 
-    pub fn generate_glyphs(&self) -> Result<(), SDKBuildError> {
-        if self.device.name == DeviceName::NanoS {
-            return Err(SDKBuildError::UnsupportedDevice);
-        }
-
-        let icon2glyph = self.device.c_sdk.join("lib_nbgl/tools/icon2glyph.py");
-
-        let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-        let dest_path = out_path.join("glyphs");
-        if !dest_path.exists() {
-            fs::create_dir_all(&dest_path).ok();
-        }
-
-        let mut cmd = Command::new(icon2glyph.as_os_str());
-        cmd.arg("--glyphcheader")
-            .arg(dest_path.join("glyphs.h").as_os_str())
-            .arg("--glyphcfile")
-            .arg(dest_path.join("glyphs.c").as_os_str());
-
-        for folder in self.glyphs_folders.iter() {
-            for file in std::fs::read_dir(folder).unwrap() {
-                let path = file.unwrap().path();
-                let path_str = path.to_str().unwrap().to_string();
-                cmd.arg(path_str);
-            }
-        }
-
-        let _ = cmd.output();
-        Ok(())
-    }
-
     pub fn build_c_sdk(&self) -> Result<(), SDKBuildError> {
+        // Generate glyphs
+        if self.device.name != DeviceName::NanoS {
+            generate_glyphs(&self.device.c_sdk, &self.device.glyphs_folders);
+        }
+
         let mut command = cc::Build::new();
         if env::var_os("CC").is_none() {
             command.compiler("clang");
@@ -842,7 +852,6 @@ fn main() {
     sdk_builder.device().unwrap();
     sdk_builder.get_info().unwrap();
     sdk_builder.cxdefines().unwrap();
-    sdk_builder.generate_glyphs().unwrap();
     sdk_builder.build_c_sdk().unwrap();
     sdk_builder.generate_bindings().unwrap();
     sdk_builder.generate_heap_size().unwrap();
