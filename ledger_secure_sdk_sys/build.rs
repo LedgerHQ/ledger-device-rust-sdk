@@ -111,6 +111,7 @@ struct Device<'a> {
     pub defines: Vec<(String, Option<String>)>,
     pub cflags: Vec<&'a str>,
     pub glyphs_folders: Vec<PathBuf>,
+    pub arm_libs: String,
 }
 
 impl std::fmt::Display for DeviceName {
@@ -437,6 +438,7 @@ impl SDKBuilder<'_> {
                 defines: header2define("csdk_nanos.h"),
                 cflags: Vec::from(CFLAGS_NANOS),
                 glyphs_folders: Vec::new(),
+                arm_libs: Default::default(),
             },
             "nanosplus" => Device {
                 name: DeviceName::NanoSPlus,
@@ -457,6 +459,7 @@ impl SDKBuilder<'_> {
                 },
                 cflags: Vec::from(CFLAGS_NANOSPLUS),
                 glyphs_folders: Vec::new(),
+                arm_libs: Default::default(),
             },
             "nanox" => Device {
                 name: DeviceName::NanoX,
@@ -477,6 +480,7 @@ impl SDKBuilder<'_> {
                 },
                 cflags: Vec::from(CFLAGS_NANOX),
                 glyphs_folders: Vec::new(),
+                arm_libs: Default::default(),
             },
             "stax" => Device {
                 name: DeviceName::Stax,
@@ -485,6 +489,7 @@ impl SDKBuilder<'_> {
                 defines: header2define("csdk_stax.h"),
                 cflags: Vec::from(CFLAGS_STAX),
                 glyphs_folders: Vec::new(),
+                arm_libs: Default::default(),
             },
             "flex" => Device {
                 name: DeviceName::Flex,
@@ -493,6 +498,7 @@ impl SDKBuilder<'_> {
                 defines: header2define("csdk_flex.h"),
                 cflags: Vec::from(CFLAGS_FLEX),
                 glyphs_folders: Vec::new(),
+                arm_libs: Default::default(),
             },
             _ => {
                 return Err(SDKBuildError::UnsupportedDevice);
@@ -535,6 +541,25 @@ impl SDKBuilder<'_> {
                     .push(self.device.c_sdk.join("lib_nbgl/glyphs/nano"));
             }
         }
+
+        // Set ARM pre-compiled libraries path
+        self.device.arm_libs = match self.device.name {
+            DeviceName::NanoS => {
+                let mut path = self.gcc_toolchain.display().to_string();
+                path.push_str("/lib");
+                path
+            }
+            DeviceName::NanoX => {
+                let mut path = self.device.c_sdk.display().to_string();
+                path.push_str("/arch/st33/lib");
+                path
+            }
+            DeviceName::NanoSPlus | DeviceName::Flex | DeviceName::Stax => {
+                let mut path = self.device.c_sdk.display().to_string();
+                path.push_str("/arch/st33k1/lib");
+                path
+            }
+        };
 
         // export TARGET into env for 'infos.rs'
         println!("cargo:rustc-env=TARGET={}", self.device.name);
@@ -664,19 +689,7 @@ impl SDKBuilder<'_> {
         command.compile("ledger-secure-sdk");
 
         /* Link with libc, libm and libgcc */
-        let mut path = self.device.c_sdk.display().to_string();
-        match self.device.name {
-            DeviceName::NanoS => {
-                path = self.gcc_toolchain.display().to_string();
-                path.push_str("/lib");
-            }
-            DeviceName::NanoX => {
-                path.push_str("/arch/st33/lib");
-            }
-            DeviceName::NanoSPlus | DeviceName::Flex | DeviceName::Stax => {
-                path.push_str("/arch/st33k1/lib");
-            }
-        };
+        let path = self.device.arm_libs.clone();
         println!("cargo:rustc-link-lib=c");
         println!("cargo:rustc-link-lib=m");
         println!("cargo:rustc-link-lib=gcc");
