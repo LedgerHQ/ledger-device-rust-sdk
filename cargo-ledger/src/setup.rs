@@ -33,7 +33,7 @@ pub fn install_targets() {
     let sysroot_cmd = std::str::from_utf8(&sysroot_cmd).unwrap().trim();
 
     let target_files_url = Path::new(
-        "https://raw.githubusercontent.com/LedgerHQ/ledger-device-rust-sdk/y333/nbgl_support_for_nanos/ledger_secure_sdk_sys"
+        "https://raw.githubusercontent.com/LedgerHQ/ledger-device-rust-sdk/refs/tags/ledger_secure_sdk_sys%401.7.0/ledger_secure_sdk_sys"
     );
     let sysroot = Path::new(sysroot_cmd).join("lib").join("rustlib");
 
