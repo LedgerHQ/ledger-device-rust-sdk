@@ -372,6 +372,10 @@ impl Comm {
         match seph::Events::from(tag) {
             #[cfg(not(any(target_os = "stax", target_os = "flex")))]
             seph::Events::ButtonPush => {
+                #[cfg(feature = "nbgl")]
+                unsafe {
+                    ux_process_button_event(spi_buffer.as_mut_ptr());
+                }
                 let button_info = spi_buffer[3] >> 1;
                 if let Some(btn_evt) = get_button_event(&mut self.buttons, button_info) {
                     return Some(Event::Button(btn_evt));

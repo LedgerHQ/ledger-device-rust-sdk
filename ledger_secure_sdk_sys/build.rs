@@ -223,6 +223,7 @@ impl SDKBuilder<'_> {
                         v.push((String::from("NBGL_USE_CASE"), None));
                     } else {
                         println!("cargo:warning=BAGL is built");
+                        println!("cargo:rustc-env=C_SDK_GRAPHICS={}", "bagl");
                         v.push((String::from("HAVE_BAGL"), None));
                     }
                     v
@@ -245,6 +246,7 @@ impl SDKBuilder<'_> {
                         v.push((String::from("NBGL_USE_CASE"), None));
                     } else {
                         println!("cargo:warning=BAGL is built");
+                        println!("cargo:rustc-env=C_SDK_GRAPHICS={}", "bagl");
                         v.push((String::from("HAVE_BAGL"), None));
                     }
                     v
@@ -394,7 +396,7 @@ impl SDKBuilder<'_> {
     pub fn build_c_sdk(&self) -> Result<(), SDKBuildError> {
         // Generate glyphs
         if self.device.name != DeviceName::NanoS {
-            generate_glyphs(&self.device.c_sdk, &self.device.glyphs_folders);
+            generate_glyphs(&self.device);
         }
 
         let mut command = cc::Build::new();
@@ -669,6 +671,8 @@ fn configure_lib_ble(command: &mut cc::Build, c_sdk: &Path) {
 }
 
 fn configure_lib_nbgl(command: &mut cc::Build, c_sdk: &Path) {
+    println!("cargo:rustc-env=C_SDK_GRAPHICS={}", "nbgl");
+
     let glyphs_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("glyphs");
     command
         .include(c_sdk.join("lib_nbgl/include/"))
@@ -864,8 +868,8 @@ fn clone_sdk(devicename: &DeviceName) -> PathBuf {
     c_sdk
 }
 
-pub fn generate_glyphs(c_sdk: &PathBuf, glyphs_folders: &[PathBuf]) {
-    let icon2glyph = c_sdk.join("lib_nbgl/tools/icon2glyph.py");
+fn generate_glyphs(device: &Device) {
+    let icon2glyph = device.c_sdk.join("lib_nbgl/tools/icon2glyph.py");
 
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
     let dest_path = out_path.join("glyphs");
@@ -879,7 +883,11 @@ pub fn generate_glyphs(c_sdk: &PathBuf, glyphs_folders: &[PathBuf]) {
         .arg("--glyphcfile")
         .arg(dest_path.join("glyphs.c").as_os_str());
 
-    for folder in glyphs_folders.iter() {
+    if device.name == DeviceName::NanoSPlus || device.name == DeviceName::NanoX {
+        cmd.arg("--reverse");
+    }
+
+    for folder in device.glyphs_folders.iter() {
         for file in std::fs::read_dir(folder).unwrap() {
             let path = file.unwrap().path();
             let path_str = path.to_str().unwrap().to_string();

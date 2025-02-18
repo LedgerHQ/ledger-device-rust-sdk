@@ -141,6 +141,7 @@ SECTIONS
   ledger.rust_sdk_name (INFO): { KEEP(*(ledger.rust_sdk_name)) }
   ledger.sdk_name (INFO): { KEEP(*(ledger.sdk_name)) }
   ledger.sdk_hash (INFO): { KEEP(*(ledger.sdk_hash)) }
+  ledger.sdk_graphics (INFO): { KEEP(*(ledger.sdk_graphics)) }
 }
 
 PROVIDE(_nvram = ABSOLUTE(_nvram_start));
