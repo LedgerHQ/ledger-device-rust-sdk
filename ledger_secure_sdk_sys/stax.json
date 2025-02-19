@@ -13,17 +13,17 @@
   "panic-strategy": "abort",
   "pre-link-args": {
       "ld.lld": [
-          "-Tstax_flex_layout.ld",
+          "-Tstax_layout.ld",
           "-Tlink.ld"
       ],
       "ld": [
-          "-Tstax_flex_layout.ld",
+          "-Tstax_layout.ld",
           "-Tlink.ld"
       ]
   },
   "relocation-model": "ropi-rwpi",
   "singlethread": true,
   "target-pointer-width": "32",
-  "os": "flex",
+  "os": "stax",
   "target-family": [ "bolos" ]
 }

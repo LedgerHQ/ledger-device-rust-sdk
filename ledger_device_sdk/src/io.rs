@@ -5,8 +5,6 @@ use ledger_secure_sdk_sys::buttons::{get_button_event, ButtonEvent, ButtonsState
 use ledger_secure_sdk_sys::seph as sys_seph;
 use ledger_secure_sdk_sys::*;
 
-#[cfg(feature = "ccid")]
-use crate::ccid;
 use crate::seph;
 use core::convert::{Infallible, TryFrom};
 use core::ops::{Index, IndexMut};
@@ -193,10 +191,6 @@ impl Comm {
                 sys_seph::seph_send(&[sys_seph::SephTags::RawAPDU as u8, len[0], len[1]]);
                 sys_seph::seph_send(&self.apdu_buffer[..self.tx]);
             }
-            #[cfg(feature = "ccid")]
-            APDU_USB_CCID => {
-                ccid::send(&self.apdu_buffer[..self.tx]);
-            }
             #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
             APDU_BLE => {
                 ble::send(&self.apdu_buffer[..self.tx]);
@@ -378,6 +372,10 @@ impl Comm {
         match seph::Events::from(tag) {
             #[cfg(not(any(target_os = "stax", target_os = "flex")))]
             seph::Events::ButtonPush => {
+                #[cfg(feature = "nbgl")]
+                unsafe {
+                    ux_process_button_event(spi_buffer.as_mut_ptr());
+                }
                 let button_info = spi_buffer[3] >> 1;
                 if let Some(btn_evt) = get_button_event(&mut self.buttons, button_info) {
                     return Some(Event::Button(btn_evt));

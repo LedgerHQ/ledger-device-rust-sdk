@@ -173,7 +173,10 @@ impl<'a> NbglHomeAndSettings {
                     };
                     SWITCH_ARRAY[i].initState = state;
                     SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
-                    SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
+                    #[cfg(any(target_os = "stax", target_os = "flex"))]
+                    {
+                        SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
+                    }
                 }
 
                 self.content = nbgl_content_t {
@@ -257,7 +260,10 @@ impl<'a> NbglHomeAndSettings {
                 };
                 SWITCH_ARRAY[i].initState = state;
                 SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
-                SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
+                #[cfg(any(target_os = "stax", target_os = "flex"))]
+                {
+                    SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
+                }
             }
 
             self.content = nbgl_content_t {

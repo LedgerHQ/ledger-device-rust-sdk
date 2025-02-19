@@ -59,3 +59,8 @@ const_cstr!(
     "ledger.sdk_version",
     env!("C_SDK_VERSION")
 );
+const_cstr!(
+    ELF_C_SDK_GRAPHICS,
+    "ledger.sdk_graphics",
+    env!("C_SDK_GRAPHICS")
+);

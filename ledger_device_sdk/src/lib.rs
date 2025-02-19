@@ -10,8 +10,6 @@
 #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
 pub mod ble;
 
-#[cfg(feature = "ccid")]
-pub mod ccid;
 pub mod ecc;
 pub mod hash;
 pub mod hmac;
@@ -24,9 +22,9 @@ pub mod seph;
 
 pub mod testing;
 
-#[cfg(any(target_os = "stax", target_os = "flex"))]
+#[cfg(any(target_os = "stax", target_os = "flex", feature = "nbgl"))]
 pub mod nbgl;
-#[cfg(not(any(target_os = "stax", target_os = "flex")))]
+#[cfg(not(any(target_os = "stax", target_os = "flex", feature = "nbgl")))]
 pub mod ui;
 
 pub mod uxapp;

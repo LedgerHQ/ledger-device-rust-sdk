@@ -10,6 +10,7 @@ use ledger_secure_sdk_sys::*;
 
 pub mod nbgl_address_review;
 pub mod nbgl_choice;
+#[cfg(any(target_os = "stax", target_os = "flex"))]
 pub mod nbgl_generic_review;
 pub mod nbgl_home_and_settings;
 pub mod nbgl_review;
@@ -20,6 +21,7 @@ pub mod nbgl_streaming_review;
 
 pub use nbgl_address_review::*;
 pub use nbgl_choice::*;
+#[cfg(any(target_os = "stax", target_os = "flex"))]
 pub use nbgl_generic_review::*;
 pub use nbgl_home_and_settings::*;
 pub use nbgl_review::*;
@@ -105,6 +107,7 @@ unsafe extern "C" fn quit_callback() {
     G_ENDED = true;
 }
 
+#[cfg(any(target_os = "stax", target_os = "flex"))]
 unsafe extern "C" fn rejected_callback() {
     G_RET = SyncNbgl::UxSyncRetRejected.into();
     G_ENDED = true;
@@ -274,6 +277,7 @@ pub enum TuneIndex {
 // Direct translation of the C original. This was done to
 // avoid compiling `os_io_seproxyhal.c` which includes many other things
 #[no_mangle]
+#[cfg(any(target_os = "stax", target_os = "flex"))]
 extern "C" fn io_seproxyhal_play_tune(tune_index: u8) {
     let mut buffer = [0u8; 4];
     let mut spi_buffer = [0u8; 128];
