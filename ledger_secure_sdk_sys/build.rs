@@ -204,7 +204,13 @@ impl SDKBuilder<'_> {
                 name: DeviceName::NanoS,
                 c_sdk: Default::default(),
                 target: "thumbv6m-none-eabi",
-                defines: header2define("csdk_nanos.h"),
+                defines: {
+                    let mut v = header2define("csdk_nanos.h");
+                    println!("cargo:warning=BAGL is built");
+                    println!("cargo:rustc-env=C_SDK_GRAPHICS={}", "bagl");
+                    v.push((String::from("HAVE_BAGL"), None));
+                    v
+                },
                 cflags: Vec::from(CFLAGS_NANOS),
                 glyphs_folders: Vec::new(),
                 arm_libs: Default::default(),
@@ -468,7 +474,9 @@ impl SDKBuilder<'_> {
         let path = self.device.arm_libs.clone();
         println!("cargo:rustc-link-lib=c");
         println!("cargo:rustc-link-lib=m");
-        println!("cargo:rustc-link-lib=gcc");
+        if self.device.name != DeviceName::NanoS {
+            println!("cargo:rustc-link-lib=gcc");
+        }
         println!("cargo:rustc-link-search={path}");
         Ok(())
     }
