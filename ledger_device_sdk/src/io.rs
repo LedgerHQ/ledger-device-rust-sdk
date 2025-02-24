@@ -18,7 +18,7 @@ pub enum StatusWords {
     BadIns = 0x6e01,
     BadP1P2 = 0x6e02,
     BadLen = 0x6e03,
-    UserCancelled = 0x6e04,
+    UserCancelled = 0x6985,
     Unknown = 0x6d00,
     Panic = 0xe000,
     DeviceLocked = 0x5515,
