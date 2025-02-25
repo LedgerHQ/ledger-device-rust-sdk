@@ -9,8 +9,11 @@ use ledger_secure_sdk_sys::{
 const DPATH_STAGE_SIZE: usize = 16;
 const ADDRESS_BUF_SIZE: usize = 64;
 const AMOUNT_BUF_SIZE: usize = 16;
+const DEFAULT_COIN_CONFIG_BUF_SIZE: usize = 16;
 
-pub struct CheckAddressParams {
+pub struct CheckAddressParams<const COIN_CONFIG_BUF_SIZE: usize = DEFAULT_COIN_CONFIG_BUF_SIZE> {
+    pub coin_config: [u8; COIN_CONFIG_BUF_SIZE],
+    pub coin_config_len: usize,
     pub dpath: [u8; DPATH_STAGE_SIZE * 4],
     pub dpath_len: usize,
     pub ref_address: [u8; ADDRESS_BUF_SIZE],
@@ -18,9 +21,11 @@ pub struct CheckAddressParams {
     pub result: *mut i32,
 }
 
-impl Default for CheckAddressParams {
+impl<const COIN_CONFIG_BUF_SIZE: usize> Default for CheckAddressParams<COIN_CONFIG_BUF_SIZE> {
     fn default() -> Self {
         CheckAddressParams {
+            coin_config: [0; COIN_CONFIG_BUF_SIZE],
+            coin_config_len: 0,
             dpath: [0; DPATH_STAGE_SIZE * 4],
             dpath_len: 0,
             ref_address: [0; ADDRESS_BUF_SIZE],
@@ -30,16 +35,20 @@ impl Default for CheckAddressParams {
     }
 }
 
-pub struct PrintableAmountParams {
+pub struct PrintableAmountParams<const COIN_CONFIG_BUF_SIZE: usize = DEFAULT_COIN_CONFIG_BUF_SIZE> {
+    pub coin_config: [u8; COIN_CONFIG_BUF_SIZE],
+    pub coin_config_len: usize,
     pub amount: [u8; AMOUNT_BUF_SIZE],
     pub amount_len: usize,
     pub amount_str: *mut i8,
     pub is_fee: bool,
 }
 
-impl Default for PrintableAmountParams {
+impl<const COIN_CONFIG_BUF_SIZE: usize> Default for PrintableAmountParams<COIN_CONFIG_BUF_SIZE> {
     fn default() -> Self {
         PrintableAmountParams {
+            coin_config: [0; COIN_CONFIG_BUF_SIZE],
+            coin_config_len: 0,
             amount: [0; AMOUNT_BUF_SIZE],
             amount_len: 0,
             amount_str: core::ptr::null_mut(),
@@ -48,7 +57,9 @@ impl Default for PrintableAmountParams {
     }
 }
 
-pub struct CreateTxParams {
+pub struct CreateTxParams<const COIN_CONFIG_BUF_SIZE: usize = DEFAULT_COIN_CONFIG_BUF_SIZE> {
+    pub coin_config: [u8; COIN_CONFIG_BUF_SIZE],
+    pub coin_config_len: usize,
     pub amount: [u8; AMOUNT_BUF_SIZE],
     pub amount_len: usize,
     pub fee_amount: [u8; AMOUNT_BUF_SIZE],
@@ -58,9 +69,11 @@ pub struct CreateTxParams {
     pub result: *mut u8,
 }
 
-impl Default for CreateTxParams {
+impl<const COIN_CONFIG_BUF_SIZE: usize> Default for CreateTxParams<COIN_CONFIG_BUF_SIZE> {
     fn default() -> Self {
         CreateTxParams {
+            coin_config: [0; COIN_CONFIG_BUF_SIZE],
+            coin_config_len: 0,
             amount: [0; AMOUNT_BUF_SIZE],
             amount_len: 0,
             fee_amount: [0; AMOUNT_BUF_SIZE],
@@ -72,7 +85,9 @@ impl Default for CreateTxParams {
     }
 }
 
-pub fn get_check_address_params(arg0: u32) -> CheckAddressParams {
+pub fn get_check_address_params<const COIN_CONFIG_BUF_SIZE: usize>(
+    arg0: u32,
+) -> CheckAddressParams<COIN_CONFIG_BUF_SIZE> {
     debug_print("=> get_check_address_params\n");
 
     let mut libarg: libargs_t = libargs_t::default();
@@ -88,7 +103,18 @@ pub fn get_check_address_params(arg0: u32) -> CheckAddressParams {
     let params: check_address_parameters_t =
         unsafe { *(libarg.__bindgen_anon_1.check_address as *const check_address_parameters_t) };
 
-    let mut check_address_params: CheckAddressParams = Default::default();
+    let mut check_address_params: CheckAddressParams<COIN_CONFIG_BUF_SIZE> = Default::default();
+
+    debug_print("==> GET_COIN_CONFIG_LENGTH\n");
+    check_address_params.coin_config_len = params.coin_configuration_length as usize;
+
+    debug_print("==> GET_COIN_CONFIG \n");
+    unsafe {
+        params.coin_configuration.copy_to_nonoverlapping(
+            check_address_params.coin_config.as_mut_ptr(),
+            check_address_params.coin_config_len,
+        );
+    }
 
     debug_print("==> GET_DPATH_LENGTH\n");
     check_address_params.dpath_len =
@@ -117,7 +143,9 @@ pub fn get_check_address_params(arg0: u32) -> CheckAddressParams {
     check_address_params
 }
 
-pub fn get_printable_amount_params(arg0: u32) -> PrintableAmountParams {
+pub fn get_printable_amount_params<const COIN_CONFIG_BUF_SIZE: usize>(
+    arg0: u32,
+) -> PrintableAmountParams<COIN_CONFIG_BUF_SIZE> {
     debug_print("=> get_printable_amount_params\n");
 
     let mut libarg: libargs_t = libargs_t::default();
@@ -134,7 +162,19 @@ pub fn get_printable_amount_params(arg0: u32) -> PrintableAmountParams {
         *(libarg.__bindgen_anon_1.get_printable_amount as *const get_printable_amount_parameters_t)
     };
 
-    let mut printable_amount_params: PrintableAmountParams = Default::default();
+    let mut printable_amount_params: PrintableAmountParams<COIN_CONFIG_BUF_SIZE> =
+        Default::default();
+
+    debug_print("==> GET_COIN_CONFIG_LENGTH\n");
+    printable_amount_params.coin_config_len = params.coin_configuration_length as usize;
+
+    debug_print("==> GET_COIN_CONFIG \n");
+    unsafe {
+        params.coin_configuration.copy_to_nonoverlapping(
+            printable_amount_params.coin_config.as_mut_ptr(),
+            printable_amount_params.coin_config_len,
+        );
+    }
 
     debug_print("==> GET_IS_FEE\n");
     printable_amount_params.is_fee = params.is_fee == true;
@@ -162,7 +202,9 @@ extern "C" {
     fn c_boot_std();
 }
 
-pub fn sign_tx_params(arg0: u32) -> CreateTxParams {
+pub fn sign_tx_params<const COIN_CONFIG_BUF_SIZE: usize>(
+    arg0: u32,
+) -> CreateTxParams<COIN_CONFIG_BUF_SIZE> {
     debug_print("=> sign_tx_params\n");
 
     let mut libarg: libargs_t = libargs_t::default();
@@ -179,7 +221,18 @@ pub fn sign_tx_params(arg0: u32) -> CreateTxParams {
         *(libarg.__bindgen_anon_1.create_transaction as *const create_transaction_parameters_t)
     };
 
-    let mut create_tx_params: CreateTxParams = Default::default();
+    let mut create_tx_params: CreateTxParams<COIN_CONFIG_BUF_SIZE> = Default::default();
+
+    debug_print("==> GET_COIN_CONFIG_LENGTH\n");
+    create_tx_params.coin_config_len = params.coin_configuration_length as usize;
+
+    debug_print("==> GET_COIN_CONFIG \n");
+    unsafe {
+        params.coin_configuration.copy_to_nonoverlapping(
+            create_tx_params.coin_config.as_mut_ptr(),
+            create_tx_params.coin_config_len,
+        );
+    }
 
     debug_print("==> GET_AMOUNT\n");
     create_tx_params.amount_len = AMOUNT_BUF_SIZE.min(params.amount_length as usize);
