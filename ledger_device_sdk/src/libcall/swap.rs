@@ -112,7 +112,9 @@ pub fn get_check_address_params<const COIN_CONFIG_BUF_SIZE: usize>(
     unsafe {
         params.coin_configuration.copy_to_nonoverlapping(
             check_address_params.coin_config.as_mut_ptr(),
-            check_address_params.coin_config_len,
+            check_address_params
+                .coin_config_len
+                .min(COIN_CONFIG_BUF_SIZE),
         );
     }
 
@@ -172,7 +174,9 @@ pub fn get_printable_amount_params<const COIN_CONFIG_BUF_SIZE: usize>(
     unsafe {
         params.coin_configuration.copy_to_nonoverlapping(
             printable_amount_params.coin_config.as_mut_ptr(),
-            printable_amount_params.coin_config_len,
+            printable_amount_params
+                .coin_config_len
+                .min(COIN_CONFIG_BUF_SIZE),
         );
     }
 
@@ -230,7 +234,7 @@ pub fn sign_tx_params<const COIN_CONFIG_BUF_SIZE: usize>(
     unsafe {
         params.coin_configuration.copy_to_nonoverlapping(
             create_tx_params.coin_config.as_mut_ptr(),
-            create_tx_params.coin_config_len,
+            create_tx_params.coin_config_len.min(COIN_CONFIG_BUF_SIZE),
         );
     }
 
