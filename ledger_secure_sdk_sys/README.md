@@ -1,4 +1,5 @@
 # Rust Low-level bindings to the Ledger C SDK
+![Dynamic TOML Badge](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FLedgerHQ%2Fledger-device-rust-sdk%2Frefs%2Fheads%2Fmaster%2Fledger_secure_sdk_sys%2FCargo.toml&query=%24.package.version&label=version)
 
 Provides access to low-level APIs to the operating system of Ledger devices.
 

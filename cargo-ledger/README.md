@@ -1,8 +1,9 @@
-# Cargo-ledger
+# cargo-ledger
+![Dynamic TOML Badge](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FLedgerHQ%2Fledger-device-rust-sdk%2Frefs%2Fheads%2Fmaster%2Fcargo-ledger%2FCargo.toml&query=%24.package.version&label=version)
 
-Builds a Nano App and outputs a JSON manifest file that can be used by [ledgerctl](https://github.com/LedgerHQ/ledgerctl) to install an application directly.
+Builds a Ledger device embedded app and outputs a JSON/TOML manifest file that can be used by [ledgerctl](https://github.com/LedgerHQ/ledgerctl) to install an application directly on a device.
 
-In order to build for Nano S, Nano X, and Nano S Plus, [custom target files](https://docs.rust-embedded.org/embedonomicon/custom-target.html) are used. They can be found at the root of the [Rust SDK](https://github.com/LedgerHQ/ledger-nanos-sdk/) and can be installed automatically with the command `setup`.
+In order to build for Nano X, Nano S Plus, Stax and Flex [custom target files](https://docs.rust-embedded.org/embedonomicon/custom-target.html) are used. They can be found at the root of the [ledger_secure_sdk_sys](https://github.com/LedgerHQ/ledger_secure_sdk_sys/) and can be installed automatically with the command `cargo ledger setup`.
 
 ## Installation
 
@@ -41,9 +42,10 @@ cargo ledger setup
 ### Building
 
 ```
-cargo ledger build nanos
 cargo ledger build nanox
 cargo ledger build nanosplus
+cargo ledger build stax
+cargo ledger build flex
 ```
 
 Loading on device can optionally be performed by appending `--load` or `-l` to the command.

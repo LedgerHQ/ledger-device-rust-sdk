@@ -1,4 +1,5 @@
-# Ledger wallets SDK for Rust Applications
+# Ledger device SDK for Rust Applications
+![Dynamic TOML Badge](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FLedgerHQ%2Fledger-device-rust-sdk%2Frefs%2Fheads%2Fmaster%2Fledger_device_sdk%2FCargo.toml&query=%24.package.version&label=version)
 
 Crate that allows developing Ledger device apps in Rust with a default configuration.
 
@@ -9,20 +10,11 @@ Contains:
 - signature abstractions
 - UI libraries (the `ui` module for Nano (S/SP/X) apps, `nbgl` module for Stax and Flex apps)
 
-## Links
-
-To learn more about using the SDK and what is required to publish an app on the Ledger Live app store, please don't hesitate to check the following resources :
-
-- 📚 [Developer's documentation](https://developers.ledger.com/)
-- 🗣️ [Ledger's Discord server](https://discord.gg/Ledger)
-- 📦 [Fully featured boilerplate app](https://github.com/LedgerHQ/app-boilerplate-rust)
-- 📦 [A Password Manager app](https://github.com/LedgerHQ/rust-app-password-manager)
-
 ## Supported devices
 
-|       Nano S       |       Nano X       |    Nano S Plus     |        Stax        |       Flex         |
-| ------------------ | ------------------ | ------------------ | ------------------ | ------------------ |
-| :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+|       Nano X       |    Nano S Plus     |        Stax        |       Flex         |
+| ------------------ | ------------------ | ------------------ | ------------------ |
+| :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 
 ## Usage
 
@@ -31,7 +23,7 @@ On Ubuntu, `gcc-multilib` might also be required.
 
 Using rustc nightly builds is mandatory as some unstable features are required.
 
-- `rustup default nightly`
+- `rustup default nightly-2024-12-01`
 - `rustup component add rust-src`
 - install [Clang](http://releases.llvm.org/download.html).
 - install an [ARM gcc toolchain](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads)
@@ -51,45 +43,33 @@ sudo pacman -S clang arm-none-eabi-gcc arm-none-eabi-newlib
 
 This SDK provides [custom target](https://doc.rust-lang.org/rustc/targets/custom.html) files. One for each supported device.
 
-### Building for Nano S
-
-```
-cargo build --release -Z build-std=core --target=./nanos.json
-```
-
 ### Building for Nano X
 
 ```
-cargo build --release -Z build-std=core --target=./nanox.json
+cargo build --release --target=nanox
 ```
 
 ### Building for Nano S+
 
 ```
-cargo build --release -Z build-std=core --target=./nanosplus.json
+cargo build --release --target=nanosplus
 ```
 
 ### Building for Stax
 
 ```
-cargo build --release -Z build-std=core --target=./stax.json
+cargo build --release --target=stax
 ```
 
 ### Building for Flex
 
 ```
-cargo build --release -Z build-std=core --target=./flex.json
+cargo build --release --target=flex
 ```
-
-## Building with rustc < 1.54
-
-Building before rustc 1.54 should fail with `error[E0635]: unknown feature const_fn_trait_bound`.
-
-This is solved by activating a specific feature: `cargo build --features pre1_54`
 
 ## Contributing
 
-You can submit an issue or even a pull request if you wish to contribute, we will check what we can do.
+You can submit an issue or even a pull request if you wish to contribute.
 
 Make sure you've followed the installation steps above. In order for your PR to be accepted, it will have to pass the CI, which performs the following checks:
 
