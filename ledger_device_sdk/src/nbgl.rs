@@ -10,7 +10,6 @@ use ledger_secure_sdk_sys::*;
 
 pub mod nbgl_address_review;
 pub mod nbgl_choice;
-#[cfg(any(target_os = "stax", target_os = "flex"))]
 pub mod nbgl_generic_review;
 pub mod nbgl_home_and_settings;
 pub mod nbgl_review;
@@ -21,7 +20,6 @@ pub mod nbgl_streaming_review;
 
 pub use nbgl_address_review::*;
 pub use nbgl_choice::*;
-#[cfg(any(target_os = "stax", target_os = "flex"))]
 pub use nbgl_generic_review::*;
 pub use nbgl_home_and_settings::*;
 pub use nbgl_review::*;

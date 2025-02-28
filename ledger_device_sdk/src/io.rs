@@ -372,7 +372,7 @@ impl Comm {
         match seph::Events::from(tag) {
             #[cfg(not(any(target_os = "stax", target_os = "flex")))]
             seph::Events::ButtonPush => {
-                #[cfg(feature = "nbgl")]
+                #[cfg(feature = "nano_nbgl")]
                 unsafe {
                     ux_process_button_event(spi_buffer.as_mut_ptr());
                 }

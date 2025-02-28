@@ -222,7 +222,7 @@ impl SDKBuilder<'_> {
                 target: "thumbv8m.main-none-eabi",
                 defines: {
                     let mut v = header2define("csdk_nanos2.h");
-                    if env::var_os("CARGO_FEATURE_NBGL").is_some() {
+                    if env::var_os("CARGO_FEATURE_NANO_NBGL").is_some() {
                         println!("cargo:warning=NBGL is built");
                         v.push((String::from("HAVE_NBGL"), None));
                         v.push((String::from("NBGL_STEP"), None));
@@ -245,7 +245,7 @@ impl SDKBuilder<'_> {
                 target: "thumbv6m-none-eabi",
                 defines: {
                     let mut v = header2define("csdk_nanox.h");
-                    if env::var_os("CARGO_FEATURE_NBGL").is_some() {
+                    if env::var_os("CARGO_FEATURE_NANO_NBGL").is_some() {
                         println!("cargo:warning=NBGL is built");
                         v.push((String::from("HAVE_NBGL"), None));
                         v.push((String::from("NBGL_STEP"), None));
@@ -537,7 +537,7 @@ impl SDKBuilder<'_> {
             DeviceName::NanoSPlus | DeviceName::NanoX | DeviceName::Stax | DeviceName::Flex => {
                 if ((self.device.name == DeviceName::NanoX
                     || self.device.name == DeviceName::NanoSPlus)
-                    && env::var_os("CARGO_FEATURE_NBGL").is_some())
+                    && env::var_os("CARGO_FEATURE_NANO_NBGL").is_some())
                     || self.device.name == DeviceName::Stax
                     || self.device.name == DeviceName::Flex
                 {
