@@ -7,58 +7,71 @@ on:
                 type: string
                 required: false
                 default: ''
-    pull_request:
 
+jobs:
+    retrieve-rust-apps:
+      name: Retrieve Rust Apps
+      runs-on: ubuntu-latest
+      outputs:
+        rust_apps: ${{ steps.get_rust_apps.outputs.rust_apps }}
+      steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
+        - name: Set up Python
+          uses: actions/setup-python@v4
+          with:
+              python-version: '3.x'
+        - name: Install ledgered
+          run: pip install ledgered
+        - name: Get all rust apps
+          id: get_rust_apps
+          run: |
+            python .github/workflows/get_rust_apps.py ${{ secrets.GH_TOKEN }} > rust_apps.txt
+            echo "rust_apps=$(cat rust_apps.txt)" >> $GITHUB_OUTPUT
 
-jobs:    
+    display-rust-apps:
+      name: Display Rust Apps
+      runs-on: ubuntu-latest
+      needs: retrieve-rust-apps
+      steps:
+        - name: Display Rust Apps
+          run: |
+            echo "Rust apps: ${{ needs.retrieve-rust-apps.outputs.rust_apps }}"
+
     test-build:
         name: Build for all targets
+        needs: retrieve-rust-apps
         strategy:
             fail-fast: false
             matrix:
-                include: 
-                    - repo: 'app-radix-babylon'
-                      branch: 'develop'
-                    - repo: 'app-sui'
-                      branch: 'develop'
-                    - repo: 'app-pocket'
-                      branch: 'develop'
-                    - repo: 'app-starknet'
-                      branch: 'develop'
-                    - repo: 'app-alephium'
-                      branch: 'develop'
-                    - repo: 'app-boilerplate-rust'
-                      branch: 'main'
-                    - repo: 'app-near'
-                      branch: 'develop'
-
+              app-name: ${{ fromJSON(needs.retrieve-rust-apps.outputs.rust_apps) }}
+              exclude:
+                - app-name: "app-kadena-legacy"
+                - app-name: "app-age"
+                - app-name: "app-provenance"
+                - app-name: "app-conflux"
         runs-on: ubuntu-latest
         container:
             image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
         steps:
-            - name: Install dependencies
+            - name: Install ledgered
               run: pip install ledgered
-
             - name: Clone SDK
               uses: actions/checkout@v4
               with:
                 path: sdk
-              
             - name: Clone App
               uses: actions/checkout@v4
               with:
-                repository: LedgerHQ/${{ matrix.repo }}
+                repository: LedgerHQ/${{ matrix.app-name }}
                 submodules: true
-                ref: ${{ matrix.branch }}
-                path: ${{ matrix.repo }}-${{ matrix.branch }}
-
+                path: ${{ matrix.app-name }}
             - name: Patch Cargo.toml
               continue-on-error: false
               run: |
-                cd ${{ matrix.repo }}-${{ matrix.branch }}
+                cd ${{ matrix.app-name }}
                 build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
                 cd $build_directory
-
                 # Determine if the project is a workspace and get the workspace root path
                 if cargo metadata --no-deps --format-version 1 | jq -e '.workspace_members | length > 0' > /dev/null; then
                     echo "Workspace detected. Retrieving workspace root path."
@@ -70,42 +83,27 @@ jobs:
                 fi
 
                 # Patch ledger_device_sdk
-                if grep -Fxq "[patch.crates-io.ledger_device_sdk]" $cargo_toml_path; then
-                    echo "The patch already exists in the file."
-                    exit 1
-                else
-                    echo "" >> $cargo_toml_path 
-                    echo "[patch.crates-io.ledger_device_sdk]" >> $cargo_toml_path
-                    path=\"$GITHUB_WORKSPACE/sdk/ledger_device_sdk\"
-                    echo "path=$path" >> $cargo_toml_path
-                    echo "Patch added to Cargo.toml"
-                fi
+                echo "" >> $cargo_toml_path
+                echo "[patch.crates-io.ledger_device_sdk]" >> $cargo_toml_path
+                path=\"$GITHUB_WORKSPACE/sdk/ledger_device_sdk\"
+                echo "path=$path" >> $cargo_toml_path
+                echo "Patch added to Cargo.toml"
                 # Patch ledger_secure_sdk_sys
-                if grep -Fxq "[patch.crates-io.ledger_secure_sdk_sys]" $cargo_toml_path; then
-                    echo "The patch already exists in the file."
-                    exit 1
-                else
-                    echo "" >> $cargo_toml_path 
-                    echo "[patch.crates-io.ledger_secure_sdk_sys]" >> $cargo_toml_path
-                    path=\"$GITHUB_WORKSPACE/sdk/ledger_secure_sdk_sys\"
-                    echo "path=$path" >> $cargo_toml_path
-                    echo "Patch added to Cargo.toml"
-                fi
+                echo "" >> $cargo_toml_path
+                echo "[patch.crates-io.ledger_secure_sdk_sys]" >> $cargo_toml_path
+                path=\"$GITHUB_WORKSPACE/sdk/ledger_secure_sdk_sys\"
+                echo "path=$path" >> $cargo_toml_path
+                echo "Patch added to Cargo.toml"
                 # Patch include_gif
-                if grep -Fxq "[patch.crates-io.include_gif]" $cargo_toml_path; then
-                    echo "The patch already exists in the file."
-                    exit 1
-                else
-                    echo "" >> $cargo_toml_path 
-                    echo "[patch.crates-io.include_gif]" >> $cargo_toml_path
-                    path=\"$GITHUB_WORKSPACE/sdk/include_gif\"
-                    echo "path=$path" >> $cargo_toml_path
-                    echo "Patch added to Cargo.toml"
-                fi
+                echo "" >> $cargo_toml_path
+                echo "[patch.crates-io.include_gif]" >> $cargo_toml_path
+                path=\"$GITHUB_WORKSPACE/sdk/include_gif\"
+                echo "path=$path" >> $cargo_toml_path
+                echo "Patch added to Cargo.toml"
                 
             - name: Build
               run: |
-                cd ${{ matrix.repo }}-${{ matrix.branch }}
+                cd ${{ matrix.app-name }}
                 build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
                 devices="$(ledger-manifest --output-devices ledger_app.toml -j | sed 's/+/plus/' | jq -rc '.devices[]')"
                 cd $build_directory
