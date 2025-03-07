@@ -360,9 +360,7 @@ impl SDKBuilder<'_> {
 
     pub fn build_c_sdk(&self) -> Result<(), SDKBuildError> {
         // Generate glyphs
-        if self.device.name != DeviceName::NanoS {
-            generate_glyphs(&self.device);
-        }
+        generate_glyphs(&self.device);
 
         let mut command = cc::Build::new();
         if env::var_os("CC").is_none() {
@@ -741,11 +739,7 @@ fn retrieve_target_file_infos(
     device: &Device,
     c_sdk: &Path,
 ) -> Result<(String, String), SDKBuildError> {
-    let prefix = if device.name == DeviceName::NanoS {
-        "".to_string()
-    } else {
-        format!("target/{}/", device.name)
-    };
+    let prefix = format!("target/{}/", device.name);
     let target_file_path = c_sdk.join(format!("{}include/bolos_target.h", prefix));
     let target_file =
         File::open(target_file_path).map_err(|_| SDKBuildError::TargetFileNotFound)?;
