@@ -29,20 +29,6 @@ const SDK_USB_FILES: [&str; 6] = [
     "lib_stusb/STM32_USB_Device_Library/Class/HID/Src/usbd_hid.c",
 ];
 
-const CFLAGS_NANOS: [&str; 11] = [
-    "-Oz",
-    "-fomit-frame-pointer",
-    "-fno-common",
-    "-fdata-sections",
-    "-ffunction-sections",
-    "-mthumb",
-    "-fno-jump-tables",
-    "-fshort-enums",
-    "-mno-unaligned-access",
-    "-fropi",
-    "-Wno-unused-command-line-argument",
-];
-
 const CFLAGS_NANOSPLUS: [&str; 22] = [
     "-Oz",
     "-g0",
@@ -95,7 +81,6 @@ const CFLAGS_NANOX: [&str; 21] = [
 
 #[derive(Debug, Default, PartialEq)]
 enum DeviceName {
-    NanoS,
     #[default]
     NanoSPlus,
     NanoX,
@@ -118,7 +103,6 @@ struct Device<'a> {
 impl std::fmt::Display for DeviceName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DeviceName::NanoS => write!(f, "nanos"),
             DeviceName::NanoSPlus => write!(f, "nanos2"),
             DeviceName::NanoX => write!(f, "nanox"),
             DeviceName::Stax => write!(f, "stax"),
@@ -200,22 +184,6 @@ impl SDKBuilder<'_> {
             .to_str()
             .unwrap()
         {
-            "nanos" => Device {
-                name: DeviceName::NanoS,
-                c_sdk: Default::default(),
-                target: "thumbv6m-none-eabi",
-                defines: {
-                    let mut v = header2define("csdk_nanos.h");
-                    println!("cargo:warning=BAGL is built");
-                    println!("cargo:rustc-env=C_SDK_GRAPHICS={}", "bagl");
-                    v.push((String::from("HAVE_BAGL"), None));
-                    v
-                },
-                cflags: Vec::from(CFLAGS_NANOS),
-                glyphs_folders: Vec::new(),
-                arm_libs: Default::default(),
-                linker_script: "nanos_layout.ld",
-            },
             "nanosplus" => Device {
                 name: DeviceName::NanoSPlus,
                 c_sdk: Default::default(),
@@ -326,11 +294,6 @@ impl SDKBuilder<'_> {
 
         // Set ARM pre-compiled libraries path
         self.device.arm_libs = match self.device.name {
-            DeviceName::NanoS => {
-                let mut path = self.gcc_toolchain.display().to_string();
-                path.push_str("/lib");
-                path
-            }
             DeviceName::NanoX => {
                 let mut path = self.device.c_sdk.display().to_string();
                 path.push_str("/arch/st33/lib");
@@ -359,11 +322,7 @@ impl SDKBuilder<'_> {
                 println!("cargo:rustc-env=API_LEVEL={}", self.api_level);
                 println!("cargo:warning=API_LEVEL is {}", self.api_level);
             }
-            None => {
-                if self.device.name != DeviceName::NanoS {
-                    return Err(SDKBuildError::InvalidAPILevel);
-                }
-            }
+            None => Err(SDKBuildError::InvalidAPILevel),
         }
 
         // Export other SDK infos into env for 'infos.rs'
@@ -474,9 +433,8 @@ impl SDKBuilder<'_> {
         let path = self.device.arm_libs.clone();
         println!("cargo:rustc-link-lib=c");
         println!("cargo:rustc-link-lib=m");
-        if self.device.name != DeviceName::NanoS {
-            println!("cargo:rustc-link-lib=gcc");
-        }
+        println!("cargo:rustc-link-lib=gcc");
+
         println!("cargo:rustc-link-search={path}");
         Ok(())
     }
@@ -529,45 +487,36 @@ impl SDKBuilder<'_> {
         }
 
         // BAGL or NBGL bindings
-        match self.device.name {
-            DeviceName::NanoS => {
-                bindings =
-                    bindings.header(self.device.c_sdk.join("include/bagl.h").to_str().unwrap())
-            }
-            DeviceName::NanoSPlus | DeviceName::NanoX | DeviceName::Stax | DeviceName::Flex => {
-                if ((self.device.name == DeviceName::NanoX
-                    || self.device.name == DeviceName::NanoSPlus)
-                    && env::var_os("CARGO_FEATURE_NANO_NBGL").is_some())
-                    || self.device.name == DeviceName::Stax
-                    || self.device.name == DeviceName::Flex
-                {
-                    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-                    let mut include_path = "-I".to_string();
-                    let glyphs = out_path.join("glyphs");
-                    include_path += glyphs.to_str().unwrap();
-                    bindings = bindings.clang_args([include_path.as_str()]);
+        if ((self.device.name == DeviceName::NanoX || self.device.name == DeviceName::NanoSPlus)
+            && env::var_os("CARGO_FEATURE_NANO_NBGL").is_some())
+            || self.device.name == DeviceName::Stax
+            || self.device.name == DeviceName::Flex
+        {
+            let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+            let mut include_path = "-I".to_string();
+            let glyphs = out_path.join("glyphs");
+            include_path += glyphs.to_str().unwrap();
+            bindings = bindings.clang_args([include_path.as_str()]);
 
-                    bindings = bindings.clang_args([
-                        format!("-I{bsdk}/lib_nbgl/include/").as_str(),
-                        format!("-I{bsdk}/lib_ux_nbgl/").as_str(),
-                    ]);
-                    bindings = bindings
-                        .header(
-                            self.device
-                                .c_sdk
-                                .join("lib_nbgl/include/nbgl_use_case.h")
-                                .to_str()
-                                .unwrap(),
-                        )
-                        .header(
-                            self.device
-                                .c_sdk
-                                .join("lib_ux_nbgl/ux_nbgl.h")
-                                .to_str()
-                                .unwrap(),
-                        );
-                }
-            }
+            bindings = bindings.clang_args([
+                format!("-I{bsdk}/lib_nbgl/include/").as_str(),
+                format!("-I{bsdk}/lib_ux_nbgl/").as_str(),
+            ]);
+            bindings = bindings
+                .header(
+                    self.device
+                        .c_sdk
+                        .join("lib_nbgl/include/nbgl_use_case.h")
+                        .to_str()
+                        .unwrap(),
+                )
+                .header(
+                    self.device
+                        .c_sdk
+                        .join("lib_ux_nbgl/ux_nbgl.h")
+                        .to_str()
+                        .unwrap(),
+                );
         }
 
         // BLE bindings
@@ -839,10 +788,6 @@ fn retrieve_target_file_infos(
 /// Fetch the appropriate C SDK to build
 fn clone_sdk(devicename: &DeviceName) -> PathBuf {
     let (repo_url, sdk_branch) = match devicename {
-        DeviceName::NanoS => (
-            Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_LNS",
-        ),
         DeviceName::NanoX => (
             Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
             "API_LEVEL_22",

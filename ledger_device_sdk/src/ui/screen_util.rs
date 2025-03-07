@@ -24,7 +24,6 @@ pub fn fulldraw(x_pos: i32, y_pos: i32, bmp: &[u8]) {
 }
 
 pub fn screen_update() {
-    #[cfg(not(target_os = "nanos"))]
     unsafe {
         ledger_secure_sdk_sys::screen_update();
     }

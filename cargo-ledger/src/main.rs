@@ -52,7 +52,6 @@ struct CliArgs {
 
 #[derive(ValueEnum, Clone, Copy, Debug, PartialEq)]
 enum Device {
-    Nanos,
     Nanox,
     Nanosplus,
     Stax,
@@ -68,7 +67,6 @@ impl Display for Device {
 impl AsRef<str> for Device {
     fn as_ref(&self) -> &str {
         match self {
-            Device::Nanos => "nanos",
             Device::Nanox => "nanox",
             Device::Nanosplus => "nanosplus",
             Device::Stax => "stax",
@@ -159,7 +157,6 @@ fn build_app(
     let exe_path = match use_prebuilt {
         None => {
             let c_sdk_path = match device {
-                Device::Nanos => std::env::var("NANOS_SDK"),
                 Device::Nanosplus => std::env::var("NANOSP_SDK"),
                 Device::Nanox => std::env::var("NANOX_SDK"),
                 Device::Stax => std::env::var("STAX_SDK"),
@@ -264,7 +261,7 @@ fn build_app(
         None => match metadata_ledger.flags {
             Some(flags) => match device {
                 // Modify flags to enable BLE if targeting Nano X
-                Device::Nanos | Device::Nanosplus => flags,
+                Device::Nanosplus => flags,
                 Device::Nanox | Device::Stax | Device::Flex => {
                     let base =
                         u32::from_str_radix(flags.trim_start_matches("0x"), 16)
@@ -279,7 +276,6 @@ fn build_app(
     // Target ID according to target, in case it
     // is not present in the retrieved ELF infos.
     let backup_targetid: String = match device {
-        Device::Nanos => String::from("0x31100004"),
         Device::Nanox => String::from("0x33000004"),
         Device::Nanosplus => String::from("0x33100004"),
         Device::Stax => String::from("0x33200004"),
@@ -301,13 +297,8 @@ fn build_app(
         "binary": hex_file,
         "dataSize": infos.size
     });
-    // Ignore apiLevel for Nano S as it is unsupported for now
-    match device {
-        Device::Nanos => (),
-        _ => {
-            json["apiLevel"] = infos.api_level.into();
-        }
-    }
+
+    json["apiLevel"] = infos.api_level.into();
     serde_json::to_writer_pretty(file, &json).unwrap();
 
     // Copy icon to the same directory as the app.json
@@ -359,20 +350,20 @@ mod tests {
     #[test]
     fn valid_metadata() {
         let (_, metadata_ledger, metadata_nanos) =
-            retrieve_metadata(Device::Nanos, Some("./tests/valid/Cargo.toml"));
+            retrieve_metadata(Device::Flex, Some("./tests/valid/Cargo.toml"));
 
         assert_eq!(metadata_ledger.name, Some("TestApp".to_string()));
         assert_eq!(metadata_ledger.curve, ["secp256k1"]);
         assert_eq!(metadata_ledger.flags, "0x38");
         assert_eq!(metadata_ledger.path, ["'44/123"]);
 
-        assert_eq!(metadata_nanos.icon, "./assets/nanos.gif")
+        //assert_eq!(metadata_nanos.icon, "./assets/nanos.gif")
     }
 
     #[test]
     fn valid_metadata_variant() {
         let (_, metadata_ledger, metadata_nanos) = retrieve_metadata(
-            Device::Nanos,
+            Device::Flex,
             Some("./tests/valid_variant/Cargo.toml"),
         );
 
@@ -380,13 +371,13 @@ mod tests {
         assert_eq!(metadata_ledger.curve, ["secp256k1"]);
         assert_eq!(metadata_ledger.flags, "0x38");
         assert_eq!(metadata_ledger.path, ["'44/123"]);
-        assert_eq!(metadata_nanos.icon, "./assets/nanos.gif")
+        //assert_eq!(metadata_nanos.icon, "./assets/nanos.gif")
     }
 
     #[test]
     fn valid_outdated_metadata() {
         let (_, metadata_ledger, metadata_nanos) = retrieve_metadata(
-            Device::Nanos,
+            Device::Flex,
             Some("./tests/valid_outdated/Cargo.toml"),
         );
 
@@ -394,6 +385,6 @@ mod tests {
         assert_eq!(metadata_ledger.curve, ["secp256k1"]);
         assert_eq!(metadata_ledger.flags, "0");
         assert_eq!(metadata_ledger.path, ["'44/123"]);
-        assert_eq!(metadata_nanos.icon, "nanos.gif")
+        //assert_eq!(metadata_nanos.icon, "nanos.gif")
     }
 }

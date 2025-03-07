@@ -22,4 +22,4 @@ nano_nbgl = []
 
 [lints.rust.unexpected_cfgs]
 level = "warn"
-check-cfg = ['cfg(target_os, values("stax", "flex", "nanos", "nanox", "nanosplus"))']
+check-cfg = ['cfg(target_os, values("stax", "flex", "nanox", "nanosplus"))']

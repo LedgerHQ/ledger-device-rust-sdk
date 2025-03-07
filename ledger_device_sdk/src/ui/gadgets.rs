@@ -42,25 +42,19 @@ pub fn get_event(buttons: &mut ButtonsState) -> Option<ButtonEvent> {
 }
 
 pub fn clear_screen() {
-    #[cfg(not(target_os = "nanos"))]
-    {
-        #[cfg(not(feature = "speculos"))]
-        unsafe {
-            ledger_secure_sdk_sys::screen_clear();
-        }
-
-        #[cfg(feature = "speculos")]
-        {
-            // Speculos does not emulate the screen_clear syscall yet
-            RectFull::new()
-                .width(crate::ui::SCREEN_WIDTH as u32)
-                .height(crate::ui::SCREEN_HEIGHT as u32)
-                .erase();
-        }
+    #[cfg(not(feature = "speculos"))]
+    unsafe {
+        ledger_secure_sdk_sys::screen_clear();
     }
 
-    #[cfg(target_os = "nanos")]
-    BLANK.paint();
+    #[cfg(feature = "speculos")]
+    {
+        // Speculos does not emulate the screen_clear syscall yet
+        RectFull::new()
+            .width(crate::ui::SCREEN_WIDTH as u32)
+            .height(crate::ui::SCREEN_HEIGHT as u32)
+            .erase();
+    }
 }
 
 /// Display a developer mode / pending review popup, cleared with user interaction.
@@ -89,18 +83,9 @@ pub fn display_pending_review(comm: &mut Comm) {
     clear_screen();
 
     // Add icon and text to match the C SDK equivalent.
-    #[cfg(target_os = "nanos")]
-    {
-        "Pending".place(Location::Custom(2), Layout::Centered, true);
-        "Ledger review".place(Location::Custom(14), Layout::Centered, true);
-    }
-
-    #[cfg(not(target_os = "nanos"))]
-    {
-        WARNING.draw(57, 10);
-        "Pending".place(Location::Custom(28), Layout::Centered, true);
-        "Ledger review".place(Location::Custom(42), Layout::Centered, true);
-    }
+    WARNING.draw(57, 10);
+    "Pending".place(Location::Custom(28), Layout::Centered, true);
+    "Ledger review".place(Location::Custom(42), Layout::Centered, true);
 
     crate::ui::screen_util::screen_update();
 
