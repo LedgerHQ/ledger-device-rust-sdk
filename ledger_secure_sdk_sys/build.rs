@@ -322,7 +322,7 @@ impl SDKBuilder<'_> {
                 println!("cargo:rustc-env=API_LEVEL={}", self.api_level);
                 println!("cargo:warning=API_LEVEL is {}", self.api_level);
             }
-            None => Err(SDKBuildError::InvalidAPILevel),
+            None => return Err(SDKBuildError::InvalidAPILevel),
         }
 
         // Export other SDK infos into env for 'infos.rs'
