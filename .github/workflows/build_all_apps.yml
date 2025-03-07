@@ -51,6 +51,7 @@ jobs:
                 - app-name: "app-age"
                 - app-name: "app-provenance"
                 - app-name: "app-conflux"
+                - app-name: "app-pocket"
         runs-on: ubuntu-latest
         container:
             image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
@@ -73,46 +74,45 @@ jobs:
                 cd ${{ matrix.app-name }}
                 build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
                 cd $build_directory
-                # Determine if the project is a workspace and get the workspace root path
-                if cargo metadata --no-deps --format-version 1 | jq -e '.workspace_members | length > 0' > /dev/null; then
-                    echo "Workspace detected. Retrieving workspace root path."
-                    workspace_root=$(cargo metadata --no-deps --format-version 1 | jq -r '.workspace_root')
-                    cargo_toml_path="$workspace_root/Cargo.toml"
-                else
-                    echo "No workspace detected. Using Cargo.toml in the current directory."
-                    cargo_toml_path="$(pwd)/Cargo.toml"
-                fi
-
+                workspace_root=$(cargo metadata --no-deps --format-version 1 | jq -r '.workspace_root')
+                cargo_toml_path="$workspace_root/Cargo.toml"
+                
                 # Patch ledger_device_sdk
                 echo "" >> $cargo_toml_path
                 echo "[patch.crates-io.ledger_device_sdk]" >> $cargo_toml_path
                 path=\"$GITHUB_WORKSPACE/sdk/ledger_device_sdk\"
                 echo "path=$path" >> $cargo_toml_path
                 echo "Patch added to Cargo.toml"
+                
                 # Patch ledger_secure_sdk_sys
                 echo "" >> $cargo_toml_path
                 echo "[patch.crates-io.ledger_secure_sdk_sys]" >> $cargo_toml_path
                 path=\"$GITHUB_WORKSPACE/sdk/ledger_secure_sdk_sys\"
                 echo "path=$path" >> $cargo_toml_path
                 echo "Patch added to Cargo.toml"
+                
                 # Patch include_gif
                 echo "" >> $cargo_toml_path
                 echo "[patch.crates-io.include_gif]" >> $cargo_toml_path
                 path=\"$GITHUB_WORKSPACE/sdk/include_gif\"
                 echo "path=$path" >> $cargo_toml_path
                 echo "Patch added to Cargo.toml"
-                
+
+                # Print Cargo.toml
+                echo "Cargo.toml:"
+                cat $cargo_toml_path
+
             - name: Build
               run: |
                 cd ${{ matrix.app-name }}
                 build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
                 devices="$(ledger-manifest --output-devices ledger_app.toml -j | sed 's/+/plus/' | jq -rc '.devices[]')"
                 cd $build_directory
+                # Required as patch has a different version from what is locked in Cargo.lock
+                cargo +$RUST_NIGHTLY update include_gif
+                cargo +$RUST_NIGHTLY update ledger_secure_sdk_sys
+                cargo +$RUST_NIGHTLY update ledger_device_sdk
                 for device in $devices; do
-                    # Required as patch has a different version from what is locked in Cargo.lock
-                    cargo +$RUST_NIGHTLY update include_gif
-                    cargo +$RUST_NIGHTLY update ledger_secure_sdk_sys
-                    cargo +$RUST_NIGHTLY update ledger_device_sdk
                     echo "Build for "$device
                     cargo ledger build $device
                 done
