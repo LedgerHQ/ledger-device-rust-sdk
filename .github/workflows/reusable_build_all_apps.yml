@@ -1,13 +1,22 @@
 name: Build all Rust apps
 
 on:
+    workflow_call:
+      inputs:
+        c_sdk_branch:
+          required: false
+          default: ''
+          type: string
     workflow_dispatch:
-        inputs:
-            sdk_branch:
-                type: string
-                required: false
-                default: ''
+      inputs:
+        c_sdk_branch:
+          type: string
+          required: false
+          default: ''
     pull_request:
+
+env:
+  C_SDK_URL: 'https://github.com/LedgerHQ/ledger-secure-sdk.git'
 
 jobs:
     retrieve-rust-apps:
@@ -106,6 +115,14 @@ jobs:
 
             - name: Build
               run: |
+                # Clone C SDK if provided
+                if [ -n "${{ github.event.inputs.c_sdk_branch }}" ]; then
+                    git clone $C_SDK_URL --branch ${{ github.event.inputs.c_sdk_branch }} --single-branch c_sdk
+                    echo "setting LEDGER_SDK_PATH to $(realpath c_sdk)"
+                    LEDGER_SDK_PATH=$(realpath c_sdk)
+                else
+                    echo "using C SDK from ledger-app-builder"
+                fi
                 cd ${{ matrix.app-name }}
                 build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
                 cd $build_directory
