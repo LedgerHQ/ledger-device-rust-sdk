@@ -25,8 +25,8 @@ jobs:
           id: get_repo_and_branch
           run: |
             if [ -n "${{ inputs.c_sdk_branch }}" ]; then
-              echo "repo='LedgerHQ/ledger-device-rust-sdk'" >> $GITHUB_OUTPUT
-              echo "branch='refs/heads/master'" >> $GITHUB_OUTPUT
+              echo "repo=LedgerHQ/ledger-device-rust-sdk" >> $GITHUB_OUTPUT
+              echo "branch=refs/heads/master" >> $GITHUB_OUTPUT
             else
               echo "repo=${{ github.repository}}" >> $GITHUB_OUTPUT
               echo "branch=${{ github.ref }}" >> $GITHUB_OUTPUT
