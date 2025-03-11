@@ -29,6 +29,9 @@ jobs:
       steps:
         - name: Checkout repository
           uses: actions/checkout@v4
+          with:
+            repository: ${{ github.repository }}
+            ref: ${{ github.event_name == 'workflow_call' && 'refs/heads/master' || github.ref }}
         - name: Set up Python
           uses: actions/setup-python@v4
           with:
