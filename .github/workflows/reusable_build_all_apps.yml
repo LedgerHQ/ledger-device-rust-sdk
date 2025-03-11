@@ -27,6 +27,13 @@ jobs:
         exclude_apps: ${{ steps.get_rust_apps.outputs.exclude_apps }}
         ledger_devices: ${{ steps.get_rust_apps.outputs.ledger_devices }}
       steps:
+        - name: Display context
+          run: |
+            echo "github.repository: ${{ github.repository }}"
+            echo "github.ref: ${{ github.ref }}"
+            echo "github.event_name: ${{ github.event_name }}"
+            echo "github.head_ref: ${{ github.head_ref }}"
+            echo "github.event.inputs.c_sdk_branch: ${{ github.event.inputs.c_sdk_branch }}"  
         - name: Checkout repository
           uses: actions/checkout@v4
           with:
