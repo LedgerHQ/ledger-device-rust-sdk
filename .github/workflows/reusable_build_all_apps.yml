@@ -12,7 +12,6 @@ on:
 
 env:
   C_SDK_URL: 'https://github.com/LedgerHQ/ledger-secure-sdk.git'
-  RUST_SDK_URL: 'https://github.com/LedgerHQ/ledger-device-rust-sdk.git'
 
 jobs:
     how-workflow-is-called:
@@ -25,8 +24,8 @@ jobs:
         - name: Get repository and branch
           id: get_repo_and_branch
           run: |
-            if [ -n "${{ github.event.inputs.c_sdk_branch }}" ]; then
-              echo "repo=$RUST_SDK_URL" >> $GITHUB_OUTPUT
+            if [ -n "${{ inputs.c_sdk_branch }}" ]; then
+              echo "repo='LedgerHQ/ledger-device-rust-sdk'" >> $GITHUB_OUTPUT
               echo "branch='refs/heads/master'" >> $GITHUB_OUTPUT
             else
               echo "repo=${{ github.repository}}" >> $GITHUB_OUTPUT
@@ -135,8 +134,8 @@ jobs:
             - name: Build
               run: |
                 # Clone C SDK if provided
-                if [ -n "${{ github.event.inputs.c_sdk_branch }}" ]; then
-                    git clone $C_SDK_URL --branch ${{ github.event.inputs.c_sdk_branch }} --single-branch c_sdk
+                if [ -n "${{ inputs.c_sdk_branch }}" ]; then
+                    git clone $C_SDK_URL --branch ${{ inputs.c_sdk_branch }} --single-branch c_sdk
                     echo "setting LEDGER_SDK_PATH to $(realpath c_sdk)"
                     LEDGER_SDK_PATH=$(realpath c_sdk)
                 else
