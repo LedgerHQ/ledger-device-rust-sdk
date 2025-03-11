@@ -26,7 +26,7 @@ jobs:
           run: |
             if [ -n "${{ inputs.c_sdk_branch }}" ]; then
               echo "repo=LedgerHQ/ledger-device-rust-sdk" >> $GITHUB_OUTPUT
-              echo "branch=refs/heads/master" >> $GITHUB_OUTPUT
+              echo "branch=y333/update_ci" >> $GITHUB_OUTPUT
             else
               echo "repo=${{ github.repository}}" >> $GITHUB_OUTPUT
               echo "branch=${{ github.ref }}" >> $GITHUB_OUTPUT
