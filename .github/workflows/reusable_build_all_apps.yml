@@ -76,6 +76,8 @@ jobs:
               uses: actions/checkout@v4
               with:
                 path: sdk
+                repository: ${{ github.repository }}
+                ref: ${{ github.event_name == 'workflow_call' && 'refs/heads/master' || github.ref }}
             - name: Clone App
               uses: actions/checkout@v4
               with:
