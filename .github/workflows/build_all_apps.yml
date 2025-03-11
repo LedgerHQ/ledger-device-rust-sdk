@@ -15,6 +15,8 @@ jobs:
       runs-on: ubuntu-latest
       outputs:
         rust_apps: ${{ steps.get_rust_apps.outputs.rust_apps }}
+        exclude_apps: ${{ steps.get_rust_apps.outputs.exclude_apps }}
+        ledger_devices: ${{ steps.get_rust_apps.outputs.ledger_devices }}
       steps:
         - name: Checkout repository
           uses: actions/checkout@v4
@@ -27,8 +29,10 @@ jobs:
         - name: Get all rust apps
           id: get_rust_apps
           run: |
-            python .github/workflows/get_rust_apps.py ${{ secrets.GH_TOKEN }} > rust_apps.txt
-            echo "rust_apps=$(cat rust_apps.txt)" >> $GITHUB_OUTPUT
+            python .github/workflows/get_rust_apps.py ${{ secrets.GH_TOKEN }}
+            echo "rust_apps=$(cat rust_apps.json)" >> $GITHUB_OUTPUT
+            echo "exclude_apps=$(cat exclude_apps.json)" >> $GITHUB_OUTPUT
+            echo "ledger_devices=$(cat ledger_devices.json)" >> $GITHUB_OUTPUT
 
     display-rust-apps:
       name: Display Rust Apps
@@ -38,6 +42,8 @@ jobs:
         - name: Display Rust Apps
           run: |
             echo "Rust apps: ${{ needs.retrieve-rust-apps.outputs.rust_apps }}"
+            echo "Exclude apps: ${{ needs.retrieve-rust-apps.outputs.exclude_apps }}"
+            echo "Ledger devices: ${{ needs.retrieve-rust-apps.outputs.ledger_devices }}"
 
     test-build:
         name: Build for all targets
@@ -46,12 +52,8 @@ jobs:
             fail-fast: false
             matrix:
               app-name: ${{ fromJSON(needs.retrieve-rust-apps.outputs.rust_apps) }}
-              exclude:
-                - app-name: "app-kadena-legacy"
-                - app-name: "app-age"
-                - app-name: "app-provenance"
-                - app-name: "app-conflux"
-                - app-name: "app-pocket"
+              device: ${{ fromJSON(needs.retrieve-rust-apps.outputs.ledger_devices) }}
+              exclude: ${{ fromJSON(needs.retrieve-rust-apps.outputs.exclude_apps) }}
         runs-on: ubuntu-latest
         container:
             image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
@@ -106,13 +108,11 @@ jobs:
               run: |
                 cd ${{ matrix.app-name }}
                 build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
-                devices="$(ledger-manifest --output-devices ledger_app.toml -j | sed 's/+/plus/' | jq -rc '.devices[]')"
                 cd $build_directory
                 # Required as patch has a different version from what is locked in Cargo.lock
                 cargo +$RUST_NIGHTLY update include_gif
                 cargo +$RUST_NIGHTLY update ledger_secure_sdk_sys
                 cargo +$RUST_NIGHTLY update ledger_device_sdk
-                for device in $devices; do
-                    echo "Build for "$device
-                    cargo ledger build $device
-                done
+                device=$(echo ${{ matrix.device }} | sed 's/+/plus/')
+                echo "Build for "$device
+                cargo ledger build $device
