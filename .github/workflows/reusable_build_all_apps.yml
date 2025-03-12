@@ -7,9 +7,6 @@ on:
           required: false
           default: ''
           type: string
-      secrets:
-        GH_TOKEN:
-          required: true
     workflow_dispatch:
     pull_request:
 
