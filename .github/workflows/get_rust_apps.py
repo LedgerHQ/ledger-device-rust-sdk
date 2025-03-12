@@ -1,4 +1,4 @@
-from ledgered.github import GitHubLedgerHQ, NoManifestException
+from ledgered.github import GitHubLedgerHQ, NoManifestException, Condition
 from github.GithubException import GithubException
 
 import sys
@@ -9,12 +9,12 @@ if len(sys.argv) != 2:
     sys.exit(1)
 
 ledger_devices = ["nanos+", "nanox", "stax", "flex"]
-filtered_apps = ["app-kadena-legacy", "app-pocket", "app-age", "app-provenance"]
+filtered_apps = ["app-kadena-legacy", "app-pocket"]
 
 # Retrieve all apps on LedgerHQ GitHub organization
 token = sys.argv[1]
 gh = GitHubLedgerHQ(token)
-apps=gh.apps
+apps=gh.apps.filter(archived=Condition.WITHOUT)
 
 rust_apps = []
 exclude_apps = []

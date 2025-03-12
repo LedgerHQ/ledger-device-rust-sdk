@@ -57,7 +57,7 @@ jobs:
         - name: Get all rust apps
           id: get_rust_apps
           run: |
-            python .github/workflows/get_rust_apps.py ${{ secrets.GH_TOKEN }}
+            python .github/workflows/get_rust_apps.py ${{ secrets.GITHUB_TOKEN }}
             echo "rust_apps=$(cat rust_apps.json)" >> $GITHUB_OUTPUT
             echo "exclude_apps=$(cat exclude_apps.json)" >> $GITHUB_OUTPUT
             echo "ledger_devices=$(cat ledger_devices.json)" >> $GITHUB_OUTPUT
