@@ -13,9 +13,6 @@ if len(sys.argv) != 2:
 # app-pocket: does not build (Obsidians' Alamgu issue)
 excluded_apps = ["app-kadena-legacy", "app-pocket"]
 
-# Excluded devices
-excluded_devices = ["nanos"]
-
 # Retrieve all public apps on LedgerHQ GitHub organization
 token = sys.argv[1]
 gh = GitHubLedgerHQ(token)
@@ -36,8 +33,7 @@ for app in apps:
         if manifest.app.sdk == "rust":
             if app.name not in excluded_apps:
                 for d in manifest.app.devices:
-                    if d not in excluded_devices:
-                        rust_apps.append({"app-name": app.name, "device": d})
+                    rust_apps.append({"app-name": app.name, "device": d})
 
 # save the list of (apps, device) pairs to build in a json format:
 with open("rust_apps.json", "w") as f:
