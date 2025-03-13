@@ -451,14 +451,14 @@ impl Comm {
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
-        let _: Option<Event<T>> = self.decode_event(spi_buffer);
-
-        if unsafe { G_io_app.apdu_state } != APDU_IDLE && unsafe { G_io_app.apdu_length } > 0 {
-            self.rx = unsafe { G_io_app.apdu_length as usize };
-            self.event_pending = true;
-            return true;
+        match self.decode_event::<T>(spi_buffer) {
+            Some(Event::Command(_)) => {
+                self.rx = unsafe { G_io_app.apdu_length as usize };
+                self.event_pending = true;
+                return true;
+            }
+            _ => return false,
         }
-        false
     }
 
     /// Wait for the next Command event. Discards received button events.
