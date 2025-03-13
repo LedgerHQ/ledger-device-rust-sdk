@@ -26,7 +26,7 @@ jobs:
           run: |
             if [ -n "${{ inputs.c_sdk_branch }}" ]; then
               echo "repo=LedgerHQ/ledger-device-rust-sdk" >> $GITHUB_OUTPUT
-              echo "branch=y333/update_ci" >> $GITHUB_OUTPUT
+              echo "branch=master" >> $GITHUB_OUTPUT
             else
               echo "repo=${{ github.repository}}" >> $GITHUB_OUTPUT
               echo "branch=${{ github.ref }}" >> $GITHUB_OUTPUT
@@ -37,8 +37,6 @@ jobs:
       needs: how-workflow-is-called
       outputs:
         rust_apps: ${{ steps.get_rust_apps.outputs.rust_apps }}
-        exclude_apps: ${{ steps.get_rust_apps.outputs.exclude_apps }}
-        ledger_devices: ${{ steps.get_rust_apps.outputs.ledger_devices }}
       steps:
         - name: Checkout repository
           uses: actions/checkout@v4
@@ -56,8 +54,6 @@ jobs:
           run: |
             python .github/workflows/get_rust_apps.py ${{ secrets.GITHUB_TOKEN }}
             echo "rust_apps=$(cat rust_apps.json)" >> $GITHUB_OUTPUT
-            echo "exclude_apps=$(cat exclude_apps.json)" >> $GITHUB_OUTPUT
-            echo "ledger_devices=$(cat ledger_devices.json)" >> $GITHUB_OUTPUT
 
     display-rust-apps:
       name: Display Rust Apps
@@ -67,8 +63,6 @@ jobs:
         - name: Display Rust Apps
           run: |
             echo "Rust apps: ${{ needs.retrieve-rust-apps.outputs.rust_apps }}"
-            echo "Exclude apps: ${{ needs.retrieve-rust-apps.outputs.exclude_apps }}"
-            echo "Ledger devices: ${{ needs.retrieve-rust-apps.outputs.ledger_devices }}"
 
     test-build:
         name: Build for all targets
@@ -76,9 +70,9 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-              app-name: ${{ fromJSON(needs.retrieve-rust-apps.outputs.rust_apps) }}
-              device: ${{ fromJSON(needs.retrieve-rust-apps.outputs.ledger_devices) }}
-              exclude: ${{ fromJSON(needs.retrieve-rust-apps.outputs.exclude_apps) }}
+              app-name: ["app-boilerplate-rust"]
+              device: ["nanos+", "nanox", "stax", "flex"]
+              include: ${{ fromJSON(needs.retrieve-rust-apps.outputs.rust_apps) }}
         runs-on: ubuntu-latest
         container:
             image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest

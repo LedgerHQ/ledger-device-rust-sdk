@@ -8,13 +8,18 @@ if len(sys.argv) != 2:
     print("Usage: get_rust_apps.py <github_token>")
     sys.exit(1)
 
-ledger_devices = ["nanos+", "nanox", "stax", "flex"]
-filtered_apps = ["app-kadena-legacy", "app-pocket"]
+# Excluded Rust apps
+# app-kadena-legacy: has been replaced by app-kadena
+# app-pocket: does not build (Obsidians' Alamgu issue)
+excluded_apps = ["app-kadena-legacy", "app-pocket"]
 
-# Retrieve all apps on LedgerHQ GitHub organization
+# Excluded devices
+excluded_devices = ["nanos"]
+
+# Retrieve all public apps on LedgerHQ GitHub organization
 token = sys.argv[1]
 gh = GitHubLedgerHQ(token)
-apps=gh.apps.filter(archived=Condition.WITHOUT)
+apps=gh.apps.filter(private=Condition.WITHOUT, archived=Condition.WITHOUT)
 
 rust_apps = []
 exclude_apps = []
@@ -29,20 +34,11 @@ for app in apps:
     else:
         # Filter out apps that are Rust based
         if manifest.app.sdk == "rust":
-                rust_apps.append(app.name)
-                # filter out app for specific devices
-                for d in ledger_devices:
-                    if d not in manifest.app.devices or app.name in filtered_apps:
-                        exclude_apps.append({"app-name": app.name, "device": d})
+            if app.name not in excluded_apps:
+                for d in manifest.app.devices:
+                    if d not in excluded_devices:
+                        rust_apps.append({"app-name": app.name, "device": d})
 
-# save the list of Rust apps in a json format:
+# save the list of (apps, device) pairs to build in a json format:
 with open("rust_apps.json", "w") as f:
     f.write(json.dumps(rust_apps))
-
-# save the list of Excluded apps in a json format:
-with open("exclude_apps.json", "w") as f:
-    f.write(json.dumps(exclude_apps))
-
-# save the list of Ledger devices in a json format:
-with open("ledger_devices.json", "w") as f:
-    f.write(json.dumps(ledger_devices))
