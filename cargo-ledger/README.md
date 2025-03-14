@@ -50,10 +50,10 @@ cargo ledger build flex
 
 Loading on device can optionally be performed by appending `--load` or `-l` to the command.
 
-By default, this program will attempt to build the current program with in `release` mode (full command: `cargo build --release --target=nanos --message-format=json`)
+By default, this program will attempt to build the current program with in `release` mode (full command: `cargo build --release --target=nanosplus --message-format=json`)
 
 Arguments can be passed to modify this behaviour after inserting a `--` like so:
 
 ```
-cargo ledger build nanos --load -- --features one -Z unstable-options --out-dir ./output/
+cargo ledger build nanosplus --load -- --features one -Z unstable-options --out-dir ./output/
 ```

@@ -423,33 +423,20 @@ impl<'a> Page<'a> {
                 self.label.place(Location::Middle, Layout::Centered, true);
             }
             PageStyle::PictureNormal => {
-                let mut icon_x = 16;
-                let mut icon_y = 8;
-                if cfg!(target_os = "nanos") {
-                    self.label
-                        .place(Location::Middle, Layout::Custom(41), false);
-                } else {
-                    icon_x = 57;
-                    icon_y = 10;
-                    self.label
-                        .place(Location::Custom(28), Layout::Centered, false);
-                }
+                let icon_x = 57;
+                let icon_y = 10;
+                self.label
+                    .place(Location::Custom(28), Layout::Centered, false);
                 if let Some(glyph) = self.glyph {
                     let icon = Icon::from(glyph);
                     icon.set_x(icon_x).set_y(icon_y).display();
                 }
             }
             PageStyle::PictureBold => {
-                let mut icon_x = 56;
-                let mut icon_y = 2;
-                if cfg!(target_os = "nanos") {
-                    self.label[0].place(Location::Bottom, Layout::Centered, true);
-                } else {
-                    icon_x = 57;
-                    icon_y = 17;
-                    self.label[0].place(Location::Custom(35), Layout::Centered, true);
-                    self.label[1].place(Location::Custom(49), Layout::Centered, true);
-                }
+                let icon_x = 57;
+                let icon_y = 17;
+                self.label[0].place(Location::Custom(35), Layout::Centered, true);
+                self.label[1].place(Location::Custom(49), Layout::Centered, true);
                 if let Some(glyph) = self.glyph {
                     let icon = Icon::from(glyph);
                     icon.set_x(icon_x).set_y(icon_y).display();
@@ -457,10 +444,7 @@ impl<'a> Page<'a> {
             }
             PageStyle::BoldNormal => {
                 let padding = 1;
-                let mut max_text_lines = 3;
-                if cfg!(target_os = "nanos") {
-                    max_text_lines = 1;
-                }
+                let max_text_lines = 3;
                 let total_height = (OPEN_SANS[0].height * max_text_lines) as usize
                     + OPEN_SANS[1].height as usize
                     + 2 * padding as usize;
@@ -469,29 +453,21 @@ impl<'a> Page<'a> {
                 self.label[0].place(Location::Custom(cur_y), Layout::Centered, true);
                 cur_y += OPEN_SANS[0].height as usize + 2 * padding as usize;
 
-                // If the device is a Nano S, display the second label as
-                // a single line of text
-                if cfg!(target_os = "nanos") {
-                    self.label[1].place(Location::Custom(cur_y), Layout::Centered, false);
-                }
-                // Otherwise, display the second label as up to 3 lines of text
-                else {
-                    let mut indices = [(0, 0); 3];
-                    let len = self.label[1].len();
-                    for (i, indice) in indices.iter_mut().enumerate() {
-                        let start = (i * MAX_CHAR_PER_LINE).min(len);
-                        if start >= len {
-                            break; // Break if we reach the end of the string
-                        }
-                        let end = (start + MAX_CHAR_PER_LINE).min(len);
-                        *indice = (start, end);
-                        (&self.label[1][start..end]).place(
-                            Location::Custom(cur_y),
-                            Layout::Centered,
-                            false,
-                        );
-                        cur_y += OPEN_SANS[0].height as usize + 2 * padding as usize;
+                let mut indices = [(0, 0); 3];
+                let len = self.label[1].len();
+                for (i, indice) in indices.iter_mut().enumerate() {
+                    let start = (i * MAX_CHAR_PER_LINE).min(len);
+                    if start >= len {
+                        break; // Break if we reach the end of the string
                     }
+                    let end = (start + MAX_CHAR_PER_LINE).min(len);
+                    *indice = (start, end);
+                    (&self.label[1][start..end]).place(
+                        Location::Custom(cur_y),
+                        Layout::Centered,
+                        false,
+                    );
+                    cur_y += OPEN_SANS[0].height as usize + 2 * padding as usize;
                 }
             }
         }

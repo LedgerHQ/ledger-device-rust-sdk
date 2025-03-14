@@ -356,8 +356,6 @@ mod tests {
         assert_eq!(metadata_ledger.curve, ["secp256k1"]);
         assert_eq!(metadata_ledger.flags, "0x38");
         assert_eq!(metadata_ledger.path, ["'44/123"]);
-
-        //assert_eq!(metadata_nanos.icon, "./assets/nanos.gif")
     }
 
     #[test]
@@ -371,7 +369,6 @@ mod tests {
         assert_eq!(metadata_ledger.curve, ["secp256k1"]);
         assert_eq!(metadata_ledger.flags, "0x38");
         assert_eq!(metadata_ledger.path, ["'44/123"]);
-        //assert_eq!(metadata_nanos.icon, "./assets/nanos.gif")
     }
 
     #[test]
@@ -385,6 +382,5 @@ mod tests {
         assert_eq!(metadata_ledger.curve, ["secp256k1"]);
         assert_eq!(metadata_ledger.flags, "0");
         assert_eq!(metadata_ledger.path, ["'44/123"]);
-        //assert_eq!(metadata_nanos.icon, "nanos.gif")
     }
 }
