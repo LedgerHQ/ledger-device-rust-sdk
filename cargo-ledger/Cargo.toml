@@ -1,6 +1,6 @@
 [package]
 name = "cargo-ledger"
-version = "1.7.0"
+version = "1.8.0"
 authors = ["yhql", "agrojean-ledger", "y333"]
 description = "Build and sideload Ledger devices apps"
 categories = ["development-tools::cargo-plugins"]

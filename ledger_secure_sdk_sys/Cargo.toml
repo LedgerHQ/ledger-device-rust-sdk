@@ -1,6 +1,6 @@
 [package]
 name = "ledger_secure_sdk_sys"
-version = "1.7.2"
+version = "1.8.0"
 authors = ["yhql", "agrojean-ledger", "yogh333"]
 edition = "2021"
 license.workspace = true
@@ -22,4 +22,4 @@ nano_nbgl = []
 
 [lints.rust.unexpected_cfgs]
 level = "warn"
-check-cfg = ['cfg(target_os, values("stax", "flex", "nanos", "nanox", "nanosplus"))']
+check-cfg = ['cfg(target_os, values("stax", "flex", "nanox", "nanosplus"))']

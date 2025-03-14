@@ -62,9 +62,6 @@ void printhex_c(char* str, uint32_t m);
     "ldr %[result], =" #SYM "(sbrel)\n\t" \
     "add %[result], r9, %[result]" \
     : [result] "=r" (DST))
-#elif defined(TARGET_NANOS)
-# define SYMBOL_SBREL_ADDRESS(DST, SYM) \
-  SYMBOL_ABSOLUTE_VALUE(DST, SYM)
 #else
 # error "unknown machine"
 #endif
@@ -78,11 +75,7 @@ void link_pass(
   void* envram_prev,
   int dst_ram)
 {
-#ifdef TARGET_NANOS
-  uint32_t buf[16];
-#else
   uint32_t buf[128];
-#endif
 
   typedef typeof(*buf) link_addr_t;
 
@@ -173,10 +166,7 @@ void get_link_time_nvram_values(
   void** nvram_ptr_p,
   void** envram_ptr_p)
 {
-#if defined(ST31)
-    SYMBOL_ABSOLUTE_VALUE(*nvram_ptr_p, _nvram);
-    SYMBOL_ABSOLUTE_VALUE(*envram_ptr_p, _envram);
-#elif defined(ST33) || defined(ST33K1M5)
+#if defined(ST33) || defined(ST33K1M5)
     __asm volatile("ldr %0, =_nvram":"=r"(*nvram_ptr_p));
     __asm volatile("ldr %0, =_envram":"=r"(*envram_ptr_p));
 #else
@@ -274,7 +264,6 @@ void c_boot_std() {
     io_seproxyhal_spi_send(c, 4);
 #endif
 
-#ifndef TARGET_NANOS
     // Warn UX layer of io reset to avoid unwanted pin lock
     memset(&G_ux_params, 0, sizeof(G_ux_params));
     G_ux_params.ux_id = BOLOS_UX_IO_RESET;
@@ -287,7 +276,6 @@ void c_boot_std() {
             break;
         }
     }
-#endif
 
 #ifdef HAVE_BLE
     unsigned int plane = G_io_app.plane_mode;

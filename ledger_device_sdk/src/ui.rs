@@ -2,11 +2,7 @@
 
 pub mod bagls;
 
-#[cfg(not(target_os = "nanos"))]
 pub mod string_se;
-
-#[cfg(target_os = "nanos")]
-pub mod string_mcu;
 
 pub mod bitmaps;
 pub mod fonts;
@@ -19,8 +15,4 @@ pub const PADDING: usize = 2;
 pub const Y_PADDING: usize = 3;
 pub const SCREEN_WIDTH: usize = 128;
 
-#[cfg(target_os = "nanos")]
-pub const SCREEN_HEIGHT: usize = 32;
-
-#[cfg(not(target_os = "nanos"))]
 pub const SCREEN_HEIGHT: usize = 64;

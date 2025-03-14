@@ -1,11 +1,4 @@
-#[cfg(target_os = "nanos")]
-pub mod mcu;
-#[cfg(target_os = "nanos")]
-pub use self::mcu::*;
-
-#[cfg(not(target_os = "nanos"))]
 pub mod se;
-#[cfg(not(target_os = "nanos"))]
 pub use self::se::*;
 
 use bitmaps::Glyph;

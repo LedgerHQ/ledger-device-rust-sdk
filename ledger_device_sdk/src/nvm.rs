@@ -184,8 +184,6 @@ macro_rules! atomic_storage {
     };
 }
 
-#[cfg(target_os = "nanos")]
-atomic_storage!(64);
 #[cfg(target_os = "nanox")]
 atomic_storage!(256);
 #[cfg(any(target_os = "nanosplus", target_os = "stax", target_os = "flex"))]

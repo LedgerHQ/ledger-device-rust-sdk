@@ -6,11 +6,11 @@ version = "0.0.0"
 name = "test"
 path = ""
 
-[package.metadata.nanos]
+[package.metadata.ledger]
 api_level = "1"
 name = "TestApp"
 curve = ["secp256k1"]
 flags = "0"
-icon = "nanos.gif"
-icon_small = "nanox.gif"
+nanosplus.icon = "nanosplus.gif"
+nanox.icon = "nanox.gif"
 path = ["'44/123"]

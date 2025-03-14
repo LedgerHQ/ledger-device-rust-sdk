@@ -123,17 +123,11 @@ impl<T> NVMData<T> {
         NVMData { data }
     }
 
-    #[cfg(target_os = "nanos")]
-    pub fn get_mut(&mut self) -> &mut T {
-        ledger_secure_sdk_sys::pic_rs_mut(&mut self.data)
-    }
-
     /// This will return a mutable access by casting the pointer
     /// to the correct offset in `.nvm_data` manually.
     /// This is necessary when using the `rwpi` relocation model,
     /// because a static mutable will be assumed to be located in
     /// RAM, and be accessed through the static base (r9)
-    #[cfg(not(target_os = "nanos"))]
     fn get_addr(&self) -> *mut T {
         use core::arch::asm;
         unsafe {
@@ -148,7 +142,6 @@ impl<T> NVMData<T> {
         }
     }
 
-    #[cfg(not(target_os = "nanos"))]
     pub fn get_mut(&mut self) -> &mut T {
         unsafe {
             let pic_addr = self.get_addr();
@@ -156,7 +149,6 @@ impl<T> NVMData<T> {
         }
     }
 
-    #[cfg(not(target_os = "nanos"))]
     pub fn get_ref(&self) -> &T {
         unsafe {
             let pic_addr = self.get_addr();
