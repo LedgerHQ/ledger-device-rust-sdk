@@ -39,7 +39,7 @@ pub fn install_targets() {
 
     // Retrieve each target file independently
     // TODO: handle target.json modified upstream
-    for target in &["nanos", "nanox", "nanosplus", "stax", "flex"] {
+    for target in &["nanox", "nanosplus", "stax", "flex"] {
         let outfilepath = sysroot.join(target).join("target.json");
         let targetpath =
             outfilepath.clone().into_os_string().into_string().unwrap();

@@ -36,10 +36,6 @@ impl Location {
     }
 }
 
-#[cfg(target_os = "nanos")]
-pub const MAX_LINES: usize = 2;
-
-#[cfg(not(target_os = "nanos"))]
 pub const MAX_LINES: usize = 4;
 
 pub trait Place {
