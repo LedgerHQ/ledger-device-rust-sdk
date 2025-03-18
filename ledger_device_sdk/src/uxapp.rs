@@ -21,7 +21,7 @@ pub enum UxEvent {
     Keyboard = BOLOS_UX_KEYBOARD,
     WakeUp = BOLOS_UX_WAKE_UP,
     ValidatePIN = BOLOS_UX_VALIDATE_PIN,
-    LastID,
+    LastID = BOLOS_UX_VALIDATE_PIN + 1,
 }
 
 impl UxEvent {
