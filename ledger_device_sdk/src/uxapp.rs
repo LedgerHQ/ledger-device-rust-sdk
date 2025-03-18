@@ -21,7 +21,7 @@ pub enum UxEvent {
     Keyboard = BOLOS_UX_KEYBOARD,
     WakeUp = BOLOS_UX_WAKE_UP,
     ValidatePIN = BOLOS_UX_VALIDATE_PIN,
-    LastID = BOLOS_UX_LAST_ID,
+    LastID = BOLOS_UX_VALIDATE_PIN + 1,
 }
 
 impl UxEvent {
@@ -38,7 +38,7 @@ impl UxEvent {
 
                 Self::ValidatePIN as u8
             }
-            Self::LastID => Self::LastID as u8,
+            Self::LastID => panic!("Unknown UX Event"),
         };
 
         os_ux_rs(&params);
