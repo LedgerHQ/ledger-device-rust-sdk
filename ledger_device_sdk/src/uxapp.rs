@@ -44,12 +44,9 @@ impl UxEvent {
                 Self::DelayLock => {
                     #[cfg(any(target_os = "stax", target_os = "flex", feature = "nano_nbgl"))]
                     {
-                        G_ux_params.u = bolos_ux_params_s__bindgen_ty_1 {
-                            lock_delay: bolos_ux_params_s__bindgen_ty_1__bindgen_ty_3 {
-                                delay_ms: val.unwrap_or(10000),
-                            },
-                        };
+                        G_ux_params.u.lock_delay.delay_ms = val.unwrap_or(10000);
                     }
+
                     Self::DelayLock as u8
                 }
                 Self::LastID => panic!("Unknown UX Event"),
