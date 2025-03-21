@@ -397,7 +397,7 @@ impl Comm {
             seph::Events::BleReceive => ble::receive(&mut self.apdu_buffer, spi_buffer),
 
             seph::Events::TickerEvent => {
-                #[cfg(any(target_os = "stax", target_os = "flex"))]
+                #[cfg(any(target_os = "stax", target_os = "flex", feature = "nano_nbgl"))]
                 unsafe {
                     ux_process_ticker_event();
                 }

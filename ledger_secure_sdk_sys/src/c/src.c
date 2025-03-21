@@ -251,7 +251,7 @@ void c_reset_bss() {
   memset(bss, 0, bss_len);
 }
 
-bolos_ux_params_t G_ux_params;
+bolos_ux_params_t G_ux_params = {0};
 
 void c_boot_std() {
     // below is a 'manual' implementation of `io_seproxyhal_init`
