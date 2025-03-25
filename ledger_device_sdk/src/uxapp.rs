@@ -27,7 +27,7 @@ pub enum UxEvent {
 
 impl UxEvent {
     #[allow(unused)]
-    pub fn request(&self, val: Option<u32>) -> u32 {
+    pub fn request(&self) -> u32 {
         unsafe {
             //let mut params = bolos_ux_params_t::default();
             G_ux_params.ux_id = match self {
@@ -44,7 +44,7 @@ impl UxEvent {
                 Self::DelayLock => {
                     #[cfg(any(target_os = "stax", target_os = "flex", feature = "nano_nbgl"))]
                     {
-                        G_ux_params.u.lock_delay.delay_ms = val.unwrap_or(10000);
+                        G_ux_params.u.lock_delay.delay_ms = 10000;
                     }
 
                     Self::DelayLock as u8
@@ -70,7 +70,7 @@ impl UxEvent {
                 let mut spi_buffer = [0u8; 256];
                 sys_seph::send_general_status();
                 sys_seph::seph_recv(&mut spi_buffer, 0);
-                UxEvent::Event.request(None);
+                UxEvent::Event.request();
             } else {
                 unsafe { os_sched_yield(BOLOS_UX_OK as u8) };
             }
@@ -95,7 +95,7 @@ impl UxEvent {
                 seph::seph_recv(&mut spi_buffer, 0);
                 event = comm.decode_event(&mut spi_buffer);
 
-                UxEvent::Event.request(None);
+                UxEvent::Event.request();
 
                 if let Option::Some(Event::Command(_)) = event {
                     return (ret, event);
