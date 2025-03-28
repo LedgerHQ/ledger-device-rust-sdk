@@ -538,35 +538,37 @@ impl<'a> MultiPageMenu<'a> {
 
         loop {
             match self.comm.next_event() {
-                io::Event::Button(button) => if  UxEvent::Event.request() == BOLOS_UX_OK {
-                    match button {
-                        BothButtonsRelease => return EventOrPageIndex::Index(index),
-                        b => {
-                            match b {
-                                LeftButtonRelease => {
-                                    if index as i16 - 1 < 0 {
-                                        index = self.pages.len() - 1;
-                                    } else {
-                                        index = index.saturating_sub(1);
+                io::Event::Button(button) => {
+                    if UxEvent::Event.request() == BOLOS_UX_OK {
+                        match button {
+                            BothButtonsRelease => return EventOrPageIndex::Index(index),
+                            b => {
+                                match b {
+                                    LeftButtonRelease => {
+                                        if index as i16 - 1 < 0 {
+                                            index = self.pages.len() - 1;
+                                        } else {
+                                            index = index.saturating_sub(1);
+                                        }
                                     }
-                                }
-                                RightButtonRelease => {
-                                    if index < self.pages.len() - 1 {
-                                        index += 1;
-                                    } else {
-                                        index = 0;
+                                    RightButtonRelease => {
+                                        if index < self.pages.len() - 1 {
+                                            index += 1;
+                                        } else {
+                                            index = 0;
+                                        }
                                     }
+                                    _ => (),
                                 }
-                                _ => (),
+                                clear_screen();
+                                self.pages[index].place();
+                                LEFT_ARROW.display();
+                                RIGHT_ARROW.display();
+                                crate::ui::screen_util::screen_update();
                             }
-                            clear_screen();
-                            self.pages[index].place();
-                            LEFT_ARROW.display();
-                            RIGHT_ARROW.display();
-                            crate::ui::screen_util::screen_update();
                         }
                     }
-                },
+                }
                 io::Event::Command(ins) => return EventOrPageIndex::Event(io::Event::Command(ins)),
                 io::Event::Ticker => {
                     if UxEvent::Event.request() != BOLOS_UX_OK {
