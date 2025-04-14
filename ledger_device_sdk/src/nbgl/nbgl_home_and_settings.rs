@@ -209,7 +209,7 @@ impl<'a> NbglHomeAndSettings {
                     },
                     match self.nb_settings {
                         0 => core::ptr::null(),
-                        _ => &self.generic_contents as *const nbgl_genericContents_t
+                        _ => &self.generic_contents as *const nbgl_genericContents_t,
                     },
                     &self.info_list as *const nbgl_contentInfoList_t,
                     core::ptr::null(),
@@ -298,7 +298,7 @@ impl<'a> NbglHomeAndSettings {
                 },
                 match self.nb_settings {
                     0 => core::ptr::null(),
-                    _ => &self.generic_contents as *const nbgl_genericContents_t
+                    _ => &self.generic_contents as *const nbgl_genericContents_t,
                 },
                 &self.info_list as *const nbgl_contentInfoList_t,
                 core::ptr::null(),
