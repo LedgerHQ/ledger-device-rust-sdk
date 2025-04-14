@@ -195,7 +195,7 @@ impl<'a> NbglHomeAndSettings {
                     __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
                         contentsList: &self.content as *const nbgl_content_t,
                     },
-                    nbContents: if self.nb_settings > 0 { 1 } else { 0 },
+                    nbContents: self.nb_settings,
                 };
 
                 self.ux_sync_init();
@@ -207,7 +207,10 @@ impl<'a> NbglHomeAndSettings {
                         PageIndex::Home => INIT_HOME_PAGE as u8,
                         PageIndex::Settings(idx) => idx,
                     },
-                    &self.generic_contents as *const nbgl_genericContents_t,
+                    match self.nb_settings {
+                        0 => core::ptr::null(),
+                        _ => &self.generic_contents as *const nbgl_genericContents_t,
+                    },
                     &self.info_list as *const nbgl_contentInfoList_t,
                     core::ptr::null(),
                     Some(quit_callback),
@@ -282,7 +285,7 @@ impl<'a> NbglHomeAndSettings {
                 __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
                     contentsList: &self.content as *const nbgl_content_t,
                 },
-                nbContents: if self.nb_settings > 0 { 1 } else { 0 },
+                nbContents: self.nb_settings,
             };
 
             nbgl_useCaseHomeAndSettings(
@@ -293,7 +296,10 @@ impl<'a> NbglHomeAndSettings {
                     PageIndex::Home => INIT_HOME_PAGE as u8,
                     PageIndex::Settings(idx) => idx,
                 },
-                &self.generic_contents as *const nbgl_genericContents_t,
+                match self.nb_settings {
+                    0 => core::ptr::null(),
+                    _ => &self.generic_contents as *const nbgl_genericContents_t,
+                },
                 &self.info_list as *const nbgl_contentInfoList_t,
                 core::ptr::null(),
                 Some(quit_cb),
