@@ -6,12 +6,16 @@ use ledger_secure_sdk_sys::{
     libargs_s__bindgen_ty_1, libargs_t, MAX_PRINTABLE_AMOUNT_SIZE,
 };
 
-const DPATH_STAGE_SIZE: usize = 16;
-const ADDRESS_BUF_SIZE: usize = 64;
-const AMOUNT_BUF_SIZE: usize = 16;
-const DEFAULT_COIN_CONFIG_BUF_SIZE: usize = 16;
+pub const DEFAULT_COIN_CONFIG_BUF_SIZE: usize = 16;
+pub const DEFAULT_ADDRESS_BUF_SIZE: usize = 64;
 
-pub struct CheckAddressParams<const COIN_CONFIG_BUF_SIZE: usize = DEFAULT_COIN_CONFIG_BUF_SIZE> {
+const DPATH_STAGE_SIZE: usize = 16;
+const AMOUNT_BUF_SIZE: usize = 16;
+
+pub struct CheckAddressParams<
+    const COIN_CONFIG_BUF_SIZE: usize = DEFAULT_COIN_CONFIG_BUF_SIZE,
+    const ADDRESS_BUF_SIZE: usize = DEFAULT_ADDRESS_BUF_SIZE,
+> {
     pub coin_config: [u8; COIN_CONFIG_BUF_SIZE],
     pub coin_config_len: usize,
     pub dpath: [u8; DPATH_STAGE_SIZE * 4],
@@ -21,7 +25,9 @@ pub struct CheckAddressParams<const COIN_CONFIG_BUF_SIZE: usize = DEFAULT_COIN_C
     pub result: *mut i32,
 }
 
-impl<const COIN_CONFIG_BUF_SIZE: usize> Default for CheckAddressParams<COIN_CONFIG_BUF_SIZE> {
+impl<const COIN_CONFIG_BUF_SIZE: usize, const ADDRESS_BUF_SIZE: usize> Default
+    for CheckAddressParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE>
+{
     fn default() -> Self {
         CheckAddressParams {
             coin_config: [0; COIN_CONFIG_BUF_SIZE],
@@ -35,7 +41,11 @@ impl<const COIN_CONFIG_BUF_SIZE: usize> Default for CheckAddressParams<COIN_CONF
     }
 }
 
-pub struct PrintableAmountParams<const COIN_CONFIG_BUF_SIZE: usize = DEFAULT_COIN_CONFIG_BUF_SIZE> {
+pub struct PrintableAmountParams<
+    const COIN_CONFIG_BUF_SIZE: usize = DEFAULT_COIN_CONFIG_BUF_SIZE,
+    // Unused const generic paramer here, to allow type inference in `swap_return` fn
+    const ADDRESS_BUF_SIZE: usize = DEFAULT_ADDRESS_BUF_SIZE,
+> {
     pub coin_config: [u8; COIN_CONFIG_BUF_SIZE],
     pub coin_config_len: usize,
     pub amount: [u8; AMOUNT_BUF_SIZE],
@@ -44,7 +54,9 @@ pub struct PrintableAmountParams<const COIN_CONFIG_BUF_SIZE: usize = DEFAULT_COI
     pub is_fee: bool,
 }
 
-impl<const COIN_CONFIG_BUF_SIZE: usize> Default for PrintableAmountParams<COIN_CONFIG_BUF_SIZE> {
+impl<const COIN_CONFIG_BUF_SIZE: usize, const ADDRESS_BUF_SIZE: usize> Default
+    for PrintableAmountParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE>
+{
     fn default() -> Self {
         PrintableAmountParams {
             coin_config: [0; COIN_CONFIG_BUF_SIZE],
@@ -57,7 +69,10 @@ impl<const COIN_CONFIG_BUF_SIZE: usize> Default for PrintableAmountParams<COIN_C
     }
 }
 
-pub struct CreateTxParams<const COIN_CONFIG_BUF_SIZE: usize = DEFAULT_COIN_CONFIG_BUF_SIZE> {
+pub struct CreateTxParams<
+    const COIN_CONFIG_BUF_SIZE: usize = DEFAULT_COIN_CONFIG_BUF_SIZE,
+    const ADDRESS_BUF_SIZE: usize = DEFAULT_ADDRESS_BUF_SIZE,
+> {
     pub coin_config: [u8; COIN_CONFIG_BUF_SIZE],
     pub coin_config_len: usize,
     pub amount: [u8; AMOUNT_BUF_SIZE],
@@ -69,7 +84,9 @@ pub struct CreateTxParams<const COIN_CONFIG_BUF_SIZE: usize = DEFAULT_COIN_CONFI
     pub result: *mut u8,
 }
 
-impl<const COIN_CONFIG_BUF_SIZE: usize> Default for CreateTxParams<COIN_CONFIG_BUF_SIZE> {
+impl<const COIN_CONFIG_BUF_SIZE: usize, const ADDRESS_BUF_SIZE: usize> Default
+    for CreateTxParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE>
+{
     fn default() -> Self {
         CreateTxParams {
             coin_config: [0; COIN_CONFIG_BUF_SIZE],
@@ -85,9 +102,12 @@ impl<const COIN_CONFIG_BUF_SIZE: usize> Default for CreateTxParams<COIN_CONFIG_B
     }
 }
 
-pub fn get_check_address_params<const COIN_CONFIG_BUF_SIZE: usize>(
+pub fn get_check_address_params<
+    const COIN_CONFIG_BUF_SIZE: usize,
+    const ADDRESS_BUF_SIZE: usize,
+>(
     arg0: u32,
-) -> CheckAddressParams<COIN_CONFIG_BUF_SIZE> {
+) -> CheckAddressParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE> {
     debug_print("=> get_check_address_params\n");
 
     let mut libarg: libargs_t = libargs_t::default();
@@ -103,7 +123,8 @@ pub fn get_check_address_params<const COIN_CONFIG_BUF_SIZE: usize>(
     let params: check_address_parameters_t =
         unsafe { *(libarg.__bindgen_anon_1.check_address as *const check_address_parameters_t) };
 
-    let mut check_address_params: CheckAddressParams<COIN_CONFIG_BUF_SIZE> = Default::default();
+    let mut check_address_params: CheckAddressParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE> =
+        Default::default();
 
     debug_print("==> GET_COIN_CONFIG_LENGTH\n");
     check_address_params.coin_config_len = params.coin_configuration_length as usize;
@@ -145,9 +166,12 @@ pub fn get_check_address_params<const COIN_CONFIG_BUF_SIZE: usize>(
     check_address_params
 }
 
-pub fn get_printable_amount_params<const COIN_CONFIG_BUF_SIZE: usize>(
+pub fn get_printable_amount_params<
+    const COIN_CONFIG_BUF_SIZE: usize,
+    const ADDRESS_BUF_SIZE: usize,
+>(
     arg0: u32,
-) -> PrintableAmountParams<COIN_CONFIG_BUF_SIZE> {
+) -> PrintableAmountParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE> {
     debug_print("=> get_printable_amount_params\n");
 
     let mut libarg: libargs_t = libargs_t::default();
@@ -164,7 +188,7 @@ pub fn get_printable_amount_params<const COIN_CONFIG_BUF_SIZE: usize>(
         *(libarg.__bindgen_anon_1.get_printable_amount as *const get_printable_amount_parameters_t)
     };
 
-    let mut printable_amount_params: PrintableAmountParams<COIN_CONFIG_BUF_SIZE> =
+    let mut printable_amount_params: PrintableAmountParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE> =
         Default::default();
 
     debug_print("==> GET_COIN_CONFIG_LENGTH\n");
@@ -206,9 +230,9 @@ extern "C" {
     fn c_boot_std();
 }
 
-pub fn sign_tx_params<const COIN_CONFIG_BUF_SIZE: usize>(
+pub fn sign_tx_params<const COIN_CONFIG_BUF_SIZE: usize, const ADDRESS_BUF_SIZE: usize>(
     arg0: u32,
-) -> CreateTxParams<COIN_CONFIG_BUF_SIZE> {
+) -> CreateTxParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE> {
     debug_print("=> sign_tx_params\n");
 
     let mut libarg: libargs_t = libargs_t::default();
@@ -225,7 +249,8 @@ pub fn sign_tx_params<const COIN_CONFIG_BUF_SIZE: usize>(
         *(libarg.__bindgen_anon_1.create_transaction as *const create_transaction_parameters_t)
     };
 
-    let mut create_tx_params: CreateTxParams<COIN_CONFIG_BUF_SIZE> = Default::default();
+    let mut create_tx_params: CreateTxParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE> =
+        Default::default();
 
     debug_print("==> GET_COIN_CONFIG_LENGTH\n");
     create_tx_params.coin_config_len = params.coin_configuration_length as usize;
@@ -279,13 +304,28 @@ pub fn sign_tx_params<const COIN_CONFIG_BUF_SIZE: usize>(
     create_tx_params
 }
 
-pub enum SwapResult<'a> {
-    CheckAddressResult(&'a mut CheckAddressParams, i32),
-    PrintableAmountResult(&'a mut PrintableAmountParams, &'a str),
-    CreateTxResult(&'a mut CreateTxParams, u8),
+pub enum SwapResult<
+    'a,
+    const COIN_CONFIG_BUF_SIZE: usize = DEFAULT_COIN_CONFIG_BUF_SIZE,
+    const ADDRESS_BUF_SIZE: usize = DEFAULT_ADDRESS_BUF_SIZE,
+> {
+    CheckAddressResult(
+        &'a mut CheckAddressParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE>,
+        i32,
+    ),
+    PrintableAmountResult(
+        &'a mut PrintableAmountParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE>,
+        &'a str,
+    ),
+    CreateTxResult(
+        &'a mut CreateTxParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE>,
+        u8,
+    ),
 }
 
-pub fn swap_return(res: SwapResult) {
+pub fn swap_return<const COIN_CONFIG_BUF_SIZE: usize, const ADDRESS_BUF_SIZE: usize>(
+    res: SwapResult<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE>,
+) {
     match res {
         SwapResult::CheckAddressResult(&mut ref p, r) => {
             unsafe { *(p.result) = r };
