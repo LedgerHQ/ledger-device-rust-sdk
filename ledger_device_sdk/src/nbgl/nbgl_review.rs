@@ -132,15 +132,15 @@ impl<'a> NbglReview<'a> {
                             &icon as *const nbgl_icon_details_t,
                             match self.title.is_empty() {
                                 true => core::ptr::null(),
-                                false => self.title.as_ptr() as *const c_char
+                                false => self.title.as_ptr() as *const c_char,
                             },
                             match self.subtitle.is_empty() {
                                 true => core::ptr::null(),
-                                false => self.subtitle.as_ptr() as *const c_char
+                                false => self.subtitle.as_ptr() as *const c_char,
                             },
                             match self.finish_title.is_empty() {
                                 true => core::ptr::null(),
-                                false => self.finish_title.as_ptr() as *const c_char
+                                false => self.finish_title.as_ptr() as *const c_char,
                             },
                             Some(choice_callback),
                         );

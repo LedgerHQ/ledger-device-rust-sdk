@@ -47,7 +47,7 @@ impl<'a> NbglAddressReview<'a> {
                 &icon as *const nbgl_icon_details_t,
                 match self.verify_str.is_empty() {
                     true => core::ptr::null(),
-                    false => self.verify_str.as_ptr()
+                    false => self.verify_str.as_ptr(),
                 },
                 core::ptr::null(),
                 Some(choice_callback),
