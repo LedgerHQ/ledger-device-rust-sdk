@@ -12,7 +12,7 @@ impl SyncNBGL for NbglAddressReview<'_> {}
 impl<'a> NbglAddressReview<'a> {
     pub fn new() -> NbglAddressReview<'a> {
         NbglAddressReview {
-            verify_str: CString::new("").unwrap(),
+            verify_str: CString::default(),
             glyph: None,
         }
     }
@@ -45,7 +45,10 @@ impl<'a> NbglAddressReview<'a> {
                 address.as_ptr(),
                 core::ptr::null(),
                 &icon as *const nbgl_icon_details_t,
-                self.verify_str.as_ptr(),
+                match self.verify_str.is_empty() {
+                    true => core::ptr::null(),
+                    false => self.verify_str.as_ptr()
+                },
                 core::ptr::null(),
                 Some(choice_callback),
             );
