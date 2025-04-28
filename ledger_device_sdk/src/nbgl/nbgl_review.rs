@@ -17,9 +17,9 @@ impl SyncNBGL for NbglReview<'_> {}
 impl<'a> NbglReview<'a> {
     pub fn new() -> NbglReview<'a> {
         NbglReview {
-            title: CString::new("").unwrap(),
-            subtitle: CString::new("").unwrap(),
-            finish_title: CString::new("").unwrap(),
+            title: CString::default(),
+            subtitle: CString::default(),
+            finish_title: CString::default(),
             glyph: None,
             tx_type: TransactionType::Transaction,
             blind: false,
@@ -130,9 +130,18 @@ impl<'a> NbglReview<'a> {
                             self.tx_type.to_c_type(false),
                             &tag_value_list as *const nbgl_contentTagValueList_t,
                             &icon as *const nbgl_icon_details_t,
-                            self.title.as_ptr() as *const c_char,
-                            self.subtitle.as_ptr() as *const c_char,
-                            self.finish_title.as_ptr() as *const c_char,
+                            match self.title.is_empty() {
+                                true => core::ptr::null(),
+                                false => self.title.as_ptr() as *const c_char
+                            },
+                            match self.subtitle.is_empty() {
+                                true => core::ptr::null(),
+                                false => self.subtitle.as_ptr() as *const c_char
+                            },
+                            match self.finish_title.is_empty() {
+                                true => core::ptr::null(),
+                                false => self.finish_title.as_ptr() as *const c_char
+                            },
                             Some(choice_callback),
                         );
                     }
