@@ -3,9 +3,9 @@ members = [
 	"ledger_device_sdk",
 	"ledger_secure_sdk_sys",
 	"include_gif",
-	"testmacro",
-	"cargo-ledger"
+	"testmacro"
 ]
+exclude = ["cargo-ledger"]
 resolver = "2"
 
 [workspace.package]

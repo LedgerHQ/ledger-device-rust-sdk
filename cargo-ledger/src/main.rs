@@ -349,38 +349,50 @@ mod tests {
 
     #[test]
     fn valid_metadata() {
-        let (_, metadata_ledger, metadata_nanos) =
-            retrieve_metadata(Device::Flex, Some("./tests/valid/Cargo.toml"));
-
-        assert_eq!(metadata_ledger.name, Some("TestApp".to_string()));
-        assert_eq!(metadata_ledger.curve, ["secp256k1"]);
-        assert_eq!(metadata_ledger.flags, "0x38");
-        assert_eq!(metadata_ledger.path, ["'44/123"]);
+        match retrieve_metadata(Device::Flex, Some("./tests/valid/Cargo.toml")) {
+            Ok(res) => {
+                let (_, metadata_ledger, _metadata_nanos) = res;
+                assert_eq!(metadata_ledger.name, Some("TestApp".to_string()));
+                assert_eq!(metadata_ledger.curve, ["secp256k1"]);
+                assert_eq!(metadata_ledger.flags, Some(String::from("0x38")));
+                assert_eq!(metadata_ledger.path, ["'44/123"]);
+            },
+            Err(_) => panic!("Failed to retrieve metadata"),
+        };
     }
 
     #[test]
     fn valid_metadata_variant() {
-        let (_, metadata_ledger, metadata_nanos) = retrieve_metadata(
+        match retrieve_metadata(
             Device::Flex,
             Some("./tests/valid_variant/Cargo.toml"),
-        );
-
-        assert_eq!(metadata_ledger.name, Some("TestApp".to_string()));
-        assert_eq!(metadata_ledger.curve, ["secp256k1"]);
-        assert_eq!(metadata_ledger.flags, "0x38");
-        assert_eq!(metadata_ledger.path, ["'44/123"]);
+        ) {
+            Ok(res) => {
+                let (_, metadata_ledger, _metadata_nanos) = res;
+                assert_eq!(metadata_ledger.name, Some("TestApp".to_string()));
+                assert_eq!(metadata_ledger.curve, ["secp256k1"]);
+                assert_eq!(metadata_ledger.flags, Some(String::from("0x38")));
+                assert_eq!(metadata_ledger.path, ["'44/123"]);
+            },
+            Err(_) => panic!("Failed to retrieve metadata"),
+        };
     }
 
     #[test]
     fn valid_outdated_metadata() {
-        let (_, metadata_ledger, metadata_nanos) = retrieve_metadata(
+
+        match retrieve_metadata(
             Device::Flex,
             Some("./tests/valid_outdated/Cargo.toml"),
-        );
-
-        assert_eq!(metadata_ledger.name, Some("TestApp".to_string()));
-        assert_eq!(metadata_ledger.curve, ["secp256k1"]);
-        assert_eq!(metadata_ledger.flags, "0");
-        assert_eq!(metadata_ledger.path, ["'44/123"]);
+        ) {
+            Ok(res) => {
+                let (_, metadata_ledger, _metadata_nanos) = res;
+                assert_eq!(metadata_ledger.name, Some("TestApp".to_string()));
+                assert_eq!(metadata_ledger.curve, ["secp256k1"]);
+                assert_eq!(metadata_ledger.flags, Some(String::from("0x38")));
+                assert_eq!(metadata_ledger.path, ["'44/123"]);
+            },
+            Err(_) => panic!("Failed to retrieve metadata"),
+        };
     }
 }
