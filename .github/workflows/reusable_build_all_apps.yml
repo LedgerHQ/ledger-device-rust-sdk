@@ -142,6 +142,6 @@ jobs:
                 cargo +$RUST_NIGHTLY update include_gif
                 cargo +$RUST_NIGHTLY update ledger_secure_sdk_sys
                 cargo +$RUST_NIGHTLY update ledger_device_sdk
-                device=$(echo ${{ matrix.device }} | sed 's/+/plus/')
+                device=$(echo ${{ matrix.device }} | sed 's/p/plus/')
                 echo "Build for "$device
                 cargo ledger build $device
