@@ -71,7 +71,7 @@ jobs:
             fail-fast: false
             matrix:
               app-name: ["app-boilerplate-rust"]
-              device: ["nanos+", "nanox", "stax", "flex"]
+              device: ["nanosp", "nanox", "stax", "flex"]
               include: ${{ fromJSON(needs.retrieve-rust-apps.outputs.rust_apps) }}
         runs-on: ubuntu-latest
         container:
