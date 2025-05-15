@@ -71,7 +71,7 @@ jobs:
             fail-fast: false
             matrix:
               app-name: ["app-boilerplate-rust"]
-              device: ["nanosp", "nanox", "stax", "flex"]
+              device: ["nanos+", "nanox", "stax", "flex"]
               include: ${{ fromJSON(needs.retrieve-rust-apps.outputs.rust_apps) }}
         runs-on: ubuntu-latest
         container:
@@ -142,6 +142,6 @@ jobs:
                 cargo +$RUST_NIGHTLY update include_gif
                 cargo +$RUST_NIGHTLY update ledger_secure_sdk_sys
                 cargo +$RUST_NIGHTLY update ledger_device_sdk
-                device=$(echo ${{ matrix.device }} | sed 's/p/plus/')
+                device=$(echo ${{ matrix.device }} | sed 's/+/plus/')
                 echo "Build for "$device
                 cargo ledger build $device
