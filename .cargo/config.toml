@@ -4,6 +4,3 @@ build-std-features = ["compiler-builtins-mem"]
 
 [build]
 target = "flex"
-
-[env]
-LEDGER_SDK_PATH="/opt/flex-secure-sdk/"
