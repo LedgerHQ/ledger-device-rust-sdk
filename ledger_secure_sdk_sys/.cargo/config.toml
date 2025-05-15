@@ -1,6 +1,0 @@
-[unstable]
-build-std = ["core"]
-build-std-features = ["compiler-builtins-mem"]
-
-[build]
-target = "flex"
