@@ -132,6 +132,7 @@ enum SDKBuildError {
     UnsupportedDevice,
     InvalidAPILevel,
     MissingSDKName,
+    MissingSDKPath,
     TargetFileNotFound,
     MissingTargetId,
     MissingTargetName,
@@ -186,7 +187,13 @@ impl SDKBuilder<'_> {
         {
             "nanosplus" => Device {
                 name: DeviceName::NanoSPlus,
-                c_sdk: Default::default(),
+                c_sdk: match env::var("LEDGER_SDK_PATH") {
+                    Ok(path) => PathBuf::from(path),
+                    Err(_) => match env::var("NANOSP_SDK") {
+                        Ok(path) => PathBuf::from(path),
+                        Err(_) => return Err(SDKBuildError::MissingSDKPath),
+                    },
+                },
                 target: "thumbv8m.main-none-eabi",
                 defines: {
                     let mut v = header2define("csdk_nanos2.h");
@@ -209,7 +216,13 @@ impl SDKBuilder<'_> {
             },
             "nanox" => Device {
                 name: DeviceName::NanoX,
-                c_sdk: Default::default(),
+                c_sdk: match env::var("LEDGER_SDK_PATH") {
+                    Ok(path) => PathBuf::from(path),
+                    Err(_) => match env::var("NANOX_SDK") {
+                        Ok(path) => PathBuf::from(path),
+                        Err(_) => return Err(SDKBuildError::MissingSDKPath),
+                    },
+                },
                 target: "thumbv6m-none-eabi",
                 defines: {
                     let mut v = header2define("csdk_nanox.h");
@@ -232,7 +245,13 @@ impl SDKBuilder<'_> {
             },
             "stax" => Device {
                 name: DeviceName::Stax,
-                c_sdk: Default::default(),
+                c_sdk: match env::var("LEDGER_SDK_PATH") {
+                    Ok(path) => PathBuf::from(path),
+                    Err(_) => match env::var("STAX_SDK") {
+                        Ok(path) => PathBuf::from(path),
+                        Err(_) => return Err(SDKBuildError::MissingSDKPath),
+                    },
+                },
                 target: "thumbv8m.main-none-eabi",
                 defines: header2define("csdk_stax.h"),
                 cflags: Vec::from(CFLAGS_STAX),
@@ -242,7 +261,13 @@ impl SDKBuilder<'_> {
             },
             "flex" => Device {
                 name: DeviceName::Flex,
-                c_sdk: Default::default(),
+                c_sdk: match env::var("LEDGER_SDK_PATH") {
+                    Ok(path) => PathBuf::from(path),
+                    Err(_) => match env::var("FLEX_SDK") {
+                        Ok(path) => PathBuf::from(path),
+                        Err(_) => return Err(SDKBuildError::MissingSDKPath),
+                    },
+                },
                 target: "thumbv8m.main-none-eabi",
                 defines: header2define("csdk_flex.h"),
                 cflags: Vec::from(CFLAGS_FLEX),
@@ -253,12 +278,6 @@ impl SDKBuilder<'_> {
             _ => {
                 return Err(SDKBuildError::UnsupportedDevice);
             }
-        };
-
-        // set the C SDK path
-        self.device.c_sdk = match env::var("LEDGER_SDK_PATH") {
-            Err(_) => clone_sdk(&self.device.name),
-            Ok(path) => PathBuf::from(path),
         };
 
         // set glyphs folders
@@ -780,6 +799,7 @@ fn retrieve_target_file_infos(
 }
 
 /// Fetch the appropriate C SDK to build
+#[allow(dead_code)]
 fn clone_sdk(devicename: &DeviceName) -> PathBuf {
     let (repo_url, sdk_branch) = match devicename {
         DeviceName::NanoX => (

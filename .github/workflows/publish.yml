@@ -24,7 +24,7 @@ jobs:
       - name: Test Dry-Run Publish for Each Package
         run: |
           # Iterate through package names retrieved
-          PACKAGE_NAMES="testmacro include_gif ledger_secure_sdk_sys ledger_device_sdk cargo-ledger"
+          PACKAGE_NAMES="testmacro include_gif ledger_secure_sdk_sys ledger_device_sdk"
           for PACKAGE_NAME in $PACKAGE_NAMES; do
             # Test a dry-run publish for each package within the workspace if required
             last_published_version=$(cargo search -q --limit 1 $PACKAGE_NAME | grep -oP '\d+\.\d+\.\d+')
@@ -60,7 +60,7 @@ jobs:
       - name: Publish Package on crates.io if required
         run: |
           # Iterate through package names retrieved
-          PACKAGE_NAMES="testmacro include_gif ledger_secure_sdk_sys ledger_device_sdk cargo-ledger"
+          PACKAGE_NAMES="testmacro include_gif ledger_secure_sdk_sys ledger_device_sdk"
           for PACKAGE_NAME in $PACKAGE_NAMES; do
             # Publish each package within the workspace if required
             last_published_version=$(cargo search -q --limit 1 $PACKAGE_NAME | grep -oP '\d+\.\d+\.\d+')

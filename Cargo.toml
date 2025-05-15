@@ -3,8 +3,7 @@ members = [
 	"ledger_device_sdk",
 	"ledger_secure_sdk_sys",
 	"include_gif",
-	"testmacro",
-	"cargo-ledger"
+	"testmacro"
 ]
 resolver = "2"
 

@@ -9,10 +9,3 @@ runner = "speculos --model stax --display=headless"
 
 [target.flex]
 runner = "speculos --model flex --display=headless"
-
-[unstable]
-build-std = ["core", "alloc"]
-build-std-features = ["compiler-builtins-mem"]
-
-[build]
-target = "stax"

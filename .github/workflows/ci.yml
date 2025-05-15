@@ -24,28 +24,12 @@ jobs:
         target: ["nanox", "nanosplus", "stax", "flex"]
         package: [include_gif, testmacro, ledger_secure_sdk_sys, ledger_device_sdk]
     steps:
-      - name: Print Environment variables
-        run:
-          echo "The value of RUST_NIGHTLY is $RUST_NIGHTLY"
       - name: Clone
         uses: actions/checkout@v4
       - name: Cargo clippy
         working-directory: ${{ matrix.package }}
         run: |
-          cargo +$RUST_NIGHTLY clippy --target ${{ matrix.target }}
-
-  clippy-cargo-ledger:
-    name: Run static analysis for cargo-ledger
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
-    steps:
-      - name: Clone
-        uses: actions/checkout@v4
-      - name: Cargo clippy for cargo-ledger
-        working-directory: cargo-ledger
-        run: |
-          cargo +$RUST_STABLE clippy --no-deps
+          cargo clippy --target ${{ matrix.target }}
 
   format:
     name: Check code formatting
@@ -57,7 +41,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Run cargo fmt
         run: |
-          cargo +$RUST_NIGHTLY fmt --all --check
+          cargo fmt --all --check
 
   build:
     name: Build SDK
@@ -73,20 +57,7 @@ jobs:
       - name: Cargo build
         working-directory: ledger_device_sdk
         run: |
-          cargo +$RUST_NIGHTLY build --target ${{ matrix.target }}
-
-  build-cargo-ledger:
-    name: Build SDK
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
-    steps:
-      - name: Clone
-        uses: actions/checkout@v4
-      - name: Cargo build
-        working-directory: cargo-ledger
-        run: |
-          cargo +$RUST_STABLE build
+          cargo build --target ${{ matrix.target }}
 
   test:
     name: Run unit and integration tests
@@ -102,4 +73,4 @@ jobs:
       - name: Unit tests
         working-directory: ledger_device_sdk
         run: |
-          cargo +$RUST_NIGHTLY test --target ${{ matrix.target }} --features speculos --tests
+          cargo test --target ${{ matrix.target }} --features speculos --tests
