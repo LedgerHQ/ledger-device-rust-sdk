@@ -32,7 +32,6 @@ jobs:
           BUILD_DEVICE_NAME="$(echo ${{ matrix.device }})"
           BIN_DIR_NAME="$(echo ${{ matrix.device }} | sed 's/nanosplus/nanos2/')"
           cd app-boilerplate
-          RUST_NIGHTLY=nightly
           cargo ledger build ${{ matrix.device }}
       
       #- name: Upload binary artifacts
