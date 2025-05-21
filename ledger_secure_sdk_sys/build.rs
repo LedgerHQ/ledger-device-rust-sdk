@@ -187,9 +187,7 @@ impl SDKBuilder<'_> {
         {
             "nanosplus" => Device {
                 name: DeviceName::NanoSPlus,
-                c_sdk: match env::var("LEDGER_SDK_PATH")
-                    .or_else(|_| env::var("NANOSP_SDK"))
-                {
+                c_sdk: match env::var("LEDGER_SDK_PATH").or_else(|_| env::var("NANOSP_SDK")) {
                     Ok(path) => PathBuf::from(path),
                     Err(_) => return Err(SDKBuildError::MissingSDKPath),
                 },
@@ -215,9 +213,7 @@ impl SDKBuilder<'_> {
             },
             "nanox" => Device {
                 name: DeviceName::NanoX,
-                c_sdk: match env::var("LEDGER_SDK_PATH")
-                    .or_else(|_| env::var("NANOX_SDK"))
-                {
+                c_sdk: match env::var("LEDGER_SDK_PATH").or_else(|_| env::var("NANOX_SDK")) {
                     Ok(path) => PathBuf::from(path),
                     Err(_) => return Err(SDKBuildError::MissingSDKPath),
                 },
@@ -243,9 +239,7 @@ impl SDKBuilder<'_> {
             },
             "stax" => Device {
                 name: DeviceName::Stax,
-                c_sdk: match env::var("LEDGER_SDK_PATH")
-                    .or_else(|_| env::var("STAX_SDK"))
-                {
+                c_sdk: match env::var("LEDGER_SDK_PATH").or_else(|_| env::var("STAX_SDK")) {
                     Ok(path) => PathBuf::from(path),
                     Err(_) => return Err(SDKBuildError::MissingSDKPath),
                 },
@@ -258,9 +252,7 @@ impl SDKBuilder<'_> {
             },
             "flex" => Device {
                 name: DeviceName::Flex,
-                c_sdk: match env::var("LEDGER_SDK_PATH")
-                    .or_else(|_| env::var("FLEX_SDK"))
-                {
+                c_sdk: match env::var("LEDGER_SDK_PATH").or_else(|_| env::var("FLEX_SDK")) {
                     Ok(path) => PathBuf::from(path),
                     Err(_) => return Err(SDKBuildError::MissingSDKPath),
                 },
