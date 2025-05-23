@@ -1,6 +1,6 @@
 [unstable]
-build-std = ["core"]
+build-std = ["core", "alloc"]
 build-std-features = ["compiler-builtins-mem"]
 
 [build]
-target = "nanosplus"
+target = "flex"
