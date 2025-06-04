@@ -111,13 +111,11 @@ impl<'a> NbglHomeAndSettings {
         }
     }
 
-    pub fn tagline(
-        self,
-        tagline: &'a str) -> NbglHomeAndSettings {
-            NbglHomeAndSettings {
-                tag_line: Some(CString::new(tagline).unwrap()),
-                ..self
-            }
+    pub fn tagline(self, tagline: &'a str) -> NbglHomeAndSettings {
+        NbglHomeAndSettings {
+            tag_line: Some(CString::new(tagline).unwrap()),
+            ..self
+        }
     }
 
     pub fn settings(
