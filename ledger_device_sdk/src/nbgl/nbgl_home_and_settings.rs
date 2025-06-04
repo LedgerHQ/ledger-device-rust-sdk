@@ -305,7 +305,10 @@ impl<'a> NbglHomeAndSettings {
             nbgl_useCaseHomeAndSettings(
                 self.app_name.as_ptr() as *const c_char,
                 &self.icon as *const nbgl_icon_details_t,
-                core::ptr::null(),
+                match self.tag_line {
+                    None => core::ptr::null(),
+                    Some(ref tag) => tag.as_ptr() as *const c_char,
+                },
                 match self.start_page {
                     PageIndex::Home => INIT_HOME_PAGE as u8,
                     PageIndex::Settings(idx) => idx,
