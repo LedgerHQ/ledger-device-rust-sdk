@@ -47,6 +47,7 @@ pub enum PageIndex {
 /// information fields, and settings switches.
 pub struct NbglHomeAndSettings {
     app_name: CString,
+    tag_line: Option<CString>,
     info_contents: Vec<CString>,
     info_contents_ptr: Vec<*const c_char>,
     setting_contents: Vec<[CString; 2]>,
@@ -74,6 +75,7 @@ impl<'a> NbglHomeAndSettings {
     pub fn new() -> NbglHomeAndSettings {
         NbglHomeAndSettings {
             app_name: CString::new("").unwrap(),
+            tag_line: None,
             info_contents: Vec::default(),
             info_contents_ptr: Vec::default(),
             setting_contents: Vec::default(),
@@ -107,6 +109,15 @@ impl<'a> NbglHomeAndSettings {
             info_contents: v,
             ..self
         }
+    }
+
+    pub fn tagline(
+        self,
+        tagline: &'a str) -> NbglHomeAndSettings {
+            NbglHomeAndSettings {
+                tag_line: Some(CString::new(tagline).unwrap()),
+                ..self
+            }
     }
 
     pub fn settings(
@@ -202,7 +213,10 @@ impl<'a> NbglHomeAndSettings {
                 nbgl_useCaseHomeAndSettings(
                     self.app_name.as_ptr() as *const c_char,
                     &self.icon as *const nbgl_icon_details_t,
-                    core::ptr::null(),
+                    match self.tag_line {
+                        None => core::ptr::null(),
+                        Some(ref tag) => tag.as_ptr() as *const c_char,
+                    },
                     match self.start_page {
                         PageIndex::Home => INIT_HOME_PAGE as u8,
                         PageIndex::Settings(idx) => idx,
