@@ -11,7 +11,8 @@ if len(sys.argv) != 2:
 # Excluded Rust apps
 # app-kadena-legacy: has been replaced by app-kadena
 # app-pocket: does not build (Obsidians' Alamgu issue)
-excluded_apps = ["app-kadena-legacy", "app-pocket"]
+# app-age: not maintained anymore
+excluded_apps = ["app-kadena-legacy", "app-pocket", "app-age"]
 
 # Retrieve all public apps on LedgerHQ GitHub organization
 token = sys.argv[1]
