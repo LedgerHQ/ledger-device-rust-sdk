@@ -73,10 +73,22 @@ impl<'a> NbglChoice<'a> {
             self.ux_sync_init();
             nbgl_useCaseChoice(
                 &icon as *const nbgl_icon_details_t,
-                message.as_ptr() as *const c_char,
-                sub_message.as_ptr() as *const c_char,
-                confirm_text.as_ptr() as *const c_char,
-                cancel_text.as_ptr() as *const c_char,
+                match message.is_empty() {
+                    true => core::ptr::null(),
+                    false => message.as_ptr() as *const c_char,
+                },
+                match sub_message.is_empty() {
+                    true => core::ptr::null(),
+                    false => sub_message.as_ptr() as *const c_char,
+                },
+                match confirm_text.is_empty() {
+                    true => core::ptr::null(),
+                    false => confirm_text.as_ptr() as *const c_char,
+                },
+                match cancel_text.is_empty() {
+                    true => core::ptr::null(),
+                    false => cancel_text.as_ptr() as *const c_char,
+                },
                 Some(choice_callback),
             );
             let sync_ret = self.ux_sync_wait(false);
