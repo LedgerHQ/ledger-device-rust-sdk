@@ -17,3 +17,7 @@ authors = ["Ledger"]
 [profile.release]
 opt-level = 's'
 lto = true
+
+[profile.dev]
+opt-level = 's'
+lto = true

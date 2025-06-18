@@ -1,33 +1,28 @@
 #![no_std]
 #![no_main]
 
-// Force boot section to be embedded in
-use ledger_device_sdk as _;
-
 use include_gif::include_gif;
 use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{init_comm, NbglChoice, NbglGlyph, NbglStatus};
-use ledger_secure_sdk_sys::*;
 
-#[panic_handler]
-fn panic(_: &core::panic::PanicInfo) -> ! {
-    exit_app(1);
-}
+
+ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    unsafe {
-        nbgl_refreshReset();
-    }
-
+    
     let mut comm = Comm::new();
     // Initialize reference to Comm instance for NBGL
     // API calls.
     init_comm(&mut comm);
 
     // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
+    #[cfg(any(target_os = "stax", target_os = "flex"))]
     const WARNING: NbglGlyph =
-        NbglGlyph::from_include(include_gif!("icons/Warning_64px.gif", NBGL));
+        NbglGlyph::from_include(include_gif!("./icons/Warning_64px.gif", NBGL));
+    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    const WARNING: NbglGlyph =
+        NbglGlyph::from_include(include_gif!("./icons/icon_warning.gif", NBGL));
 
     let back_to_safety = NbglChoice::new().glyph(&WARNING).show(
         "Security risk detected",
