@@ -434,11 +434,11 @@ impl SDKBuilder<'_> {
 
         command.compile("ledger-secure-sdk");
 
-        /* Link with libc, libm and libgcc */
+        /* Link with libc, libm and clang compiler-rt builtins */
         let path = self.device.arm_libs.clone();
         println!("cargo:rustc-link-lib=c");
         println!("cargo:rustc-link-lib=m");
-        println!("cargo:rustc-link-lib=gcc");
+        println!("cargo:rustc-link-lib=clang_rt.builtins");
 
         println!("cargo:rustc-link-search={path}");
         Ok(())

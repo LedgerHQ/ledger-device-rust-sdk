@@ -125,7 +125,7 @@ SECTIONS
   {
     libc.a ( * )
     libm.a ( * )
-    libgcc.a ( * )
+    libclang_rt.builtins.a ( * )
     *(.ARM.exidx* .gnu.linkonce.armexidx.*)
     *(.debug_info)
   }
