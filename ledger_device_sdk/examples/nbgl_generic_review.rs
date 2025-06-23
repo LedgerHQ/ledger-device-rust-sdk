@@ -1,39 +1,34 @@
 #![no_std]
 #![no_main]
 
-// Force boot section to be embedded in
-use ledger_device_sdk as _;
-
 use include_gif::include_gif;
 use ledger_device_sdk::io::*;
-use ledger_device_sdk::nbgl::{
-    init_comm, CenteredInfo, CenteredInfoStyle, Field, InfoButton, InfoLongPress, InfosList,
-    NbglChoice, NbglGenericReview, NbglGlyph, NbglPageContent, NbglStatus, TagValueConfirm,
-    TagValueList, TuneIndex,
+use ledger_device_sdk::nbgl::init_comm;
+use ledger_device_sdk::nbgl::nbgl_generic_review::{
+    CenteredInfo, CenteredInfoStyle, InfoButton, InfoLongPress, InfosList,
+    NbglGenericReview, NbglPageContent, TagValueConfirm,
+    TagValueList
 };
-use ledger_secure_sdk_sys::*;
+use ledger_device_sdk::nbgl::{
+    Field, NbglGlyph, NbglStatus, TuneIndex
+};
+use ledger_device_sdk::nbgl::NbglChoice;
 
-use core::ops::Not;
-
-#[panic_handler]
-fn panic(_: &core::panic::PanicInfo) -> ! {
-    exit_app(1);
-}
+ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    unsafe {
-        nbgl_refreshReset();
-    }
 
     let mut comm = Comm::new();
     // Initialize reference to Comm instance for NBGL
     // API calls.
     init_comm(&mut comm);
 
-    // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
-    const FERRIS: NbglGlyph =
-        NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
+     // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
+    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    const FERRIS: NbglGlyph = NbglGlyph::from_include(include_gif!("./examples/crab_64x64.gif", NBGL));
+    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    const FERRIS: NbglGlyph = NbglGlyph::from_include(include_gif!("./examples/crab_16x16.gif", NBGL));
 
     let centered_info = CenteredInfo::new(
         "Sample centered info",
@@ -100,19 +95,14 @@ extern "C" fn sample_main() {
             status_text = "Example confirmed";
             show_tx = false;
         } else {
-            show_tx = NbglChoice::new()
+            show_tx = !NbglChoice::new()
                 .glyph(&IMPORTANT)
                 .show(
                     "Reject transaction?",
                     "",
                     "Yes, reject",
                     "Go back to transaction",
-                )
-                // not() is used to invert the boolean value returned
-                // by the choice (since we want to return to showing the
-                // transaction if the user selects "Go back to transaction"
-                // which returns false).
-                .not();
+                );
         }
     }
     NbglStatus::new()

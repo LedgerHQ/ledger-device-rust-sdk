@@ -5,7 +5,6 @@ use include_gif::include_gif;
 use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{init_comm, NbglChoice, NbglGlyph, NbglStatus};
 
-
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
 #[no_mangle]

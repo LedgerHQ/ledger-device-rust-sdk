@@ -1,30 +1,19 @@
 #![no_std]
 #![no_main]
 
-// Force boot section to be embedded in
-use ledger_device_sdk as _;
-
 use include_gif::include_gif;
 use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{
     init_comm, Field, NbglGlyph, NbglReview, NbglReviewStatus, NbglSpinner, StatusType,
 };
 use ledger_device_sdk::testing::debug_print;
-use ledger_secure_sdk_sys::*;
 
-#[panic_handler]
-fn panic(_: &core::panic::PanicInfo) -> ! {
-    exit_app(1);
-}
+ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
 // static spin_end: bool = false;
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    unsafe {
-        nbgl_refreshReset();
-    }
-
     let mut comm = Comm::new();
     // Initialize reference to Comm instance for NBGL
     // API calls.
