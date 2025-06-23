@@ -27,7 +27,7 @@ pub enum UxEvent {
 
 impl UxEvent {
     #[allow(unused)]
-    pub fn request(&self) -> u32 {
+    pub fn request(&self, comm: &mut Comm) -> u32 {
         unsafe {
             //let mut params = bolos_ux_params_t::default();
             G_ux_params.ux_id = match self {
@@ -42,7 +42,7 @@ impl UxEvent {
                     Self::ValidatePIN as u8
                 }
                 Self::DelayLock => {
-                    #[cfg(any(target_os = "stax", target_os = "flex", feature = "nano_nbgl"))]
+                    #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
                     {
                         G_ux_params.u.lock_delay.delay_ms = 10000;
                     }
@@ -55,22 +55,20 @@ impl UxEvent {
             os_ux(&raw mut G_ux_params as *mut bolos_ux_params_t);
 
             match self {
-                Self::ValidatePIN => Self::block(),
+                Self::ValidatePIN => Self::block(comm),
                 _ => os_sched_last_status(TASK_BOLOS_UX as u32) as u32,
             }
         }
     }
 
-    pub fn block() -> u32 {
+    pub fn block(comm: &mut Comm) -> u32 {
         let mut ret = unsafe { os_sched_last_status(TASK_BOLOS_UX as u32) } as u32;
         while ret == BOLOS_UX_IGNORE || ret == BOLOS_UX_CONTINUE {
             if unsafe { os_sched_is_running(TASK_SUBTASKS_START as u32) }
                 != BOLOS_TRUE.try_into().unwrap()
             {
-                let mut spi_buffer = [0u8; 256];
-                sys_seph::send_general_status();
-                sys_seph::seph_recv(&mut spi_buffer, 0);
-                UxEvent::Event.request();
+                sys_seph::io_rx(&mut comm.io_buffer, true);
+                UxEvent::Event.request(comm);
             } else {
                 unsafe { os_sched_yield(BOLOS_UX_OK as u8) };
             }
@@ -90,12 +88,12 @@ impl UxEvent {
             if unsafe { os_sched_is_running(TASK_SUBTASKS_START as u32) }
                 != BOLOS_TRUE.try_into().unwrap()
             {
-                let mut spi_buffer = [0u8; 256];
-                seph::send_general_status();
-                seph::seph_recv(&mut spi_buffer, 0);
-                event = comm.decode_event(&mut spi_buffer);
+                let status = sys_seph::io_rx(&mut comm.io_buffer, true);
+                if status > 0 {
+                    event = comm.decode_event(status)
+                }
 
-                UxEvent::Event.request();
+                UxEvent::Event.request(comm);
 
                 if let Option::Some(Event::Command(_)) = event {
                     return (ret, event);
