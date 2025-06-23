@@ -3,24 +3,26 @@
 #include "exceptions.h"
 #include "os_apilevel.h"
 #include "string.h"
-#include "seproxyhal_protocol.h"
+#include "os_io.h"
 #include "os_id.h"
-#include "os_io_usb.h"
 #include "os_nvm.h"
 #include "os_pic.h"
 #include "checks.h"
+
+#ifdef HAVE_IO_USB
+#include "usbd_ledger.h"
+#endif  // HAVE_IO_USB
+
 #ifdef HAVE_BLE
-  #include "ledger_ble.h"
-  bolos_ux_asynch_callback_t G_io_asynch_ux_callback;
-#endif
+#include "ble_ledger.h"
+#include "ble_ledger_profile_apdu.h"
+#endif  // HAVE_BLE
 
 extern void sample_main(int arg0);
 extern void heap_init();
 
 struct SectionSrc;
 struct SectionDst;
-
-io_seph_app_t G_io_app;
 
 extern Elf32_Rel _relocs;
 extern Elf32_Rel _erelocs;
@@ -254,15 +256,6 @@ void c_reset_bss() {
 bolos_ux_params_t G_ux_params = {0};
 
 void c_boot_std() {
-    // below is a 'manual' implementation of `io_seproxyhal_init`
-#ifdef HAVE_MCU_PROTECT
-    unsigned char c[4];
-    c[0] = SEPROXYHAL_TAG_MCU;
-    c[1] = 0;
-    c[2] = 1;
-    c[3] = SEPROXYHAL_TAG_MCU_TYPE_PROTECT;
-    io_seproxyhal_spi_send(c, 4);
-#endif
 
     // Warn UX layer of io reset to avoid unwanted pin lock
     memset(&G_ux_params, 0, sizeof(G_ux_params));
@@ -277,33 +270,36 @@ void c_boot_std() {
         }
     }
 
+    os_io_init_t init_io;
+
+    init_io.usb.pid        = 0;
+    init_io.usb.vid        = 0;
+    init_io.usb.class_mask = 0;
+    memset(init_io.usb.name, 0, sizeof(init_io.usb.name));
+#ifdef HAVE_IO_USB
+    init_io.usb.class_mask = USBD_LEDGER_CLASS_HID;
+#ifdef HAVE_WEBUSB
+    init_io.usb.class_mask |= USBD_LEDGER_CLASS_WEBUSB;
+#endif  // HAVE_WEBUSB
+#ifdef HAVE_IO_U2F
+    init_io.usb.class_mask |= USBD_LEDGER_CLASS_HID_U2F;
+
+    init_io.usb.hid_u2f_settings.protocol_version            = 2;
+    init_io.usb.hid_u2f_settings.major_device_version_number = 0;
+    init_io.usb.hid_u2f_settings.minor_device_version_number = 1;
+    init_io.usb.hid_u2f_settings.build_device_version_number = 0;
+    init_io.usb.hid_u2f_settings.capabilities_flag = 0;
+#endif  // HAVE_IO_U2F
+#endif  // !HAVE_IO_USB
+
+    init_io.ble.profile_mask = 0;
 #ifdef HAVE_BLE
-    unsigned int plane = G_io_app.plane_mode;
-#endif
+    init_io.ble.profile_mask = BLE_LEDGER_PROFILE_APDU;
+#endif  // !HAVE_BLE
 
-    memset(&G_io_app, 0, sizeof(G_io_app));
+    os_io_init(&init_io);
+    os_io_start();
 
-#ifdef HAVE_BLE
-    G_io_app.plane_mode = plane;
-#endif
-    G_io_app.apdu_state = APDU_IDLE;
-    G_io_app.apdu_length = 0;
-    G_io_app.apdu_media = IO_APDU_MEDIA_NONE;
-
-    G_io_app.ms = 0;
-    io_usb_hid_init();
-
-    USB_power(0);
-    USB_power(1);
-          
-#ifdef HAVE_BLE
-    memset(&G_io_asynch_ux_callback, 0, sizeof(G_io_asynch_ux_callback));
-    BLE_power(1, NULL);
-#endif
-
-#if !defined(HAVE_BOLOS) && defined(HAVE_PENDING_REVIEW_SCREEN)
-    check_audited_app();
-#endif // !defined(HAVE_BOLOS) && defined(HAVE_PENDING_REVIEW_SCREEN)
     heap_init();
 }
 
@@ -358,15 +354,3 @@ int c_main(int arg0) {
   }
   return 0;
 }
-
-#ifdef HAVE_PRINTF
-void mcu_usb_prints(const char *str, unsigned int charcount)
-{
-    unsigned char buf[4];
-    buf[0] = SEPROXYHAL_TAG_PRINTF;
-    buf[1] = charcount >> 8;
-    buf[2] = charcount;
-    io_seproxyhal_spi_send(buf, 3);
-    io_seproxyhal_spi_send((const uint8_t *) str, charcount);
-}
-#endif

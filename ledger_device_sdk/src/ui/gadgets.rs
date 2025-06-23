@@ -4,8 +4,9 @@ use crate::{
     uxapp::{UxEvent, BOLOS_UX_OK},
 };
 use ledger_secure_sdk_sys::{
-    buttons::{get_button_event, ButtonEvent, ButtonsState},
-    seph,
+    //buttons::{get_button_event, ButtonEvent, ButtonsState},
+    buttons::{ButtonEvent, ButtonsState},
+    //seph,
 };
 
 use crate::ui::bitmaps::{Glyph, WARNING};
@@ -22,8 +23,9 @@ const MAX_CHAR_PER_LINE: usize = 17;
 /// Handles communication to filter
 /// out actual events, and converts key
 /// events into presses/releases
-pub fn get_event(buttons: &mut ButtonsState) -> Option<ButtonEvent> {
-    if !seph::is_status_sent() {
+/// TODO_IO
+pub fn get_event(_buttons: &mut ButtonsState) -> Option<ButtonEvent> {
+    /*if !seph::is_status_sent() {
         seph::send_general_status();
     }
 
@@ -37,7 +39,7 @@ pub fn get_event(buttons: &mut ButtonsState) -> Option<ButtonEvent> {
             let button_info = buttons.cmd_buffer[3] >> 1;
             return get_button_event(buttons, button_info);
         }
-    }
+    }*/
     None
 }
 
@@ -539,7 +541,7 @@ impl<'a> MultiPageMenu<'a> {
         loop {
             match self.comm.next_event() {
                 io::Event::Button(button) => {
-                    if UxEvent::Event.request() == BOLOS_UX_OK {
+                    if UxEvent::Event.request(self.comm) == BOLOS_UX_OK {
                         match button {
                             BothButtonsRelease => return EventOrPageIndex::Index(index),
                             b => {
@@ -571,7 +573,7 @@ impl<'a> MultiPageMenu<'a> {
                 }
                 io::Event::Command(ins) => return EventOrPageIndex::Event(io::Event::Command(ins)),
                 io::Event::Ticker => {
-                    if UxEvent::Event.request() != BOLOS_UX_OK {
+                    if UxEvent::Event.request(self.comm) != BOLOS_UX_OK {
                         // pin lock management
                         UxEvent::block_and_get_event::<Temp>(self.comm);
                         // notify Ticker event only when redisplay is required
