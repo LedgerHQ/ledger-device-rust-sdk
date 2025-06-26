@@ -27,7 +27,7 @@ pub enum UxEvent {
 
 impl UxEvent {
     #[allow(unused)]
-    pub fn request(&self, comm: &mut Comm) -> u32 {
+    pub fn request(&self) -> u32 {
         unsafe {
             //let mut params = bolos_ux_params_t::default();
             G_ux_params.ux_id = match self {
@@ -55,20 +55,21 @@ impl UxEvent {
             os_ux(&raw mut G_ux_params as *mut bolos_ux_params_t);
 
             match self {
-                Self::ValidatePIN => Self::block(comm),
+                Self::ValidatePIN => Self::block(),
                 _ => os_sched_last_status(TASK_BOLOS_UX as u32) as u32,
             }
         }
     }
 
-    pub fn block(comm: &mut Comm) -> u32 {
+    pub fn block() -> u32 {
         let mut ret = unsafe { os_sched_last_status(TASK_BOLOS_UX as u32) } as u32;
         while ret == BOLOS_UX_IGNORE || ret == BOLOS_UX_CONTINUE {
             if unsafe { os_sched_is_running(TASK_SUBTASKS_START as u32) }
                 != BOLOS_TRUE.try_into().unwrap()
             {
-                sys_seph::io_rx(&mut comm.io_buffer, true);
-                UxEvent::Event.request(comm);
+                let mut spi_buffer = [0u8; 256];
+                sys_seph::io_rx(&mut spi_buffer, true);
+                UxEvent::Event.request();
             } else {
                 unsafe { os_sched_yield(BOLOS_UX_OK as u8) };
             }
@@ -93,7 +94,7 @@ impl UxEvent {
                     event = comm.decode_event(status)
                 }
 
-                UxEvent::Event.request(comm);
+                UxEvent::Event.request();
 
                 if let Option::Some(Event::Command(_)) = event {
                     return (ret, event);
