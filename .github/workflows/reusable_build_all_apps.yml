@@ -131,7 +131,7 @@ jobs:
                 if [ -n "${{ inputs.c_sdk_branch }}" ]; then
                     git clone $C_SDK_URL --branch ${{ inputs.c_sdk_branch }} --single-branch c_sdk
                     echo "setting LEDGER_SDK_PATH to $(realpath c_sdk)"
-                    LEDGER_SDK_PATH=$(realpath c_sdk)
+                    export LEDGER_SDK_PATH=$(realpath c_sdk)
                 else
                     echo "using C SDK from ledger-app-builder"
                 fi
