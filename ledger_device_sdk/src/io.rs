@@ -267,7 +267,7 @@ impl Comm {
             self.event_pending = false;
 
             // Reject incomplete APDUs
-            if self.rx_length < 6 {
+            if self.rx_length < 5 {
                 self.reply(StatusWords::BadLen);
                 return None;
             }
@@ -439,7 +439,7 @@ impl Comm {
                 }
                 self.apdu_type = packet_type;
                 self.rx_length = length as usize;
-                self.rx = self.rx_length;
+                self.rx = self.rx_length-1;
                 self.event_pending = true;
                 return self.check_event();
             }
@@ -458,7 +458,7 @@ impl Comm {
         match self.decode_event::<T>(length) {
             Some(Event::Command(_)) => {
                 self.rx_length = length as usize;
-                self.rx = self.rx_length;
+                self.rx = self.rx_length-1;
                 self.event_pending = true;
                 return true;
             }
@@ -556,7 +556,7 @@ impl Comm {
     }
 
     pub fn get_data(&self) -> Result<&[u8], StatusWords> {
-        if self.rx_length == 6 {
+        if self.rx_length == 5 {
             Ok(&[]) // Conforming zero-data APDU
         } else {
             let first_len_byte = self.io_buffer[5] as usize;
