@@ -74,3 +74,9 @@ jobs:
         working-directory: ledger_device_sdk
         run: |
           cargo test --target ${{ matrix.target }} --features speculos --tests
+
+  build-apps:
+    name: Build all Rust apps
+    uses: ./.github/workflows/reusable_build_all_apps.yml
+    with:
+      rust_sdk_branch: ${{ github.ref }}
