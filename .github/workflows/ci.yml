@@ -80,3 +80,4 @@ jobs:
     uses: ./.github/workflows/reusable_build_all_apps.yml
     with:
       rust_sdk_branch: ${{ github.ref }}
+      c_sdk_branch: API_LEVEL_24

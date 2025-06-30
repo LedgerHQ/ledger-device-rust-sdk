@@ -109,6 +109,9 @@ pub enum Event<T> {
 /// Manages the communication of the device: receives events such as button presses, incoming
 /// APDU requests, and provides methods to build and transmit APDU responses.
 pub struct Comm {
+    pub apdu_buffer: [u8; 272],
+    pub rx: usize,
+    pub tx: usize,
     pub event_pending: bool,
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     buttons: ButtonsState,
@@ -122,9 +125,6 @@ pub struct Comm {
     pub io_buffer: [u8; 273],
     pub rx_length: usize,
     pub tx_length: usize,
-
-    // Legacy
-    pub rx: usize,
 }
 
 impl Default for Comm {
@@ -150,6 +150,9 @@ impl Comm {
     /// Creates a new [`Comm`] instance, which accepts any CLA APDU by default.
     pub const fn new() -> Self {
         Self {
+            apdu_buffer: [0u8; 272],
+            rx: 0,
+            tx: 0,
             event_pending: false,
             #[cfg(not(any(target_os = "stax", target_os = "flex")))]
             buttons: ButtonsState::new(),
@@ -158,7 +161,6 @@ impl Comm {
             io_buffer: [0u8; 273],
             rx_length: 0,
             tx_length: 0,
-            rx: 0,
         }
     }
 
@@ -185,7 +187,13 @@ impl Comm {
     // This is private. Users should call reply to set the satus word and
     // transmit the response.
     fn apdu_send(&mut self, _is_swap: bool) {
-        sys_seph::io_tx(self.apdu_type, &self.io_buffer, self.tx_length);
+        if self.tx != 0 {
+            sys_seph::io_tx(self.apdu_type, &self.apdu_buffer, self.tx);
+            self.tx = 0;
+        }
+        else {
+            sys_seph::io_tx(self.apdu_type, &self.io_buffer, self.tx_length);
+        }
         self.tx_length = 0;
         self.rx_length = 0;
     }
@@ -350,7 +358,7 @@ impl Comm {
             seph::Events::TickerEvent => {
                 #[cfg(any(target_os = "stax", target_os = "flex", feature = "nano_nbgl"))]
                 unsafe {
-                ux_process_ticker_event();
+                    ux_process_ticker_event();
                 }
                 return Some(Event::Ticker);
             }
@@ -384,6 +392,7 @@ impl Comm {
                     }
 
                     seph::ItcUxEvent::Redisplay => {
+                        #[cfg(any(target_os = "stax", target_os = "flex", feature = "nano_nbgl"))]
                         unsafe {
                             nbgl_objAllowDrawing(true);
                             nbgl_screenRedraw();
@@ -441,6 +450,7 @@ impl Comm {
                         return None;
                     }
                 }
+                self.apdu_buffer[0..272].copy_from_slice(&self.io_buffer[1..273]);
                 self.apdu_type = packet_type;
                 self.rx_length = length as usize;
                 self.rx = self.rx_length-1;
