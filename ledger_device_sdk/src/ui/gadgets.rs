@@ -541,7 +541,7 @@ impl<'a> MultiPageMenu<'a> {
         loop {
             match self.comm.next_event() {
                 io::Event::Button(button) => {
-                    if UxEvent::Event.request(self.comm) == BOLOS_UX_OK {
+                    if UxEvent::Event.request() == BOLOS_UX_OK {
                         match button {
                             BothButtonsRelease => return EventOrPageIndex::Index(index),
                             b => {
@@ -573,7 +573,7 @@ impl<'a> MultiPageMenu<'a> {
                 }
                 io::Event::Command(ins) => return EventOrPageIndex::Event(io::Event::Command(ins)),
                 io::Event::Ticker => {
-                    if UxEvent::Event.request(self.comm) != BOLOS_UX_OK {
+                    if UxEvent::Event.request() != BOLOS_UX_OK {
                         // pin lock management
                         UxEvent::block_and_get_event::<Temp>(self.comm);
                         // notify Ticker event only when redisplay is required
