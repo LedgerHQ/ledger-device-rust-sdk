@@ -416,10 +416,9 @@ impl Comm {
                     ux_process_default_event();
                 }
                 #[cfg(any(target_os = "nanox", target_os = "nanosplus"))]
-                {
+                if !cfg!(feature = "nano_nbgl") {
                     crate::uxapp::UxEvent::Event.request();
                 }
-
             }
         }
         None
