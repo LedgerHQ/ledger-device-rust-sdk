@@ -94,7 +94,7 @@ pub enum Event<T> {
     #[cfg(any(target_os = "stax", target_os = "flex"))]
     TouchEvent,
     /// Ticker
-    Ticker
+    Ticker,
 }
 
 /// Manages the communication of the device: receives events such as button presses, incoming
