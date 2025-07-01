@@ -95,6 +95,8 @@ pub enum Event<T> {
     TouchEvent,
     /// Ticker
     Ticker,
+    // Status
+    Status,
 }
 
 /// Manages the communication of the device: receives events such as button presses, incoming
@@ -396,6 +398,19 @@ impl Comm {
             #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
             seph::Events::BleReceive => ble::receive(&mut self.apdu_buffer, spi_buffer),
 
+            #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
+            seph::Events::StatusEvent => {
+                if cfg!(feature = "nano_nbgl") {
+                    #[cfg(any(feature = "nano_nbgl"))]
+                    unsafe {
+                        ux_process_default_event();
+                    }
+                }
+                else {
+                    return Some(Event::Status);
+                }
+            }
+
             seph::Events::TickerEvent => {
                 #[cfg(any(target_os = "stax", target_os = "flex", feature = "nano_nbgl"))]
                 unsafe {
@@ -411,7 +426,7 @@ impl Comm {
             },
 
             _ => {
-                #[cfg(any(target_os = "stax", target_os = "flex"))]
+                #[cfg(any(target_os = "stax", target_os = "flex", feature = "nano_nbgl"))]
                 unsafe {
                     ux_process_default_event();
                 }

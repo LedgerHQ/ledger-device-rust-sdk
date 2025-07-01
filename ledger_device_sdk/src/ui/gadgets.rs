@@ -578,6 +578,9 @@ impl<'a> MultiPageMenu<'a> {
                         return EventOrPageIndex::Event(io::Event::Ticker);
                     }
                 }
+                io::Event::Status => {
+                    UxEvent::Event.request();
+                }
             };
         }
     }
