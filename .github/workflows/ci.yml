@@ -90,7 +90,7 @@ jobs:
           git clone https://github.com/LedgerHQ/ledger-secure-sdk.git --branch API_LEVEL_24 --single-branch c_sdk
           echo "setting LEDGER_SDK_PATH to $(realpath c_sdk)"
           export LEDGER_SDK_PATH=$(realpath c_sdk)
-          pip install speculos --break-system-packages
+          pip install -U speculos --break-system-packages
           # ####################################### #
           cargo test --target ${{ matrix.target }} --features speculos,debug --tests
 
