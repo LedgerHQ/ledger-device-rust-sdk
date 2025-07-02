@@ -21,7 +21,7 @@ const SDK_C_FILES: [&str; 13] = [
     "io/src/os_io.c",
     "io/src/os_io_default_apdu.c",
     "io/src/os_io_seph_cmd.c",
-    "io/src/os_io_seph_ux.c"
+    "io/src/os_io_seph_ux.c",
 ];
 
 const CFLAGS_NANOSPLUS: [&str; 22] = [

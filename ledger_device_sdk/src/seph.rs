@@ -73,7 +73,6 @@ impl From<u8> for ItcUxEvent {
     }
 }
 
-
 /// FFI bindings to USBD functions inlined here for clarity
 /// and also because some of the generated ones are incorrectly
 /// assuming mutable pointers when they are not
