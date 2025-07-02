@@ -86,6 +86,11 @@ jobs:
       - name: Unit tests
         working-directory: ledger_device_sdk
         run: |
+          # to be suppressed when C SDK API_LEVEL_24 is available in dev-tools
+          git clone https://github.com/LedgerHQ/ledger-secure-sdk.git --branch API_LEVEL_24 --single-branch c_sdk
+          echo "setting LEDGER_SDK_PATH to $(realpath c_sdk)"
+          export LEDGER_SDK_PATH=$(realpath c_sdk)
+          # ####################################### #
           cargo test --target ${{ matrix.target }} --features speculos,debug --tests
 
   build-apps:
