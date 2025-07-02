@@ -21,7 +21,7 @@ const SDK_C_FILES: [&str; 13] = [
     "io/src/os_io.c",
     "io/src/os_io_default_apdu.c",
     "io/src/os_io_seph_cmd.c",
-    "io/src/os_io_seph_ux.c"
+    "io/src/os_io_seph_ux.c",
 ];
 
 const CFLAGS_NANOSPLUS: [&str; 22] = [
@@ -670,10 +670,15 @@ fn configure_lib_nbgl(command: &mut cc::Build, c_sdk: &Path) {
                 .collect::<Vec<PathBuf>>(),
         )
         .files(
-            glob(c_sdk.join("lib_nbgl/src/nbgl_use_case*.c").to_str().unwrap())
-                .unwrap()
-                .map(|x| x.unwrap())
-                .collect::<Vec<PathBuf>>(),
+            glob(
+                c_sdk
+                    .join("lib_nbgl/src/nbgl_use_case*.c")
+                    .to_str()
+                    .unwrap(),
+            )
+            .unwrap()
+            .map(|x| x.unwrap())
+            .collect::<Vec<PathBuf>>(),
         )
         .file(c_sdk.join("src/nbgl_stubs.S"))
         .include(&glyphs_path)
