@@ -313,7 +313,7 @@ impl Comm {
         None
     }
 
-    pub fn process_event<T>(&mut self, mut seph_buffer: [u8; 272], length: i32) -> Option<Event<T>>
+    pub fn process_event<T>(&mut self, seph_buffer: [u8; 272], length: i32) -> Option<Event<T>>
     where
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
