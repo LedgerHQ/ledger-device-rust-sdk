@@ -1,4 +1,3 @@
-
 #[cfg(not(any(target_os = "stax", target_os = "flex")))]
 use ledger_secure_sdk_sys::buttons::{get_button_event, ButtonEvent, ButtonsState};
 use ledger_secure_sdk_sys::seph as sys_seph;
@@ -16,7 +15,6 @@ use core::ops::{Index, IndexMut};
 unsafe extern "C" {
     pub unsafe static mut G_ux_params: bolos_ux_params_t;
 }
-
 
 #[derive(Copy, Clone)]
 #[repr(u16)]
@@ -103,7 +101,7 @@ pub enum Event<T> {
     #[cfg(any(target_os = "stax", target_os = "flex"))]
     TouchEvent,
     /// Ticker
-    Ticker
+    Ticker,
 }
 
 /// Manages the communication of the device: receives events such as button presses, incoming
@@ -190,8 +188,7 @@ impl Comm {
         if self.tx != 0 {
             sys_seph::io_tx(self.apdu_type, &self.apdu_buffer, self.tx);
             self.tx = 0;
-        }
-        else {
+        } else {
             sys_seph::io_tx(self.apdu_type, &self.io_buffer, self.tx_length);
         }
         self.tx_length = 0;
@@ -261,7 +258,7 @@ impl Comm {
         if status > 0 {
             return self.detect_apdu::<T>(status);
         }
-        return false
+        return false;
     }
 
     pub fn check_event<T>(&mut self) -> Option<Event<T>>
@@ -287,10 +284,7 @@ impl Comm {
             }
 
             // Manage BOLOS specific APDUs B0xx0000
-            if    self.io_buffer[1] == 0xB0
-               && self.io_buffer[3] == 0x00
-               && self.io_buffer[4] == 0x00
-            {
+            if self.io_buffer[1] == 0xB0 && self.io_buffer[3] == 0x00 && self.io_buffer[4] == 0x00 {
                 handle_bolos_apdu(self, self.io_buffer[2]);
                 return None;
             }
@@ -327,13 +321,12 @@ impl Comm {
         let tag = seph_buffer[0];
         let _len: usize = u16::from_be_bytes([seph_buffer[1], seph_buffer[2]]) as usize;
 
-        if (length as usize) < _len+3 {
+        if (length as usize) < _len + 3 {
             self.reply(StatusWords::BadLen);
-            return None
+            return None;
         }
 
         match seph::Events::from(tag) {
-
             // BUTTON PUSH EVENT
             #[cfg(not(any(target_os = "stax", target_os = "flex")))]
             seph::Events::ButtonPushEvent => {
@@ -352,7 +345,7 @@ impl Comm {
             seph::Events::ScreenTouchEvent => unsafe {
                 ux_process_finger_event(seph_buffer.as_mut_ptr());
                 return Some(Event::TouchEvent);
-            }
+            },
 
             // TICKER EVENT
             seph::Events::TickerEvent => {
@@ -367,29 +360,26 @@ impl Comm {
             seph::Events::ItcEvent => {
                 #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
                 match ItcUxEvent::from(seph_buffer[3]) {
-
-                    seph::ItcUxEvent::AskBlePairing => {
-                        unsafe {
-                            G_ux_params.ux_id = BOLOS_UX_ASYNCHMODAL_PAIRING_REQUEST;
-                            G_ux_params.len = 20;
-                            G_ux_params.u.pairing_request.type_ = seph_buffer[4];
-                            G_ux_params.u.pairing_request.pairing_info_len = (_len-2) as u32;
-                            for i in 0..G_ux_params.u.pairing_request.pairing_info_len as usize {
-                                G_ux_params.u.pairing_request.pairing_info[i as usize] = seph_buffer[5+i] as i8;
-                            }
-                            G_ux_params.u.pairing_request.pairing_info[G_ux_params.u.pairing_request.pairing_info_len as usize] = 0;
-                            os_ux(&raw mut G_ux_params as *mut bolos_ux_params_t);
+                    seph::ItcUxEvent::AskBlePairing => unsafe {
+                        G_ux_params.ux_id = BOLOS_UX_ASYNCHMODAL_PAIRING_REQUEST;
+                        G_ux_params.len = 20;
+                        G_ux_params.u.pairing_request.type_ = seph_buffer[4];
+                        G_ux_params.u.pairing_request.pairing_info_len = (_len - 2) as u32;
+                        for i in 0..G_ux_params.u.pairing_request.pairing_info_len as usize {
+                            G_ux_params.u.pairing_request.pairing_info[i as usize] =
+                                seph_buffer[5 + i] as i8;
                         }
-                    }
+                        G_ux_params.u.pairing_request.pairing_info
+                            [G_ux_params.u.pairing_request.pairing_info_len as usize] = 0;
+                        os_ux(&raw mut G_ux_params as *mut bolos_ux_params_t);
+                    },
 
-                    seph::ItcUxEvent::BlePairingStatus => {
-                        unsafe {
-                            G_ux_params.ux_id = BOLOS_UX_ASYNCHMODAL_PAIRING_STATUS;
-                            G_ux_params.len = 0;
-                            G_ux_params.u.pairing_status.pairing_ok = seph_buffer[4];
-                            os_ux(&raw mut G_ux_params as *mut bolos_ux_params_t);
-                        }
-                    }
+                    seph::ItcUxEvent::BlePairingStatus => unsafe {
+                        G_ux_params.ux_id = BOLOS_UX_ASYNCHMODAL_PAIRING_STATUS;
+                        G_ux_params.len = 0;
+                        G_ux_params.u.pairing_status.pairing_ok = seph_buffer[4];
+                        os_ux(&raw mut G_ux_params as *mut bolos_ux_params_t);
+                    },
 
                     seph::ItcUxEvent::Redisplay => {
                         #[cfg(any(target_os = "stax", target_os = "flex", feature = "nano_nbgl"))]
@@ -400,11 +390,9 @@ impl Comm {
                         }
                     }
 
-                    _ => {
-                        return None
-                    }
+                    _ => return None,
                 }
-                return None
+                return None;
             }
 
             // DEFAULT EVENT
@@ -422,7 +410,7 @@ impl Comm {
         None
     }
 
-    pub fn decode_event<T>(&mut self, length:i32) -> Option<Event<T>>
+    pub fn decode_event<T>(&mut self, length: i32) -> Option<Event<T>>
     where
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
@@ -434,18 +422,19 @@ impl Comm {
                 // SE or SEPH event
                 let mut seph_buffer = [0u8; 272];
                 seph_buffer[0..272].copy_from_slice(&self.io_buffer[1..273]);
-                if let Some(event) = self.process_event(seph_buffer, length-1) {
+                if let Some(event) = self.process_event(seph_buffer, length - 1) {
                     return Some(event);
                 }
             }
 
-            seph::PacketTypes::PacketTypeRawApdu |
-            seph::PacketTypes::PacketTypeUsbHidApdu |
-            seph::PacketTypes::PacketTypeUsbWebusbApdu |
-            seph::PacketTypes::PacketTypeBleApdu=> {
+            seph::PacketTypes::PacketTypeRawApdu
+            | seph::PacketTypes::PacketTypeUsbHidApdu
+            | seph::PacketTypes::PacketTypeUsbWebusbApdu
+            | seph::PacketTypes::PacketTypeBleApdu => {
                 unsafe {
                     if os_perso_is_pin_set() == BOLOS_TRUE.try_into().unwrap()
-                    && os_global_pin_is_validated() != BOLOS_TRUE.try_into().unwrap() {
+                        && os_global_pin_is_validated() != BOLOS_TRUE.try_into().unwrap()
+                    {
                         self.reply(StatusWords::DeviceLocked);
                         return None;
                     }
@@ -453,18 +442,17 @@ impl Comm {
                 self.apdu_buffer[0..272].copy_from_slice(&self.io_buffer[1..273]);
                 self.apdu_type = packet_type;
                 self.rx_length = length as usize;
-                self.rx = self.rx_length-1;
+                self.rx = self.rx_length - 1;
                 self.event_pending = true;
                 return self.check_event();
             }
 
-            _ => {
-            }
+            _ => {}
         }
         None
     }
 
-    fn detect_apdu<T>(&mut self, length:i32) -> bool
+    fn detect_apdu<T>(&mut self, length: i32) -> bool
     where
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
@@ -472,7 +460,7 @@ impl Comm {
         match self.decode_event::<T>(length) {
             Some(Event::Command(_)) => {
                 self.rx_length = length as usize;
-                self.rx = self.rx_length-1;
+                self.rx = self.rx_length - 1;
                 self.event_pending = true;
                 return true;
             }
@@ -585,8 +573,7 @@ impl Comm {
                 (0, 6) => Ok(&[]), // Non-conforming zero-data APDU
                 (0, 7) => Err(StatusWords::BadLen),
                 (0, _) => {
-                    let len =
-                        u16::from_le_bytes([self.io_buffer[6], self.io_buffer[7]]) as usize;
+                    let len = u16::from_le_bytes([self.io_buffer[6], self.io_buffer[7]]) as usize;
                     get_data_from_buffer(len, 8)
                 }
                 (len, _) => get_data_from_buffer(len, 6),
