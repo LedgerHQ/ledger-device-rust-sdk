@@ -411,9 +411,13 @@ impl Comm {
             },
 
             _ => {
-                #[cfg(any(target_os = "stax", target_os = "flex"))]
+                #[cfg(any(target_os = "stax", target_os = "flex", feature = "nano_nbgl"))]
                 unsafe {
                     ux_process_default_event();
+                }
+                #[cfg(any(target_os = "nanox", target_os = "nanosplus"))]
+                if !cfg!(feature = "nano_nbgl") {
+                    crate::uxapp::UxEvent::Event.request();
                 }
             }
         }
@@ -598,7 +602,7 @@ fn handle_bolos_apdu(com: &mut Comm, ins: u8) {
                     (260 - com.tx - 1) as u32,
                 );
                 com.apdu_buffer[com.tx] = len as u8;
-                com.tx += (1 + len) as usize;
+                com.tx += 1 + (len as usize);
 
                 let len = os_registry_get_current_app_tag(
                     BOLOS_TAG_APPVERSION,
@@ -606,7 +610,7 @@ fn handle_bolos_apdu(com: &mut Comm, ins: u8) {
                     (260 - com.tx - 1) as u32,
                 );
                 com.apdu_buffer[com.tx] = len as u8;
-                com.tx += (1 + len) as usize;
+                com.tx += 1 + (len as usize);
 
                 // to be fixed within io tasks
                 // return OS flags to notify of platform's global state (pin lock etc)
