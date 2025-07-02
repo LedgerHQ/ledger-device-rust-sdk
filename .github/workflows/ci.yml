@@ -29,6 +29,11 @@ jobs:
       - name: Cargo clippy
         working-directory: ${{ matrix.package }}
         run: |
+          # to be suppressed when C SDK API_LEVEL_24 is available in dev-tools
+          git clone https://github.com/LedgerHQ/ledger-secure-sdk.git --branch API_LEVEL_24 --single-branch c_sdk
+          echo "setting LEDGER_SDK_PATH to $(realpath c_sdk)"
+          export LEDGER_SDK_PATH=$(realpath c_sdk)
+          # ####################################### #
           cargo clippy --target ${{ matrix.target }}
 
   format:
@@ -57,11 +62,13 @@ jobs:
       - name: Cargo build
         working-directory: ledger_device_sdk
         run: |
+          # to be suppressed when C SDK API_LEVEL_24 is available in dev-tools
           git clone https://github.com/LedgerHQ/ledger-secure-sdk.git --branch API_LEVEL_24 --single-branch c_sdk
           echo "setting LEDGER_SDK_PATH to $(realpath c_sdk)"
           export LEDGER_SDK_PATH=$(realpath c_sdk)
+          # ####################################### #
           cargo build --target ${{ matrix.target }}
-          if ($${ matrix.target } == "nanosplus" | $${ matrix.target } == "nanox"); then
+          if [[ "${{ matrix.target }}" == "nanosplus" || "${{ matrix.target }}" == "nanox" ]]; then
             cargo build --target ${{ matrix.target }} --features nano_nbgl;
           fi
 
