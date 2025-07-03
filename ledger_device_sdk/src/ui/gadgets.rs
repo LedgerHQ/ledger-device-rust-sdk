@@ -35,8 +35,7 @@ pub fn get_event(buttons: &mut ButtonsState) -> Option<ButtonEvent> {
                     return get_button_event(buttons, button_info);
                 }
             }
-            _ => {
-            }
+            _ => {}
         }
     }
     None
