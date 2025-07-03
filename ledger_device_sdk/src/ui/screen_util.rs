@@ -32,5 +32,5 @@ pub fn screen_update() {
 #[cfg(not(feature = "speculos"))]
 pub fn seph_setup_ticker(interval_ms: u16) {
     let ms = interval_ms.to_be_bytes();
-    ledger_secure_sdk_sys::seph::seph_send(&[0x4e, 0, 2, ms[0], ms[1]]);
+    ledger_secure_sdk_sys::seph::io_tx(0x01, &[0x4e, 0, 2, ms[0], ms[1]], 5);
 }

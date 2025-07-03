@@ -42,7 +42,7 @@ impl UxEvent {
                     Self::ValidatePIN as u8
                 }
                 Self::DelayLock => {
-                    #[cfg(any(target_os = "stax", target_os = "flex", feature = "nano_nbgl"))]
+                    #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
                     {
                         G_ux_params.u.lock_delay.delay_ms = 10000;
                     }
@@ -68,8 +68,7 @@ impl UxEvent {
                 != BOLOS_TRUE.try_into().unwrap()
             {
                 let mut spi_buffer = [0u8; 256];
-                sys_seph::send_general_status();
-                sys_seph::seph_recv(&mut spi_buffer, 0);
+                sys_seph::io_rx(&mut spi_buffer, true);
                 UxEvent::Event.request();
             } else {
                 unsafe { os_sched_yield(BOLOS_UX_OK as u8) };
@@ -90,10 +89,10 @@ impl UxEvent {
             if unsafe { os_sched_is_running(TASK_SUBTASKS_START as u32) }
                 != BOLOS_TRUE.try_into().unwrap()
             {
-                let mut spi_buffer = [0u8; 256];
-                seph::send_general_status();
-                seph::seph_recv(&mut spi_buffer, 0);
-                event = comm.decode_event(&mut spi_buffer);
+                let status = sys_seph::io_rx(&mut comm.io_buffer, true);
+                if status > 0 {
+                    event = comm.decode_event(status)
+                }
 
                 UxEvent::Event.request();
 
