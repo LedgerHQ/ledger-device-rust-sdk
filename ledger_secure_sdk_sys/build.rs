@@ -169,7 +169,7 @@ impl SDKBuilder<'_> {
 
         let gcc_toolchain = if sysroot.is_empty() {
             // path for Debian-based systems
-            String::from("/usr/lib/arm-none-eabi")
+            String::from("/usr/lib/picolibc/arm-none-eabi")
         } else {
             format!("{sysroot}")
         };
@@ -302,13 +302,13 @@ impl SDKBuilder<'_> {
         // Set ARM pre-compiled libraries path
         self.device.arm_libs = match self.device.name {
             DeviceName::NanoX => {
-                let mut path = self.device.c_sdk.display().to_string();
-                path.push_str("/arch/st33/lib");
+                let mut path = self.gcc_toolchain.display().to_string();
+                path.push_str("/lib/thumb/v7-m/nofp");
                 path
             }
             DeviceName::NanoSPlus | DeviceName::Flex | DeviceName::Stax => {
-                let mut path = self.device.c_sdk.display().to_string();
-                path.push_str("/arch/st33k1/lib");
+                let mut path = self.gcc_toolchain.display().to_string();
+                path.push_str("/lib/thumb/v8-m.main/nofp");
                 path
             }
         };
@@ -434,11 +434,9 @@ impl SDKBuilder<'_> {
 
         command.compile("ledger-secure-sdk");
 
-        /* Link with libc, libm and clang compiler-rt builtins */
+        /* Link with libc */
         let path = self.device.arm_libs.clone();
         println!("cargo:rustc-link-lib=c");
-        println!("cargo:rustc-link-lib=m");
-        println!("cargo:rustc-link-lib=clang_rt.builtins");
 
         println!("cargo:rustc-link-search={path}");
         Ok(())

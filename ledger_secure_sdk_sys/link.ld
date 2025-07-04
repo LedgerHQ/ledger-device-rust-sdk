@@ -124,8 +124,6 @@ SECTIONS
   /DISCARD/ :
   {
     libc.a ( * )
-    libm.a ( * )
-    libclang_rt.builtins.a ( * )
     *(.ARM.exidx* .gnu.linkonce.armexidx.*)
     *(.debug_info)
   }
