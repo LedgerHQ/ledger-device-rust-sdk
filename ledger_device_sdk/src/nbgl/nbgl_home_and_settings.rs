@@ -204,7 +204,7 @@ impl<'a> NbglHomeAndSettings {
                     __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
                         contentsList: &self.content as *const nbgl_content_t,
                     },
-                    nbContents: self.nb_settings,
+                    nbContents: 1,
                 };
 
                 self.ux_sync_init();
@@ -297,7 +297,7 @@ impl<'a> NbglHomeAndSettings {
                 __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
                     contentsList: &self.content as *const nbgl_content_t,
                 },
-                nbContents: self.nb_settings,
+                nbContents: 1,
             };
 
             nbgl_useCaseHomeAndSettings(
