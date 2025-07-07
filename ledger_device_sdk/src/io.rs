@@ -184,7 +184,7 @@ impl Comm {
     /// Send the currently held APDU
     // This is private. Users should call reply to set the satus word and
     // transmit the response.
-    fn apdu_send(&mut self, _is_swap: bool) {
+    fn apdu_send(&mut self) {
         if self.tx != 0 {
             sys_seph::io_tx(self.apdu_type, &self.apdu_buffer, self.tx);
             self.tx = 0;
@@ -527,17 +527,11 @@ impl Comm {
         self.io_buffer[self.tx_length + 1] = sw as u8;
         self.tx_length += 2;
         // Transmit the response
-        self.apdu_send(false);
+        self.apdu_send();
     }
 
     pub fn swap_reply<T: Into<Reply>>(&mut self, reply: T) {
-        let sw = reply.into().0;
-        // Append status word
-        self.io_buffer[self.tx_length] = (sw >> 8) as u8;
-        self.io_buffer[self.tx_length + 1] = sw as u8;
-        self.tx_length += 2;
-        // Transmit the response
-        self.apdu_send(true);
+        self.reply(reply);
     }
 
     /// Set the Status Word of the response to `StatusWords::OK` (which is equal
@@ -547,7 +541,7 @@ impl Comm {
     }
 
     pub fn swap_reply_ok(&mut self) {
-        self.swap_reply(StatusWords::Ok);
+        self.reply_ok();
     }
 
     /// Return APDU Metadata
