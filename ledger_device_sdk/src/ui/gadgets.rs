@@ -5,7 +5,7 @@ use crate::{
 };
 use ledger_secure_sdk_sys::{
     buttons::{get_button_event, ButtonEvent, ButtonsState},
-    seph,
+    seph, OS_IO_PACKET_TYPE_SEPH, OS_IO_PACKET_TYPE_SE_EVT  
 };
 
 use crate::ui::bitmaps::{Glyph, WARNING};
@@ -28,7 +28,7 @@ pub fn get_event(buttons: &mut ButtonsState) -> Option<ButtonEvent> {
     if status > 0 {
         let packet_type = io_buffer[0];
         match packet_type {
-            0x01 | 0x02 => {
+            OS_IO_PACKET_TYPE_SEPH | OS_IO_PACKET_TYPE_SE_EVT => {
                 // SE or SEPH event
                 if io_buffer[1] == 0x05 {
                     let button_info = io_buffer[4] >> 1;
