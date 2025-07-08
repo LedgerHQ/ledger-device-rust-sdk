@@ -282,8 +282,6 @@ impl Comm {
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
         if self.event_pending {
-            //let mut apdu_buffer = [0u8; 272];
-            //apdu_buffer[0..272].copy_from_slice(&self.io_buffer[1..273]);
             self.event_pending = false;
 
             // Reject incomplete APDUs
@@ -328,11 +326,12 @@ impl Comm {
         None
     }
 
-    pub fn process_event<T>(&mut self, mut seph_buffer: [u8; 272], length: i32) -> Option<Event<T>>
+    pub fn process_event<T>(&mut self, length: i32) -> Option<Event<T>>
     where
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
+        let mut seph_buffer = &mut self.io_buffer[1..273];
         let tag = seph_buffer[0];
         let _len: usize = u16::from_be_bytes([seph_buffer[1], seph_buffer[2]]) as usize;
 
@@ -435,9 +434,7 @@ impl Comm {
         match seph::PacketTypes::from(packet_type) {
             seph::PacketTypes::PacketTypeSeph | seph::PacketTypes::PacketTypeSeEvent => {
                 // SE or SEPH event
-                let mut seph_buffer = [0u8; 272];
-                seph_buffer[0..272].copy_from_slice(&self.io_buffer[1..273]);
-                if let Some(event) = self.process_event(seph_buffer, length - 1) {
+                if let Some(event) = self.process_event(length - 1) {
                     return Some(event);
                 }
             }
