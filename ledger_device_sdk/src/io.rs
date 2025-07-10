@@ -107,9 +107,8 @@ pub enum Event<T> {
 /// Manages the communication of the device: receives events such as button presses, incoming
 /// APDU requests, and provides methods to build and transmit APDU responses.
 pub struct Comm {
-    pub apdu_buffer: [u8; 272],
-    pub rx: usize,
-    pub tx: usize,
+    apdu_buffer: [u8; 272],
+    rx: usize,
     pub event_pending: bool,
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     buttons: ButtonsState,
@@ -150,7 +149,6 @@ impl Comm {
         Self {
             apdu_buffer: [0u8; 272],
             rx: 0,
-            tx: 0,
             event_pending: false,
             #[cfg(not(any(target_os = "stax", target_os = "flex")))]
             buttons: ButtonsState::new(),
@@ -200,12 +198,7 @@ impl Comm {
                 }
             }
         }
-        if self.tx != 0 {
-            sys_seph::io_tx(self.apdu_type, &self.apdu_buffer, self.tx);
-            self.tx = 0;
-        } else {
-            sys_seph::io_tx(self.apdu_type, &self.io_buffer, self.tx_length);
-        }
+        sys_seph::io_tx(self.apdu_type, &self.io_buffer, self.tx_length);
         self.tx_length = 0;
         self.rx_length = 0;
     }
