@@ -185,6 +185,23 @@ impl Comm {
     // This is private. Users should call reply to set the satus word and
     // transmit the response.
     fn apdu_send(&mut self) {
+        #[cfg(any(target_os = "stax", target_os = "flex", feature = "nano_nbgl"))]
+        {
+            let mut buffer: [u8; 273] = [0; 273];
+            let status = sys_seph::io_rx(&mut buffer, false);
+            if status > 0 {
+                let packet_type = seph::PacketTypes::from(buffer[0]);
+                let event = seph::Events::from(buffer[1]);
+                match (packet_type, event) {
+                    (seph::PacketTypes::PacketTypeSeph, seph::Events::TickerEvent) => {
+                        unsafe {
+                            ux_process_ticker_event();
+                        }
+                    }
+                    (_, _) => {}
+                }
+            }
+        }
         if self.tx != 0 {
             sys_seph::io_tx(self.apdu_type, &self.apdu_buffer, self.tx);
             self.tx = 0;
