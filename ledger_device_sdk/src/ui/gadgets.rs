@@ -5,7 +5,7 @@ use crate::{
 };
 use ledger_secure_sdk_sys::{
     buttons::{get_button_event, ButtonEvent, ButtonsState},
-    seph, OS_IO_PACKET_TYPE_SEPH, OS_IO_PACKET_TYPE_SE_EVT  
+    seph, OS_IO_PACKET_TYPE_SEPH, OS_IO_PACKET_TYPE_SE_EVT,
 };
 
 use crate::ui::bitmaps::{Glyph, WARNING};
