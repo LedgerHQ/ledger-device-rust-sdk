@@ -193,11 +193,9 @@ impl Comm {
                 let packet_type = seph::PacketTypes::from(buffer[0]);
                 let event = seph::Events::from(buffer[1]);
                 match (packet_type, event) {
-                    (seph::PacketTypes::PacketTypeSeph, seph::Events::TickerEvent) => {
-                        unsafe {
-                            ux_process_ticker_event();
-                        }
-                    }
+                    (seph::PacketTypes::PacketTypeSeph, seph::Events::TickerEvent) => unsafe {
+                        ux_process_ticker_event();
+                    },
                     (_, _) => {}
                 }
             }
