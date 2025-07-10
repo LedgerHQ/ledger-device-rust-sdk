@@ -72,37 +72,3 @@ impl From<u8> for ItcUxEvent {
         }
     }
 }
-
-/// FFI bindings to USBD functions inlined here for clarity
-/// and also because some of the generated ones are incorrectly
-/// assuming mutable pointers when they are not
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct apdu_buffer_s {
-    pub buf: *mut u8,
-    pub len: u16,
-}
-impl Default for apdu_buffer_s {
-    fn default() -> Self {
-        unsafe { ::core::mem::zeroed() }
-    }
-}
-pub type ApduBufferT = apdu_buffer_s;
-
-pub fn handle_event(_apdu_buffer: &mut [u8], spi_buffer: &[u8]) {
-    let _len = u16::from_be_bytes([spi_buffer[1], spi_buffer[2]]);
-    match Events::from(spi_buffer[0]) {
-        Events::TickerEvent => {
-            #[cfg(any(
-                target_os = "apex_p",
-                target_os = "stax",
-                target_os = "flex",
-                feature = "nano_nbgl"
-            ))]
-            unsafe {
-                ux_process_ticker_event();
-            }
-        }
-        _ => (),
-    }
-}
