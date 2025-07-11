@@ -23,19 +23,19 @@ const MAX_CHAR_PER_LINE: usize = 17;
 /// out actual events, and converts key
 /// events into presses/releases
 pub fn get_event(buttons: &mut ButtonsState) -> Option<ButtonEvent> {
-    if !seph::is_status_sent() {
-        seph::send_general_status();
-    }
-
-    // TODO: Receiving an APDU while in UX will lead to .. exit ?
-    while seph::is_status_sent() {
-        seph::seph_recv(&mut buttons.cmd_buffer, 0);
-        let tag = buttons.cmd_buffer[0];
-
-        // button push event
-        if tag == 0x05 {
-            let button_info = buttons.cmd_buffer[3] >> 1;
-            return get_button_event(buttons, button_info);
+    let mut io_buffer = [0u8; 273];
+    let status = seph::io_rx(&mut io_buffer, true);
+    if status > 0 {
+        let packet_type = io_buffer[0];
+        match packet_type {
+            0x01 | 0x02 => {
+                // SE or SEPH event
+                if io_buffer[1] == 0x05 {
+                    let button_info = io_buffer[4] >> 1;
+                    return get_button_event(buttons, button_info);
+                }
+            }
+            _ => {}
         }
     }
     None
