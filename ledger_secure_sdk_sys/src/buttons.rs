@@ -18,13 +18,29 @@ impl ButtonsState {
 /// Event types needed by
 /// an application
 #[derive(Eq, PartialEq)]
+#[repr(u8)]
 pub enum ButtonEvent {
-    LeftButtonPress,
-    RightButtonPress,
-    BothButtonsPress,
-    LeftButtonRelease,
-    RightButtonRelease,
-    BothButtonsRelease,
+    LeftButtonPressed = BUTTON_LEFT_PRESSED as u8, 
+    RightButtonPressed = BUTTON_RIGHT_PRESSED as u8,            
+    LeftButtonConitnuousPressed = BUTTON_LEFT_CONTINUOUS_PRESSED as u8,   
+    RightButtonConitnuousPressed = BUTTON_RIGHT_CONTINUOUS_PRESSED as u8,
+    BothButtonsPressed = BUTTON_BOTH_PRESSED as u8,
+    BothButtonTouched = BUTTON_BOTH_TOUCHED as u8, 
+    InvalidButtonEvent = INVALID_BUTTON_EVENT as u8
+}
+
+impl from<u8> for ButtonEvent {
+    fn from(v: u8) -> ButtonEvent {
+        match v {
+            BUTTON_LEFT_PRESSED => ButtonEvent::LeftButtonPressed,
+            BUTTON_RIGHT_PRESSED => ButtonEvent::RightButtonPressed,
+            BUTTON_LEFT_CONTINUOUS_PRESSED => ButtonEvent::LeftButtonConitnuousPressed,
+            BUTTON_RIGHT_CONTINUOUS_PRESSED => ButtonEvent::RightButtonConitnuousPressed,
+            BUTTON_BOTH_PRESSED => ButtonEvent::BothButtonsPressed,
+            BUTTON_BOTH_TOUCHED => ButtonEvent::BothButtonTouched,
+            _ => ButtonEvent::InvalidButtonEvent,
+        }
+    }
 }
 
 /// Distinguish between button press and button release
