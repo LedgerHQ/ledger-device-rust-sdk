@@ -455,7 +455,7 @@ checksum = "d0263a3d970d5c054ed9312c0057b4f3bde9c0b33836d3637361d4a9e6e7a408"
 
 [[package]]
 name = "include_gif"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "flate2",
  "image",
