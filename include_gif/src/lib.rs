@@ -77,11 +77,7 @@ fn generate_glyph(filename: LitStr, glyph_type: GlyphType) -> TokenStream {
         std::env::var("CARGO_MANIFEST_DIR").unwrap(),
         filename.value()
     );
-    let mut grayscale_image = image::ImageReader::open(path)
-        .unwrap()
-        .decode()
-        .unwrap()
-        .into_luma8();
+    let mut grayscale_image: GrayImage = open(path).unwrap().to_luma8();
     let mut vec_output = Vec::new();
 
     match glyph_type {
