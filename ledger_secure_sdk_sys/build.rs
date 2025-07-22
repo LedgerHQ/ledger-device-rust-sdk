@@ -645,11 +645,35 @@ fn configure_lib_nbgl(command: &mut cc::Build, c_sdk: &Path) {
         .file(c_sdk.join("lib_ux_nbgl/ux.c"))
         .file(c_sdk.join("qrcode/src/qrcodegen.c"))
         .files(
-            glob(c_sdk.join("lib_nbgl/src/*.c").to_str().unwrap())
+            glob(c_sdk.join("lib_nbgl/src/nbgl_layout*.c").to_str().unwrap())
                 .unwrap()
                 .map(|x| x.unwrap())
                 .collect::<Vec<PathBuf>>(),
         )
+        .files(
+            glob(c_sdk.join("lib_nbgl/src/nbgl_page*.c").to_str().unwrap())
+                .unwrap()
+                .map(|x| x.unwrap())
+                .collect::<Vec<PathBuf>>(),
+        )
+        .files(
+            glob(c_sdk.join("lib_nbgl/src/nbgl_step*.c").to_str().unwrap())
+                .unwrap()
+                .map(|x| x.unwrap())
+                .collect::<Vec<PathBuf>>(),
+        )
+        .files(
+            glob(
+                c_sdk
+                    .join("lib_nbgl/src/nbgl_use_case*.c")
+                    .to_str()
+                    .unwrap(),
+            )
+            .unwrap()
+            .map(|x| x.unwrap())
+            .collect::<Vec<PathBuf>>(),
+        )
+        .file(c_sdk.join("src/nbgl_stubs.S"))
         .include(&glyphs_path)
         .file(glyphs_path.join("glyphs.c"));
 }
