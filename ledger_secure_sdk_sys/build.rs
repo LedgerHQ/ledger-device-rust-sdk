@@ -663,10 +663,15 @@ fn configure_lib_nbgl(command: &mut cc::Build, c_sdk: &Path) {
                 .collect::<Vec<PathBuf>>(),
         )
         .files(
-            glob(c_sdk.join("lib_nbgl/src/nbgl_use_case*.c").to_str().unwrap())
-                .unwrap()
-                .map(|x| x.unwrap())
-                .collect::<Vec<PathBuf>>(),
+            glob(
+                c_sdk
+                    .join("lib_nbgl/src/nbgl_use_case*.c")
+                    .to_str()
+                    .unwrap(),
+            )
+            .unwrap()
+            .map(|x| x.unwrap())
+            .collect::<Vec<PathBuf>>(),
         )
         .file(c_sdk.join("src/nbgl_stubs.S"))
         .include(&glyphs_path)
