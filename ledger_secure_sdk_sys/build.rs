@@ -8,8 +8,7 @@ use std::{env, fs::File, io::BufRead, io::BufReader, io::Read};
 
 const AUX_C_FILES: [&str; 2] = ["./src/c/src.c", "./src/c/sjlj.s"];
 
-const SDK_C_FILES: [&str; 9] = [
-    "src/os_io_usb.c",
+const SDK_C_FILES: [&str; 13] = [
     "src/pic.c",
     "src/checks.c",
     "src/cx_stubs.S",
@@ -18,15 +17,11 @@ const SDK_C_FILES: [&str; 9] = [
     "src/svc_cx_call.s",
     "src/syscalls.c",
     "src/os_printf.c",
-];
-
-const SDK_USB_FILES: [&str; 6] = [
-    "lib_stusb/usbd_conf.c",
-    "lib_stusb/STM32_USB_Device_Library/Core/Src/usbd_core.c",
-    "lib_stusb/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c",
-    "lib_stusb/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c",
-    "lib_stusb_impl/usbd_impl.c",
-    "lib_stusb/STM32_USB_Device_Library/Class/HID/Src/usbd_hid.c",
+    "protocol/src/ledger_protocol.c",
+    "io/src/os_io.c",
+    "io/src/os_io_default_apdu.c",
+    "io/src/os_io_seph_cmd.c",
+    "io/src/os_io_seph_ux.c",
 ];
 
 const CFLAGS_NANOSPLUS: [&str; 22] = [
@@ -378,25 +373,25 @@ impl SDKBuilder<'_> {
 
         command
             .files(&AUX_C_FILES)
-            .files(str2path(&self.device.c_sdk, &SDK_C_FILES))
-            .files(str2path(&self.device.c_sdk, &SDK_USB_FILES));
+            .files(str2path(&self.device.c_sdk, &SDK_C_FILES));
+
+        //command
+        //    .file(c_sdk.join("lib_standard_app/main.c"))
+
+        let glyphs_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("glyphs");
 
         command = command
             .include(self.gcc_toolchain.join("include"))
             .include(self.device.c_sdk.join("include"))
+            .include(self.device.c_sdk.join("lib_u2f/include"))
+            .include(self.device.c_sdk.join("io/include"))
+            .include(self.device.c_sdk.join("io_legacy/include"))
+            .include(self.device.c_sdk.join("protocol/include"))
             .include(self.device.c_sdk.join("lib_cxng/include"))
-            .include(self.device.c_sdk.join("lib_stusb"))
-            .include(self.device.c_sdk.join("lib_stusb_impl"))
-            .include(
-                self.device
-                    .c_sdk
-                    .join("lib_stusb/STM32_USB_Device_Library/Core/Inc"),
-            )
-            .include(
-                self.device
-                    .c_sdk
-                    .join("lib_stusb/STM32_USB_Device_Library/Class/HID/Inc"),
-            )
+            .include(self.device.c_sdk.join("lib_ux/include"))
+            .include(self.device.c_sdk.join("lib_bagl/include"))
+            .include(self.device.c_sdk.join("lib_nbgl/include"))
+            .include(&glyphs_path)
             .debug(true)
             .define("main", "_start")
             .clone();
@@ -419,6 +414,9 @@ impl SDKBuilder<'_> {
 
         // Configure BLE and NBGL
         for s in self.device.defines.iter() {
+            if s.0 == "HAVE_IO_USB" {
+                configure_lib_usb(&mut command, &self.device.c_sdk);
+            }
             if s.0 == "HAVE_BLE" {
                 configure_lib_ble(&mut command, &self.device.c_sdk);
             }
@@ -452,9 +450,10 @@ impl SDKBuilder<'_> {
             "-fshort-enums".to_string(),
             format!("-I{gcc_tc}/include"),
             format!("-I{bsdk}/include"),
+            format!("-I{bsdk}/io/include/"),
+            format!("-I{bsdk}/io_legacy/include/"),
+            format!("-I{bsdk}/lib_u2f/include/"),
             format!("-I{bsdk}/lib_cxng/include/"),
-            format!("-I{bsdk}/lib_stusb/STM32_USB_Device_Library/Core/Inc/"),
-            format!("-I{bsdk}/lib_stusb/"),
         ];
         let headers = str2path(
             &self.device.c_sdk,
@@ -463,11 +462,8 @@ impl SDKBuilder<'_> {
                 "include/os.h",               /* syscalls */
                 "include/os_screen.h",
                 "include/syscalls.h",
-                "include/os_io_seproxyhal.h",
                 "include/os_ux.h",
                 "include/ox.h", /* crypto-related syscalls */
-                "lib_stusb/STM32_USB_Device_Library/Core/Inc/usbd_def.h",
-                "include/os_io_usb.h",
                 "lib_standard_app/swap_lib_calls.h",
             ],
         );
@@ -615,20 +611,31 @@ fn main() {
 // Helper functions
 // --------------------------------------------------
 
+fn configure_lib_usb(command: &mut cc::Build, c_sdk: &Path) {
+    command
+        .file(c_sdk.join("lib_stusb/src/usbd_conf.c"))
+        .file(c_sdk.join("lib_stusb/src/usbd_core.c"))
+        .file(c_sdk.join("lib_stusb/src/usbd_ctlreq.c"))
+        .file(c_sdk.join("lib_stusb/src/usbd_desc.c"))
+        .file(c_sdk.join("lib_stusb/src/usbd_ioreq.c"))
+        .file(c_sdk.join("lib_stusb/src/usbd_ledger_ccid.c"))
+        .file(c_sdk.join("lib_stusb/src/usbd_ledger_cdc.c"))
+        .file(c_sdk.join("lib_stusb/src/usbd_ledger_hid_kbd.c"))
+        .file(c_sdk.join("lib_stusb/src/usbd_ledger_hid_u2f.c"))
+        .file(c_sdk.join("lib_stusb/src/usbd_ledger_hid.c"))
+        .file(c_sdk.join("lib_stusb/src/usbd_ledger_webusb.c"))
+        .file(c_sdk.join("lib_stusb/src/usbd_ledger.c"))
+        .include(c_sdk.join("lib_stusb/include"))
+        .include(c_sdk.join("lib_stusb_impl/include"));
+}
+
 fn configure_lib_ble(command: &mut cc::Build, c_sdk: &Path) {
     command
-        .file(c_sdk.join("src/ledger_protocol.c"))
-        .file(c_sdk.join("lib_blewbxx/core/auto/ble_gap_aci.c"))
-        .file(c_sdk.join("lib_blewbxx/core/auto/ble_gatt_aci.c"))
-        .file(c_sdk.join("lib_blewbxx/core/auto/ble_hal_aci.c"))
-        .file(c_sdk.join("lib_blewbxx/core/auto/ble_hci_le.c"))
-        .file(c_sdk.join("lib_blewbxx/core/auto/ble_l2cap_aci.c"))
-        .file(c_sdk.join("lib_blewbxx/core/template/osal.c"))
-        .file(c_sdk.join("lib_blewbxx_impl/src/ledger_ble.c"))
+        .file(c_sdk.join("lib_blewbxx/src/ble_cmd.c"))
+        .file(c_sdk.join("lib_blewbxx/src/ble_ledger_profile_apdu.c"))
+        .file(c_sdk.join("lib_blewbxx/src/ble_ledger_profile_u2f.c"))
+        .file(c_sdk.join("lib_blewbxx/src/ble_ledger.c"))
         .include(c_sdk.join("lib_blewbxx/include"))
-        .include(c_sdk.join("lib_blewbxx/core"))
-        .include(c_sdk.join("lib_blewbxx/core/auto"))
-        .include(c_sdk.join("lib_blewbxx/core/template"))
         .include(c_sdk.join("lib_blewbxx_impl/include"));
 }
 
