@@ -1,4 +1,3 @@
---sysroot="/usr/arm-none-eabi"
 -Oz
 -g0
 -fomit-frame-pointer
@@ -6,18 +5,6 @@
 -fno-common
 -mlittle-endian
 -std=gnu99
--Wall
--Wextra
--Wno-main
--Werror=int-to-pointer-cast
--Wno-error=int-conversion
--Wimplicit-fallthrough
--Wvla
--Wundef
--Wshadow
--Wformat=2
--Wformat-security
--Wwrite-strings
 -fdata-sections
 -ffunction-sections
 -funsigned-char
@@ -28,7 +15,8 @@
 -nostdlib
 -nodefaultlibs
 -frwpi
--mthumb
 --target=armv8m-none-eabi
 -mcpu=cortex-m35p+nodsp
+-mthumb
 -msoft-float
+-Wno-unused-command-line-argument
