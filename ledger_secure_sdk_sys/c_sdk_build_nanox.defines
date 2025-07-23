@@ -1,4 +1,6 @@
-#define HAVE_SWAP
+#define HAVE_BLE
+#define BLE_COMMAND_TIMEOUT_MS 2000
+#define HAVE_BLE_APDU
 #define USE_OS_IO_STACK
 #define IO_HID_EP_LENGTH 64
 #define HAVE_SPRINTF
@@ -11,9 +13,9 @@
 #define HAVE_WEBUSB
 #define WEBUSB_URL_SIZE_B 0
 #define WEBUSB_URL
+#define HAVE_IO_U2F
 #define OS_IO_SEPROXYHAL
-#define STANDARD_APP_SYNC_RAPDU
-#define API_LEVEL 24
+#define STANDARD_APP_SYNC_RAPDU 
 #define REVAMPED_IO
 #define gcc
 #define __IO volatile

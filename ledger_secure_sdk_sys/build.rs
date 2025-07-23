@@ -138,7 +138,7 @@ impl SDKBuilder<'_> {
                 },
                 target: "thumbv8m.main-none-eabi",
                 defines: {
-                    let mut v = header2define("csdk_nanos2.h");
+                    let mut v = header2define("c_sdk_build_nanosplus.defines");
                     if env::var_os("CARGO_FEATURE_NANO_NBGL").is_some() {
                         println!("cargo:warning=NBGL is built");
                         v.push((String::from("HAVE_NBGL"), None));
@@ -171,7 +171,7 @@ impl SDKBuilder<'_> {
                 },
                 target: "thumbv6m-none-eabi",
                 defines: {
-                    let mut v = header2define("csdk_nanox.h");
+                    let mut v = header2define("c_sdk_build_nanox.defines");
                     if env::var_os("CARGO_FEATURE_NANO_NBGL").is_some() {
                         println!("cargo:warning=NBGL is built");
                         v.push((String::from("HAVE_NBGL"), None));
@@ -203,7 +203,7 @@ impl SDKBuilder<'_> {
                     Err(_) => return Err(SDKBuildError::MissingSDKPath),
                 },
                 target: "thumbv8m.main-none-eabi",
-                defines: header2define("csdk_stax.h"),
+                defines: header2define("c_sdk_build_stax.defines"),
                 cflags: {
                     let mut m_path = String::from(env!("CARGO_MANIFEST_DIR"));
                     m_path.push_str("/c_sdk_build_stax.cflags");
@@ -223,7 +223,7 @@ impl SDKBuilder<'_> {
                     Err(_) => return Err(SDKBuildError::MissingSDKPath),
                 },
                 target: "thumbv8m.main-none-eabi",
-                defines: header2define("csdk_flex.h"),
+                defines: header2define("c_sdk_build_flex.defines"),
                 cflags: {
                     let mut m_path = String::from(env!("CARGO_MANIFEST_DIR"));
                     m_path.push_str("/c_sdk_build_flex.cflags");
@@ -455,7 +455,12 @@ impl SDKBuilder<'_> {
 
         // Target specific files
         let csdk_target_name = self.device.name.to_string();
-        let header = format!("csdk_{csdk_target_name}.h");
+        let header = match self.device.name {
+            DeviceName::NanoSPlus => String::from("c_sdk_build_nanosplus.defines"),
+            DeviceName::NanoX => String::from("c_sdk_build_nanox.defines"),
+            DeviceName::Stax => String::from("c_sdk_build_stax.defines"),
+            DeviceName::Flex => String::from("c_sdk_build_flex.defines"),
+        };
 
         bindings = bindings.clang_arg(format!("-I{bsdk}/target/{csdk_target_name}/include/"));
         bindings = bindings.header(header);
