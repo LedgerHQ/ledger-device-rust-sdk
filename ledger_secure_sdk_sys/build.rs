@@ -488,13 +488,6 @@ impl SDKBuilder<'_> {
                         .join("lib_nbgl/include/nbgl_use_case.h")
                         .to_str()
                         .unwrap(),
-                )
-                .header(
-                    self.device
-                        .c_sdk
-                        .join("lib_ux_nbgl/ux_nbgl.h")
-                        .to_str()
-                        .unwrap(),
                 );
         }
 
