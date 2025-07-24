@@ -1,0 +1,63 @@
+name: Build C Boilerplate application and check if C SDK build parameters are still correct
+
+on:
+  workflow_dispatch:
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    - cron:  '0 12 * * *'
+    
+jobs:
+  build_csdk_build_parameters_extractor:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
+    steps:
+      - name: Checkout C SDK Build Parameters Extractor
+        uses: actions/checkout@v4
+        with:
+          repository: LedgerHQ/csdk_build_params_x
+          path: c_sdk_build_params_x
+      - name: Build C SDK Build Parameters Extractor
+        run: |
+          cd c_sdk_build_params_x
+          cargo build --release
+      - name: Upload C SDK Build Parameters Extractor
+        uses: actions/upload-artifact@v4
+        with:
+          name: c_sdk_build_params_extractor
+          path: c_sdk_build_params_x/target/release/cbpx
+  check_csdk_build_parameters:
+    runs-on: ubuntu-latest
+    needs: build_csdk_build_parameters_extractor 
+    container:
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
+    strategy:
+      matrix:
+        target: ["nanox", "nanosplus", "stax", "flex"]
+    steps:
+      - name: Checkout Rust SDK
+        uses: actions/checkout@v4
+      - name: Checkout C BP
+        uses: actions/checkout@v4
+        with:
+          repository: LedgerHQ/app-boilerplate
+          path: c_boilerplate
+      - name: Download C SDK Build Parameters Extractor
+        uses: actions/download-artifact@v4
+        with:
+          name: c_sdk_build_params_extractor   
+      - name: Run C SDK Build Parameters Extractor
+        run: |
+          c_sdk_build_params_extractor --app-path c_boilerplate \
+                                         --device ${{ matrix.target }}
+          # Compare output with matching file
+          diff c_sdk_build_${{ matrix.target }}.cflags ledger_secure_sdk_sys/c_sdk_build_${{ matrix.target }}.cflags
+          if [ $? -ne 0 ]; then
+            echo "C SDK build parameters CFLAGS do not match for target ${{ matrix.target }}"
+            exit 1
+          fi
+          diff c_sdk_build_${{ matrix.target }}.defines ledger_secure_sdk_sys/c_sdk_build_${{ matrix.target }}.defines
+          if [ $? -ne 0 ]; then
+            echo "C SDK build parameters DEFINES do not match for target ${{ matrix.target }}"
+            exit 1
+          fi
