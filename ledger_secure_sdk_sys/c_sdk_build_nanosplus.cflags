@@ -5,19 +5,6 @@
 -momit-leaf-frame-pointer
 -fno-common
 -std=gnu99
--Wall
--Wextra
--Wno-main
--Werror=int-to-pointer-cast
--Wno-error=int-conversion
--Wimplicit-fallthrough
--Wvla
--Wno-undef
--Wshadow
--Wformat=2
--Wformat-security
--Wwrite-strings
--Wno-unused-command-line-argument
 -fdata-sections
 -ffunction-sections
 -funsigned-char
@@ -31,3 +18,4 @@
 -mcpu=cortex-m35p+nodsp
 -mlittle-endian
 -mthumb
+-Wno-unused-command-line-argument
