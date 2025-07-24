@@ -28,6 +28,7 @@ debug = []
 speculos = []
 heap = [ "ledger_secure_sdk_sys/heap" ]
 nano_nbgl = [ "ledger_secure_sdk_sys/nano_nbgl" ]
+debug_csdk = [ "ledger_secure_sdk_sys/debug_csdk" ]
 
 default = [ "heap" ]
 
