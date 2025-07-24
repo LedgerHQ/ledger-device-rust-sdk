@@ -15,7 +15,7 @@
 #define WEBUSB_URL
 #define HAVE_IO_U2F
 #define OS_IO_SEPROXYHAL
-#define STANDARD_APP_SYNC_RAPDU 
+#define STANDARD_APP_SYNC_RAPDU
 #define REVAMPED_IO
 #define gcc
 #define __IO volatile

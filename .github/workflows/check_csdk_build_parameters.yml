@@ -1,6 +1,7 @@
 name: Build C Boilerplate application and check if C SDK build parameters are still correct
 
 on:
+  pull_request:
   workflow_dispatch:
   schedule:
     # * is a special character in YAML so you have to quote this string
@@ -15,7 +16,7 @@ jobs:
       - name: Checkout C SDK Build Parameters Extractor
         uses: actions/checkout@v4
         with:
-          repository: LedgerHQ/csdk_build_params_x
+          repository: LedgerHQ/csdk_build_parameters_extractor
           path: c_sdk_build_params_x
       - name: Build C SDK Build Parameters Extractor
         run: |
@@ -48,15 +49,21 @@ jobs:
           name: c_sdk_build_params_extractor   
       - name: Run C SDK Build Parameters Extractor
         run: |
-          c_sdk_build_params_extractor --app-path c_boilerplate \
+          # to be suppressed when C SDK API_LEVEL_24 is available in dev-tools
+          git clone https://github.com/LedgerHQ/ledger-secure-sdk.git --branch API_LEVEL_24 --single-branch c_sdk
+          echo "setting LEDGER_SDK_PATH to $(realpath c_sdk)"
+          export LEDGER_SDK_PATH=$(realpath c_sdk)
+          # ####################################### #
+          chmod +x cbpx
+          ./cbpx --app-path c_boilerplate \
                                          --device ${{ matrix.target }}
           # Compare output with matching file
-          diff c_sdk_build_${{ matrix.target }}.cflags ledger_secure_sdk_sys/c_sdk_build_${{ matrix.target }}.cflags
+          diff -Z c_sdk_build_${{ matrix.target }}.cflags ledger_secure_sdk_sys/c_sdk_build_${{ matrix.target }}.cflags
           if [ $? -ne 0 ]; then
             echo "C SDK build parameters CFLAGS do not match for target ${{ matrix.target }}"
             exit 1
           fi
-          diff c_sdk_build_${{ matrix.target }}.defines ledger_secure_sdk_sys/c_sdk_build_${{ matrix.target }}.defines
+          diff -Z c_sdk_build_${{ matrix.target }}.defines ledger_secure_sdk_sys/c_sdk_build_${{ matrix.target }}.defines
           if [ $? -ne 0 ]; then
             echo "C SDK build parameters DEFINES do not match for target ${{ matrix.target }}"
             exit 1
