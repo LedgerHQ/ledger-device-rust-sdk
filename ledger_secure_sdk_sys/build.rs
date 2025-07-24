@@ -24,56 +24,6 @@ const SDK_C_FILES: [&str; 13] = [
     "io/src/os_io_seph_ux.c",
 ];
 
-const CFLAGS_NANOSPLUS: [&str; 22] = [
-    "-Oz",
-    "-g0",
-    "-fomit-frame-pointer",
-    "-momit-leaf-frame-pointer",
-    "-fno-common",
-    "-mlittle-endian",
-    "-std=gnu99",
-    "-fdata-sections",
-    "-ffunction-sections",
-    "-funsigned-char",
-    "-fshort-enums",
-    "-mno-unaligned-access",
-    "-fropi",
-    "-fno-jump-tables",
-    "-nostdlib",
-    "-nodefaultlibs",
-    "-frwpi",
-    "--target=armv8m-none-eabi",
-    "-mcpu=cortex-m35p+nodsp",
-    "-mthumb",
-    "-msoft-float",
-    "-Wno-unused-command-line-argument",
-];
-const CFLAGS_STAX: [&str; 22] = CFLAGS_NANOSPLUS;
-const CFLAGS_FLEX: [&str; 22] = CFLAGS_NANOSPLUS;
-const CFLAGS_NANOX: [&str; 21] = [
-    "-Oz",
-    "-g0",
-    "-fomit-frame-pointer",
-    "-momit-leaf-frame-pointer",
-    "-fno-common",
-    "-mlittle-endian",
-    "-std=gnu99",
-    "-fdata-sections",
-    "-ffunction-sections",
-    "-funsigned-char",
-    "-fshort-enums",
-    "-mno-unaligned-access",
-    "-fropi",
-    "-fno-jump-tables",
-    "-nostdlib",
-    "-nodefaultlibs",
-    "-frwpi",
-    "-mthumb",
-    "--target=armv6m-none-eabi",
-    "-mcpu=cortex-m0plus",
-    "-Wno-unused-command-line-argument",
-];
-
 #[derive(Debug, Default, PartialEq)]
 enum DeviceName {
     #[default]
@@ -89,7 +39,7 @@ struct Device<'a> {
     pub c_sdk: PathBuf,
     pub target: &'a str,
     pub defines: Vec<(String, Option<String>)>,
-    pub cflags: Vec<&'a str>,
+    pub cflags: Vec<String>,
     pub glyphs_folders: Vec<PathBuf>,
     pub arm_libs: String,
     pub linker_script: &'a str,
@@ -188,7 +138,7 @@ impl SDKBuilder<'_> {
                 },
                 target: "thumbv8m.main-none-eabi",
                 defines: {
-                    let mut v = header2define("csdk_nanos2.h");
+                    let mut v = header2define("c_sdk_build_nanosplus.defines");
                     if env::var_os("CARGO_FEATURE_NANO_NBGL").is_some() {
                         println!("cargo:warning=NBGL is built");
                         v.push((String::from("HAVE_NBGL"), None));
@@ -201,7 +151,14 @@ impl SDKBuilder<'_> {
                     }
                     v
                 },
-                cflags: Vec::from(CFLAGS_NANOSPLUS),
+                cflags: {
+                    let mut m_path = String::from(env!("CARGO_MANIFEST_DIR"));
+                    m_path.push_str("/c_sdk_build_nanosplus.cflags");
+                    let f = File::open(m_path)
+                        .expect("Failed to open c_sdk_build_nanosplus.cflags file");
+                    let reader = BufReader::new(f);
+                    reader.lines().filter_map(|line| line.ok()).collect::<Vec<String>>()
+                },
                 glyphs_folders: Vec::new(),
                 arm_libs: Default::default(),
                 linker_script: "nanosplus_layout.ld",
@@ -214,7 +171,7 @@ impl SDKBuilder<'_> {
                 },
                 target: "thumbv6m-none-eabi",
                 defines: {
-                    let mut v = header2define("csdk_nanox.h");
+                    let mut v = header2define("c_sdk_build_nanox.defines");
                     if env::var_os("CARGO_FEATURE_NANO_NBGL").is_some() {
                         println!("cargo:warning=NBGL is built");
                         v.push((String::from("HAVE_NBGL"), None));
@@ -227,7 +184,14 @@ impl SDKBuilder<'_> {
                     }
                     v
                 },
-                cflags: Vec::from(CFLAGS_NANOX),
+                cflags: {
+                    let mut m_path = String::from(env!("CARGO_MANIFEST_DIR"));
+                    m_path.push_str("/c_sdk_build_nanox.cflags");
+                    let f = File::open(m_path)
+                        .expect("Failed to open c_sdk_build_nanox.cflags file");
+                    let reader = BufReader::new(f);
+                    reader.lines().filter_map(|line| line.ok()).collect::<Vec<String>>()
+                },
                 glyphs_folders: Vec::new(),
                 arm_libs: Default::default(),
                 linker_script: "nanox_layout.ld",
@@ -239,8 +203,15 @@ impl SDKBuilder<'_> {
                     Err(_) => return Err(SDKBuildError::MissingSDKPath),
                 },
                 target: "thumbv8m.main-none-eabi",
-                defines: header2define("csdk_stax.h"),
-                cflags: Vec::from(CFLAGS_STAX),
+                defines: header2define("c_sdk_build_stax.defines"),
+                cflags: {
+                    let mut m_path = String::from(env!("CARGO_MANIFEST_DIR"));
+                    m_path.push_str("/c_sdk_build_stax.cflags");
+                    let f = File::open(m_path)
+                        .expect("Failed to open c_sdk_build_stax.cflags file");
+                    let reader = BufReader::new(f);
+                    reader.lines().filter_map(|line| line.ok()).collect::<Vec<String>>()
+                },
                 glyphs_folders: Vec::new(),
                 arm_libs: Default::default(),
                 linker_script: "stax_layout.ld",
@@ -252,8 +223,15 @@ impl SDKBuilder<'_> {
                     Err(_) => return Err(SDKBuildError::MissingSDKPath),
                 },
                 target: "thumbv8m.main-none-eabi",
-                defines: header2define("csdk_flex.h"),
-                cflags: Vec::from(CFLAGS_FLEX),
+                defines: header2define("c_sdk_build_flex.defines"),
+                cflags: {
+                    let mut m_path = String::from(env!("CARGO_MANIFEST_DIR"));
+                    m_path.push_str("/c_sdk_build_flex.cflags");
+                    let f = File::open(m_path)
+                        .expect("Failed to open c_sdk_build_flex.cflags file");
+                    let reader = BufReader::new(f);
+                    reader.lines().filter_map(|line| line.ok()).collect::<Vec<String>>()
+                },
                 glyphs_folders: Vec::new(),
                 arm_libs: Default::default(),
                 linker_script: "flex_layout.ld",
@@ -401,6 +379,12 @@ impl SDKBuilder<'_> {
             command.define(define.as_str(), value.as_deref());
         }
 
+        // If the debug_csdk feature is enabled, add PRINTF defines
+        if env::var_os("CARGO_FEATURE_DEBUG_CSDK").is_some() {
+            command.define("HAVE_PRINTF", None);
+            command.define("PRINTF", Some("mcu_usb_printf"));
+        }
+
         // Set the CFLAGS
         for cflag in &self.device.cflags {
             command.flag(cflag);
@@ -477,7 +461,12 @@ impl SDKBuilder<'_> {
 
         // Target specific files
         let csdk_target_name = self.device.name.to_string();
-        let header = format!("csdk_{csdk_target_name}.h");
+        let header = match self.device.name {
+            DeviceName::NanoSPlus => String::from("c_sdk_build_nanosplus.defines"),
+            DeviceName::NanoX => String::from("c_sdk_build_nanox.defines"),
+            DeviceName::Stax => String::from("c_sdk_build_stax.defines"),
+            DeviceName::Flex => String::from("c_sdk_build_flex.defines"),
+        };
 
         bindings = bindings.clang_arg(format!("-I{bsdk}/target/{csdk_target_name}/include/"));
         bindings = bindings.header(header);
@@ -508,13 +497,6 @@ impl SDKBuilder<'_> {
                     self.device
                         .c_sdk
                         .join("lib_nbgl/include/nbgl_use_case.h")
-                        .to_str()
-                        .unwrap(),
-                )
-                .header(
-                    self.device
-                        .c_sdk
-                        .join("lib_ux_nbgl/ux_nbgl.h")
                         .to_str()
                         .unwrap(),
                 );
