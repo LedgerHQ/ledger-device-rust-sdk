@@ -379,6 +379,12 @@ impl SDKBuilder<'_> {
             command.define(define.as_str(), value.as_deref());
         }
 
+        // If the debug_csdk feature is enabled, add PRINTF defines
+        if env::var_os("CARGO_FEATURE_DEBUG_CSDK").is_some() {
+            command.define("HAVE_PRINTF", None);
+            command.define("PRINTF", Some("mcu_usb_printf"));
+        }
+
         // Set the CFLAGS
         for cflag in &self.device.cflags {
             command.flag(cflag);
