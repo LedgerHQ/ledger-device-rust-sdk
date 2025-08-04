@@ -87,6 +87,7 @@ jobs:
                 path: ${{ matrix.app-name }}
             - name: Patch Cargo.toml
               continue-on-error: false
+              if: ${{ inputs.rust_sdk_branch != 'master' }}
               run: |
                 cd ${{ matrix.app-name }}
                 build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
@@ -132,7 +133,7 @@ jobs:
                 cd ${{ matrix.app-name }}
                 build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
                 cd $build_directory
-                # Required as patch has a different version from what is locked in Cargo.lock
+                # Use last published versions of the Rust SDK
                 cargo update include_gif
                 cargo update ledger_secure_sdk_sys
                 cargo update ledger_device_sdk
