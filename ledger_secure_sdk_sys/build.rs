@@ -31,6 +31,7 @@ enum DeviceName {
     NanoX,
     Stax,
     Flex,
+    ApexP,
 }
 
 #[derive(Debug, Default)]
@@ -52,6 +53,7 @@ impl std::fmt::Display for DeviceName {
             DeviceName::NanoX => write!(f, "nanox"),
             DeviceName::Stax => write!(f, "stax"),
             DeviceName::Flex => write!(f, "flex"),
+            DeviceName::ApexP => write!(f, "apex_p"),
         }
     }
 }
@@ -238,6 +240,26 @@ impl SDKBuilder<'_> {
                 arm_libs: Default::default(),
                 linker_script: "flex_layout.ld",
             },
+            "apex_p" => Device {
+                name: DeviceName::ApexP,
+                c_sdk: match env::var("LEDGER_SDK_PATH").or_else(|_| env::var("APEX_P_SDK")) {
+                    Ok(path) => PathBuf::from(path),
+                    Err(_) => return Err(SDKBuildError::MissingSDKPath),
+                },
+                target: "thumbv8m.main-none-eabi",
+                defines: header2define("c_sdk_build_apex_p.defines"),
+                cflags: {
+                    let mut m_path = String::from(env!("CARGO_MANIFEST_DIR"));
+                    m_path.push_str("/c_sdk_build_apex_p.cflags");
+                    let f = File::open(m_path)
+                        .expect("Failed to open c_sdk_build_apex_p.cflags file");
+                    let reader = BufReader::new(f);
+                    reader.lines().filter_map(|line| line.ok()).collect::<Vec<String>>()
+                },
+                glyphs_folders: Vec::new(),
+                arm_libs: Default::default(),
+                linker_script: "apex_p_layout.ld",
+            },
             _ => {
                 return Err(SDKBuildError::UnsupportedDevice);
             }
@@ -267,6 +289,17 @@ impl SDKBuilder<'_> {
                     .glyphs_folders
                     .push(self.device.c_sdk.join("lib_nbgl/glyphs/32px"));
             }
+            DeviceName::ApexP => {
+                self.device
+                    .glyphs_folders
+                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/wallet"));
+                self.device
+                    .glyphs_folders
+                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/48px"));
+                self.device
+                    .glyphs_folders
+                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/24px"));
+            }
             _ => {
                 self.device
                     .glyphs_folders
@@ -281,7 +314,7 @@ impl SDKBuilder<'_> {
                 path.push_str("/arch/st33/lib");
                 path
             }
-            DeviceName::NanoSPlus | DeviceName::Flex | DeviceName::Stax => {
+            DeviceName::NanoSPlus | DeviceName::Flex | DeviceName::Stax | DeviceName::ApexP => {
                 let mut path = self.device.c_sdk.display().to_string();
                 path.push_str("/arch/st33k1/lib");
                 path
@@ -355,8 +388,6 @@ impl SDKBuilder<'_> {
             .files(&AUX_C_FILES)
             .files(str2path(&self.device.c_sdk, &SDK_C_FILES));
 
-        //command
-        //    .file(c_sdk.join("lib_standard_app/main.c"))
 
         let glyphs_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("glyphs");
 
@@ -468,6 +499,7 @@ impl SDKBuilder<'_> {
             DeviceName::NanoX => String::from("c_sdk_build_nanox.defines"),
             DeviceName::Stax => String::from("c_sdk_build_stax.defines"),
             DeviceName::Flex => String::from("c_sdk_build_flex.defines"),
+            DeviceName::ApexP => String::from("c_sdk_build_apex_p.defines"),
         };
 
         bindings = bindings.clang_arg(format!("-I{bsdk}/target/{csdk_target_name}/include/"));
@@ -483,6 +515,7 @@ impl SDKBuilder<'_> {
             && env::var_os("CARGO_FEATURE_NANO_NBGL").is_some())
             || self.device.name == DeviceName::Stax
             || self.device.name == DeviceName::Flex
+            || self.device.name == DeviceName::ApexP
         {
             let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
             let mut include_path = "-I".to_string();
@@ -501,12 +534,21 @@ impl SDKBuilder<'_> {
                         .join("lib_nbgl/include/nbgl_use_case.h")
                         .to_str()
                         .unwrap(),
+                )
+                .header(
+                    self.device
+                        .c_sdk
+                        .join("lib_ux_nbgl/ux_nbgl.h")
+                        .to_str()
+                        .unwrap(),
                 );
+        } else {
+            bindings = bindings.clang_arg("-DHAVE_UX_FLOW");
         }
 
         // BLE bindings
         match self.device.name {
-            DeviceName::NanoX | DeviceName::Flex | DeviceName::Stax => {
+            DeviceName::NanoX | DeviceName::Flex | DeviceName::Stax | DeviceName::ApexP => {
                 bindings = bindings.header(
                     self.device
                         .c_sdk
@@ -807,19 +849,23 @@ fn clone_sdk(devicename: &DeviceName) -> PathBuf {
     let (repo_url, sdk_branch) = match devicename {
         DeviceName::NanoX => (
             Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_22",
+            "API_LEVEL_24",
         ),
         DeviceName::NanoSPlus => (
             Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_22",
+            "API_LEVEL_24",
         ),
         DeviceName::Stax => (
             Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_22",
+            "API_LEVEL_24",
         ),
         DeviceName::Flex => (
             Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_22",
+            "API_LEVEL_24",
+        ),
+        DeviceName::ApexP => (
+            Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
+            "API_LEVEL_25",
         ),
     };
 
