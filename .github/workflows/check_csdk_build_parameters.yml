@@ -1,4 +1,6 @@
 name: Build C Boilerplate application and check if C SDK build parameters are still correct
+permissions:
+  contents: read
 
 on:
   pull_request:
