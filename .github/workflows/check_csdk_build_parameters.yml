@@ -41,6 +41,11 @@ jobs:
         with:
           repository: LedgerHQ/app-boilerplate
           path: c_boilerplate
+      - name: Checkout C SDK Build Parameters Extractor
+        uses: actions/checkout@v4
+        with:
+          repository: LedgerHQ/csdk_build_parameters_extractor
+          path: c_sdk_build_params
       - name: Download C SDK Build Parameters Extractor
         uses: actions/download-artifact@v4
         with:
@@ -51,12 +56,12 @@ jobs:
           ./cbpx --app-path c_boilerplate \
                                          --device ${{ matrix.target }}
           # Compare output with matching file
-          diff c_sdk_build_${{ matrix.target }}.cflags c_sdk_build_${{ matrix.target }}_ref.cflags
+          diff c_sdk_build_${{ matrix.target }}.cflags c_sdk_build_params/c_sdk_build_${{ matrix.target }}_ref.cflags
           if [ $? -ne 0 ]; then
             echo "C SDK build parameters CFLAGS do not match for target ${{ matrix.target }}"
             exit 1
           fi
-          diff c_sdk_build_${{ matrix.target }}.defines c_sdk_build_${{ matrix.target }}_ref.defines
+          diff c_sdk_build_${{ matrix.target }}.defines c_sdk_build_params/c_sdk_build_${{ matrix.target }}_ref.defines
           if [ $? -ne 0 ]; then
             echo "C SDK build parameters DEFINES do not match for target ${{ matrix.target }}"
             exit 1
