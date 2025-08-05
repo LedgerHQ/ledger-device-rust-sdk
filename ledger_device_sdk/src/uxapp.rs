@@ -42,7 +42,7 @@ impl UxEvent {
                     Self::ValidatePIN as u8
                 }
                 Self::DelayLock => {
-                    #[cfg(any(target_os = "stax", target_os = "flex", feature = "nano_nbgl"))]
+                    #[cfg(any(target_os = "apex_p", target_os = "stax", target_os = "flex", feature = "nano_nbgl"))]
                     {
                         G_ux_params.u.lock_delay.delay_ms = 10000;
                     }

@@ -34,4 +34,4 @@ default = [ "heap" ]
 
 [lints.rust.unexpected_cfgs]
 level = "warn" 
-check-cfg = ['cfg(target_os, values("stax", "flex", "nanox", "nanosplus"))']
+check-cfg = ['cfg(target_os, values("apex_p", "stax", "flex", "nanox", "nanosplus"))']

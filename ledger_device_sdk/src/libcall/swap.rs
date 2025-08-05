@@ -1,4 +1,4 @@
-#[cfg(any(target_os = "stax", target_os = "flex"))]
+#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p", feature = "nano_nbgl"))]
 use crate::nbgl::NbglSpinner;
 use crate::testing::debug_print;
 use ledger_secure_sdk_sys::{
@@ -298,7 +298,7 @@ pub fn sign_tx_params<const COIN_CONFIG_BUF_SIZE: usize, const ADDRESS_BUF_SIZE:
         c_boot_std();
     }
 
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p", feature = "nano_nbgl"))]
     NbglSpinner::new().show("Signing");
 
     create_tx_params
