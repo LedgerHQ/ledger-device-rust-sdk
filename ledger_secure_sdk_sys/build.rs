@@ -148,6 +148,7 @@ impl SDKBuilder<'_> {
                         println!("cargo:warning=BAGL is built");
                         println!("cargo:rustc-env=C_SDK_GRAPHICS={}", "bagl");
                         v.push((String::from("HAVE_BAGL"), None));
+                        v.push((String::from("HAVE_UX_FLOW"), None));
                     }
                     v
                 },
@@ -181,6 +182,7 @@ impl SDKBuilder<'_> {
                         println!("cargo:warning=BAGL is built");
                         println!("cargo:rustc-env=C_SDK_GRAPHICS={}", "bagl");
                         v.push((String::from("HAVE_BAGL"), None));
+                        v.push((String::from("HAVE_UX_FLOW"), None));
                     }
                     v
                 },
