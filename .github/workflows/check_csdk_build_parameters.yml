@@ -36,8 +36,6 @@ jobs:
       matrix:
         target: ["nanox", "nanosplus", "stax", "flex"]
     steps:
-      - name: Checkout Rust SDK
-        uses: actions/checkout@v4
       - name: Checkout C BP
         uses: actions/checkout@v4
         with:
@@ -49,21 +47,16 @@ jobs:
           name: c_sdk_build_params_extractor   
       - name: Run C SDK Build Parameters Extractor
         run: |
-          # to be suppressed when C SDK API_LEVEL_24 is available in dev-tools
-          git clone https://github.com/LedgerHQ/ledger-secure-sdk.git --branch API_LEVEL_24 --single-branch c_sdk
-          echo "setting LEDGER_SDK_PATH to $(realpath c_sdk)"
-          export LEDGER_SDK_PATH=$(realpath c_sdk)
-          # ####################################### #
           chmod +x cbpx
           ./cbpx --app-path c_boilerplate \
                                          --device ${{ matrix.target }}
           # Compare output with matching file
-          diff -Z c_sdk_build_${{ matrix.target }}.cflags ledger_secure_sdk_sys/c_sdk_build_${{ matrix.target }}.cflags
+          diff c_sdk_build_${{ matrix.target }}.cflags c_sdk_build_${{ matrix.target }}_ref.cflags
           if [ $? -ne 0 ]; then
             echo "C SDK build parameters CFLAGS do not match for target ${{ matrix.target }}"
             exit 1
           fi
-          diff -Z c_sdk_build_${{ matrix.target }}.defines ledger_secure_sdk_sys/c_sdk_build_${{ matrix.target }}.defines
+          diff c_sdk_build_${{ matrix.target }}.defines c_sdk_build_${{ matrix.target }}_ref.defines
           if [ $? -ne 0 ]; then
             echo "C SDK build parameters DEFINES do not match for target ${{ matrix.target }}"
             exit 1

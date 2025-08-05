@@ -160,7 +160,10 @@ impl SDKBuilder<'_> {
                     let f = File::open(m_path)
                         .expect("Failed to open c_sdk_build_nanosplus.cflags file");
                     let reader = BufReader::new(f);
-                    reader.lines().filter_map(|line| line.ok()).collect::<Vec<String>>()
+                    reader
+                        .lines()
+                        .filter_map(|line| line.ok())
+                        .collect::<Vec<String>>()
                 },
                 glyphs_folders: Vec::new(),
                 arm_libs: Default::default(),
@@ -191,10 +194,13 @@ impl SDKBuilder<'_> {
                 cflags: {
                     let mut m_path = String::from(env!("CARGO_MANIFEST_DIR"));
                     m_path.push_str("/c_sdk_build_nanox.cflags");
-                    let f = File::open(m_path)
-                        .expect("Failed to open c_sdk_build_nanox.cflags file");
+                    let f =
+                        File::open(m_path).expect("Failed to open c_sdk_build_nanox.cflags file");
                     let reader = BufReader::new(f);
-                    reader.lines().filter_map(|line| line.ok()).collect::<Vec<String>>()
+                    reader
+                        .lines()
+                        .filter_map(|line| line.ok())
+                        .collect::<Vec<String>>()
                 },
                 glyphs_folders: Vec::new(),
                 arm_libs: Default::default(),
@@ -211,10 +217,13 @@ impl SDKBuilder<'_> {
                 cflags: {
                     let mut m_path = String::from(env!("CARGO_MANIFEST_DIR"));
                     m_path.push_str("/c_sdk_build_stax.cflags");
-                    let f = File::open(m_path)
-                        .expect("Failed to open c_sdk_build_stax.cflags file");
+                    let f =
+                        File::open(m_path).expect("Failed to open c_sdk_build_stax.cflags file");
                     let reader = BufReader::new(f);
-                    reader.lines().filter_map(|line| line.ok()).collect::<Vec<String>>()
+                    reader
+                        .lines()
+                        .filter_map(|line| line.ok())
+                        .collect::<Vec<String>>()
                 },
                 glyphs_folders: Vec::new(),
                 arm_libs: Default::default(),
@@ -231,10 +240,13 @@ impl SDKBuilder<'_> {
                 cflags: {
                     let mut m_path = String::from(env!("CARGO_MANIFEST_DIR"));
                     m_path.push_str("/c_sdk_build_flex.cflags");
-                    let f = File::open(m_path)
-                        .expect("Failed to open c_sdk_build_flex.cflags file");
+                    let f =
+                        File::open(m_path).expect("Failed to open c_sdk_build_flex.cflags file");
                     let reader = BufReader::new(f);
-                    reader.lines().filter_map(|line| line.ok()).collect::<Vec<String>>()
+                    reader
+                        .lines()
+                        .filter_map(|line| line.ok())
+                        .collect::<Vec<String>>()
                 },
                 glyphs_folders: Vec::new(),
                 arm_libs: Default::default(),
@@ -251,10 +263,13 @@ impl SDKBuilder<'_> {
                 cflags: {
                     let mut m_path = String::from(env!("CARGO_MANIFEST_DIR"));
                     m_path.push_str("/c_sdk_build_apex_p.cflags");
-                    let f = File::open(m_path)
-                        .expect("Failed to open c_sdk_build_apex_p.cflags file");
+                    let f =
+                        File::open(m_path).expect("Failed to open c_sdk_build_apex_p.cflags file");
                     let reader = BufReader::new(f);
-                    reader.lines().filter_map(|line| line.ok()).collect::<Vec<String>>()
+                    reader
+                        .lines()
+                        .filter_map(|line| line.ok())
+                        .collect::<Vec<String>>()
                 },
                 glyphs_folders: Vec::new(),
                 arm_libs: Default::default(),
@@ -387,7 +402,6 @@ impl SDKBuilder<'_> {
         command
             .files(&AUX_C_FILES)
             .files(str2path(&self.device.c_sdk, &SDK_C_FILES));
-
 
         let glyphs_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("glyphs");
 
