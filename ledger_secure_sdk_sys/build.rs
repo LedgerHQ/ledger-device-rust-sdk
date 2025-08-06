@@ -547,11 +547,7 @@ impl SDKBuilder<'_> {
                     .unwrap(),
             );
             if self.device.name == DeviceName::NanoSPlus || self.device.name == DeviceName::NanoX {
-                bindings = bindings.clang_args([
-                    "-DHAVE_NBGL",
-                    "-DNBGL_STEP",
-                    "-DNBGL_USE_CASE",
-                ]);
+                bindings = bindings.clang_args(["-DHAVE_NBGL", "-DNBGL_STEP", "-DNBGL_USE_CASE"]);
             }
         } else {
             bindings = bindings.clang_arg("-DHAVE_UX_FLOW");
