@@ -19,9 +19,19 @@ pub mod seph;
 
 pub mod testing;
 
-#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p", feature = "nano_nbgl"))]
+#[cfg(any(
+    target_os = "stax",
+    target_os = "flex",
+    target_os = "apex_p",
+    feature = "nano_nbgl"
+))]
 pub mod nbgl;
-#[cfg(not(any(target_os = "stax", target_os = "flex", target_os = "apex_p", feature = "nano_nbgl")))]
+#[cfg(not(any(
+    target_os = "stax",
+    target_os = "flex",
+    target_os = "apex_p",
+    feature = "nano_nbgl"
+)))]
 pub mod ui;
 
 pub mod uxapp;

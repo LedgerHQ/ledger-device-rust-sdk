@@ -5,13 +5,23 @@ use ledger_secure_sdk_sys::*;
 
 use crate::seph;
 
-#[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+#[cfg(any(
+    target_os = "nanox",
+    target_os = "stax",
+    target_os = "flex",
+    target_os = "apex_p"
+))]
 use crate::seph::ItcUxEvent;
 
 use core::convert::{Infallible, TryFrom};
 use core::ops::{Index, IndexMut};
 
-#[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+#[cfg(any(
+    target_os = "nanox",
+    target_os = "stax",
+    target_os = "flex",
+    target_os = "apex_p"
+))]
 unsafe extern "C" {
     pub unsafe static mut G_ux_params: bolos_ux_params_t;
 }
@@ -185,7 +195,12 @@ impl Comm {
     // This is private. Users should call reply to set the satus word and
     // transmit the response.
     fn apdu_send(&mut self) {
-        #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p", feature = "nano_nbgl"))]
+        #[cfg(any(
+            target_os = "stax",
+            target_os = "flex",
+            target_os = "apex_p",
+            feature = "nano_nbgl"
+        ))]
         {
             let mut buffer: [u8; 273] = [0; 273];
             let status = sys_seph::io_rx(&mut buffer, false);
@@ -364,7 +379,12 @@ impl Comm {
 
             // TICKER EVENT
             seph::Events::TickerEvent => {
-                #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p", feature = "nano_nbgl"))]
+                #[cfg(any(
+                    target_os = "stax",
+                    target_os = "flex",
+                    target_os = "apex_p",
+                    feature = "nano_nbgl"
+                ))]
                 unsafe {
                     ux_process_ticker_event();
                 }
@@ -373,7 +393,12 @@ impl Comm {
 
             // ITC EVENT
             seph::Events::ItcEvent => {
-                #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+                #[cfg(any(
+                    target_os = "nanox",
+                    target_os = "stax",
+                    target_os = "flex",
+                    target_os = "apex_p"
+                ))]
                 match ItcUxEvent::from(seph_buffer[3]) {
                     seph::ItcUxEvent::AskBlePairing => unsafe {
                         G_ux_params.ux_id = BOLOS_UX_ASYNCHMODAL_PAIRING_REQUEST;
@@ -397,7 +422,12 @@ impl Comm {
                     },
 
                     seph::ItcUxEvent::Redisplay => {
-                        #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p", feature = "nano_nbgl"))]
+                        #[cfg(any(
+                            target_os = "stax",
+                            target_os = "flex",
+                            target_os = "apex_p",
+                            feature = "nano_nbgl"
+                        ))]
                         unsafe {
                             nbgl_objAllowDrawing(true);
                             nbgl_screenRedraw();
@@ -412,7 +442,12 @@ impl Comm {
 
             // DEFAULT EVENT
             _ => {
-                #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p", feature = "nano_nbgl"))]
+                #[cfg(any(
+                    target_os = "stax",
+                    target_os = "flex",
+                    target_os = "apex_p",
+                    feature = "nano_nbgl"
+                ))]
                 unsafe {
                     ux_process_default_event();
                 }

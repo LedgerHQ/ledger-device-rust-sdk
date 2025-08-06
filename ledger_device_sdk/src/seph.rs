@@ -93,7 +93,12 @@ pub fn handle_event(_apdu_buffer: &mut [u8], spi_buffer: &[u8]) {
     let _len = u16::from_be_bytes([spi_buffer[1], spi_buffer[2]]);
     match Events::from(spi_buffer[0]) {
         Events::TickerEvent => {
-            #[cfg(any(target_os = "apex_p", target_os = "stax", target_os = "flex", feature = "nano_nbgl"))]
+            #[cfg(any(
+                target_os = "apex_p",
+                target_os = "stax",
+                target_os = "flex",
+                feature = "nano_nbgl"
+            ))]
             unsafe {
                 ux_process_ticker_event();
             }
