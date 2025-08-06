@@ -558,7 +558,7 @@ impl SDKBuilder<'_> {
         }
 
         let bindings = bindings
-            .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
+            .parse_callbacks(Box::new(bindgen::CargoCallbacks))
             .generate()
             .expect("Unable to generate bindings");
 
