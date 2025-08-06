@@ -93,6 +93,11 @@ jobs:
                 cd ${{ matrix.app-name }}
                 build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
                 cd $build_directory
+                # Required as patch has a different version from what is locked in Cargo.lock
+                cargo update include_gif
+                cargo update ledger_secure_sdk_sys
+                cargo update ledger_device_sdk
+
                 workspace_root=$(cargo metadata --no-deps --format-version 1 | jq -r '.workspace_root')
                 cargo_toml_path="$workspace_root/Cargo.toml"
                 
@@ -134,10 +139,7 @@ jobs:
                 cd ${{ matrix.app-name }}
                 build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
                 cd $build_directory
-                # Use last published versions of the Rust SDK
-                cargo update include_gif
-                cargo update ledger_secure_sdk_sys
-                cargo update ledger_device_sdk
+                echo "Building app for ${{ matrix.device }}"
                 device=$(echo ${{ matrix.device }} | sed 's/+/plus/')
                 echo "Build for "$device
                 cargo ledger build $device
