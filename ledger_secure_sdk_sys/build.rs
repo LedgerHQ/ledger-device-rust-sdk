@@ -491,10 +491,8 @@ impl SDKBuilder<'_> {
             &[
                 "lib_cxng/include/libcxng.h", /* cxlib */
                 "include/os.h",               /* syscalls */
-                "include/os_screen.h",
                 "include/syscalls.h",
                 "include/os_ux.h",
-                "include/ox.h", /* crypto-related syscalls */
                 "lib_standard_app/swap_lib_calls.h",
             ],
         );
@@ -541,37 +539,22 @@ impl SDKBuilder<'_> {
                 format!("-I{bsdk}/lib_nbgl/include/").as_str(),
                 format!("-I{bsdk}/lib_ux_nbgl/").as_str(),
             ]);
-            bindings = bindings
-                .header(
-                    self.device
-                        .c_sdk
-                        .join("lib_nbgl/include/nbgl_use_case.h")
-                        .to_str()
-                        .unwrap(),
-                )
-                .header(
-                    self.device
-                        .c_sdk
-                        .join("lib_ux_nbgl/ux_nbgl.h")
-                        .to_str()
-                        .unwrap(),
-                );
+            bindings = bindings.header(
+                self.device
+                    .c_sdk
+                    .join("lib_nbgl/include/nbgl_use_case.h")
+                    .to_str()
+                    .unwrap(),
+            );
+            if self.device.name == DeviceName::NanoSPlus || self.device.name == DeviceName::NanoX {
+                bindings = bindings.clang_args([
+                    "-DHAVE_NBGL",
+                    "-DNBGL_STEP",
+                    "-DNBGL_USE_CASE",
+                ]);
+            }
         } else {
             bindings = bindings.clang_arg("-DHAVE_UX_FLOW");
-        }
-
-        // BLE bindings
-        match self.device.name {
-            DeviceName::NanoX | DeviceName::Flex | DeviceName::Stax | DeviceName::ApexP => {
-                bindings = bindings.header(
-                    self.device
-                        .c_sdk
-                        .join("lib_blewbxx_impl/include/ledger_ble.h")
-                        .to_str()
-                        .unwrap(),
-                )
-            }
-            _ => (),
         }
 
         for define in &self.cxdefines {
@@ -579,7 +562,7 @@ impl SDKBuilder<'_> {
         }
 
         let bindings = bindings
-            .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+            .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
             .generate()
             .expect("Unable to generate bindings");
 
