@@ -460,6 +460,12 @@ impl SDKBuilder<'_> {
             if s.0 == "HAVE_NBGL" {
                 configure_lib_nbgl(&mut command, &self.device.c_sdk);
             }
+            if s.0 == "HAVE_BAGL" {
+                let glyphs_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("glyphs");
+                command
+                    .include(&glyphs_path)
+                    .file(glyphs_path.join("glyphs.c"));
+            }
         }
 
         // Add the defines found in the Makefile.conf.cx to our build command.

@@ -35,6 +35,7 @@ const fn middle_y(glyph: &Glyph) -> i16 {
     ((crate::ui::SCREEN_HEIGHT as u32 - glyph.height) / 2) as i16
 }
 
+#[derive(Clone, Copy)]
 pub struct Icon<'a> {
     pub icon: &'a Glyph<'a>,
     pub pos: (i16, i16),
@@ -95,25 +96,27 @@ use crate::ui::bitmaps;
 pub const OUTER_PADDING: usize = 2;
 pub const SCREENW: i16 = (crate::ui::SCREEN_WIDTH - OUTER_PADDING) as i16;
 
-pub const DOWN_ARROW: Icon =
+pub static DOWN_ARROW: Icon =
     Icon::from(&bitmaps::DOWN_ARROW).set_x(SCREENW - bitmaps::DOWN_ARROW.width as i16);
-pub const LEFT_ARROW: Icon = Icon::from(&bitmaps::LEFT_ARROW).set_x(OUTER_PADDING as i16);
-pub const RIGHT_ARROW: Icon =
+pub static LEFT_ARROW: Icon = Icon::from(&bitmaps::LEFT_ARROW).set_x(OUTER_PADDING as i16);
+pub static RIGHT_ARROW: Icon =
     Icon::from(&bitmaps::RIGHT_ARROW).set_x(SCREENW - bitmaps::RIGHT_ARROW.width as i16);
-pub const UP_ARROW: Icon = Icon::from(&bitmaps::UP_ARROW).set_x(OUTER_PADDING as i16);
-pub const DOWN_S_ARROW: Icon = DOWN_ARROW.shift_v(4);
-pub const LEFT_S_ARROW: Icon = LEFT_ARROW.shift_h(4);
-pub const RIGHT_S_ARROW: Icon = RIGHT_ARROW.shift_h(-4);
-pub const UP_S_ARROW: Icon = UP_ARROW.shift_v(-4);
+pub static UP_ARROW: Icon = Icon::from(&bitmaps::UP_ARROW).set_x(OUTER_PADDING as i16);
+pub static DOWN_S_ARROW: Icon = DOWN_ARROW.shift_v(4);
+pub static LEFT_S_ARROW: Icon = LEFT_ARROW.shift_h(4);
+pub static RIGHT_S_ARROW: Icon = RIGHT_ARROW.shift_h(-4);
+pub static UP_S_ARROW: Icon = UP_ARROW.shift_v(-4);
 
-pub const CHECKMARK_ICON: Icon = Icon::from(&bitmaps::CHECKMARK);
-pub const CROSS_ICON: Icon = Icon::from(&bitmaps::CROSS);
-pub const COGGLE_ICON: Icon = Icon::from(&bitmaps::COGGLE);
-pub const CERTIFICATE_ICON: Icon = Icon::from(&bitmaps::CERTIFICATE);
-pub const CROSSMARK_ICON: Icon = Icon::from(&bitmaps::CROSSMARK);
-pub const DASHBOARD_ICON: Icon = Icon::from(&bitmaps::DASHBOARD);
-pub const DASHBOARD_X_ICON: Icon = Icon::from(&bitmaps::DASHBOARD_X);
-pub const EYE_ICON: Icon = Icon::from(&bitmaps::EYE);
-pub const PROCESSING_ICON: Icon = Icon::from(&bitmaps::PROCESSING);
-pub const VALIDATE_14_ICON: Icon = Icon::from(&bitmaps::VALIDATE_14);
-pub const WARNING_ICON: Icon = Icon::from(&bitmaps::WARNING);
+//pub static BACK_ICON: Icon = Icon::from(&bitmaps::BACK);
+pub static BACK_X_ICON: Icon = Icon::from(&bitmaps::BACK_X);
+pub static COGGLE_ICON: Icon = Icon::from(&bitmaps::COGGLE);
+pub static PROCESSING_ICON: Icon = Icon::from(&bitmaps::PROCESSING);
+pub static CERTIFICATE_ICON: Icon = Icon::from(&bitmaps::CERTIFICATE);
+pub static CROSSMARK_ICON: Icon = Icon::from(&bitmaps::CROSSMARK);
+pub static DASHBOARD_ICON: Icon = Icon::from(&bitmaps::DASHBOARD);
+pub static DASHBOARD_X_ICON: Icon = Icon::from(&bitmaps::DASHBOARD_X);
+pub static EYE_ICON: Icon = Icon::from(&bitmaps::EYE);
+pub static VALIDATE_14_ICON: Icon = Icon::from(&bitmaps::VALIDATE_14);
+pub static WARNING_ICON: Icon = Icon::from(&bitmaps::WARNING);
+pub static CHECKMARK_ICON: Icon = Icon::from(&bitmaps::CHECKMARK);
+pub static CROSS_ICON: Icon = Icon::from(&bitmaps::CROSS);
