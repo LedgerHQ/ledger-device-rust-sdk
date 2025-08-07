@@ -4,7 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Instant;
-use std::{env, fs::File, io::BufRead, io::BufReader, io::Read};
+use std::{env, fs::File, io::BufRead, io::BufReader, io::Read, io::Write};
 
 const AUX_C_FILES: [&str; 2] = ["./src/c/src.c", "./src/c/sjlj.s"];
 
@@ -315,10 +315,16 @@ impl SDKBuilder<'_> {
                     .glyphs_folders
                     .push(self.device.c_sdk.join("lib_nbgl/glyphs/24px"));
             }
-            _ => {
-                self.device
-                    .glyphs_folders
-                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/nano"));
+            DeviceName::NanoSPlus | DeviceName::NanoX => {
+                if env::var_os("CARGO_FEATURE_NANO_NBGL").is_some() {
+                    self.device
+                        .glyphs_folders
+                        .push(self.device.c_sdk.join("lib_nbgl/glyphs/nano"));
+                } else {
+                    self.device
+                        .glyphs_folders
+                        .push(self.device.c_sdk.join("lib_ux/glyphs"));
+                }
             }
         }
 
@@ -523,18 +529,17 @@ impl SDKBuilder<'_> {
         }
 
         // BAGL or NBGL bindings
+        let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+        let mut include_path = "-I".to_string();
+        let glyphs = out_path.join("glyphs");
+        include_path += glyphs.to_str().unwrap();
+        bindings = bindings.clang_args([include_path.as_str()]);
         if ((self.device.name == DeviceName::NanoX || self.device.name == DeviceName::NanoSPlus)
             && env::var_os("CARGO_FEATURE_NANO_NBGL").is_some())
             || self.device.name == DeviceName::Stax
             || self.device.name == DeviceName::Flex
             || self.device.name == DeviceName::ApexP
         {
-            let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-            let mut include_path = "-I".to_string();
-            let glyphs = out_path.join("glyphs");
-            include_path += glyphs.to_str().unwrap();
-            bindings = bindings.clang_args([include_path.as_str()]);
-
             bindings = bindings.clang_args([
                 format!("-I{bsdk}/lib_nbgl/include/").as_str(),
                 format!("-I{bsdk}/lib_ux_nbgl/").as_str(),
@@ -550,7 +555,11 @@ impl SDKBuilder<'_> {
                 bindings = bindings.clang_args(["-DHAVE_NBGL", "-DNBGL_STEP", "-DNBGL_USE_CASE"]);
             }
         } else {
-            bindings = bindings.clang_arg("-DHAVE_UX_FLOW");
+            bindings = bindings.clang_args([
+                format!("-I{bsdk}/lib_bagl/include/").as_str(),
+                format!("-I{bsdk}/lib_ux/include/").as_str(),
+            ]);
+            bindings = bindings.clang_args(["-DHAVE_BAGL", "-DHAVE_UX_FLOW"]);
         }
 
         for define in &self.cxdefines {
@@ -878,32 +887,74 @@ fn clone_sdk(devicename: &DeviceName) -> PathBuf {
 }
 
 fn generate_glyphs(device: &Device) {
-    let icon2glyph = device.c_sdk.join("lib_nbgl/tools/icon2glyph.py");
-
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
     let dest_path = out_path.join("glyphs");
     if !dest_path.exists() {
         fs::create_dir_all(&dest_path).ok();
     }
 
-    let mut cmd = Command::new(icon2glyph.as_os_str());
-    cmd.arg("--glyphcheader")
-        .arg(dest_path.join("glyphs.h").as_os_str())
-        .arg("--glyphcfile")
-        .arg(dest_path.join("glyphs.c").as_os_str());
+    // NBGL Glyphs
+    if ((device.name == DeviceName::NanoSPlus || device.name == DeviceName::NanoX)
+        && env::var_os("CARGO_FEATURE_NANO_NBGL").is_some())
+        || device.name == DeviceName::Stax
+        || device.name == DeviceName::Flex
+        || device.name == DeviceName::ApexP
+    {
+        println!("cargo:warning=NBGL glyphs are generated");
+        let icon2glyph = device.c_sdk.join("lib_nbgl/tools/icon2glyph.py");
 
-    if device.name == DeviceName::NanoSPlus || device.name == DeviceName::NanoX {
-        cmd.arg("--reverse");
-    }
+        let mut cmd = Command::new(icon2glyph.as_os_str());
+        cmd.arg("--glyphcheader")
+            .arg(dest_path.join("glyphs.h").as_os_str())
+            .arg("--glyphcfile")
+            .arg(dest_path.join("glyphs.c").as_os_str());
 
-    for folder in device.glyphs_folders.iter() {
-        for file in std::fs::read_dir(folder).unwrap() {
-            let path = file.unwrap().path();
-            let path_str = path.to_str().unwrap().to_string();
-            cmd.arg(path_str);
+        if device.name == DeviceName::NanoSPlus || device.name == DeviceName::NanoX {
+            cmd.arg("--reverse");
         }
+
+        for folder in device.glyphs_folders.iter() {
+            for file in std::fs::read_dir(folder).unwrap() {
+                let path = file.unwrap().path();
+                let path_str = path.to_str().unwrap().to_string();
+                cmd.arg(path_str);
+            }
+        }
+        let _ = cmd.output();
     }
-    let _ = cmd.output();
+    // BAGL Glyphs
+    else {
+        println!("cargo:warning=BAGL glyphs are generated");
+        let icon2glyph = device.c_sdk.join("icon3.py");
+
+        let mut cmd1 = Command::new("python3");
+        cmd1.arg(icon2glyph.as_os_str());
+        cmd1.arg("--glyphcheader");
+        let mut cmd2 = Command::new("python3");
+        cmd2.arg(icon2glyph.as_os_str());
+        cmd2.arg("--glyphcfile").arg("--factorize");
+
+        for folder in device.glyphs_folders.iter() {
+            for file in std::fs::read_dir(folder).unwrap() {
+                let path = file.unwrap().path();
+                let path_str = path.to_str().unwrap().to_string();
+                cmd1.arg(&path_str);
+                cmd2.arg(&path_str);
+            }
+        }
+        let output1 = cmd1.output().unwrap();
+        let output2 = cmd2.output().unwrap();
+
+        let mut glyphs_header: File = File::create(dest_path.join("glyphs.h")).unwrap();
+        glyphs_header
+            .write_all(&output1.stdout)
+            .expect("Failed to write glyphs.h");
+
+        let mut glyphs_cfile = File::create(dest_path.join("glyphs.c")).unwrap();
+        glyphs_cfile
+            .write_all(&output2.stdout)
+            .expect("Failed to write glyphs.c");
+    }
 }
 
 /// Helper function to concatenate all paths in pathlist to c_sdk's path
