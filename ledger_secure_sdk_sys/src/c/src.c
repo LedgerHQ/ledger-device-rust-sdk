@@ -58,7 +58,7 @@ void printhex_c(char* str, uint32_t m);
     "movt %[result], #:upper16:" #SYM "(sbrel)\n\t" \
     "add %[result], r9, %[result]" \
     : [result] "=r" (DST))
-#elif defined(TARGET_NANOX) || defined(TARGET_STAX) || defined(TARGET_FLEX)
+#elif defined(TARGET_NANOX) || defined(TARGET_STAX) || defined(TARGET_FLEX) || defined(TARGET_APEX_P)
 # define SYMBOL_SBREL_ADDRESS(DST, SYM) \
   __asm volatile( \
     "ldr %[result], =" #SYM "(sbrel)\n\t" \

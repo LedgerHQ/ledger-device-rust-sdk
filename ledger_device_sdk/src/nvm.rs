@@ -186,7 +186,12 @@ macro_rules! atomic_storage {
 
 #[cfg(target_os = "nanox")]
 atomic_storage!(256);
-#[cfg(any(target_os = "nanosplus", target_os = "stax", target_os = "flex"))]
+#[cfg(any(
+    target_os = "nanosplus",
+    target_os = "stax",
+    target_os = "flex",
+    target_os = "apex_p"
+))]
 atomic_storage!(512);
 
 pub enum AtomicStorageElem {

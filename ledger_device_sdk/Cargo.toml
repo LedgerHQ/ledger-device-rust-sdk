@@ -28,9 +28,10 @@ debug = []
 speculos = []
 heap = [ "ledger_secure_sdk_sys/heap" ]
 nano_nbgl = [ "ledger_secure_sdk_sys/nano_nbgl" ]
+debug_csdk = [ "ledger_secure_sdk_sys/debug_csdk" ]
 
 default = [ "heap" ]
 
 [lints.rust.unexpected_cfgs]
 level = "warn" 
-check-cfg = ['cfg(target_os, values("stax", "flex", "nanox", "nanosplus"))']
+check-cfg = ['cfg(target_os, values("apex_p", "stax", "flex", "nanox", "nanosplus"))']

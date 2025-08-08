@@ -228,10 +228,10 @@ impl<'a> MessageValidator<'a> {
         let draw = |page: usize| {
             clear_screen();
             if page == page_count - 2 {
-                draw_icon_and_text(CHECKMARK_ICON, self.confirm);
+                draw_icon_and_text(VALIDATE_14_ICON, self.confirm);
                 RIGHT_ARROW.display();
             } else if page == page_count - 1 {
-                draw_icon_and_text(CROSS_ICON, self.cancel);
+                draw_icon_and_text(CROSSMARK_ICON, self.cancel);
             } else {
                 self.message[page].place(Location::Middle, Layout::Centered, false);
                 RIGHT_ARROW.display();
