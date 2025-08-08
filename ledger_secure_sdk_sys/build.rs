@@ -140,7 +140,13 @@ impl SDKBuilder<'_> {
                 },
                 target: "thumbv8m.main-none-eabi",
                 defines: {
-                    let mut v = header2define(format!("{}/devices/nanosplus/c_sdk_build_nanosplus.defines", env!("CARGO_MANIFEST_DIR")).as_str());
+                    let mut v = header2define(
+                        format!(
+                            "{}/devices/nanosplus/c_sdk_build_nanosplus.defines",
+                            env!("CARGO_MANIFEST_DIR")
+                        )
+                        .as_str(),
+                    );
                     if env::var_os("CARGO_FEATURE_NANO_NBGL").is_some() {
                         println!("cargo:warning=NBGL is built");
                         v.push((String::from("HAVE_NBGL"), None));
@@ -155,7 +161,10 @@ impl SDKBuilder<'_> {
                     v
                 },
                 cflags: {
-                    let m_path = format!("{}/devices/nanosplus/c_sdk_build_nanosplus.cflags", env!("CARGO_MANIFEST_DIR"));
+                    let m_path = format!(
+                        "{}/devices/nanosplus/c_sdk_build_nanosplus.cflags",
+                        env!("CARGO_MANIFEST_DIR")
+                    );
                     let f = File::open(m_path)
                         .expect("Failed to open c_sdk_build_nanosplus.cflags file");
                     let reader = BufReader::new(f);
@@ -166,7 +175,10 @@ impl SDKBuilder<'_> {
                 },
                 glyphs_folders: Vec::new(),
                 arm_libs: Default::default(),
-                linker_script: format!("{}/devices/nanosplus/nanosplus_layout.ld", env!("CARGO_MANIFEST_DIR"))
+                linker_script: format!(
+                    "{}/devices/nanosplus/nanosplus_layout.ld",
+                    env!("CARGO_MANIFEST_DIR")
+                ),
             },
             "nanox" => Device {
                 name: DeviceName::NanoX,
@@ -176,7 +188,13 @@ impl SDKBuilder<'_> {
                 },
                 target: "thumbv6m-none-eabi",
                 defines: {
-                    let mut v = header2define(format!("{}/devices/nanox/c_sdk_build_nanox.defines", env!("CARGO_MANIFEST_DIR")).as_str());
+                    let mut v = header2define(
+                        format!(
+                            "{}/devices/nanox/c_sdk_build_nanox.defines",
+                            env!("CARGO_MANIFEST_DIR")
+                        )
+                        .as_str(),
+                    );
                     if env::var_os("CARGO_FEATURE_NANO_NBGL").is_some() {
                         println!("cargo:warning=NBGL is built");
                         v.push((String::from("HAVE_NBGL"), None));
@@ -191,8 +209,12 @@ impl SDKBuilder<'_> {
                     v
                 },
                 cflags: {
-                    let m_path = format!("{}/devices/nanox/c_sdk_build_nanox.cflags", env!("CARGO_MANIFEST_DIR"));
-                    let f = File::open(m_path).expect("Failed to open c_sdk_build_nanox.cflags file");
+                    let m_path = format!(
+                        "{}/devices/nanox/c_sdk_build_nanox.cflags",
+                        env!("CARGO_MANIFEST_DIR")
+                    );
+                    let f =
+                        File::open(m_path).expect("Failed to open c_sdk_build_nanox.cflags file");
                     let reader = BufReader::new(f);
                     reader
                         .lines()
@@ -201,7 +223,10 @@ impl SDKBuilder<'_> {
                 },
                 glyphs_folders: Vec::new(),
                 arm_libs: Default::default(),
-                linker_script: format!("{}/devices/nanox/nanox_layout.ld", env!("CARGO_MANIFEST_DIR")),
+                linker_script: format!(
+                    "{}/devices/nanox/nanox_layout.ld",
+                    env!("CARGO_MANIFEST_DIR")
+                ),
             },
             "stax" => Device {
                 name: DeviceName::Stax,
@@ -210,10 +235,20 @@ impl SDKBuilder<'_> {
                     Err(_) => return Err(SDKBuildError::MissingSDKPath),
                 },
                 target: "thumbv8m.main-none-eabi",
-                defines: header2define(format!("{}/devices/stax/c_sdk_build_stax.defines", env!("CARGO_MANIFEST_DIR")).as_str()),
+                defines: header2define(
+                    format!(
+                        "{}/devices/stax/c_sdk_build_stax.defines",
+                        env!("CARGO_MANIFEST_DIR")
+                    )
+                    .as_str(),
+                ),
                 cflags: {
-                    let m_path = format!("{}/devices/stax/c_sdk_build_stax.cflags", env!("CARGO_MANIFEST_DIR"));
-                    let f = File::open(m_path).expect("Failed to open c_sdk_build_stax.cflags file");
+                    let m_path = format!(
+                        "{}/devices/stax/c_sdk_build_stax.cflags",
+                        env!("CARGO_MANIFEST_DIR")
+                    );
+                    let f =
+                        File::open(m_path).expect("Failed to open c_sdk_build_stax.cflags file");
                     let reader = BufReader::new(f);
                     reader
                         .lines()
@@ -222,7 +257,10 @@ impl SDKBuilder<'_> {
                 },
                 glyphs_folders: Vec::new(),
                 arm_libs: Default::default(),
-                linker_script: format!("{}/devices/stax/stax_layout.ld", env!("CARGO_MANIFEST_DIR")),
+                linker_script: format!(
+                    "{}/devices/stax/stax_layout.ld",
+                    env!("CARGO_MANIFEST_DIR")
+                ),
             },
             "flex" => Device {
                 name: DeviceName::Flex,
@@ -231,10 +269,20 @@ impl SDKBuilder<'_> {
                     Err(_) => return Err(SDKBuildError::MissingSDKPath),
                 },
                 target: "thumbv8m.main-none-eabi",
-                defines: header2define(format!("{}/devices/flex/c_sdk_build_flex.defines", env!("CARGO_MANIFEST_DIR")).as_str()),
+                defines: header2define(
+                    format!(
+                        "{}/devices/flex/c_sdk_build_flex.defines",
+                        env!("CARGO_MANIFEST_DIR")
+                    )
+                    .as_str(),
+                ),
                 cflags: {
-                    let m_path = format!("{}/devices/flex/c_sdk_build_flex.cflags", env!("CARGO_MANIFEST_DIR"));
-                    let f = File::open(m_path).expect("Failed to open c_sdk_build_flex.cflags file");
+                    let m_path = format!(
+                        "{}/devices/flex/c_sdk_build_flex.cflags",
+                        env!("CARGO_MANIFEST_DIR")
+                    );
+                    let f =
+                        File::open(m_path).expect("Failed to open c_sdk_build_flex.cflags file");
                     let reader = BufReader::new(f);
                     reader
                         .lines()
@@ -243,7 +291,10 @@ impl SDKBuilder<'_> {
                 },
                 glyphs_folders: Vec::new(),
                 arm_libs: Default::default(),
-                linker_script: format!("{}/devices/flex/flex_layout.ld", env!("CARGO_MANIFEST_DIR")),
+                linker_script: format!(
+                    "{}/devices/flex/flex_layout.ld",
+                    env!("CARGO_MANIFEST_DIR")
+                ),
             },
             "apex_p" => Device {
                 name: DeviceName::ApexP,
@@ -252,10 +303,20 @@ impl SDKBuilder<'_> {
                     Err(_) => return Err(SDKBuildError::MissingSDKPath),
                 },
                 target: "thumbv8m.main-none-eabi",
-                defines: header2define(format!("{}/devices/apex_p/c_sdk_build_apex_p.defines", env!("CARGO_MANIFEST_DIR")).as_str()),
+                defines: header2define(
+                    format!(
+                        "{}/devices/apex_p/c_sdk_build_apex_p.defines",
+                        env!("CARGO_MANIFEST_DIR")
+                    )
+                    .as_str(),
+                ),
                 cflags: {
-                    let m_path = format!("{}/devices/apex_p/c_sdk_build_apex_p.cflags", env!("CARGO_MANIFEST_DIR"));
-                    let f = File::open(m_path).expect("Failed to open c_sdk_build_apex_p.cflags file");
+                    let m_path = format!(
+                        "{}/devices/apex_p/c_sdk_build_apex_p.cflags",
+                        env!("CARGO_MANIFEST_DIR")
+                    );
+                    let f =
+                        File::open(m_path).expect("Failed to open c_sdk_build_apex_p.cflags file");
                     let reader = BufReader::new(f);
                     reader
                         .lines()
@@ -264,7 +325,10 @@ impl SDKBuilder<'_> {
                 },
                 glyphs_folders: Vec::new(),
                 arm_libs: Default::default(),
-                linker_script: format!("{}/devices/apex_p/apex_p_layout.ld", env!("CARGO_MANIFEST_DIR")),
+                linker_script: format!(
+                    "{}/devices/apex_p/apex_p_layout.ld",
+                    env!("CARGO_MANIFEST_DIR")
+                ),
             },
             _ => {
                 return Err(SDKBuildError::UnsupportedDevice);
@@ -510,7 +574,9 @@ impl SDKBuilder<'_> {
         // Target specific files
         let csdk_target_name = self.device.name.to_string();
         let header = match self.device.name {
-            DeviceName::NanoSPlus => String::from("devices/nanosplus/c_sdk_build_nanosplus.defines"),
+            DeviceName::NanoSPlus => {
+                String::from("devices/nanosplus/c_sdk_build_nanosplus.defines")
+            }
             DeviceName::NanoX => String::from("devices/nanox/c_sdk_build_nanox.defines"),
             DeviceName::Stax => String::from("devices/stax/c_sdk_build_stax.defines"),
             DeviceName::Flex => String::from("devices/flex/c_sdk_build_flex.defines"),
