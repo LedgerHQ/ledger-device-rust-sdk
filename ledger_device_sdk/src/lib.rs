@@ -26,12 +26,10 @@ pub mod testing;
     feature = "nano_nbgl"
 ))]
 pub mod nbgl;
-#[cfg(not(any(
-    target_os = "stax",
-    target_os = "flex",
-    target_os = "apex_p",
-    feature = "nano_nbgl"
-)))]
+#[cfg(all(
+    any(target_os = "nanosplus", target_os = "nanox"),
+    not(feature = "nano_nbgl")
+))]
 pub mod ui;
 
 pub mod uxapp;
