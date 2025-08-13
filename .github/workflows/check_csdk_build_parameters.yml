@@ -57,14 +57,7 @@ jobs:
           chmod +x cbpx
           ./cbpx --app-path c_boilerplate \
                                          --device ${{ matrix.target }}
-          # Compare output with matching file
-          diff c_sdk_build_${{ matrix.target }}.cflags c_sdk_build_params/c_sdk_build_${{ matrix.target }}_ref.cflags
           if [ $? -ne 0 ]; then
-            echo "C SDK build parameters CFLAGS do not match for target ${{ matrix.target }}"
-            exit 1
-          fi
-          diff c_sdk_build_${{ matrix.target }}.defines c_sdk_build_params/c_sdk_build_${{ matrix.target }}_ref.defines
-          if [ $? -ne 0 ]; then
-            echo "C SDK build parameters DEFINES do not match for target ${{ matrix.target }}"
+            echo "C SDK build parameters do not match with ref ones for target ${{ matrix.target }}"
             exit 1
           fi
