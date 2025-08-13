@@ -34,6 +34,7 @@ jobs:
           cargo build --release   
       - name: Run C SDK Build Parameters Extractor
         run: |
+          cd c_sdk_build_params_x
           ./target/release/cbpx --app-path ../c_boilerplate \
                                          --device ${{ matrix.target }}
           if [ $? -ne 0 ]; then
