@@ -2,9 +2,9 @@ name: Build and Test with last nightly everyday @12PM
 
 on:
   workflow_dispatch:
-  schedule:
+  # schedule:
     # * is a special character in YAML so you have to quote this string
-    - cron:  '0 12 * * *'
+  #  - cron:  '0 12 * * *'
     
 jobs:
   build_with_last_nightly:
