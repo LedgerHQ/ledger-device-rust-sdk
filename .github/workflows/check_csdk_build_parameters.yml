@@ -1,0 +1,43 @@
+name: Build C Boilerplate application and check if C SDK build parameters are still correct
+permissions:
+  contents: read
+
+on:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    - cron:  '0 12 * * *'
+    
+jobs:
+  check_csdk_build_parameters:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
+    strategy:
+      matrix:
+        target: ["nanox", "nanosplus", "stax", "flex", "apex_p"]
+    steps:
+      - name: Checkout C BP
+        uses: actions/checkout@v4
+        with:
+          repository: LedgerHQ/app-boilerplate
+          path: c_boilerplate
+      - name: Checkout C SDK Build Parameters Extractor
+        uses: actions/checkout@v4
+        with:
+          repository: LedgerHQ/csdk_build_parameters_extractor
+          path: c_sdk_build_params_x
+      - name: Build C SDK Build Parameters Extractor
+        run: |
+          cd c_sdk_build_params_x
+          cargo build --release   
+      - name: Run C SDK Build Parameters Extractor
+        run: |
+          cd c_sdk_build_params_x
+          ./target/release/cbpx --app-path ../c_boilerplate \
+                                         --device ${{ matrix.target }}
+          if [ $? -ne 0 ]; then
+            echo "C SDK build parameters do not match with ref ones for target ${{ matrix.target }}"
+            exit 1
+          fi

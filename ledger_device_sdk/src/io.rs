@@ -1,17 +1,27 @@
-#[cfg(not(any(target_os = "stax", target_os = "flex")))]
+#[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
 use ledger_secure_sdk_sys::buttons::{get_button_event, ButtonEvent, ButtonsState};
 use ledger_secure_sdk_sys::seph as sys_seph;
 use ledger_secure_sdk_sys::*;
 
 use crate::seph;
 
-#[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
+#[cfg(any(
+    target_os = "nanox",
+    target_os = "stax",
+    target_os = "flex",
+    target_os = "apex_p"
+))]
 use crate::seph::ItcUxEvent;
 
 use core::convert::{Infallible, TryFrom};
 use core::ops::{Index, IndexMut};
 
-#[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
+#[cfg(any(
+    target_os = "nanox",
+    target_os = "stax",
+    target_os = "flex",
+    target_os = "apex_p"
+))]
 unsafe extern "C" {
     pub unsafe static mut G_ux_params: bolos_ux_params_t;
 }
@@ -96,9 +106,9 @@ pub enum Event<T> {
     /// APDU event
     Command(T),
     /// Button press or release event
-    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
     Button(ButtonEvent),
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     TouchEvent,
     /// Ticker
     Ticker,
@@ -111,7 +121,7 @@ pub struct Comm {
     pub rx: usize,
     pub tx: usize,
     pub event_pending: bool,
-    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
     buttons: ButtonsState,
     /// Expected value for the APDU CLA byte.
     /// If defined, [`Comm`] will automatically reply with [`StatusWords::BadCla`] when an APDU
@@ -152,7 +162,7 @@ impl Comm {
             rx: 0,
             tx: 0,
             event_pending: false,
-            #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+            #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
             buttons: ButtonsState::new(),
             expected_cla: None,
             apdu_type: seph::PacketTypes::PacketTypeNone as u8,
@@ -185,7 +195,12 @@ impl Comm {
     // This is private. Users should call reply to set the satus word and
     // transmit the response.
     fn apdu_send(&mut self) {
-        #[cfg(any(target_os = "stax", target_os = "flex", feature = "nano_nbgl"))]
+        #[cfg(any(
+            target_os = "stax",
+            target_os = "flex",
+            target_os = "apex_p",
+            feature = "nano_nbgl"
+        ))]
         {
             let mut buffer: [u8; 273] = [0; 273];
             let status = sys_seph::io_rx(&mut buffer, false);
@@ -343,7 +358,7 @@ impl Comm {
 
         match seph::Events::from(tag) {
             // BUTTON PUSH EVENT
-            #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+            #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
             seph::Events::ButtonPushEvent => {
                 #[cfg(feature = "nano_nbgl")]
                 unsafe {
@@ -356,7 +371,7 @@ impl Comm {
             }
 
             // SCREEN TOUCH EVENT
-            #[cfg(any(target_os = "stax", target_os = "flex"))]
+            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
             seph::Events::ScreenTouchEvent => unsafe {
                 ux_process_finger_event(seph_buffer.as_mut_ptr());
                 return Some(Event::TouchEvent);
@@ -364,7 +379,12 @@ impl Comm {
 
             // TICKER EVENT
             seph::Events::TickerEvent => {
-                #[cfg(any(target_os = "stax", target_os = "flex", feature = "nano_nbgl"))]
+                #[cfg(any(
+                    target_os = "stax",
+                    target_os = "flex",
+                    target_os = "apex_p",
+                    feature = "nano_nbgl"
+                ))]
                 unsafe {
                     ux_process_ticker_event();
                 }
@@ -373,7 +393,12 @@ impl Comm {
 
             // ITC EVENT
             seph::Events::ItcEvent => {
-                #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
+                #[cfg(any(
+                    target_os = "nanox",
+                    target_os = "stax",
+                    target_os = "flex",
+                    target_os = "apex_p"
+                ))]
                 match ItcUxEvent::from(seph_buffer[3]) {
                     seph::ItcUxEvent::AskBlePairing => unsafe {
                         G_ux_params.ux_id = BOLOS_UX_ASYNCHMODAL_PAIRING_REQUEST;
@@ -397,7 +422,12 @@ impl Comm {
                     },
 
                     seph::ItcUxEvent::Redisplay => {
-                        #[cfg(any(target_os = "stax", target_os = "flex", feature = "nano_nbgl"))]
+                        #[cfg(any(
+                            target_os = "stax",
+                            target_os = "flex",
+                            target_os = "apex_p",
+                            feature = "nano_nbgl"
+                        ))]
                         unsafe {
                             nbgl_objAllowDrawing(true);
                             nbgl_screenRedraw();
@@ -412,7 +442,12 @@ impl Comm {
 
             // DEFAULT EVENT
             _ => {
-                #[cfg(any(target_os = "stax", target_os = "flex", feature = "nano_nbgl"))]
+                #[cfg(any(
+                    target_os = "stax",
+                    target_os = "flex",
+                    target_os = "apex_p",
+                    feature = "nano_nbgl"
+                ))]
                 unsafe {
                     ux_process_default_event();
                 }

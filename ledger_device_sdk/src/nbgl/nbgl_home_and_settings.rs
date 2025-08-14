@@ -182,7 +182,7 @@ impl<'a> NbglHomeAndSettings {
                     };
                     SWITCH_ARRAY[i].initState = state;
                     SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
-                    #[cfg(any(target_os = "stax", target_os = "flex"))]
+                    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
                     {
                         SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
                     }
@@ -275,7 +275,7 @@ impl<'a> NbglHomeAndSettings {
                 };
                 SWITCH_ARRAY[i].initState = state;
                 SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
-                #[cfg(any(target_os = "stax", target_os = "flex"))]
+                #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
                 {
                     SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
                 }
