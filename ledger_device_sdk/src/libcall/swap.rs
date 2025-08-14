@@ -274,7 +274,7 @@ pub fn get_printable_amount_params<
     debug_print("==> GET_AMOUNT_STR\n");
     printable_amount_params.amount_str = unsafe {
         &(*(libarg.__bindgen_anon_1.get_printable_amount as *mut get_printable_amount_parameters_t))
-            .printable_amount as *const i8 as *mut i8
+            .printable_amount as *const u8 as *mut i8
     };
 
     printable_amount_params
