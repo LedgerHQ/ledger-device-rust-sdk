@@ -15,22 +15,22 @@ jobs:
       matrix:
         device: ["nanox", "nanosplus", "stax", "flex"]
     steps:
-      - name: update nightly toolchain
+      - name: install nightly toolchain
         run: |
-          rustup update nightly
+          rustup toolchain install nightly
           rustup component add rust-src --toolchain nightly
-          cargo +nightly ledger setup
+          export RUST_NIGHTLY=nightly
+          cargo ledger setup
 
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           repository: LedgerHQ/app-boilerplate-rust
+          branch: y333/nightly_support
           path: app-boilerplate
 
       - name: Build
         run: |
-          BUILD_DEVICE_NAME="$(echo ${{ matrix.device }})"
-          BIN_DIR_NAME="$(echo ${{ matrix.device }} | sed 's/nanosplus/nanos2/')"
           cd app-boilerplate
           cargo ledger build ${{ matrix.device }}
       
