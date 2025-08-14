@@ -218,8 +218,8 @@ impl NbglStreamingReview {
             let mut tag_value_array: Vec<nbgl_contentTagValue_t> = Vec::new();
             for field in v.iter() {
                 let val = nbgl_contentTagValue_t {
-                    item: field.name.as_ptr() as *const i8,
-                    value: field.value.as_ptr() as *const i8,
+                    item: field.name.as_ptr() as *const ::core::ffi::c_char,
+                    value: field.value.as_ptr() as *const ::core::ffi::c_char,
                     ..Default::default()
                 };
                 tag_value_array.push(val);
