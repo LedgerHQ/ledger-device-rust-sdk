@@ -155,8 +155,8 @@ pub fn get_check_address_params<
 
     debug_print("==> GET_REF_ADDRESS\n");
     let mut address_length = 0usize;
-    let mut c = unsafe { *(params.address_to_check.add(address_length)) };
-    while c != '\0' as u8 && address_length < ADDRESS_BUF_SIZE {
+    let mut c: core::ffi::c_char = unsafe { *(params.address_to_check.add(address_length)) };
+    while c != '\0' as core::ffi::c_char && address_length < ADDRESS_BUF_SIZE {
         check_address_params.ref_address[address_length] = c as u8;
         address_length += 1;
         c = unsafe { *(params.address_to_check.add(address_length)) };
@@ -224,7 +224,7 @@ pub fn get_printable_amount_params<
     debug_print("==> GET_AMOUNT_STR\n");
     printable_amount_params.amount_str = unsafe {
         &(*(libarg.__bindgen_anon_1.get_printable_amount as *mut get_printable_amount_parameters_t))
-            .printable_amount as *const u8 as *mut i8
+            .printable_amount as *const core::ffi::c_char as *mut i8
     };
 
     printable_amount_params
@@ -285,7 +285,7 @@ pub fn sign_tx_params<const COIN_CONFIG_BUF_SIZE: usize, const ADDRESS_BUF_SIZE:
     debug_print("==> GET_DESTINATION_ADDRESS\n");
     let mut dest_address_length = 0usize;
     let mut c = unsafe { *params.destination_address.add(dest_address_length) };
-    while c != '\0' as u8 && dest_address_length < ADDRESS_BUF_SIZE {
+    while c != '\0' as ::core::ffi::c_char && dest_address_length < ADDRESS_BUF_SIZE {
         create_tx_params.dest_address[dest_address_length] = c as u8;
         dest_address_length += 1;
         c = unsafe { *params.destination_address.add(dest_address_length) };
