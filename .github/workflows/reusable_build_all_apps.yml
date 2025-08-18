@@ -126,9 +126,6 @@ jobs:
                 echo "Cargo.toml:"
                 cat $cargo_toml_path
 
-                cargo update include_gif
-                cargo update ledger_secure_sdk_sys
-                cargo update ledger_device_sdk
             - name: Build
               run: |
                 # Clone C SDK if provided
@@ -142,6 +139,9 @@ jobs:
                 cd ${{ matrix.app-name }}
                 build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
                 cd $build_directory
+                cargo update include_gif
+                cargo update ledger_secure_sdk_sys
+                cargo update ledger_device_sdk
                 echo "Building app for ${{ matrix.device }}"
                 device=$(echo ${{ matrix.device }} | sed 's/+/plus/')
                 echo "Build for "$device
