@@ -89,7 +89,7 @@ pub static COGGLE: Glyph = Glyph {
 };
 extern "C" {
     /// The bitmap for the processing icon.
-    pub static C_icon_down_bitmap: [u8; 25];
+    pub static C_icon_down_bitmap: [u8; 4];
 }
 pub static DOWN_ARROW: Glyph = Glyph {
     bitmap: unsafe { &C_icon_down_bitmap },
@@ -99,7 +99,7 @@ pub static DOWN_ARROW: Glyph = Glyph {
 };
 extern "C" {
     /// The bitmap for the left arrow icon.
-    pub static C_icon_left_bitmap: [u8; 25];
+    pub static C_icon_left_bitmap: [u8; 4];
 }
 pub static LEFT_ARROW: Glyph = Glyph {
     bitmap: unsafe { &C_icon_left_bitmap },
@@ -109,7 +109,7 @@ pub static LEFT_ARROW: Glyph = Glyph {
 };
 extern "C" {
     /// The bitmap for the right arrow icon.
-    pub static C_icon_right_bitmap: [u8; 25];
+    pub static C_icon_right_bitmap: [u8; 4];
 }
 pub static RIGHT_ARROW: Glyph = Glyph {
     bitmap: unsafe { &C_icon_right_bitmap },
@@ -119,7 +119,7 @@ pub static RIGHT_ARROW: Glyph = Glyph {
 };
 extern "C" {
     /// The bitmap for the up arrow icon.
-    pub static C_icon_up_bitmap: [u8; 25];
+    pub static C_icon_up_bitmap: [u8; 4];
 }
 pub static UP_ARROW: Glyph = Glyph {
     bitmap: unsafe { &C_icon_up_bitmap },
