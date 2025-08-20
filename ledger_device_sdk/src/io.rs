@@ -121,7 +121,6 @@ pub enum Event<T> {
 pub struct Comm {
     pub apdu_buffer: [u8; 272],
     pub rx: usize,
-    pub tx: usize,
     pub event_pending: bool,
     #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
     buttons: ButtonsState,
@@ -162,7 +161,6 @@ impl Comm {
         Self {
             apdu_buffer: [0u8; 272],
             rx: 0,
-            tx: 0,
             event_pending: false,
             #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
             buttons: ButtonsState::new(),
@@ -217,12 +215,9 @@ impl Comm {
                 }
             }
         }
-        if self.tx != 0 {
-            sys_seph::io_tx(self.apdu_type, &self.apdu_buffer, self.tx);
-            self.tx = 0;
-        } else {
-            sys_seph::io_tx(self.apdu_type, &self.io_buffer, self.tx_length);
-        }
+
+        sys_seph::io_tx(self.apdu_type, &self.io_buffer, self.tx_length);
+
         self.tx_length = 0;
         self.rx_length = 0;
     }
