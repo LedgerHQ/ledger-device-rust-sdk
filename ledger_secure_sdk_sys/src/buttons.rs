@@ -1,6 +1,6 @@
 /// Structure keeping track of button pushes
 /// 1 -> left button, 2 -> right button
-#[derive(Default)]
+#[derive(Default, Debug, Copy, Clone)]
 pub struct ButtonsState {
     pub button_mask: u8,
     pub cmd_buffer: [u8; 4],
@@ -17,7 +17,7 @@ impl ButtonsState {
 
 /// Event types needed by
 /// an application
-#[derive(Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum ButtonEvent {
     LeftButtonPress,
     RightButtonPress,
