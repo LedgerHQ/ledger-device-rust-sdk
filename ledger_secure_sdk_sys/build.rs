@@ -528,6 +528,30 @@ impl SDKBuilder<'_> {
             command.define(define, None);
         }
 
+        // Add defines and flags specified in the LEDGER_SDK_EXTRA_DEFINES and LEDGER_SDK_EXTRA_CFLAGS environment
+        // variables, if they are set.
+        // This allows apps to customize the build process. Since they are added after the default includes, they can
+        // override previous definitions.
+
+        println!("cargo:rerun-if-env-changed=LEDGER_SDK_EXTRA_DEFINES");
+        println!("cargo:rerun-if-env-changed=LEDGER_SDK_EXTRA_CFLAGS");
+
+        if let Ok(defs) = env::var("LEDGER_SDK_EXTRA_DEFINES") {
+            for d in defs.split_whitespace() {
+                if let Some((k, v)) = d.split_once('=') {
+                    command.define(k, Some(v));
+                } else {
+                    command.define(d, None);
+                }
+            }
+        }
+        if let Ok(flags) = env::var("LEDGER_SDK_EXTRA_CFLAGS") {
+            for f in flags.split_whitespace() {
+                command.flag(f);
+            }
+        }
+
+        /* Compile the SDK */
         command.compile("ledger-secure-sdk");
 
         /* Link with libc, libm and libgcc */
