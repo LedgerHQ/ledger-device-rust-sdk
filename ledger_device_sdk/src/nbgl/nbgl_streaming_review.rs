@@ -37,10 +37,14 @@ impl NbglStreamingReview {
         }
     }
 
-    pub fn start(&self, title: &str, subtitle: &str) -> bool {
+    pub fn start(&self, title: &str, subtitle: Option<&str>) -> bool {
+        crate::testing::debug_print("NbglStreamingReview::start called\n");
         unsafe {
             let title = CString::new(title).unwrap();
-            let subtitle = CString::new(subtitle).unwrap();
+            let subtitle = match subtitle {
+                Some(s) => CString::new(s).unwrap(),
+                None => CString::default(),
+            };
 
             self.ux_sync_init();
             match self.blind {
@@ -49,7 +53,10 @@ impl NbglStreamingReview {
                         self.tx_type.to_c_type(false),
                         &self.icon as *const nbgl_icon_details_t,
                         title.as_ptr() as *const c_char,
-                        subtitle.as_ptr() as *const c_char,
+                        match subtitle.is_empty() {
+                            true => core::ptr::null(),
+                            false => subtitle.as_ptr() as *const c_char,
+                        },
                         Some(choice_callback),
                     );
                 }
@@ -58,7 +65,10 @@ impl NbglStreamingReview {
                         self.tx_type.to_c_type(false),
                         &self.icon as *const nbgl_icon_details_t,
                         title.as_ptr() as *const c_char,
-                        subtitle.as_ptr() as *const c_char,
+                        match subtitle.is_empty() {
+                            true => core::ptr::null(),
+                            false => subtitle.as_ptr() as *const c_char,
+                        },
                         Some(choice_callback),
                     );
                 }
