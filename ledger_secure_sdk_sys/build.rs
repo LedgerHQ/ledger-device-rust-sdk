@@ -544,6 +544,9 @@ impl SDKBuilder<'_> {
                     .include(&glyphs_path)
                     .file(glyphs_path.join("glyphs.c"));
             }
+            if s.0 == "HAVE_IO_U2F" {
+                configure_lib_u2f(command, &self.device.c_sdk, only_includes);
+            }
         }
     }
 
@@ -827,6 +830,13 @@ fn configure_lib_nbgl(command: &mut cc::Build, c_sdk: &Path, only_includes: bool
         .include(c_sdk.join("qrcode/include/"))
         .include(c_sdk.join("lib_bagl/include/"))
         .include(&glyphs_path);
+}
+
+fn configure_lib_u2f(command: &mut cc::Build, c_sdk: &Path, only_includes: bool) {
+    if !only_includes {
+        command.file(c_sdk.join("lib_u2f/src/u2f_transport.c"));
+    }
+    command.include(c_sdk.join("lib_u2f/include"));
 }
 
 fn retrieve_csdk_info(device: &Device, path: &PathBuf) -> Result<CSDKInfo, SDKBuildError> {
