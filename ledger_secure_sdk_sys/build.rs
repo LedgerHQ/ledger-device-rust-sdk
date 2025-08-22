@@ -8,14 +8,13 @@ use std::{env, fs::File, io::BufRead, io::BufReader, io::Read, io::Write};
 
 const AUX_C_FILES: [&str; 2] = ["./src/c/src.c", "./src/c/sjlj.s"];
 
-const SDK_C_FILES: [&str; 13] = [
+const SDK_C_FILES: [&str; 12] = [
     "src/pic.c",
     "src/checks.c",
     "src/cx_stubs.S",
     "src/os.c",
     "src/svc_call.s",
     "src/svc_cx_call.s",
-    "src/syscalls.c",
     "src/os_printf.c",
     "protocol/src/ledger_protocol.c",
     "io/src/os_io.c",
@@ -23,6 +22,8 @@ const SDK_C_FILES: [&str; 13] = [
     "io/src/os_io_seph_cmd.c",
     "io/src/os_io_seph_ux.c",
 ];
+
+const SDK_SYSCALLS_FILES: [&str; 1] = ["src/syscalls.c"];
 
 #[derive(Debug, Default, PartialEq)]
 enum DeviceName {
@@ -449,20 +450,13 @@ impl SDKBuilder<'_> {
         Ok(())
     }
 
-    pub fn build_c_sdk(&self) -> Result<(), SDKBuildError> {
-        // Generate glyphs
-        generate_glyphs(&self.device);
-
+    fn base_cc(&self) -> cc::Build {
         let mut command = cc::Build::new();
         if env::var_os("CC").is_none() {
             command.compiler("clang");
         } else {
             // Let cc::Build determine CC from the environment variable
         }
-
-        command
-            .files(&AUX_C_FILES)
-            .files(str2path(&self.device.c_sdk, &SDK_C_FILES));
 
         let glyphs_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("glyphs");
 
@@ -504,25 +498,6 @@ impl SDKBuilder<'_> {
                 .join(format!("target/{}/include", self.device.name)),
         );
 
-        // Configure BLE and NBGL
-        for s in self.device.defines.iter() {
-            if s.0 == "HAVE_IO_USB" {
-                configure_lib_usb(&mut command, &self.device.c_sdk);
-            }
-            if s.0 == "HAVE_BLE" {
-                configure_lib_ble(&mut command, &self.device.c_sdk);
-            }
-            if s.0 == "HAVE_NBGL" {
-                configure_lib_nbgl(&mut command, &self.device.c_sdk);
-            }
-            if s.0 == "HAVE_BAGL" {
-                let glyphs_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("glyphs");
-                command
-                    .include(&glyphs_path)
-                    .file(glyphs_path.join("glyphs.c"));
-            }
-        }
-
         // Add the defines found in the Makefile.conf.cx to our build command.
         for define in self.cxdefines.iter() {
             command.define(define, None);
@@ -532,9 +507,6 @@ impl SDKBuilder<'_> {
         // variables, if they are set.
         // This allows apps to customize the build process. Since they are added after the default includes, they can
         // override previous definitions.
-
-        println!("cargo:rerun-if-env-changed=LEDGER_SDK_EXTRA_DEFINES");
-        println!("cargo:rerun-if-env-changed=LEDGER_SDK_EXTRA_CFLAGS");
 
         if let Ok(defs) = env::var("LEDGER_SDK_EXTRA_DEFINES") {
             for d in defs.split_whitespace() {
@@ -551,8 +523,55 @@ impl SDKBuilder<'_> {
             }
         }
 
+        command
+    }
+
+    fn configure_extras_modules(&self, command: &mut cc::Build, only_includes: bool) {
+        // Configure BLE and NBGL
+        for s in self.device.defines.iter() {
+            if s.0 == "HAVE_IO_USB" {
+                configure_lib_usb(command, &self.device.c_sdk, only_includes);
+            }
+            if s.0 == "HAVE_BLE" {
+                configure_lib_ble(command, &self.device.c_sdk, only_includes);
+            }
+            if s.0 == "HAVE_NBGL" {
+                configure_lib_nbgl(command, &self.device.c_sdk, only_includes);
+            }
+            if s.0 == "HAVE_BAGL" {
+                let glyphs_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("glyphs");
+                command
+                    .include(&glyphs_path)
+                    .file(glyphs_path.join("glyphs.c"));
+            }
+        }
+    }
+
+    pub fn build_c_sdk(&self) -> Result<(), SDKBuildError> {
+        // Generate glyphs
+        generate_glyphs(&self.device);
+
+        println!("cargo:rerun-if-env-changed=LEDGER_SDK_EXTRA_DEFINES");
+        println!("cargo:rerun-if-env-changed=LEDGER_SDK_EXTRA_CFLAGS");
+
         /* Compile the SDK */
-        command.compile("ledger-secure-sdk");
+        let mut command = self.base_cc();
+
+        command
+            .files(&AUX_C_FILES)
+            .files(str2path(&self.device.c_sdk, &SDK_C_FILES));
+
+        self.configure_extras_modules(&mut command, false);
+        command.compile("ledger-secure-sdk-core");
+
+        /* Compile the syscalls */
+        let mut command = self.base_cc();
+
+        command.files(str2path(&self.device.c_sdk, &SDK_SYSCALLS_FILES));
+
+        self.configure_extras_modules(&mut command, true);
+
+        command.compile("ledger-secure-sdk-syscalls");
 
         /* Link with libc, libm and libgcc */
         let path = self.device.arm_libs.clone();
@@ -726,78 +745,88 @@ fn main() {
 // Helper functions
 // --------------------------------------------------
 
-fn configure_lib_usb(command: &mut cc::Build, c_sdk: &Path) {
+fn configure_lib_usb(command: &mut cc::Build, c_sdk: &Path, only_includes: bool) {
+    if !only_includes {
+        command
+            .file(c_sdk.join("lib_stusb/src/usbd_conf.c"))
+            .file(c_sdk.join("lib_stusb/src/usbd_core.c"))
+            .file(c_sdk.join("lib_stusb/src/usbd_ctlreq.c"))
+            .file(c_sdk.join("lib_stusb/src/usbd_desc.c"))
+            .file(c_sdk.join("lib_stusb/src/usbd_ioreq.c"))
+            .file(c_sdk.join("lib_stusb/src/usbd_ledger_ccid.c"))
+            .file(c_sdk.join("lib_stusb/src/usbd_ledger_cdc.c"))
+            .file(c_sdk.join("lib_stusb/src/usbd_ledger_hid_kbd.c"))
+            .file(c_sdk.join("lib_stusb/src/usbd_ledger_hid_u2f.c"))
+            .file(c_sdk.join("lib_stusb/src/usbd_ledger_hid.c"))
+            .file(c_sdk.join("lib_stusb/src/usbd_ledger_webusb.c"))
+            .file(c_sdk.join("lib_stusb/src/usbd_ledger.c"));
+    }
     command
-        .file(c_sdk.join("lib_stusb/src/usbd_conf.c"))
-        .file(c_sdk.join("lib_stusb/src/usbd_core.c"))
-        .file(c_sdk.join("lib_stusb/src/usbd_ctlreq.c"))
-        .file(c_sdk.join("lib_stusb/src/usbd_desc.c"))
-        .file(c_sdk.join("lib_stusb/src/usbd_ioreq.c"))
-        .file(c_sdk.join("lib_stusb/src/usbd_ledger_ccid.c"))
-        .file(c_sdk.join("lib_stusb/src/usbd_ledger_cdc.c"))
-        .file(c_sdk.join("lib_stusb/src/usbd_ledger_hid_kbd.c"))
-        .file(c_sdk.join("lib_stusb/src/usbd_ledger_hid_u2f.c"))
-        .file(c_sdk.join("lib_stusb/src/usbd_ledger_hid.c"))
-        .file(c_sdk.join("lib_stusb/src/usbd_ledger_webusb.c"))
-        .file(c_sdk.join("lib_stusb/src/usbd_ledger.c"))
         .include(c_sdk.join("lib_stusb/include"))
         .include(c_sdk.join("lib_stusb_impl/include"));
 }
 
-fn configure_lib_ble(command: &mut cc::Build, c_sdk: &Path) {
+fn configure_lib_ble(command: &mut cc::Build, c_sdk: &Path, only_includes: bool) {
+    if !only_includes {
+        command
+            .file(c_sdk.join("lib_blewbxx/src/ble_cmd.c"))
+            .file(c_sdk.join("lib_blewbxx/src/ble_ledger_profile_apdu.c"))
+            .file(c_sdk.join("lib_blewbxx/src/ble_ledger_profile_u2f.c"))
+            .file(c_sdk.join("lib_blewbxx/src/ble_ledger.c"));
+    }
     command
-        .file(c_sdk.join("lib_blewbxx/src/ble_cmd.c"))
-        .file(c_sdk.join("lib_blewbxx/src/ble_ledger_profile_apdu.c"))
-        .file(c_sdk.join("lib_blewbxx/src/ble_ledger_profile_u2f.c"))
-        .file(c_sdk.join("lib_blewbxx/src/ble_ledger.c"))
         .include(c_sdk.join("lib_blewbxx/include"))
         .include(c_sdk.join("lib_blewbxx_impl/include"));
 }
 
-fn configure_lib_nbgl(command: &mut cc::Build, c_sdk: &Path) {
+fn configure_lib_nbgl(command: &mut cc::Build, c_sdk: &Path, only_includes: bool) {
     println!("cargo:rustc-env=C_SDK_GRAPHICS={}", "nbgl");
 
     let glyphs_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("glyphs");
+
+    if !only_includes {
+        command
+            .file(c_sdk.join("lib_ux_nbgl/ux.c"))
+            .file(c_sdk.join("qrcode/src/qrcodegen.c"))
+            .files(
+                glob(c_sdk.join("lib_nbgl/src/nbgl_layout*.c").to_str().unwrap())
+                    .unwrap()
+                    .map(|x| x.unwrap())
+                    .collect::<Vec<PathBuf>>(),
+            )
+            .files(
+                glob(c_sdk.join("lib_nbgl/src/nbgl_page*.c").to_str().unwrap())
+                    .unwrap()
+                    .map(|x| x.unwrap())
+                    .collect::<Vec<PathBuf>>(),
+            )
+            .files(
+                glob(c_sdk.join("lib_nbgl/src/nbgl_step*.c").to_str().unwrap())
+                    .unwrap()
+                    .map(|x| x.unwrap())
+                    .collect::<Vec<PathBuf>>(),
+            )
+            .files(
+                glob(
+                    c_sdk
+                        .join("lib_nbgl/src/nbgl_use_case*.c")
+                        .to_str()
+                        .unwrap(),
+                )
+                .unwrap()
+                .map(|x| x.unwrap())
+                .collect::<Vec<PathBuf>>(),
+            )
+            .file(c_sdk.join("src/nbgl_stubs.S"))
+            .file(glyphs_path.join("glyphs.c"));
+    }
     command
         .include(c_sdk.join("lib_nbgl/include/"))
         .include(c_sdk.join("lib_nbgl/include/fonts/"))
         .include(c_sdk.join("lib_ux_nbgl/"))
         .include(c_sdk.join("qrcode/include/"))
         .include(c_sdk.join("lib_bagl/include/"))
-        .file(c_sdk.join("lib_ux_nbgl/ux.c"))
-        .file(c_sdk.join("qrcode/src/qrcodegen.c"))
-        .files(
-            glob(c_sdk.join("lib_nbgl/src/nbgl_layout*.c").to_str().unwrap())
-                .unwrap()
-                .map(|x| x.unwrap())
-                .collect::<Vec<PathBuf>>(),
-        )
-        .files(
-            glob(c_sdk.join("lib_nbgl/src/nbgl_page*.c").to_str().unwrap())
-                .unwrap()
-                .map(|x| x.unwrap())
-                .collect::<Vec<PathBuf>>(),
-        )
-        .files(
-            glob(c_sdk.join("lib_nbgl/src/nbgl_step*.c").to_str().unwrap())
-                .unwrap()
-                .map(|x| x.unwrap())
-                .collect::<Vec<PathBuf>>(),
-        )
-        .files(
-            glob(
-                c_sdk
-                    .join("lib_nbgl/src/nbgl_use_case*.c")
-                    .to_str()
-                    .unwrap(),
-            )
-            .unwrap()
-            .map(|x| x.unwrap())
-            .collect::<Vec<PathBuf>>(),
-        )
-        .file(c_sdk.join("src/nbgl_stubs.S"))
-        .include(&glyphs_path)
-        .file(glyphs_path.join("glyphs.c"));
+        .include(&glyphs_path);
 }
 
 fn retrieve_csdk_info(device: &Device, path: &PathBuf) -> Result<CSDKInfo, SDKBuildError> {
