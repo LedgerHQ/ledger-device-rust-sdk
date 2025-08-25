@@ -1,5 +1,7 @@
 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-use ledger_secure_sdk_sys::buttons::{get_button_event, ButtonEvent, ButtonsState};
+use ledger_secure_sdk_sys::buttons::{get_button_event, ButtonEvent};
+
+use ledger_secure_sdk_sys::buttons::ButtonsState;
 use ledger_secure_sdk_sys::seph as sys_seph;
 use ledger_secure_sdk_sys::*;
 
@@ -119,7 +121,6 @@ pub enum Event<T> {
 pub struct Comm {
     pub apdu_buffer: [u8; 272],
     pub rx: usize,
-    pub tx: usize,
     pub event_pending: bool,
     #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
     buttons: ButtonsState,
@@ -160,7 +161,6 @@ impl Comm {
         Self {
             apdu_buffer: [0u8; 272],
             rx: 0,
-            tx: 0,
             event_pending: false,
             #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
             buttons: ButtonsState::new(),
@@ -215,12 +215,9 @@ impl Comm {
                 }
             }
         }
-        if self.tx != 0 {
-            sys_seph::io_tx(self.apdu_type, &self.apdu_buffer, self.tx);
-            self.tx = 0;
-        } else {
-            sys_seph::io_tx(self.apdu_type, &self.io_buffer, self.tx_length);
-        }
+
+        sys_seph::io_tx(self.apdu_type, &self.io_buffer, self.tx_length);
+
         self.tx_length = 0;
         self.rx_length = 0;
     }
@@ -343,17 +340,25 @@ impl Comm {
         None
     }
 
-    pub fn process_event<T>(&mut self, mut seph_buffer: [u8; 272], length: i32) -> Option<Event<T>>
+    pub fn process_event<T>(
+        &self,
+        seph_buffer: &[u8],
+        length: i32,
+        _buttons_state: Option<&mut ButtonsState>, // only used on NanoX/NanoS+
+    ) -> Result<Option<Event<T>>, StatusWords>
     where
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
+        if seph_buffer.len() < 3 {
+            panic!("Invalid SEPH buffer length");
+        }
+
         let tag = seph_buffer[0];
         let _len: usize = u16::from_be_bytes([seph_buffer[1], seph_buffer[2]]) as usize;
 
         if (length as usize) < _len + 3 {
-            self.reply(StatusWords::BadLen);
-            return None;
+            return Err(StatusWords::BadLen);
         }
 
         match seph::Events::from(tag) {
@@ -362,19 +367,21 @@ impl Comm {
             seph::Events::ButtonPushEvent => {
                 #[cfg(feature = "nano_nbgl")]
                 unsafe {
-                    ux_process_button_event(seph_buffer.as_mut_ptr());
+                    ux_process_button_event(seph_buffer.as_ptr() as *mut u8); // the cast to mutable can be removed on more recent SDKs
                 }
-                let button_info = seph_buffer[3] >> 1;
-                if let Some(btn_evt) = get_button_event(&mut self.buttons, button_info) {
-                    return Some(Event::Button(btn_evt));
+                if let Some(buttons_state) = _buttons_state {
+                    let button_info = seph_buffer[3] >> 1;
+                    if let Some(btn_evt) = get_button_event(buttons_state, button_info) {
+                        return Ok(Some(Event::Button(btn_evt)));
+                    }
                 }
             }
 
             // SCREEN TOUCH EVENT
             #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
             seph::Events::ScreenTouchEvent => unsafe {
-                ux_process_finger_event(seph_buffer.as_mut_ptr());
-                return Some(Event::TouchEvent);
+                ux_process_finger_event(seph_buffer.as_ptr() as *mut u8); // the cast to mutable can be removed on more recent SDKs)
+                return Ok(Some(Event::TouchEvent));
             },
 
             // TICKER EVENT
@@ -388,7 +395,7 @@ impl Comm {
                 unsafe {
                     ux_process_ticker_event();
                 }
-                return Some(Event::Ticker);
+                return Ok(Some(Event::Ticker));
             }
 
             // ITC EVENT
@@ -435,9 +442,9 @@ impl Comm {
                         }
                     }
 
-                    _ => return None,
+                    _ => return Ok(None),
                 }
-                return None;
+                return Ok(None);
             }
 
             // DEFAULT EVENT
@@ -457,7 +464,7 @@ impl Comm {
                 }
             }
         }
-        None
+        Ok(None)
     }
 
     pub fn decode_event<T>(&mut self, length: i32) -> Option<Event<T>>
@@ -469,11 +476,30 @@ impl Comm {
 
         match seph::PacketTypes::from(packet_type) {
             seph::PacketTypes::PacketTypeSeph | seph::PacketTypes::PacketTypeSeEvent => {
+                // On devices with buttons, we make a copy of the current button state
+                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+                let mut buttons_copy = self.buttons;
+                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+                let buttons_state = Some(&mut buttons_copy);
+
+                #[cfg(not(any(target_os = "nanosplus", target_os = "nanox")))]
+                let buttons_state = None;
+
                 // SE or SEPH event
-                let mut seph_buffer = [0u8; 272];
-                seph_buffer[0..272].copy_from_slice(&self.io_buffer[1..273]);
-                if let Some(event) = self.process_event(seph_buffer, length - 1) {
-                    return Some(event);
+                let result = self.process_event(&self.io_buffer[1..273], length - 1, buttons_state);
+
+                // update buttons state, in case it was modified
+                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+                {
+                    self.buttons = buttons_copy;
+                }
+
+                match result {
+                    Ok(e) => return e,
+                    Err(status) => {
+                        self.reply(status);
+                        return None;
+                    }
                 }
             }
 
