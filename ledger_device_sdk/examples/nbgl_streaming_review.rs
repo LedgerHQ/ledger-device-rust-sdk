@@ -29,13 +29,13 @@ extern "C" fn sample_main() {
 
     // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
     const FERRIS: NbglGlyph =
-        NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
+        NbglGlyph::from_include(include_gif!("examples/crab_14x14.gif", NBGL));
 
     let mut review: NbglStreamingReview = NbglStreamingReview::new()
         .glyph(&FERRIS)
-        .tx_type(TransactionType::Message);
+        .tx_type(TransactionType::Transaction);
 
-    if !review.start("Streaming example", "Example Subtitle") {
+    if !review.start("Streaming example", None) {
         NbglReviewStatus::new().show(false);
         return;
     }

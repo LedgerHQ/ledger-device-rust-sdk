@@ -44,7 +44,7 @@ extern "C" fn sample_main() {
 
     // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
     const FERRIS: NbglGlyph =
-        NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
+        NbglGlyph::from_include(include_gif!("examples/crab_14x14.gif", NBGL));
     // Create NBGL review. Maximum number of fields and string buffer length can be customised
     // with constant generic parameters of NbglReview. Default values are 32 and 1024 respectively.
     let success = NbglReview::new()
