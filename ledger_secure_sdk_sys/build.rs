@@ -15,13 +15,13 @@ const SDK_C_FILES: [&str; 13] = [
     "src/os.c",
     "src/svc_call.s",
     "src/svc_cx_call.s",
-    "src/syscalls.c",
     "src/os_printf.c",
     "protocol/src/ledger_protocol.c",
     "io/src/os_io.c",
     "io/src/os_io_default_apdu.c",
     "io/src/os_io_seph_cmd.c",
     "io/src/os_io_seph_ux.c",
+    "src/syscalls.c",
 ];
 
 #[derive(Debug, Default, PartialEq)]
@@ -504,7 +504,7 @@ impl SDKBuilder<'_> {
                 .join(format!("target/{}/include", self.device.name)),
         );
 
-        // Configure BLE and NBGL
+        // Configure BLE, NBGL, U2F
         for s in self.device.defines.iter() {
             if s.0 == "HAVE_IO_USB" {
                 configure_lib_usb(&mut command, &self.device.c_sdk);
@@ -520,6 +520,9 @@ impl SDKBuilder<'_> {
                 command
                     .include(&glyphs_path)
                     .file(glyphs_path.join("glyphs.c"));
+            }
+            if s.0 == "HAVE_IO_U2F" {
+                configure_lib_u2f(&mut command, &self.device.c_sdk);
             }
         }
 
@@ -725,6 +728,11 @@ fn main() {
 // --------------------------------------------------
 // Helper functions
 // --------------------------------------------------
+
+fn configure_lib_u2f(command: &mut cc::Build, c_sdk: &Path) {
+    command.file(c_sdk.join("lib_u2f/src/u2f_transport.c"));
+    command.include(c_sdk.join("lib_u2f/include"));
+}
 
 fn configure_lib_usb(command: &mut cc::Build, c_sdk: &Path) {
     command
