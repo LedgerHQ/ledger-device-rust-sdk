@@ -618,7 +618,7 @@ impl Comm {
                 (0, 6) => Err(StatusWords::BadLen),
                 (0, _) => {
                     let len =
-                        u16::from_le_bytes([self.apdu_buffer[5], self.apdu_buffer[6]]) as usize;
+                        u16::from_be_bytes([self.apdu_buffer[5], self.apdu_buffer[6]]) as usize;
                     get_data_from_buffer(len, 7)
                 }
                 (len, _) => get_data_from_buffer(len, 5),
