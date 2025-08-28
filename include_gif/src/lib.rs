@@ -2,7 +2,6 @@ extern crate proc_macro;
 
 use image::*;
 use proc_macro::TokenStream;
-use std::collections::HashMap;
 use std::io::Write;
 use syn::{parse_macro_input, Ident, LitStr};
 
@@ -154,33 +153,29 @@ fn generate_bagl_glyph(frame: &GrayImage) -> Vec<u8> {
     packed
 }
 
-// Get the palette of colors of a grayscale image
-fn get_palette<'a>(img: &'a GrayImage) -> Vec<u8> {
-    let mut palette = HashMap::new();
-    // Count the number of occurrences of each color
-    for &pixel in img.pixels() {
-        *palette.entry(pixel[0]).or_insert(0) += 1;
+fn image_to_packed_buffer(frame: &mut GrayImage) -> (Vec<u8>, u8) {
+    // Count the number of colors in the image (max 16 supported)
+    let mut color_count = std::collections::HashSet::new();
+    for pixel in frame.pixels() {
+        color_count.insert(pixel.0[0]);
     }
-    let palette: Vec<_> = palette.into_iter().collect();
-    // Collect all colors in a vector
-    palette.into_iter().map(|(luma, _)| luma).collect()
-}
+    let mut colors = std::cmp::min(16u8, color_count.len() as u8);
 
-fn image_to_packed_buffer(frame: &GrayImage) -> (Vec<u8>, u8) {
-    let mut colors = get_palette(&frame).len() as u8;
-    if colors > 16 {
-        colors = 16;
-    }
     // Round number of colors to a power of 2
-    if !(colors != 0 && colors.count_ones() == 1) {
-        colors = (2.0_f64.powf((colors as f64).log2().ceil())) as u8;
+    colors = colors.next_power_of_two();
+
+    // Compute number of bits per pixel from number of colors (1, 2 or 4)
+    let mut bits_per_pixel = std::cmp::min(4, (colors as f64).log(2.0).ceil() as u8);
+    // 2 is not supported
+    if bits_per_pixel == 2 {
+        bits_per_pixel = 4;
     }
 
-    let mut bits_per_pixel: u8 = (colors as f32).log2().floor() as u8;
-    match bits_per_pixel {
-        0 => bits_per_pixel = 1,
-        3 => bits_per_pixel = 4,
-        _ => (),
+    // Invert if bpp is 1
+    if bits_per_pixel == 1 {
+        for pixel in frame.pixels_mut() {
+            pixel.0[0] = 255 - pixel.0[0];
+        }
     }
 
     let width = frame.width();
@@ -224,10 +219,10 @@ fn generate_nbgl_glyph(frame: &mut GrayImage) -> (Vec<u8>, u8, bool) {
                 *pixel = Luma([0; 1]);
             }
         });
-        let (packed, bpp) = image_to_packed_buffer(&frame);
+        let (packed, bpp) = image_to_packed_buffer(frame);
         return (packed, bpp, false);
     }
-    let (packed, bpp) = image_to_packed_buffer(&frame);
+    let (packed, bpp) = image_to_packed_buffer(frame);
     let mut compressed_image: Vec<u8> = Vec::new();
     let mut full_uncompressed_size = packed.len();
     let mut i = 0;
