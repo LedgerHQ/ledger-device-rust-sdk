@@ -1,6 +1,7 @@
 use crate::ui::screen_util::draw;
 use ledger_secure_sdk_sys;
 
+#[derive(Debug, Clone, Copy)]
 pub struct Glyph<'a> {
     pub bitmap: &'a [u8],
     pub width: u32,
