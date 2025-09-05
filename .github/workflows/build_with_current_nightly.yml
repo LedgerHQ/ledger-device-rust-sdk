@@ -1,51 +1,117 @@
-name: Build and Test with last nightly everyday @12PM
+name: Build and Test with last nightly
+permissions:
+  contents: read
 
 on:
+  workflow_call:
+    inputs:
+      app_repository:
+        description: 'The repository of the application to build and test'
+        required: true
+        type: string
+      app_branch_name:
+        description: 'The branch of the application to build and test'
+        required: true
+        type: string
   workflow_dispatch:
+    inputs:
+      app_repository:
+        description: 'The repository of the application to build and test'
+        required: true
+      app_branch_name:
+        description: 'The branch of the application to build and test'
+        required: true
   # schedule:
     # * is a special character in YAML so you have to quote this string
   #  - cron:  '0 12 * * *'
     
 jobs:
+  call_get_app_metadata:
+    # This job digests inputs and repository metadata provided by the `ledger_app.toml` manifest
+    # file, in order to output relevant directories, compatible devices, and other variables needed
+    # by following jobs.
+    name: Retrieve application metadata
+    uses: LedgerHQ/ledger-app-workflows/.github/workflows/_get_app_metadata.yml@v1
+    with:
+      app_repository: ${{ inputs.app_repository }}
+      app_branch_name: ${{ inputs.app_branch_name }}
+
   build_with_last_nightly:
+    needs: call_get_app_metadata
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
     strategy:
       matrix:
-        device: ["nanox", "nanosplus", "stax", "flex"]
+        device: ${{ fromJSON(needs.call_get_app_metadata.outputs.compatible_devices) }}
     steps:
-      - name: update nightly toolchain
+      - name: install nightly toolchain
         run: |
-          rustup update nightly
+          rustup toolchain install nightly
           rustup component add rust-src --toolchain nightly
-          cargo +nightly ledger setup
+          export RUST_NIGHTLY=nightly
+          cargo ledger setup
 
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          repository: LedgerHQ/app-boilerplate-rust
-          path: app-boilerplate
+          repository: ${{ inputs.app_repository }}
+          ref: ${{ inputs.app_branch_name }}
+
+      - name: Patch Cargo.toml to use y333/nightly_support for ledger_device_sdk and include_gif crate
+        run: |
+          cd ${{ needs.call_get_app_metadata.outputs.build_directory }}
+          sed -i 's|ledger_device_sdk = ".*"|ledger_device_sdk = { git = "https://github.com/LedgerHQ/ledger-device-rust-sdk.git", branch = "y333/nightly_support" }|' Cargo.toml
+          sed -i 's|include_gif = ".*"|include_gif = { git = "https://github.com/LedgerHQ/ledger-device-rust-sdk.git", branch = "y333/nightly_support" }|' Cargo.toml
+          echo "Display patched Cargo.toml:"
+          cat Cargo.toml
 
       - name: Build
         run: |
-          BUILD_DEVICE_NAME="$(echo ${{ matrix.device }})"
-          BIN_DIR_NAME="$(echo ${{ matrix.device }} | sed 's/nanosplus/nanos2/')"
-          cd app-boilerplate
-          cargo ledger build ${{ matrix.device }}
+          cargo update include_gif
+          cargo update ledger_secure_sdk_sys
+          cargo update ledger_device_sdk
+          # if ${{matrix.device}} is 'nanosp', transform to 'nanosplus' for cargo ledger build command
+          if [ "${{ matrix.device }}" = "nanosp" ]; then
+            DEVICE="nanosplus"
+          else
+            DEVICE="${{ matrix.device }}"
+          fi
+          echo "Building for device: $DEVICE"
+          cargo ledger build $DEVICE
+          BINARY_PATH=$(cargo metadata --no-deps --format-version 1 | jq -r '.target_directory')/ && \
+          echo "BINARY_PATH=$BINARY_PATH" >> $GITHUB_ENV
+          echo "BINARY_PATH is: $BINARY_PATH"
+
+      - name: Remove useless artifacts from previous build
+        run: |
+          find ${{ env.BINARY_PATH }} -mindepth 3 -maxdepth 3 -type d -exec rm -rf {} + && \
+          rm -rf ${{ env.BINARY_PATH }}/release
       
-      #- name: Upload binary artifacts
-      #  uses: actions/upload-artifact@v3
-      #  with:
-      #    name: "app_elf_binaries"
-      #    path: app-boilerplate/target/*
-      #    if-no-files-found: error
-  
-  #ragger_tests:
-  #  name: Run ragger tests using the reusable workflow
-  #  needs: build_with_last_nightly
-  #  uses: LedgerHQ/ledger-app-workflows/.github/workflows/reusable_ragger_tests.yml@v1
-  #  with:
-  #    app_repository: LedgerHQ/app-boilerplate-rust
-  #    app_branch_name: "main"
-  #    download_app_binaries_artifact: "app_elf_binaries"
+      - name: Upload binary artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: "app_binaries-${{ matrix.device }}"
+          path: ${{env.BINARY_PATH}}
+          if-no-files-found: error
+
+  merge_artifacts:
+    name: Merge build artifacts
+    needs: build_with_last_nightly
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Merge artifacts
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: "app_binaries"
+          pattern: "app_binaries-*"
+          delete-merged: true
+
+  ragger_tests:
+   name: Run ragger tests using the reusable workflow
+   needs: merge_artifacts
+   uses: LedgerHQ/ledger-app-workflows/.github/workflows/reusable_ragger_tests.yml@v1
+   with:
+     app_repository: ${{ inputs.app_repository }}
+     app_branch_name: ${{ inputs.app_branch_name }}
+     download_app_binaries_artifact: "app_binaries"
