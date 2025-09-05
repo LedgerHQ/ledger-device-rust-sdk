@@ -1,4 +1,6 @@
 name: Build and Test with last nightly
+permissions:
+  contents: read
 
 on:
   workflow_call:
