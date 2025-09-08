@@ -5,20 +5,20 @@ permissions:
 on:
   workflow_call:
     inputs:
-      app_repository:
-        description: 'The repository of the application to build and test'
+      app_name:
+        description: 'The name of the application to build and test'
         required: true
         type: string
-      app_branch_name:
+      app_branch:
         description: 'The branch of the application to build and test'
         required: true
         type: string
   workflow_dispatch:
     inputs:
-      app_repository:
-        description: 'The repository of the application to build and test'
+      app_name:
+        description: 'The name of the application to build and test'
         required: true
-      app_branch_name:
+      app_branch:
         description: 'The branch of the application to build and test'
         required: true
   # schedule:
@@ -33,8 +33,8 @@ jobs:
     name: Retrieve application metadata
     uses: LedgerHQ/ledger-app-workflows/.github/workflows/_get_app_metadata.yml@v1
     with:
-      app_repository: ${{ inputs.app_repository }}
-      app_branch_name: ${{ inputs.app_branch_name }}
+      app_repository: LedgerHQ/${{ inputs.app_name }}
+      app_branch_name: ${{ inputs.app_branch }}
 
   build_with_last_nightly:
     needs: call_get_app_metadata
@@ -55,19 +55,39 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          repository: ${{ inputs.app_repository }}
-          ref: ${{ inputs.app_branch_name }}
+          repository: LedgerHQ/${{ inputs.app_name }}
+          ref: ${{ inputs.app_branch }}
+          path: ${{ inputs.app_name }}
+          submodules: true
 
-      - name: Patch Cargo.toml to use y333/nightly_support for ledger_device_sdk and include_gif crate
+      - name: Patch Cargo.toml to use y333/nightly_support for ledger_device_sdk, ledger_secure_sdk_sys, include_gif crates
         run: |
-          cd ${{ needs.call_get_app_metadata.outputs.build_directory }}
-          sed -i 's|ledger_device_sdk = ".*"|ledger_device_sdk = { git = "https://github.com/LedgerHQ/ledger-device-rust-sdk.git", branch = "y333/nightly_support" }|' Cargo.toml
-          sed -i 's|include_gif = ".*"|include_gif = { git = "https://github.com/LedgerHQ/ledger-device-rust-sdk.git", branch = "y333/nightly_support" }|' Cargo.toml
+          cd ${{ inputs.app_name }}/${{ needs.call_get_app_metadata.outputs.build_directory }}
+
+          # Patch include_gif
+          echo "" >> Cargo.toml && \
+          echo "[patch.crates-io.include_gif]" >> Cargo.toml && \
+          echo "git = \"https://github.com/LedgerHQ/ledger-device-rust-sdk.git\"" >> Cargo.toml && \
+          echo "branch = \"y333/nightly_support\"" >> Cargo.toml
+
+          # Patch ledger_secure_sdk_sys
+          echo "" >> Cargo.toml && \
+          echo "[patch.crates-io.ledger_secure_sdk_sys]" >> Cargo.toml && \
+          echo "git = \"https://github.com/LedgerHQ/ledger-device-rust-sdk.git\"" >> Cargo.toml && \
+          echo "branch = \"y333/nightly_support\"" >> Cargo.toml
+
+          # Patch ledger_device_sdk
+          echo "" >> Cargo.toml && \
+          echo "[patch.crates-io.ledger_device_sdk]" >> Cargo.toml && \
+          echo "git = \"https://github.com/LedgerHQ/ledger-device-rust-sdk.git\"" >> Cargo.toml && \
+          echo "branch = \"y333/nightly_support\"" >> Cargo.toml
+
           echo "Display patched Cargo.toml:"
           cat Cargo.toml
 
       - name: Build
         run: |
+          cd ${{ inputs.app_name }}/${{ needs.call_get_app_metadata.outputs.build_directory }}
           cargo update include_gif
           cargo update ledger_secure_sdk_sys
           cargo update ledger_device_sdk
@@ -91,8 +111,33 @@ jobs:
       - name: Upload binary artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: "app_binaries-${{ matrix.device }}"
+          name: "${{ inputs.app_name }}_binaries-${{ matrix.device }}"
           path: ${{env.BINARY_PATH}}
+          if-no-files-found: error
+
+  build_check_signature_starknet:
+    name: Build binary used to check signture during the test
+    if: ${{ inputs.app_name == 'app-starknet' }}
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
+    steps:
+      - name: Clone
+        uses: actions/checkout@v4
+        with:
+          repository: LedgerHQ/${{ inputs.app_name }}
+          ref: ${{ inputs.app_branch }}
+          path: ${{ inputs.app_name }}
+          submodules: true
+      - name: Build
+        working-directory: ${{ inputs.app_name }}/tools/check-signature
+        run: |
+          cargo build
+      - name: Upload app binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: check-signature
+          path: ${{ inputs.app_name }}/tools/check-signature/target/debug/check-signature
           if-no-files-found: error
 
   merge_artifacts:
@@ -103,15 +148,28 @@ jobs:
       - name: Merge artifacts
         uses: actions/upload-artifact/merge@v4
         with:
-          name: "app_binaries"
-          pattern: "app_binaries-*"
+          name: "${{ inputs.app_name }}_binaries"
+          pattern: "${{ inputs.app_name }}_binaries-*"
           delete-merged: true
 
   ragger_tests:
    name: Run ragger tests using the reusable workflow
+   if: ${{ inputs.app_name != 'app-starknet' }}
    needs: merge_artifacts
    uses: LedgerHQ/ledger-app-workflows/.github/workflows/reusable_ragger_tests.yml@v1
    with:
-     app_repository: ${{ inputs.app_repository }}
-     app_branch_name: ${{ inputs.app_branch_name }}
-     download_app_binaries_artifact: "app_binaries"
+     app_repository: LedgerHQ/${{ inputs.app_name }}
+     app_branch_name: ${{ inputs.app_branch }}
+     download_app_binaries_artifact: "${{ inputs.app_name }}_binaries"
+
+  ragger_tests_starknet:
+   name: Run ragger tests using the reusable workflow
+   if: ${{ inputs.app_name == 'app-starknet' }}
+   needs: [merge_artifacts, build_check_signature_starknet]
+   uses: LedgerHQ/ledger-app-workflows/.github/workflows/reusable_ragger_tests.yml@v1
+   with:
+     app_repository: LedgerHQ/${{ inputs.app_name }}
+     app_branch_name: ${{ inputs.app_branch }}
+     download_app_binaries_artifact: "${{ inputs.app_name }}_binaries"
+     additional_app_binaries_artifact: "check-signature"
+     additional_app_binaries_artifact_dir: "tools/check-signature/target/debug"

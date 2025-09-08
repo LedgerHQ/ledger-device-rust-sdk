@@ -3,11 +3,7 @@ permissions:
   contents: read
 
 on:
-  workflow_call:
   workflow_dispatch:
-  schedule:
-    # * is a special character in YAML so you have to quote this string
-    - cron:  '0 12 * * *'
 
 jobs:
     retrieve-rust-apps:
@@ -31,7 +27,7 @@ jobs:
           id: get_rust_apps
           run: |
             python .github/workflows/get_rust_app_branch.py ${{ secrets.GITHUB_TOKEN }}
-            echo "rust_apps=$(cat rust_apps.json)" >> $GITHUB_OUTPUT
+            echo "rust_apps=$(cat rust_app_branch.json)" >> $GITHUB_OUTPUT
 
     display-rust-apps:
       name: Display Rust Apps
@@ -53,5 +49,5 @@ jobs:
               include: ${{ fromJSON(needs.retrieve-rust-apps.outputs.rust_apps) }}
         uses: ./.github/workflows/reusable_build_and_test_with_last_nightly.yml
         with:
-            app-repository: ${{ matrix.app-repo }}
-            app-branch-name: ${{ matrix.app-branch }}
+            app_name: ${{ matrix.app-name }}
+            app_branch: ${{ matrix.app-branch }}
