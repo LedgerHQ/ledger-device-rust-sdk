@@ -1,4 +1,4 @@
-name: Build and Test all Rust apps with last nightly
+name: Build and Test all Apps with last nightly
 permissions:
   contents: read
 

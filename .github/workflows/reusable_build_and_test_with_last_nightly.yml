@@ -1,4 +1,4 @@
-name: Build and Test with last nightly
+name: Reusable Build and Test an App with last nightly
 permissions:
   contents: read
 
