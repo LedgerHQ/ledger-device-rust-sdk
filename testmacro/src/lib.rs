@@ -10,7 +10,7 @@ pub fn test_item(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let r = quote! {
         #[test_case]
-        const t: TestType = TestType {
+        const TEST: TestType = TestType {
             modname: module_path!(),
             name: #name,
             f: || -> Result<(),()> {
