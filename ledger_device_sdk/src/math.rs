@@ -20,7 +20,10 @@ impl BigUint<4> {
             let err = cx_math_invintm_no_throw(res.data.as_mut_ptr(), v, modulus.data.as_ptr(), 4);
             match err {
                 CX_OK => res,
-                _ => panic!("Error computing inverse of BigUint with error code: {}", err),
+                _ => panic!(
+                    "Error computing inverse of BigUint with error code: {}",
+                    err
+                ),
             }
         }
     }
@@ -140,7 +143,10 @@ impl<const N: usize> BigUint<N> {
             );
             match err {
                 CX_OK => res,
-                _ => panic!("Error computing inverse of BigUint with error code: {}", err),
+                _ => panic!(
+                    "Error computing inverse of BigUint with error code: {}",
+                    err
+                ),
             }
         }
     }
@@ -299,7 +305,10 @@ impl<const N: usize> Rem for BigUint<N> {
             let err = cx_math_modm_no_throw(res.data.as_mut_ptr(), N, modulus.data.as_ptr(), N);
             match err {
                 CX_OK => return res,
-                _ => panic!("Error computing modulus of BigUint with error code: {}", err),
+                _ => panic!(
+                    "Error computing modulus of BigUint with error code: {}",
+                    err
+                ),
             }
         }
     }
@@ -311,7 +320,10 @@ impl<const N: usize> RemAssign for BigUint<N> {
             let err = cx_math_modm_no_throw(self.data.as_mut_ptr(), N, modulus.data.as_ptr(), N);
             match err {
                 CX_OK => {}
-                _ => panic!("Error computing modulus of BigUint with error code: {}", err),
+                _ => panic!(
+                    "Error computing modulus of BigUint with error code: {}",
+                    err
+                ),
             }
         }
     }
