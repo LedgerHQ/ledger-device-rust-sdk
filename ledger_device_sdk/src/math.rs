@@ -1,4 +1,5 @@
 use core::default::Default;
+use core::fmt::Display;
 use core::ops::{Add, AddAssign, Mul, Rem, RemAssign, Sub, SubAssign};
 use ledger_secure_sdk_sys::{
     cx_math_add_no_throw, cx_math_addm_no_throw, cx_math_cmp_no_throw, cx_math_invintm_no_throw,
@@ -10,6 +11,15 @@ use ledger_secure_sdk_sys::{
 #[derive(Debug, Copy, Clone)]
 pub struct BigUint<const N: usize> {
     pub data: [u8; N],
+}
+
+impl<const N: usize> Display for BigUint<N> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        for byte in &self.data {
+            write!(f, "{:02x}", byte)?;
+        }
+        Ok(())
+    }
 }
 
 impl BigUint<4> {
@@ -373,6 +383,61 @@ impl<const N: usize> PartialOrd<BigUint<N>> for BigUint<N> {
                 _ => panic!("Error comparing BigUint with error code: {}", err),
             }
         }
+    }
+}
+
+// Conversion to and from Rust primitive u32
+impl<const N: usize> From<u32> for BigUint<N> {
+    fn from(value: u32) -> Self {
+        assert!(N >= 4, "BigUint<{N}> is too small to represent a u32");
+        let data = value.to_be_bytes();
+        let mut r = Self::default();
+        r.data[N - 4..N].copy_from_slice(&data);
+        r
+    }
+}
+
+impl<const N: usize> From<BigUint<N>> for u32 {
+    fn from(value: BigUint<N>) -> Self {
+        assert!(N >= 4, "BigUint<{N}> is too small to represent a u32");
+        let slice = &value.data[N - 4..N];
+        u32::from_be_bytes(slice.try_into().unwrap())
+    }
+}
+
+// Conversion to and from Rust primitive u16
+impl<const N: usize> From<u16> for BigUint<N> {
+    fn from(value: u16) -> Self {
+        assert!(N >= 2, "BigUint<{N}> is too small to represent a u16");
+        let data = value.to_be_bytes();
+        let mut r = Self::default();
+        r.data[N - 2..N].copy_from_slice(&data);
+        r
+    }
+}
+impl<const N: usize> From<BigUint<N>> for u16 {
+    fn from(value: BigUint<N>) -> Self {
+        assert!(N >= 2, "BigUint<{N}> is too small to represent a u16");
+        let slice = &value.data[N - 2..N];
+        u16::from_be_bytes(slice.try_into().unwrap())
+    }
+}
+
+// Conversion to and from Rust primitive u8
+impl<const N: usize> From<u8> for BigUint<N> {
+    fn from(value: u8) -> Self {
+        assert!(N >= 1, "BigUint<{N}> is too small to represent a u8");
+        let data = value.to_be_bytes();
+        let mut r = Self::default();
+        r.data[N - 1..N].copy_from_slice(&data);
+        r
+    }
+}
+impl<const N: usize> From<BigUint<N>> for u8 {
+    fn from(value: BigUint<N>) -> Self {
+        assert!(N >= 1, "BigUint<{N}> is too small to represent a u8");
+        let slice = &value.data[N - 1..N];
+        u8::from_be_bytes(slice.try_into().unwrap())
     }
 }
 
