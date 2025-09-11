@@ -58,7 +58,9 @@ pub fn test_panic(info: &PanicInfo) -> ! {
     debug_print(loc.file());
     debug_print(" at line ");
     let bytes = to_dec(loc.line());
-    let s = core::str::from_utf8(&bytes).unwrap().trim_start_matches('0');
+    let s = core::str::from_utf8(&bytes)
+        .unwrap()
+        .trim_start_matches('0');
     debug_print(s);
     debug_print(": ");
     debug_print(info.message().as_str().unwrap());

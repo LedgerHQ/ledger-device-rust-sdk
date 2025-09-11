@@ -12,11 +12,11 @@ pub mod hash;
 pub mod hmac;
 pub mod io;
 pub mod libcall;
+pub mod math;
 pub mod nvm;
 pub mod random;
 pub mod screen;
 pub mod seph;
-pub mod math;
 
 pub mod testing;
 

@@ -1,22 +1,11 @@
-use core::ops::{Add, AddAssign, Mul, Rem, RemAssign, Sub, SubAssign};
 use core::default::Default;
+use core::ops::{Add, AddAssign, Mul, Rem, RemAssign, Sub, SubAssign};
 use ledger_secure_sdk_sys::{
-    cx_math_addm_no_throw,
-    cx_math_add_no_throw,
-    cx_math_cmp_no_throw,
-    cx_math_invprimem_no_throw,
-    cx_math_invintm_no_throw,
-    cx_math_is_prime_no_throw,
-    cx_math_modm_no_throw,
-    cx_math_multm_no_throw,
-    cx_math_mult_no_throw,
-    cx_math_next_prime_no_throw,
-    cx_math_powm_no_throw,
-    cx_math_subm_no_throw,
-    cx_math_sub_no_throw,
-    CX_OK,
+    cx_math_add_no_throw, cx_math_addm_no_throw, cx_math_cmp_no_throw, cx_math_invintm_no_throw,
+    cx_math_invprimem_no_throw, cx_math_is_prime_no_throw, cx_math_modm_no_throw,
+    cx_math_mult_no_throw, cx_math_multm_no_throw, cx_math_next_prime_no_throw,
+    cx_math_powm_no_throw, cx_math_sub_no_throw, cx_math_subm_no_throw, CX_OK,
 };
-
 
 #[derive(Debug, Copy, Clone)]
 pub struct Number<const N: usize> {
@@ -28,12 +17,7 @@ impl Number<4> {
         let v: u32 = u32::from_be_bytes(self.data);
         let mut res = Number::<4>::default();
         unsafe {
-            let err = cx_math_invintm_no_throw(
-                res.data.as_mut_ptr(),
-                v,
-                modulus.data.as_ptr(),
-                4,
-            );
+            let err = cx_math_invintm_no_throw(res.data.as_mut_ptr(), v, modulus.data.as_ptr(), 4);
             match err {
                 CX_OK => res,
                 _ => panic!("Error computing inverse of Number with error code: {}", err),
@@ -65,7 +49,6 @@ impl<const N: usize> Number<N> {
     }
 
     pub fn addm(&self, other: &Self, modulus: &Self) -> Self {
-
         if self >= modulus || other >= modulus {
             panic!("Operands must be less than modulus");
         }
@@ -87,7 +70,6 @@ impl<const N: usize> Number<N> {
     }
 
     pub fn mulm(&self, other: &Self, modulus: &Self) -> Self {
-
         if other >= modulus {
             panic!("Second operand must be less than modulus");
         }
@@ -109,7 +91,6 @@ impl<const N: usize> Number<N> {
     }
 
     pub fn subm(&self, other: &Self, modulus: &Self) -> Self {
-
         if self >= modulus || other >= modulus {
             panic!("Operands must be less than modulus");
         }
@@ -131,7 +112,6 @@ impl<const N: usize> Number<N> {
     }
 
     pub fn powm(&self, exponent: &Self, modulus: &Self) -> Self {
-
         let mut res = Number::<N>::default();
         unsafe {
             let err = cx_math_powm_no_throw(
@@ -150,7 +130,6 @@ impl<const N: usize> Number<N> {
     }
 
     pub fn invprimem(&self, modulus: &Self) -> Self {
-
         let mut res = Number::<N>::default();
         unsafe {
             let err = cx_math_invprimem_no_throw(
@@ -167,19 +146,17 @@ impl<const N: usize> Number<N> {
     }
 
     pub fn is_prime(&self) -> bool {
-
         let mut is_prime: bool = false;
         unsafe {
-            let err = cx_math_is_prime_no_throw(
-                self.data.as_ptr(),
-                N,
-                &mut is_prime as *mut bool,
-            );
+            let err = cx_math_is_prime_no_throw(self.data.as_ptr(), N, &mut is_prime as *mut bool);
             match err {
                 CX_OK => {
                     return is_prime;
                 }
-                _ => panic!("Error checking primality of Number with error code: {}", err),
+                _ => panic!(
+                    "Error checking primality of Number with error code: {}",
+                    err
+                ),
             }
         }
     }
@@ -187,23 +164,24 @@ impl<const N: usize> Number<N> {
     pub fn next_prime(&self) -> Self {
         let mut res = self.clone();
         unsafe {
-            let err = cx_math_next_prime_no_throw(
-                res.data.as_mut_ptr(),
-                res.len() as u32,
-            );
+            let err = cx_math_next_prime_no_throw(res.data.as_mut_ptr(), res.len() as u32);
             match err {
                 CX_OK => res,
-                _ => panic!("Error computing next prime of Number with error code: {}", err),
+                _ => panic!(
+                    "Error computing next prime of Number with error code: {}",
+                    err
+                ),
             }
         }
     }
 }
 
-impl<const N: usize> Number<N> 
-    where Number<{2 * N}>: Sized
- {
+impl<const N: usize> Number<N>
+where
+    Number<{ 2 * N }>: Sized,
+{
     pub fn to_double(&self) -> Number<{ 2 * N }> {
-         let mut res = Number::<{2 * N}>::default();
+        let mut res = Number::<{ 2 * N }>::default();
         res.data[N..2 * N].copy_from_slice(&self.data);
         res
     }
@@ -287,15 +265,16 @@ impl<const N: usize> SubAssign for Number<N> {
     }
 }
 
-// impl<const N: usize, const M: usize> Mul<Number<M>> for Number<N> 
+// impl<const N: usize, const M: usize> Mul<Number<M>> for Number<N>
 //     where Number<{N + M}>: Sized
-impl<const N: usize> Mul for Number<N> 
-    where Number<{N + N}>: Sized
+impl<const N: usize> Mul for Number<N>
+where
+    Number<{ N + N }>: Sized,
 {
-    type Output = Number<{N + N}>;
+    type Output = Number<{ N + N }>;
 
     fn mul(self, other: Number<N>) -> Self::Output {
-        let mut res = Number::<{N + N}>::default();
+        let mut res = Number::<{ N + N }>::default();
         unsafe {
             let err = cx_math_mult_no_throw(
                 res.data.as_mut_ptr(),
@@ -317,12 +296,7 @@ impl<const N: usize> Rem for Number<N> {
     fn rem(self, modulus: Self) -> Self::Output {
         let mut res = self;
         unsafe {
-            let err = cx_math_modm_no_throw(
-                res.data.as_mut_ptr(),
-                N,
-                modulus.data.as_ptr(),
-                N,
-            );
+            let err = cx_math_modm_no_throw(res.data.as_mut_ptr(), N, modulus.data.as_ptr(), N);
             match err {
                 CX_OK => return res,
                 _ => panic!("Error computing modulus of Number with error code: {}", err),
@@ -334,12 +308,7 @@ impl<const N: usize> Rem for Number<N> {
 impl<const N: usize> RemAssign for Number<N> {
     fn rem_assign(&mut self, modulus: Self) {
         unsafe {
-            let err = cx_math_modm_no_throw(
-                self.data.as_mut_ptr(),
-                N,
-                modulus.data.as_ptr(),
-                N,
-            );
+            let err = cx_math_modm_no_throw(self.data.as_mut_ptr(), N, modulus.data.as_ptr(), N);
             match err {
                 CX_OK => {}
                 _ => panic!("Error computing modulus of Number with error code: {}", err),
@@ -352,13 +321,17 @@ impl<const N: usize> PartialEq<Number<N>> for Number<N> {
     fn eq(&self, other: &Self) -> bool {
         unsafe {
             let mut diff: i32 = 0;
-            let err = cx_math_cmp_no_throw(self.data.as_ptr(), other.data.as_ptr(), N, &mut diff as *mut i32);
+            let err = cx_math_cmp_no_throw(
+                self.data.as_ptr(),
+                other.data.as_ptr(),
+                N,
+                &mut diff as *mut i32,
+            );
             match err {
                 CX_OK => {
                     if diff != 0 {
                         return false;
-                    }
-                    else {
+                    } else {
                         return true;
                     }
                 }
@@ -372,16 +345,19 @@ impl<const N: usize> PartialOrd<Number<N>> for Number<N> {
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         unsafe {
             let mut diff: i32 = 0;
-            let err = cx_math_cmp_no_throw(self.data.as_ptr(), other.data.as_ptr(), N, &mut diff as *mut i32);
+            let err = cx_math_cmp_no_throw(
+                self.data.as_ptr(),
+                other.data.as_ptr(),
+                N,
+                &mut diff as *mut i32,
+            );
             match err {
-                CX_OK => {
-                    match diff {
-                        0 => Some(core::cmp::Ordering::Equal),
-                        1 => Some(core::cmp::Ordering::Greater),
-                        -1 => Some(core::cmp::Ordering::Less),
-                        _ => None,
-                    }
-                }
+                CX_OK => match diff {
+                    0 => Some(core::cmp::Ordering::Equal),
+                    1 => Some(core::cmp::Ordering::Greater),
+                    -1 => Some(core::cmp::Ordering::Less),
+                    _ => None,
+                },
                 _ => panic!("Error comparing Number with error code: {}", err),
             }
         }
@@ -476,7 +452,6 @@ mod tests {
         assert_eq!(&a, &expected);
     }
 
-
     #[test]
     fn test_number_addm() {
         let a = Number::<4>::from_slice(&[0x04, 0x03, 0x02, 0x01]).unwrap();
@@ -495,7 +470,7 @@ mod tests {
         let c = a.subm(&b, &m);
         let expected = Number::<4>::from_slice(&[0x03, 0x00, 0xFE, 0xFD]).unwrap();
         assert_eq!(&c, &expected);
-    }   
+    }
 
     #[test]
     fn test_number_mulm() {
@@ -515,7 +490,7 @@ mod tests {
         let c = a.powm(&b, &m);
         let expected = Number::<4>::from_slice(&[0x5C, 0xAC, 0x83, 0x6E]).unwrap();
         assert_eq!(&c, &expected);
-    }   
+    }
 
     #[test]
     fn test_number_invprimem() {
@@ -549,5 +524,5 @@ mod tests {
         let b = a.next_prime();
         let expected = Number::<4>::from_slice(&[0, 0, 0, 11]).unwrap();
         assert_eq!(&b, &expected);
-    } 
-}  
+    }
+}
