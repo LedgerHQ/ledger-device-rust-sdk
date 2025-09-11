@@ -16,6 +16,7 @@ pub mod nvm;
 pub mod random;
 pub mod screen;
 pub mod seph;
+pub mod math;
 
 pub mod testing;
 
