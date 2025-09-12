@@ -559,9 +559,6 @@ impl SDKBuilder<'_> {
 
         /* Link with libc, libm and libgcc */
         let path = self.device.arm_libs.clone();
-        println!("cargo:rustc-link-lib=c");
-        println!("cargo:rustc-link-lib=m");
-        println!("cargo:rustc-link-lib=gcc");
 
         println!("cargo:rustc-link-search={path}");
         Ok(())
