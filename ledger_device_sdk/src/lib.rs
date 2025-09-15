@@ -60,6 +60,8 @@ pub fn exiting_panic(_info: &PanicInfo) -> ! {
 pub use ledger_secure_sdk_sys::buttons;
 pub use ledger_secure_sdk_sys::exit_app;
 
+use ledger_secure_sdk_sys::{pic_rs, pic_rs_mut};
+
 /// Helper macro that sets an external panic handler
 /// as the project's current panic handler
 #[macro_export]
@@ -109,12 +111,12 @@ impl<T> Pic<T> {
 
     /// Returns translated reference to the wrapped data.
     pub fn get_ref(&self) -> &T {
-        ledger_secure_sdk_sys::pic_rs(&self.data)
+        pic_rs(&self.data)
     }
 
     /// Returns translated mutable reference to the wrapped data.
     pub fn get_mut(&mut self) -> &mut T {
-        ledger_secure_sdk_sys::pic_rs_mut(&mut self.data)
+        pic_rs_mut(&mut self.data)
     }
 }
 
