@@ -1,0 +1,14 @@
+[target.nanox]
+runner = "speculos -m nanox --display=headless"
+
+[target.nanosplus]
+runner = "speculos -m nanosp --display=headless"
+
+[target.stax]
+runner = "speculos --model stax"
+
+[target.flex]
+runner = "speculos --model flex"
+
+[target.apex_p]
+runner = "speculos --model apex_p"
