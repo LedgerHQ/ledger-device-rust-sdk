@@ -117,6 +117,32 @@ struct CField {
     pub value: CString,
 }
 
+impl From<&Field<'_>> for CField {
+    fn from(field: &Field) -> CField {
+        CField {
+            name: CString::new((*field).name).unwrap(),
+            value: CString::new((*field).value).unwrap(),
+        }
+    }
+}
+
+impl From<&CField> for nbgl_contentTagValue_t {
+    fn from(field: &CField) -> nbgl_contentTagValue_t {
+        nbgl_contentTagValue_t {
+            item: (*field).name.as_ptr() as *const i8,
+            value: (*field).value.as_ptr() as *const i8,
+            ..Default::default()
+        }
+    }
+}
+
+// impl From<Field<'_>> for nbgl_contentTagValue_t {
+//     fn from(field: Field) -> nbgl_contentTagValue_t {
+//         let cfield: CField = field.into();
+//         cfield.into()
+//     }
+// }
+
 pub struct NbglGlyph<'a> {
     pub width: u16,
     pub height: u16,
