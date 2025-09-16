@@ -9,6 +9,24 @@ pub struct NbglChoice<'a> {
 
 impl SyncNBGL for NbglChoice<'_> {}
 
+// To support nbgl_useCaseChoiceWithDetails
+pub enum WarningDetailsType {
+    CenteredInfoWarning,
+    QRCodeWarning,
+    BarListWarning,
+}
+
+// To support nbgl_useCaseChoiceWithDetails
+impl From<WarningDetailsType> for nbgl_warningDetailsType_t {
+    fn from(wdt: WarningDetailsType) -> Self {
+        match wdt {
+            WarningDetailsType::CenteredInfoWarning => CENTERED_INFO_WARNING,
+            WarningDetailsType::QRCodeWarning => QRCODE_WARNING,
+            WarningDetailsType::BarListWarning => BAR_LIST_WARNING,
+        }
+    }
+}
+
 impl<'a> NbglChoice<'a> {
     pub fn new() -> NbglChoice<'a> {
         NbglChoice { glyph: None }
@@ -72,4 +90,5 @@ impl<'a> NbglChoice<'a> {
             }
         }
     }
+
 }
