@@ -1,9 +1,6 @@
 #![no_std]
 #![no_main]
 
-// Force boot section to be embedded in
-//use ledger_device_sdk as _;
-
 use include_gif::include_gif;
 use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{init_comm, NbglGlyph, NbglHomeAndSettings};
