@@ -4,7 +4,7 @@
 use include_gif::include_gif;
 use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{
-    init_comm, Field, NbglGlyph, NbglReviewStatus, NbglStreamingReview, StatusType, TransactionType,
+    init_comm, Field, NbglGlyph, NbglReviewStatus, NbglStreamingReview, NbglStreamingReviewStatus, TransactionType,
 };
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
@@ -46,39 +46,104 @@ extern "C" fn sample_main() {
         },
     ];
 
+    // Standard streaming review example
     let review: NbglStreamingReview = NbglStreamingReview::new()
         .glyph(&FERRIS)
-        .tx_type(TransactionType::Message);
-    if !review.start("Streaming example", Some("Example Subtitle")) {
+        .tx_type(TransactionType::Transaction);
+    if !review.start("Streaming example", Some("Standard")) {
         NbglReviewStatus::new().show(false);
-        return;
+        ledger_secure_sdk_sys::exit_app(0);
     }
-    for i in 0..fields.len() {
-        if !review.continue_review(&fields[i..i + 1]) {
-            NbglReviewStatus::new().show(false);
-            return;
+    let mut success: Option<bool> = None;
+    for c in fields.chunks(1) {
+        match review.next(c) {
+            NbglStreamingReviewStatus::Next => {}
+            NbglStreamingReviewStatus::Skipped => {
+                success = Some(review.finish("Sign to send token\n"));
+                break;
+            }
+            NbglStreamingReviewStatus::Rejected => {
+                success = Some(false);
+                break;
+            }
         }
     }
-    let success = review.finish("Sign to send token\n");
-    NbglReviewStatus::new().show(success);
+    match success {
+        Some(b) => {
+            NbglReviewStatus::new().show(b);
+        }
+        None => {
+            let success = review.finish("Sign to send token\n");
+            NbglReviewStatus::new().show(success);
+        }
+    }
+
+    // Skippable streaming review example
+    let review: NbglStreamingReview = NbglStreamingReview::new()
+        .glyph(&FERRIS)
+        .skippable()
+        .tx_type(TransactionType::Transaction);
+    if !review.start("Streaming example", Some("Skippable")) {
+        NbglReviewStatus::new().show(false);
+        ledger_secure_sdk_sys::exit_app(0);
+    }
+    let mut success: Option<bool> = None;
+    for c in fields.chunks(1) {
+        match review.next(c) {
+            NbglStreamingReviewStatus::Next => {}
+            NbglStreamingReviewStatus::Skipped => {
+                success = Some(review.finish("Sign to send token\n"));
+                break;
+            }
+            NbglStreamingReviewStatus::Rejected => {
+                success = Some(false);
+                break;
+            }
+        }
+    }
+    match success {
+        Some(b) => {
+            NbglReviewStatus::new().show(b);
+        }
+        None => {
+            let success = review.finish("Sign to send token\n");
+            NbglReviewStatus::new().show(success);
+        }
+    }
 
     // Blind signing example
     let review: NbglStreamingReview = NbglStreamingReview::new()
         .glyph(&FERRIS)
+        .skippable()
         .blind()
-        .tx_type(TransactionType::Message);
-    if !review.start("Streaming example", Some("Example Subtitle")) {
+        .tx_type(TransactionType::Transaction);
+    if !review.start("Streaming example", Some("Blind Signing")) {
         NbglReviewStatus::new().show(false);
-        return;
+        ledger_secure_sdk_sys::exit_app(0);
     }
-    for i in 0..fields.len() {
-        if !review.continue_review(&fields[i..i + 1]) {
-            NbglReviewStatus::new().show(false);
-            return;
+    let mut success: Option<bool> = None;
+    for c in fields.chunks(1) {
+        match review.next(c) {
+            NbglStreamingReviewStatus::Next => {}
+            NbglStreamingReviewStatus::Skipped => {
+                success = Some(review.finish("Sign to send token\n"));
+                break;
+            }
+            NbglStreamingReviewStatus::Rejected => {
+                success = Some(false);
+                break;
+            }
         }
     }
-    let success = review.finish("Sign to send token\n");
-    NbglReviewStatus::new().show(success);
+    match success {
+        Some(b) => {
+            NbglReviewStatus::new().show(b);
+        }
+        None => {
+            let success = review.finish("Sign to send token\n");
+            NbglReviewStatus::new().show(success);
+        }
+    }
 
     ledger_secure_sdk_sys::exit_app(0);
 

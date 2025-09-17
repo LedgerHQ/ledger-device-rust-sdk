@@ -38,6 +38,7 @@ enum SyncNbgl {
     UxSyncRetRejected = 0x01,
     UxSyncRetQuitted = 0x02,
     UxSyncRetApduReceived = 0x03,
+    UxSyncRetSkipped = 0x04,
     UxSyncRetError = 0xFF,
 }
 
@@ -48,6 +49,7 @@ impl From<u8> for SyncNbgl {
             0x01 => SyncNbgl::UxSyncRetRejected,
             0x02 => SyncNbgl::UxSyncRetQuitted,
             0x03 => SyncNbgl::UxSyncRetApduReceived,
+            0x04 => SyncNbgl::UxSyncRetSkipped,
             _ => SyncNbgl::UxSyncRetError,
         }
     }
@@ -60,6 +62,7 @@ impl From<SyncNbgl> for u8 {
             SyncNbgl::UxSyncRetRejected => 0x01,
             SyncNbgl::UxSyncRetQuitted => 0x02,
             SyncNbgl::UxSyncRetApduReceived => 0x03,
+            SyncNbgl::UxSyncRetSkipped => 0x04,
             SyncNbgl::UxSyncRetError => 0xFF,
         }
     }
@@ -99,6 +102,11 @@ unsafe extern "C" fn choice_callback(confirm: bool) {
     } else {
         SyncNbgl::UxSyncRetRejected.into()
     };
+    G_ENDED = true;
+}
+
+unsafe extern "C" fn skip_callback() {
+    G_RET = SyncNbgl::UxSyncRetSkipped.into();
     G_ENDED = true;
 }
 
