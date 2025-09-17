@@ -6,9 +6,16 @@ pub struct NbglStreamingReview {
     icon: nbgl_icon_details_t,
     tx_type: TransactionType,
     blind: bool,
+    skip: bool,
 }
 
 impl SyncNBGL for NbglStreamingReview {}
+
+pub enum NbglStreamingReviewStatus {
+    Next,
+    Rejected,
+    Skipped,
+}
 
 impl NbglStreamingReview {
     pub fn new() -> NbglStreamingReview {
@@ -16,6 +23,7 @@ impl NbglStreamingReview {
             icon: nbgl_icon_details_t::default(),
             tx_type: TransactionType::Transaction,
             blind: false,
+            skip: false,
         }
     }
 
@@ -37,8 +45,14 @@ impl NbglStreamingReview {
         }
     }
 
+    pub fn skippable(self) -> NbglStreamingReview {
+        NbglStreamingReview {
+            skip: true,
+            ..self
+        }
+    }
+
     pub fn start(&self, title: &str, subtitle: Option<&str>) -> bool {
-        crate::testing::debug_print("NbglStreamingReview::start called\n");
         unsafe {
             let title = CString::new(title).unwrap();
             let subtitle = match subtitle {
@@ -50,7 +64,7 @@ impl NbglStreamingReview {
             match self.blind {
                 true => {
                     nbgl_useCaseReviewStreamingBlindSigningStart(
-                        self.tx_type.to_c_type(false),
+                        self.tx_type.to_c_type(self.skip),
                         &self.icon as *const nbgl_icon_details_t,
                         title.as_ptr() as *const c_char,
                         match subtitle.is_empty() {
@@ -62,7 +76,7 @@ impl NbglStreamingReview {
                 }
                 false => {
                     nbgl_useCaseReviewStreamingStart(
-                        self.tx_type.to_c_type(false),
+                        self.tx_type.to_c_type(self.skip),
                         &self.icon as *const nbgl_icon_details_t,
                         title.as_ptr() as *const c_char,
                         match subtitle.is_empty() {
@@ -87,6 +101,7 @@ impl NbglStreamingReview {
         }
     }
 
+    #[deprecated(note = "use next instead")]
     pub fn continue_review(&self, fields: &[Field]) -> bool {
         unsafe {
             let v: Vec<CField> = fields
@@ -129,6 +144,57 @@ impl NbglStreamingReview {
                 }
                 _ => {
                     return false;
+                }
+            }
+        }
+    }
+
+    pub fn next(&self, fields: &[Field]) -> NbglStreamingReviewStatus {
+        unsafe {
+            let v: Vec<CField> = fields
+                .iter()
+                .map(|f| CField {
+                    name: CString::new(f.name).unwrap(),
+                    value: CString::new(f.value).unwrap(),
+                })
+                .collect();
+
+            // Fill the tag_value_array with the fields converted to nbgl_contentTagValue_t
+            let mut tag_value_array: Vec<nbgl_contentTagValue_t> = Vec::new();
+            for field in v.iter() {
+                let val = nbgl_contentTagValue_t {
+                    item: field.name.as_ptr() as *const i8,
+                    value: field.value.as_ptr() as *const i8,
+                    ..Default::default()
+                };
+                tag_value_array.push(val);
+            }
+
+            // Create the tag_value_list with the tag_value_array.
+            let tag_value_list = nbgl_contentTagValueList_t {
+                pairs: tag_value_array.as_ptr() as *const nbgl_contentTagValue_t,
+                nbPairs: fields.len() as u8,
+                ..Default::default()
+            };
+
+            self.ux_sync_init();
+            nbgl_useCaseReviewStreamingContinueExt(
+                &tag_value_list as *const nbgl_contentTagValueList_t,
+                Some(choice_callback),
+                Some(skip_callback),
+            );
+            let sync_ret = self.ux_sync_wait(false);
+
+            // Return true if the user approved the transaction, false otherwise.
+            match sync_ret {
+                SyncNbgl::UxSyncRetApproved => {
+                    return NbglStreamingReviewStatus::Next;
+                }
+                SyncNbgl::UxSyncRetSkipped => {
+                    return NbglStreamingReviewStatus::Skipped;
+                }
+                _ => {
+                    return NbglStreamingReviewStatus::Rejected;
                 }
             }
         }
