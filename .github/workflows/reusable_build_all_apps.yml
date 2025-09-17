@@ -133,6 +133,29 @@ jobs:
                     git clone $C_SDK_URL --branch ${{ inputs.c_sdk_branch }} --single-branch c_sdk
                     echo "setting LEDGER_SDK_PATH to $(realpath c_sdk)"
                     export LEDGER_SDK_PATH=$(realpath c_sdk)
+
+                    test_api_level=$(grep "API_LEVEL :=" "$LEDGER_SDK_PATH/Makefile.defines")
+                    echo "test_api_level=$test_api_level"
+                    if [ "${{ matrix.device }}" = "nanos+" ]; then
+                        path="/opt/nanosplus-secure-sdk"
+                    elif [ "${{ matrix.device }}" = "nanox" ]; then
+                        path="/opt/nanox-secure-sdk"
+                    elif [ "${{ matrix.device }}" = "stax" ]; then
+                        path="/opt/stax-secure-sdk"
+                    elif [ "${{ matrix.device }}" = "flex" ]; then
+                        path="/opt/flex-secure-sdk"
+                    elif [ "${{ matrix.device }}" = "apex_p" ]; then
+                        path="/opt/apex-secure-sdk"
+                    else  
+                        echo "unknown device"
+                        exit 1
+                    fi
+                    current_api_level=$(grep "API_LEVEL :=" "$path/Makefile.defines")
+                    echo "current_api_level=$current_api_level"
+                    if [ "$test_api_level" != "$current_api_level" ]; then
+                        echo "Do not build for ${{ matrix.device }} as the API level of the provided C SDK ($test_api_level) does not match the expected one ($current_api_level)"
+                        exit 0
+                    fi
                 else
                     echo "using C SDK from ledger-app-builder"
                 fi
