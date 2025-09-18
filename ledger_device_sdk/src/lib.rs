@@ -11,6 +11,7 @@ pub mod ecc;
 pub mod hash;
 pub mod hmac;
 pub mod io;
+pub mod io_new;
 pub mod libcall;
 pub mod nvm;
 pub mod random;
