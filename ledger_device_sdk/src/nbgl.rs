@@ -9,6 +9,7 @@ use core::ffi::{c_char, c_int};
 use core::mem::transmute;
 use ledger_secure_sdk_sys::*;
 
+pub mod nbgl_action;
 pub mod nbgl_address_review;
 pub mod nbgl_choice;
 #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
@@ -21,6 +22,7 @@ pub mod nbgl_spinner;
 pub mod nbgl_status;
 pub mod nbgl_streaming_review;
 
+pub use nbgl_action::*;
 pub use nbgl_address_review::*;
 pub use nbgl_choice::*;
 #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
