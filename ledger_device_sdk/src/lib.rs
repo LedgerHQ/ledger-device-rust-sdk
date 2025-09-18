@@ -11,6 +11,7 @@ pub mod ecc;
 pub mod hash;
 pub mod hmac;
 pub mod io;
+pub(crate) mod io_callbacks;
 pub mod io_new;
 pub mod libcall;
 pub mod math;
