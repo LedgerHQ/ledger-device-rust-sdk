@@ -14,6 +14,7 @@ pub mod nbgl_choice;
 pub mod nbgl_generic_review;
 pub mod nbgl_home_and_settings;
 pub mod nbgl_review;
+pub mod nbgl_review_extended;
 pub mod nbgl_review_status;
 pub mod nbgl_spinner;
 pub mod nbgl_status;
@@ -25,6 +26,7 @@ pub use nbgl_choice::*;
 pub use nbgl_generic_review::*;
 pub use nbgl_home_and_settings::*;
 pub use nbgl_review::*;
+pub use nbgl_review_extended::*;
 pub use nbgl_review_status::*;
 pub use nbgl_spinner::*;
 pub use nbgl_status::*;
@@ -33,12 +35,13 @@ pub use nbgl_streaming_review::*;
 static mut COMM_REF: Option<&mut Comm> = None;
 
 #[derive(Copy, Clone)]
-enum SyncNbgl {
+pub enum SyncNbgl {
     UxSyncRetApproved = 0x00,
     UxSyncRetRejected = 0x01,
     UxSyncRetQuitted = 0x02,
     UxSyncRetApduReceived = 0x03,
     UxSyncRetSkipped = 0x04,
+    UxSyncRetContinue = 0x05,
     UxSyncRetError = 0xFF,
 }
 
@@ -50,6 +53,7 @@ impl From<u8> for SyncNbgl {
             0x02 => SyncNbgl::UxSyncRetQuitted,
             0x03 => SyncNbgl::UxSyncRetApduReceived,
             0x04 => SyncNbgl::UxSyncRetSkipped,
+            0x05 => SyncNbgl::UxSyncRetContinue,
             _ => SyncNbgl::UxSyncRetError,
         }
     }
@@ -63,6 +67,7 @@ impl From<SyncNbgl> for u8 {
             SyncNbgl::UxSyncRetQuitted => 0x02,
             SyncNbgl::UxSyncRetApduReceived => 0x03,
             SyncNbgl::UxSyncRetSkipped => 0x04,
+            SyncNbgl::UxSyncRetContinue => 0x05,
             SyncNbgl::UxSyncRetError => 0xFF,
         }
     }
@@ -115,7 +120,11 @@ unsafe extern "C" fn quit_callback() {
     G_ENDED = true;
 }
 
-#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+unsafe extern "C" fn continue_callback() {
+    G_RET = SyncNbgl::UxSyncRetContinue.into();
+    G_ENDED = true;
+}
+
 unsafe extern "C" fn rejected_callback() {
     G_RET = SyncNbgl::UxSyncRetRejected.into();
     G_ENDED = true;
