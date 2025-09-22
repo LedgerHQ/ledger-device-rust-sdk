@@ -504,11 +504,13 @@ impl TryFrom<io::ApduHeader> for Temp {
     }
 }
 
+#[cfg(not(feature = "io_new"))]
 pub struct MultiPageMenu<'a> {
     comm: &'a mut io::Comm,
     pages: &'a [&'a Page<'a>],
 }
 
+#[cfg(not(feature = "io_new"))]
 impl<'a> MultiPageMenu<'a> {
     pub fn new(comm: &'a mut io::Comm, pages: &'a [&'a Page]) -> Self {
         MultiPageMenu { comm, pages }
