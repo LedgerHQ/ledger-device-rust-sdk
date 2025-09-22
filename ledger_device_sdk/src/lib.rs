@@ -10,9 +10,18 @@
 pub mod ecc;
 pub mod hash;
 pub mod hmac;
-pub mod io;
 pub(crate) mod io_callbacks;
-pub mod io_new;
+pub(crate) mod io_legacy;
+pub(crate) mod io_new;
+
+// Only re-export the selected module as `io`
+pub mod io {
+    #[cfg(not(feature = "io_new"))]
+    pub use super::io_legacy::*;
+    #[cfg(feature = "io_new")]
+    pub use super::io_new::*;
+}
+
 pub mod libcall;
 pub mod math;
 pub mod nvm;
@@ -42,8 +51,8 @@ use core::panic::PanicInfo;
 /// In case of runtime problems, return an internal error and exit the app
 #[inline]
 pub fn exiting_panic(_info: &PanicInfo) -> ! {
-    let mut comm = io::Comm::new();
-    comm.reply(io::StatusWords::Panic);
+    let mut comm = io_legacy::Comm::new();
+    comm.reply(io_legacy::StatusWords::Panic);
     ledger_secure_sdk_sys::exit_app(0);
 }
 

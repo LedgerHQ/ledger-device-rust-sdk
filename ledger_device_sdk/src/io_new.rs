@@ -1,6 +1,6 @@
 use crate::seph::{self, PacketTypes};
 
-pub use crate::io::{ApduHeader, Reply, StatusWords};
+pub use crate::io_legacy::{ApduHeader, Event, Reply, StatusWords};
 
 #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
 use crate::seph::ItcUxEvent;
