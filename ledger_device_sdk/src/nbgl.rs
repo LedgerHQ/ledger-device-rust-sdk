@@ -15,7 +15,9 @@ pub mod nbgl_choice;
 #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 pub mod nbgl_generic_review;
 pub mod nbgl_home_and_settings;
+pub mod nbgl_keypad;
 pub mod nbgl_review;
+#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 pub mod nbgl_review_extended;
 pub mod nbgl_review_status;
 pub mod nbgl_spinner;
@@ -28,7 +30,9 @@ pub use nbgl_choice::*;
 #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 pub use nbgl_generic_review::*;
 pub use nbgl_home_and_settings::*;
+pub use nbgl_keypad::*;
 pub use nbgl_review::*;
+#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 pub use nbgl_review_extended::*;
 pub use nbgl_review_status::*;
 pub use nbgl_spinner::*;
@@ -43,6 +47,8 @@ pub enum SyncNbgl {
     UxSyncRetApduReceived = 0x03,
     UxSyncRetSkipped = 0x04,
     UxSyncRetContinue = 0x05,
+    UxSyncRetPinValidated = 0x06,
+    UxSyncRetPinRejected = 0x07,
     UxSyncRetError = 0xFF,
 }
 
@@ -55,6 +61,8 @@ impl From<u8> for SyncNbgl {
             0x03 => SyncNbgl::UxSyncRetApduReceived,
             0x04 => SyncNbgl::UxSyncRetSkipped,
             0x05 => SyncNbgl::UxSyncRetContinue,
+            0x06 => SyncNbgl::UxSyncRetPinValidated,
+            0x07 => SyncNbgl::UxSyncRetPinRejected,
             _ => SyncNbgl::UxSyncRetError,
         }
     }
@@ -69,6 +77,8 @@ impl From<SyncNbgl> for u8 {
             SyncNbgl::UxSyncRetApduReceived => 0x03,
             SyncNbgl::UxSyncRetSkipped => 0x04,
             SyncNbgl::UxSyncRetContinue => 0x05,
+            SyncNbgl::UxSyncRetPinValidated => 0x06,
+            SyncNbgl::UxSyncRetPinRejected => 0x07,
             SyncNbgl::UxSyncRetError => 0xFF,
         }
     }
@@ -121,6 +131,7 @@ unsafe extern "C" fn continue_callback() {
     G_ENDED = true;
 }
 
+#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 unsafe extern "C" fn rejected_callback() {
     G_RET = SyncNbgl::UxSyncRetRejected.into();
     G_ENDED = true;
