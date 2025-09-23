@@ -35,13 +35,35 @@ pub fn to_hex(m: u32) -> [u8; 8] {
     hex
 }
 
+fn to_dec(v: u32) -> [u8; 10] {
+    let mut dec = [0u8; 10];
+    let mut val = v;
+    let mut fact = 1_000_000_000;
+    let mut i = 0;
+    while fact != 0 {
+        let d = val / fact;
+        let c = char::from_digit(d.into(), 10).unwrap();
+        dec[i] = c as u8;
+        i += 1;
+        val -= d * fact;
+        fact /= 10;
+    }
+    dec
+}
+
 #[cfg_attr(test, panic_handler)]
 pub fn test_panic(info: &PanicInfo) -> ! {
-    debug_print("Panic! ");
+    debug_print("Panic in ");
     let loc = info.location().unwrap();
     debug_print(loc.file());
-    debug_print("\n");
-    debug_print(core::str::from_utf8(&to_hex(loc.line())).unwrap());
+    debug_print(" at line ");
+    let bytes = to_dec(loc.line());
+    let s = core::str::from_utf8(&bytes)
+        .unwrap()
+        .trim_start_matches('0');
+    debug_print(s);
+    debug_print(": ");
+    debug_print(info.message().as_str().unwrap());
     debug_print("\n");
     ledger_secure_sdk_sys::exit_app(1);
 }
