@@ -20,12 +20,12 @@ static mut PIN_BUFFER: [u8; 16] = [0x00; 16];
 unsafe extern "C" fn pin_callback(pin: *const u8, pin_len: u8) {
     for i in 0..pin_len {
         PIN_BUFFER[i as usize] = *pin.add(i.into());
-    }   
+    }
     G_ENDED = true;
 }
 
 #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
-unsafe extern "C" fn action_callback(_token: ::core::ffi::c_int, _index: u8) {    
+unsafe extern "C" fn action_callback(_token: ::core::ffi::c_int, _index: u8) {
     G_RET = SyncNbgl::UxSyncRetPinRejected.into();
     G_ENDED = true;
 }
@@ -56,11 +56,17 @@ impl NbglKeypad {
     }
 
     pub fn min_digits(self, min: u8) -> NbglKeypad {
-        NbglKeypad { min_digits: min, ..self }
+        NbglKeypad {
+            min_digits: min,
+            ..self
+        }
     }
 
     pub fn max_digits(self, max: u8) -> NbglKeypad {
-        NbglKeypad { max_digits: max, ..self }
+        NbglKeypad {
+            max_digits: max,
+            ..self
+        }
     }
 
     pub fn hide(self, hide: bool) -> NbglKeypad {
@@ -92,7 +98,6 @@ impl NbglKeypad {
                         Some(pin_callback),
                         Some(action_callback),
                     );
-
                 }
                 false => {
                     #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]

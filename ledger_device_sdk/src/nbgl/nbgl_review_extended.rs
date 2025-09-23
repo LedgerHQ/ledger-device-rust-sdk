@@ -1,6 +1,6 @@
 use super::*;
 
-/// A wrapper around the asynchronous NBGL nbgl_useCaseReviewStart, 
+/// A wrapper around the asynchronous NBGL nbgl_useCaseReviewStart,
 /// nbgl_useCaseStaticReview, nbgl_useCaseStaticReviewLight C API binding.
 /// Used to display transaction review screens.
 pub struct NbglReviewExtended<'a> {
@@ -84,10 +84,7 @@ impl<'a> NbglReviewExtended<'a> {
 
     pub fn show(&self, fields: &[Field]) -> SyncNbgl {
         unsafe {
-            let v: Vec<CField> = fields
-                .iter()
-                .map(|f| f.into())
-                .collect();
+            let v: Vec<CField> = fields.iter().map(|f| f.into()).collect();
             let mut tag_value_array: Vec<nbgl_contentTagValue_t> = Vec::new();
             for field in v.iter() {
                 let val = nbgl_contentTagValue_t::from(field);

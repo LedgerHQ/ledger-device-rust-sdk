@@ -11,7 +11,13 @@ impl NbglConfirm {
         NbglConfirm {}
     }
 
-    pub fn show(&self, message: &str, submessage: Option<&str>, confirm_text: &str, cancel_text: &str) -> bool {
+    pub fn show(
+        &self,
+        message: &str,
+        submessage: Option<&str>,
+        confirm_text: &str,
+        cancel_text: &str,
+    ) -> bool {
         unsafe {
             let message_cstr = CString::new(message).unwrap();
             let submessage_cstr = match submessage {
@@ -19,7 +25,7 @@ impl NbglConfirm {
                 None => CString::default(),
             };
             let confirm_text_cstr = CString::new(confirm_text).unwrap();
-            let cancel_text_cstr = CString::new(cancel_text).unwrap();  
+            let cancel_text_cstr = CString::new(cancel_text).unwrap();
 
             self.ux_sync_init();
             nbgl_useCaseConfirm(
@@ -39,4 +45,3 @@ impl NbglConfirm {
         }
     }
 }
-

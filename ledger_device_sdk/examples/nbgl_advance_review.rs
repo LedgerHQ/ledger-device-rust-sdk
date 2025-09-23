@@ -4,7 +4,8 @@
 use include_gif::include_gif;
 use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{
-    init_comm, Field, NbglAdvanceReview, NbglGlyph, NbglReviewStatus, TransactionType, StatusType, SyncNbgl
+    init_comm, Field, NbglAdvanceReview, NbglGlyph, NbglReviewStatus, StatusType, SyncNbgl,
+    TransactionType,
 };
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
@@ -15,12 +16,14 @@ extern "C" fn sample_main() {
     init_comm(&mut comm);
 
     #[cfg(target_os = "apex_p")]
-    const FERRIS: NbglGlyph = NbglGlyph::from_include(include_gif!("examples/crab_48x48.png", NBGL));
+    const FERRIS: NbglGlyph =
+        NbglGlyph::from_include(include_gif!("examples/crab_48x48.png", NBGL));
     #[cfg(any(target_os = "stax", target_os = "flex"))]
-    const FERRIS: NbglGlyph = NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
+    const FERRIS: NbglGlyph =
+        NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
     #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
     const FERRIS: NbglGlyph =
-    NbglGlyph::from_include(include_gif!("examples/crab_14x14.png", NBGL));
+        NbglGlyph::from_include(include_gif!("examples/crab_14x14.png", NBGL));
 
     let my_fields = [
         Field {
@@ -50,18 +53,18 @@ extern "C" fn sample_main() {
         );
 
     let success = advance_review.show(&my_fields);
-    
+
     match success {
         SyncNbgl::UxSyncRetApproved => {
             NbglReviewStatus::new()
                 .status_type(StatusType::Transaction)
                 .show(true);
-        },
+        }
         SyncNbgl::UxSyncRetRejected => {
             NbglReviewStatus::new()
                 .status_type(StatusType::Transaction)
                 .show(false);
-        },
+        }
         _ => {}
     }
 

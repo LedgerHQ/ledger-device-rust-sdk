@@ -75,16 +75,16 @@ impl NbglGenericSettings {
         NbglGenericSettings { init_page, ..self }
     }
 
-    pub fn info(
-        mut self,
-        fields_values: &[(&str, &str)],
-    ) -> NbglGenericSettings {
-
+    pub fn info(mut self, fields_values: &[(&str, &str)]) -> NbglGenericSettings {
         for (f, v) in fields_values.iter() {
             self.info.fields.push(CString::new(*f).unwrap());
             self.info.values.push(CString::new(*v).unwrap());
-            self.info.fields_ptr.push(self.info.fields.last().unwrap().as_ptr() as *const i8);
-            self.info.values_ptr.push(self.info.values.last().unwrap().as_ptr() as *const i8);
+            self.info
+                .fields_ptr
+                .push(self.info.fields.last().unwrap().as_ptr() as *const i8);
+            self.info
+                .values_ptr
+                .push(self.info.values.last().unwrap().as_ptr() as *const i8);
         }
 
         self.info_list = Some(nbgl_contentInfoList_t {
@@ -103,7 +103,6 @@ impl NbglGenericSettings {
         nvm_data: &mut AtomicStorage<[u8; SETTINGS_SIZE]>,
         settings_strings: &[[&str; 2]],
     ) -> NbglGenericSettings {
-
         if settings_strings.len() > SETTINGS_SIZE {
             panic!("Too many settings.");
         }
@@ -154,7 +153,7 @@ impl NbglGenericSettings {
         self
     }
 
-     pub fn show(&mut self) -> SyncNbgl {
+    pub fn show(&mut self) -> SyncNbgl {
         self.ux_sync_init();
         unsafe {
             nbgl_useCaseGenericSettings(
@@ -163,7 +162,7 @@ impl NbglGenericSettings {
                 &self.generic_contents as *const nbgl_genericContents_t,
                 match self.info_list {
                     Some(ref il) => il as *const nbgl_contentInfoList_t,
-                    None => core::ptr::null()
+                    None => core::ptr::null(),
                 },
                 Some(quit_callback),
             )

@@ -15,7 +15,6 @@ static CHOICE3: &str = "Choice 3";
 static CHOICE4: &str = "Choice 4";
 
 unsafe extern "C" fn navigation_callback(_page: u8, content: *mut nbgl_pageContent_t) -> bool {
-
     (*content).type_ = CHOICES_LIST;
     (*content).__bindgen_anon_1.choicesList = nbgl_contentRadioChoice_t {
         __bindgen_anon_1: nbgl_contentRadioChoice_t__bindgen_ty_1 {
@@ -40,7 +39,6 @@ unsafe extern "C" fn controls_callback(_token: ::core::ffi::c_int, _index: u8) {
 
 impl NbglNavigableContent {
     pub fn new() -> NbglNavigableContent {
-
         NbglNavigableContent {
             title: CString::default(),
             init_page: 0,

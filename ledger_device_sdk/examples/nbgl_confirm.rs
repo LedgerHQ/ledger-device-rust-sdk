@@ -17,7 +17,6 @@ extern "C" fn sample_main() {
         "Confirm",
         "Cancel",
     );
-    
+
     ledger_secure_sdk_sys::exit_app(0);
 }
-
