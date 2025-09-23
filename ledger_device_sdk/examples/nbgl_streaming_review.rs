@@ -145,6 +145,46 @@ extern "C" fn sample_main() {
         }
     }
 
+    // Blind signing + warning example
+    let review: NbglStreamingReview = NbglStreamingReview::new()
+        .glyph(&FERRIS)
+        .skippable()
+        .blind()
+        .tx_type(TransactionType::Transaction)
+        .warning_details(
+            Some("DApp Provider"),
+            Some("https://report.url"),
+            Some("Report Provider"),
+            Some("Provider Message"),
+        );
+    if !review.start("Streaming example", Some("Blind Signing")) {
+        NbglReviewStatus::new().show(false);
+        ledger_secure_sdk_sys::exit_app(0);
+    }
+    let mut success: Option<bool> = None;
+    for c in fields.chunks(1) {
+        match review.next(c) {
+            NbglStreamingReviewStatus::Next => {}
+            NbglStreamingReviewStatus::Skipped => {
+                success = Some(review.finish("Sign to send token\n"));
+                break;
+            }
+            NbglStreamingReviewStatus::Rejected => {
+                success = Some(false);
+                break;
+            }
+        }
+    }
+    match success {
+        Some(b) => {
+            NbglReviewStatus::new().show(b);
+        }
+        None => {
+            let success = review.finish("Sign to send token\n");
+            NbglReviewStatus::new().show(success);
+        }
+    }
+
     ledger_secure_sdk_sys::exit_app(0);
 
 }

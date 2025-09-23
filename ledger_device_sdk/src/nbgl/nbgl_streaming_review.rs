@@ -2,11 +2,20 @@ use super::*;
 
 /// A wrapper around the asynchronous NBGL nbgl_useCaseReviewStreamingStart/Continue/Finish)
 /// C API binding. Used to display streamed transaction review screens.
+
+struct WarningDetailsType {
+    dapp_provider_name: CString,
+    report_url: CString,
+    report_provider: CString,
+    provider_message: CString,
+}
+
 pub struct NbglStreamingReview {
     icon: nbgl_icon_details_t,
     tx_type: TransactionType,
     blind: bool,
     skip: bool,
+    warning_details_type: Option<WarningDetailsType>,
 }
 
 impl SyncNBGL for NbglStreamingReview {}
@@ -24,6 +33,7 @@ impl NbglStreamingReview {
             tx_type: TransactionType::Transaction,
             blind: false,
             skip: false,
+            warning_details_type: None,
         }
     }
 
@@ -52,6 +62,36 @@ impl NbglStreamingReview {
         }
     }
 
+    pub fn warning_details(
+        self,
+        dapp_provider: Option<&str>,
+        report_url: Option<&str>,
+        report_provider: Option<&str>,
+        provider_message: Option<&str>,
+    ) -> NbglStreamingReview {
+        NbglStreamingReview {
+            warning_details_type: Some(WarningDetailsType {
+                dapp_provider_name: match dapp_provider {
+                    Some(s) => CString::new(s).unwrap(),
+                    None => CString::default(),
+                },
+                report_url: match report_url {
+                    Some(s) => CString::new(s).unwrap(),
+                    None => CString::default(),
+                },
+                report_provider: match report_provider {
+                    Some(s) => CString::new(s).unwrap(),
+                    None => CString::default(),
+                },
+                provider_message: match provider_message {
+                    Some(s) => CString::new(s).unwrap(),
+                    None => CString::default(),
+                }
+            }), 
+            ..self
+        }
+    }
+
     pub fn start(&self, title: &str, subtitle: Option<&str>) -> bool {
         unsafe {
             let title = CString::new(title).unwrap();
@@ -63,16 +103,41 @@ impl NbglStreamingReview {
             self.ux_sync_init();
             match self.blind {
                 true => {
-                    nbgl_useCaseReviewStreamingBlindSigningStart(
-                        self.tx_type.to_c_type(self.skip),
-                        &self.icon as *const nbgl_icon_details_t,
-                        title.as_ptr() as *const c_char,
-                        match subtitle.is_empty() {
-                            true => core::ptr::null(),
-                            false => subtitle.as_ptr() as *const c_char,
+                    match &self.warning_details_type {
+                        Some(w) => {
+                            let warning_details = nbgl_warning_t {
+                                predefinedSet: (1u32 << W3C_RISK_DETECTED_WARN),
+                                dAppProvider: w.dapp_provider_name.as_ptr() as *const i8,
+                                reportUrl: w.report_url.as_ptr() as *const i8,
+                                reportProvider: w.report_provider.as_ptr() as *const i8,
+                                providerMessage: w.provider_message.as_ptr() as *const i8,
+                                ..Default::default()
+                            };
+                            nbgl_useCaseAdvancedReviewStreamingStart(
+                                self.tx_type.to_c_type(self.skip),
+                                &self.icon as *const nbgl_icon_details_t,
+                                title.as_ptr() as *const c_char,
+                                match subtitle.is_empty() {
+                                    true => core::ptr::null(),
+                                    false => subtitle.as_ptr() as *const c_char,
+                                },
+                                &warning_details as *const nbgl_warning_t,
+                                Some(choice_callback),
+                            );
                         },
-                        Some(choice_callback),
-                    );
+                        None => {
+                            nbgl_useCaseReviewStreamingBlindSigningStart(
+                                self.tx_type.to_c_type(self.skip),
+                                &self.icon as *const nbgl_icon_details_t,
+                                title.as_ptr() as *const c_char,
+                                match subtitle.is_empty() {
+                                    true => core::ptr::null(),
+                                    false => subtitle.as_ptr() as *const c_char,
+                                },
+                                Some(choice_callback),
+                            );
+                        }
+                    }
                 }
                 false => {
                     nbgl_useCaseReviewStreamingStart(
