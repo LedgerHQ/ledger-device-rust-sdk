@@ -143,8 +143,16 @@ impl<'a> NbglHomeAndSettings {
         }
     }
 
+    #[deprecated(note = "Use start_page() for method chaining instead")]
     pub fn set_start_page(&mut self, page: PageIndex) {
         self.start_page = page;
+    }
+
+    pub fn start_page(self, page: PageIndex) -> NbglHomeAndSettings {
+        NbglHomeAndSettings {
+            start_page: page,
+            ..self
+        }
     }
 
     /// Show the home screen and settings page.
