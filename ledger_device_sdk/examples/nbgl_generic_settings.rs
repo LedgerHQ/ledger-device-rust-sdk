@@ -65,7 +65,6 @@ mod settings {
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    
     let mut comm = Comm::new();
     init_comm(&mut comm);
 
@@ -75,17 +74,16 @@ extern "C" fn sample_main() {
     let mut menu = NbglGenericSettings::new()
         .title("Settings and Info")
         .settings(settings.get_mut(), &settings_strings)
-        .info(
-            &[("Field 1", "Value 1"), ("Field 2", "Value 2")],
-        );
+        .info(&[("Field 1", "Value 1"), ("Field 2", "Value 2")]);
 
     menu.show();
 
     // Display the settings screen with settings only.
     let settings_strings = [
-        ["Switch title 1", "Switch subtitle 1"], 
-        ["Switch title 2", "Switch subtitle 2"], 
-        ["Switch title 3", "Switch subtitle 3"]];
+        ["Switch title 1", "Switch subtitle 1"],
+        ["Switch title 2", "Switch subtitle 2"],
+        ["Switch title 3", "Switch subtitle 3"],
+    ];
     let mut settings: settings::Settings = Default::default();
     let mut menu = NbglGenericSettings::new()
         .title("Only Settings")

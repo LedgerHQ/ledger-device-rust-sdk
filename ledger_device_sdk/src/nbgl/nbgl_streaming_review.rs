@@ -56,10 +56,7 @@ impl NbglStreamingReview {
     }
 
     pub fn skippable(self) -> NbglStreamingReview {
-        NbglStreamingReview {
-            skip: true,
-            ..self
-        }
+        NbglStreamingReview { skip: true, ..self }
     }
 
     pub fn warning_details(
@@ -86,8 +83,8 @@ impl NbglStreamingReview {
                 provider_message: match provider_message {
                     Some(s) => CString::new(s).unwrap(),
                     None => CString::default(),
-                }
-            }), 
+                },
+            }),
             ..self
         }
     }
@@ -102,43 +99,41 @@ impl NbglStreamingReview {
 
             self.ux_sync_init();
             match self.blind {
-                true => {
-                    match &self.warning_details_type {
-                        Some(w) => {
-                            let warning_details = nbgl_warning_t {
-                                predefinedSet: (1u32 << W3C_RISK_DETECTED_WARN),
-                                dAppProvider: w.dapp_provider_name.as_ptr() as *const i8,
-                                reportUrl: w.report_url.as_ptr() as *const i8,
-                                reportProvider: w.report_provider.as_ptr() as *const i8,
-                                providerMessage: w.provider_message.as_ptr() as *const i8,
-                                ..Default::default()
-                            };
-                            nbgl_useCaseAdvancedReviewStreamingStart(
-                                self.tx_type.to_c_type(self.skip),
-                                &self.icon as *const nbgl_icon_details_t,
-                                title.as_ptr() as *const c_char,
-                                match subtitle.is_empty() {
-                                    true => core::ptr::null(),
-                                    false => subtitle.as_ptr() as *const c_char,
-                                },
-                                &warning_details as *const nbgl_warning_t,
-                                Some(choice_callback),
-                            );
-                        },
-                        None => {
-                            nbgl_useCaseReviewStreamingBlindSigningStart(
-                                self.tx_type.to_c_type(self.skip),
-                                &self.icon as *const nbgl_icon_details_t,
-                                title.as_ptr() as *const c_char,
-                                match subtitle.is_empty() {
-                                    true => core::ptr::null(),
-                                    false => subtitle.as_ptr() as *const c_char,
-                                },
-                                Some(choice_callback),
-                            );
-                        }
+                true => match &self.warning_details_type {
+                    Some(w) => {
+                        let warning_details = nbgl_warning_t {
+                            predefinedSet: (1u32 << W3C_RISK_DETECTED_WARN),
+                            dAppProvider: w.dapp_provider_name.as_ptr() as *const i8,
+                            reportUrl: w.report_url.as_ptr() as *const i8,
+                            reportProvider: w.report_provider.as_ptr() as *const i8,
+                            providerMessage: w.provider_message.as_ptr() as *const i8,
+                            ..Default::default()
+                        };
+                        nbgl_useCaseAdvancedReviewStreamingStart(
+                            self.tx_type.to_c_type(self.skip),
+                            &self.icon as *const nbgl_icon_details_t,
+                            title.as_ptr() as *const c_char,
+                            match subtitle.is_empty() {
+                                true => core::ptr::null(),
+                                false => subtitle.as_ptr() as *const c_char,
+                            },
+                            &warning_details as *const nbgl_warning_t,
+                            Some(choice_callback),
+                        );
                     }
-                }
+                    None => {
+                        nbgl_useCaseReviewStreamingBlindSigningStart(
+                            self.tx_type.to_c_type(self.skip),
+                            &self.icon as *const nbgl_icon_details_t,
+                            title.as_ptr() as *const c_char,
+                            match subtitle.is_empty() {
+                                true => core::ptr::null(),
+                                false => subtitle.as_ptr() as *const c_char,
+                            },
+                            Some(choice_callback),
+                        );
+                    }
+                },
                 false => {
                     nbgl_useCaseReviewStreamingStart(
                         self.tx_type.to_c_type(self.skip),

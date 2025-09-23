@@ -66,7 +66,6 @@ impl<'a> NbglAdvanceReview<'a> {
         report_provider: Option<&str>,
         provider_message: Option<&str>,
     ) -> NbglAdvanceReview<'a> {
-        
         NbglAdvanceReview {
             warning_details_type: Some(WarningDetailsType {
                 dapp_provider_name: match dapp_provider {
@@ -84,18 +83,15 @@ impl<'a> NbglAdvanceReview<'a> {
                 provider_message: match provider_message {
                     Some(s) => CString::new(s).unwrap(),
                     None => CString::default(),
-                }
-            }), 
+                },
+            }),
             ..self
         }
     }
 
     pub fn show(&self, fields: &[Field]) -> SyncNbgl {
         unsafe {
-            let v: Vec<CField> = fields
-                .iter()
-                .map(|f| f.into())
-                .collect();
+            let v: Vec<CField> = fields.iter().map(|f| f.into()).collect();
             let mut tag_value_array: Vec<nbgl_contentTagValue_t> = Vec::new();
             for field in v.iter() {
                 let val = nbgl_contentTagValue_t::from(field);
@@ -108,8 +104,8 @@ impl<'a> NbglAdvanceReview<'a> {
             };
 
             let icon: nbgl_icon_details_t = match self.glyph {
-                    Some(g) => g.into(),
-                    None => nbgl_icon_details_t::default(),
+                Some(g) => g.into(),
+                None => nbgl_icon_details_t::default(),
             };
 
             let warning_details = match &self.warning_details_type {
@@ -121,9 +117,9 @@ impl<'a> NbglAdvanceReview<'a> {
                     providerMessage: w.provider_message.as_ptr() as *const i8,
                     ..Default::default()
                 },
-                None => nbgl_warning_t::default()
+                None => nbgl_warning_t::default(),
             };
-            
+
             self.ux_sync_init();
             nbgl_useCaseAdvancedReview(
                 self.operation_type.to_c_type(false),
@@ -136,12 +132,8 @@ impl<'a> NbglAdvanceReview<'a> {
                 &warning_details as *const nbgl_warning_t,
                 Some(choice_callback),
             );
-            
+
             self.ux_sync_wait(false)
         }
     }
 }
-
-
-
-        

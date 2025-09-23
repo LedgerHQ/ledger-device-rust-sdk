@@ -90,5 +90,4 @@ impl<'a> NbglChoice<'a> {
             }
         }
     }
-
 }

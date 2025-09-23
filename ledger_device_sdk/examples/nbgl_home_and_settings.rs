@@ -85,14 +85,15 @@ mod settings {
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    
     let mut comm = Comm::new();
     init_comm(&mut comm);
 
     #[cfg(target_os = "apex_p")]
-    const FERRIS: NbglGlyph = NbglGlyph::from_include(include_gif!("examples/crab_48x48.png", NBGL));
+    const FERRIS: NbglGlyph =
+        NbglGlyph::from_include(include_gif!("examples/crab_48x48.png", NBGL));
     #[cfg(any(target_os = "stax", target_os = "flex"))]
-    const FERRIS: NbglGlyph = NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
+    const FERRIS: NbglGlyph =
+        NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
     #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
     const FERRIS: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_14x14.png", NBGL));

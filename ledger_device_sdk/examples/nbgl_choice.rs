@@ -13,13 +13,15 @@ extern "C" fn sample_main() {
     init_comm(&mut comm);
 
     #[cfg(target_os = "apex_p")]
-    const WARNING: NbglGlyph = NbglGlyph::from_include(include_gif!("examples/crab_48x48.png", NBGL));
+    const WARNING: NbglGlyph =
+        NbglGlyph::from_include(include_gif!("examples/crab_48x48.png", NBGL));
     #[cfg(any(target_os = "stax", target_os = "flex"))]
-    const WARNING: NbglGlyph = NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
+    const WARNING: NbglGlyph =
+        NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
     #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
     const WARNING: NbglGlyph =
-    NbglGlyph::from_include(include_gif!("examples/crab_14x14.png", NBGL));
-    
+        NbglGlyph::from_include(include_gif!("examples/crab_14x14.png", NBGL));
+
     let back_to_safety = NbglChoice::new().glyph(&WARNING).show(
         "Security risk detected",
         "It may not be safe to sign this transaction. To continue, you'll need to review the risk.",

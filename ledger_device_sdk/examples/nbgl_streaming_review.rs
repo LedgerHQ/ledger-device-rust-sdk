@@ -4,7 +4,8 @@
 use include_gif::include_gif;
 use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{
-    init_comm, Field, NbglGlyph, NbglReviewStatus, NbglStreamingReview, NbglStreamingReviewStatus, TransactionType,
+    init_comm, Field, NbglGlyph, NbglReviewStatus, NbglStreamingReview, NbglStreamingReviewStatus,
+    TransactionType,
 };
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
@@ -15,14 +16,15 @@ extern "C" fn sample_main() {
     init_comm(&mut comm);
 
     #[cfg(target_os = "apex_p")]
-    const FERRIS: NbglGlyph = NbglGlyph::from_include(include_gif!("examples/crab_48x48.png", NBGL));
+    const FERRIS: NbglGlyph =
+        NbglGlyph::from_include(include_gif!("examples/crab_48x48.png", NBGL));
     #[cfg(any(target_os = "stax", target_os = "flex"))]
-    const FERRIS: NbglGlyph = NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
+    const FERRIS: NbglGlyph =
+        NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
     #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
     const FERRIS: NbglGlyph =
-    NbglGlyph::from_include(include_gif!("examples/crab_14x14.png", NBGL));
+        NbglGlyph::from_include(include_gif!("examples/crab_14x14.png", NBGL));
 
-   
     let fields = [
         Field {
             name: "Name1",
@@ -186,5 +188,4 @@ extern "C" fn sample_main() {
     }
 
     ledger_secure_sdk_sys::exit_app(0);
-
 }

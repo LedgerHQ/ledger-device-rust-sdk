@@ -2,15 +2,12 @@
 #![no_main]
 
 use ledger_device_sdk::io::*;
-use ledger_device_sdk::nbgl::{
-    init_comm, NbglKeypad, NbglStatus, SyncNbgl
-};
+use ledger_device_sdk::nbgl::{init_comm, NbglKeypad, NbglStatus, SyncNbgl};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
 #[no_mangle]
 extern "C" fn sample_main() {
-
     let mut comm = Comm::new();
     init_comm(&mut comm);
 
