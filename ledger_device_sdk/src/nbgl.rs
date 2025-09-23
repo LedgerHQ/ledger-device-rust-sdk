@@ -13,6 +13,7 @@ pub mod nbgl_action;
 pub mod nbgl_address_review;
 pub mod nbgl_advance_review;
 pub mod nbgl_choice;
+pub mod nbgl_confirm;
 pub mod nbgl_generic_settings;
 #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 pub mod nbgl_generic_review;
@@ -31,6 +32,7 @@ pub use nbgl_action::*;
 pub use nbgl_address_review::*;
 pub use nbgl_advance_review::*;
 pub use nbgl_choice::*;
+pub use nbgl_confirm::*;
 pub use nbgl_generic_settings::*;
 #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 pub use nbgl_generic_review::*;
