@@ -5,10 +5,10 @@ runner = "speculos -m nanox --display=headless"
 runner = "speculos -m nanosp --display=headless"
 
 [target.stax]
-runner = "speculos --model stax --display=headless"
+runner = "speculos --model stax"
 
 [target.flex]
-runner = "speculos --model flex --display=headless"
+runner = "speculos --model flex"
 
 [target.apex_p]
-runner = "speculos --model apex_p --display=headless"
+runner = "speculos --model apex_p"

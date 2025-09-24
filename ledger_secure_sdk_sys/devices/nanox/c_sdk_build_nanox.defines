@@ -34,3 +34,4 @@
 #define HAVE_INAPP_BLE_PAIRING
 #define HAVE_BATTERY
 #define HAVE_LEDGER_PKI
+#define NBGL_KEYPAD

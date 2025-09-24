@@ -1,14 +1,17 @@
 # Ledger device SDK for Rust Applications
 ![Dynamic TOML Badge](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FLedgerHQ%2Fledger-device-rust-sdk%2Frefs%2Fheads%2Fmaster%2Fledger_device_sdk%2FCargo.toml&query=%24.package.version&label=version)
 
-Crate that allows developing Ledger device apps in Rust with a default configuration.
+Crate that allows developing Ledger device applications in Rust.
 
 Contains:
 
-- some safe wrappers over common syscalls
-- IO abstractions
-- signature abstractions
-- UI libraries (the `ui` module for Nano (S/SP/X) apps, `nbgl` module for Stax and Flex apps)
+- Safe wrappers over common syscalls and C SDK functions
+- IO abstractions (`io` and `seph` modules)
+- Cryptographic abstractions (`ecc`, `hash` and `hmac` modules)
+- Aritmethic (simple and modular) abstraction (`math` module)
+- Persistent data storgae (`nvm` module)
+- UI/UX libraries (`nbgl` module)
+- Swap support (`libcall`module)
 
 ## Supported devices
 
@@ -43,6 +46,12 @@ sudo pacman -S clang arm-none-eabi-gcc arm-none-eabi-newlib
 
 This SDK provides [custom target](https://doc.rust-lang.org/rustc/targets/custom.html) files. One for each supported device.
 
+We also provide a [Docker container](https://github.com/LedgerHQ/ledger-app-builder) to build Rust applications for Ledger devices:
+
+```bash
+docker pull ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
+````
+
 ### Building for Nano X
 
 ```
@@ -65,6 +74,53 @@ cargo build --release --target=stax
 
 ```
 cargo build --release --target=flex
+```
+
+## Examples
+### Nano S+
+#### Build 
+```
+cargo build -p ledger_device_sdk --example nbgl_home_and_settings --target nanosplus --profile release --features nano_nbgl
+```
+#### Build + Run
+```
+cargo run -p ledger_device_sdk --example nbgl_home_and_settings --target nanosplus --profile release --features nano_nbgl --config ledger_device_sdk/examples/config.toml -- --api-port 5001
+```
+### Nano X
+#### Build
+```
+cargo build -p ledger_device_sdk --example nbgl_home_and_settings --target nanox --profile release --features nano_nbgl
+```
+#### Build + Run
+```
+cargo run -p ledger_device_sdk --example nbgl_home_and_settings --target nanox --profile release --features nano_nbgl --config ledger_device_sdk/examples/config.toml -- --api-port 5001
+```
+### Stax
+#### Build
+```
+cargo build -p ledger_device_sdk --example nbgl_home_and_settings --target stax --profile release
+```
+#### Build + Run
+```
+cargo run -p ledger_device_sdk --example nbgl_home_and_settings --target stax --profile release --config ledger_device_sdk/examples/config.toml
+```
+### Flex
+#### Build
+```
+cargo build -p ledger_device_sdk --example nbgl_home_and_settings --target flex --profile release
+```
+#### Build + Run
+```
+cargo run -p ledger_device_sdk --example nbgl_home_and_settings --target flex --profile release --config ledger_device_sdk/examples/config.toml
+```
+### Apex P
+#### Build
+```
+cargo build -p ledger_device_sdk --example nbgl_home_and_settings --target apex_p --profile release
+```
+#### Build + Run
+```
+cargo run -p ledger_device_sdk --example nbgl_home_and_settings --target apex_p --profile release --config ledger_device_sdk/examples/config.toml
 ```
 
 ## Contributing
