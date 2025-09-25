@@ -2,15 +2,18 @@ use crate::seph::{self, PacketTypes};
 
 pub use crate::io_legacy::{ApduHeader, Event, Reply, StatusWords};
 
+use crate::io_callbacks::nbgl_register_callbacks;
+
 #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
 use crate::seph::ItcUxEvent;
 
-use ledger_secure_sdk_sys::buttons::{get_button_event, ButtonsState};
 use ledger_secure_sdk_sys::seph as sys_seph;
 use ledger_secure_sdk_sys::*;
 
 #[cfg(not(any(target_os = "stax", target_os = "flex")))]
 use crate::buttons::ButtonEvent;
+#[cfg(not(any(target_os = "stax", target_os = "flex")))]
+use ledger_secure_sdk_sys::buttons::{get_button_event, ButtonsState};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CommError {
@@ -24,16 +27,44 @@ pub struct Comm<const N: usize = DEFAULT_BUF_SIZE> {
     buf: [u8; N],
 
     apdu_type: u8,
+    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     buttons: ButtonsState,
+    // Pending APDU state (set by next_event_ahead callback path). When set, the buffer
+    // currently holds an APDU event that must be consumed before any further io_rx call.
+    pending_apdu: bool,
+    pending_header: ApduHeader,
+    pending_offset: usize,
+    pending_length: usize,
 }
 
 impl<const N: usize> Comm<N> {
     pub fn new() -> Self {
-        Self {
+        let mut comm = Self {
             buf: [0; N],
             apdu_type: PacketTypes::PacketTypeNone as u8,
+            #[cfg(not(any(target_os = "stax", target_os = "flex")))]
             buttons: ButtonsState::default(),
+            pending_apdu: false,
+            pending_header: ApduHeader {
+                cla: 0,
+                ins: 0,
+                p1: 0,
+                p2: 0,
+            },
+            pending_offset: 0,
+            pending_length: 0,
+        };
+
+        unsafe {
+            CURRENT_COMM = (&mut comm as *mut Comm<N>) as *mut core::ffi::c_void;
         }
+        nbgl_register_callbacks(
+            next_event_ahead_impl::<N>,
+            fetch_apdu_header_impl::<N>,
+            reply_status_impl::<N>,
+        );
+
+        comm
     }
 
     /// Receive into the internal buffer. Returns a read-only guard.
@@ -136,10 +167,10 @@ impl<const N: usize> DecodedEvent<N> {
         Self { event_type }
     }
 
-    fn into_type(self) -> DecodedEventType {
+    pub fn into_type(self) -> DecodedEventType {
         self.event_type
     }
-    fn from_type(event_type: DecodedEventType) -> Self {
+    pub fn from_type(event_type: DecodedEventType) -> Self {
         Self { event_type }
     }
 
@@ -454,4 +485,52 @@ impl<'a, const N: usize> Tx<'a, N> {
     pub fn clear(&mut self) {
         self.len = 0;
     }
+}
+
+// ===== NBGL callback integration =====
+
+// Erased pointer to the Comm instance
+static mut CURRENT_COMM: *mut core::ffi::c_void = core::ptr::null_mut();
+
+// Converts the pointer back to the concrete Comm<N> type.
+unsafe fn get_comm<const N: usize>() -> &'static mut Comm<N> {
+    &mut *(CURRENT_COMM as *mut Comm<N>)
+}
+
+// Implementation wrappers specialized per const N.
+
+fn next_event_ahead_impl<const N: usize>() -> bool {
+    let comm = unsafe { get_comm::<N>() };
+    match comm.next_event().into_type() {
+        DecodedEventType::Apdu {
+            header,
+            offset,
+            length,
+        } => {
+            comm.pending_apdu = true;
+            comm.pending_header = header;
+            comm.pending_offset = offset;
+            comm.pending_length = length;
+            return true;
+        }
+        _ => {}
+    }
+    false
+}
+
+fn fetch_apdu_header_impl<const N: usize>() -> Option<ApduHeader> {
+    let comm = unsafe { get_comm::<N>() };
+    if comm.pending_apdu {
+        Some(comm.pending_header)
+    } else {
+        None
+    }
+}
+
+fn reply_status_impl<const N: usize>(reply: Reply) {
+    let comm = unsafe { get_comm::<N>() };
+    if comm.pending_apdu {
+        comm.pending_apdu = false;
+    }
+    let _ = comm.begin_tx().send(reply);
 }
