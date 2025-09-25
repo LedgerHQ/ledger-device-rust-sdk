@@ -390,7 +390,7 @@ impl DecodedEventType {
     }
 }
 
-pub struct Command<'a, const N: usize> {
+pub struct Command<'a, const N: usize = DEFAULT_BUF_SIZE> {
     comm: &'a mut Comm<N>,
     header: ApduHeader,
     offset: usize,
@@ -437,7 +437,7 @@ impl<'a, const N: usize> Command<'a, N> {
 }
 
 /// Immutable read view.
-pub struct Rx<'a, const N: usize> {
+pub struct Rx<'a, const N: usize = DEFAULT_BUF_SIZE> {
     comm: &'a mut Comm<N>,
     len: usize,
 }
@@ -465,7 +465,7 @@ impl<'a, const N: usize> Rx<'a, N> {
 }
 
 /// Mutable write view for building a send.
-pub struct Tx<'a, const N: usize> {
+pub struct Tx<'a, const N: usize = DEFAULT_BUF_SIZE> {
     comm: &'a mut Comm<N>,
     len: usize,
 }
