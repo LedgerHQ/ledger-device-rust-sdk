@@ -4,15 +4,20 @@ pub use crate::io_legacy::{ApduHeader, Event, Reply, StatusWords};
 
 use crate::io_callbacks::nbgl_register_callbacks;
 
-#[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
+#[cfg(any(
+    target_os = "nanox",
+    target_os = "stax",
+    target_os = "flex",
+    target_os = "apex_p"
+))]
 use crate::seph::ItcUxEvent;
 
 use ledger_secure_sdk_sys::seph as sys_seph;
 use ledger_secure_sdk_sys::*;
 
-#[cfg(not(any(target_os = "stax", target_os = "flex")))]
+#[cfg(not(any(target_os = "stax", target_os = "flex", target_os = "apex_p")))]
 use crate::buttons::ButtonEvent;
-#[cfg(not(any(target_os = "stax", target_os = "flex")))]
+#[cfg(not(any(target_os = "stax", target_os = "flex", target_os = "apex_p")))]
 use ledger_secure_sdk_sys::buttons::{get_button_event, ButtonsState};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -28,7 +33,7 @@ pub struct Comm<const N: usize = DEFAULT_BUF_SIZE> {
     expected_cla: Option<u8>,
 
     apdu_type: u8,
-    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+    #[cfg(not(any(target_os = "stax", target_os = "flex", target_os = "apex_p")))]
     buttons: ButtonsState,
     // Pending APDU state (set by next_event_ahead callback path). When set, the buffer
     // currently holds an APDU event that must be consumed before any further io_rx call.
@@ -44,7 +49,7 @@ impl<const N: usize> Comm<N> {
             buf: [0; N],
             expected_cla: None,
             apdu_type: PacketTypes::PacketTypeNone as u8,
-            #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+            #[cfg(not(any(target_os = "stax", target_os = "flex", target_os = "apex_p")))]
             buttons: ButtonsState::default(),
             pending_apdu: false,
             pending_header: ApduHeader {
@@ -204,7 +209,7 @@ impl<const N: usize> DecodedEvent<N> {
         let tag = seph_buffer[0];
         match Events::from(tag) {
             // BUTTON PUSH EVENT
-            #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+            #[cfg(not(any(target_os = "stax", target_os = "flex", target_os = "apex_p")))]
             Events::ButtonPushEvent => {
                 #[cfg(feature = "nano_nbgl")]
                 unsafe {
@@ -218,7 +223,7 @@ impl<const N: usize> DecodedEvent<N> {
             }
 
             // SCREEN TOUCH EVENT
-            #[cfg(any(target_os = "stax", target_os = "flex"))]
+            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
             Events::ScreenTouchEvent => unsafe {
                 ux_process_finger_event(seph_buffer.as_ptr() as *mut u8); // the cast to mutable can be removed on more recent SDKs
                 return DecodedEventType::Touch;
@@ -226,7 +231,12 @@ impl<const N: usize> DecodedEvent<N> {
 
             // TICKER EVENT
             Events::TickerEvent => {
-                #[cfg(any(target_os = "stax", target_os = "flex", feature = "nano_nbgl"))]
+                #[cfg(any(
+                    target_os = "stax",
+                    target_os = "flex",
+                    target_os = "apex_p",
+                    feature = "nano_nbgl"
+                ))]
                 unsafe {
                     ux_process_ticker_event();
                 }
@@ -236,7 +246,12 @@ impl<const N: usize> DecodedEvent<N> {
             // ITC EVENT
             seph::Events::ItcEvent => {
                 let _len = u16::from_be_bytes([seph_buffer[1], seph_buffer[2]]) as usize;
-                #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
+                #[cfg(any(
+                    target_os = "nanox",
+                    target_os = "stax",
+                    target_os = "flex",
+                    target_os = "apex_p"
+                ))]
                 match ItcUxEvent::from(seph_buffer[3]) {
                     seph::ItcUxEvent::AskBlePairing => unsafe {
                         G_ux_params.ux_id = BOLOS_UX_ASYNCHMODAL_PAIRING_REQUEST;
@@ -260,7 +275,12 @@ impl<const N: usize> DecodedEvent<N> {
                     },
 
                     seph::ItcUxEvent::Redisplay => {
-                        #[cfg(any(target_os = "stax", target_os = "flex", feature = "nano_nbgl"))]
+                        #[cfg(any(
+                            target_os = "stax",
+                            target_os = "flex",
+                            target_os = "apex_p",
+                            feature = "nano_nbgl"
+                        ))]
                         unsafe {
                             nbgl_objAllowDrawing(true);
                             nbgl_screenRedraw();
@@ -273,7 +293,12 @@ impl<const N: usize> DecodedEvent<N> {
             }
             // DEFAULT EVENT
             _ => {
-                #[cfg(any(target_os = "stax", target_os = "flex", feature = "nano_nbgl"))]
+                #[cfg(any(
+                    target_os = "stax",
+                    target_os = "flex",
+                    target_os = "apex_p",
+                    feature = "nano_nbgl"
+                ))]
                 unsafe {
                     ux_process_default_event();
                 }
@@ -346,9 +371,9 @@ pub enum DecodedEventType {
         length: usize,
     },
     ApduError(ApduError),
-    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+    #[cfg(not(any(target_os = "stax", target_os = "flex", target_os = "apex_p")))]
     Button(ButtonEvent),
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     Touch,
     Ticker,
     // Events for which no additional handling is required after decoding it
