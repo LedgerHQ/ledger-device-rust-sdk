@@ -25,6 +25,7 @@ pub const DEFAULT_BUF_SIZE: usize = 273;
 
 pub struct Comm<const N: usize = DEFAULT_BUF_SIZE> {
     buf: [u8; N],
+    expected_cla: Option<u8>,
 
     apdu_type: u8,
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
@@ -41,6 +42,7 @@ impl<const N: usize> Comm<N> {
     pub fn new() -> Self {
         let mut comm = Self {
             buf: [0; N],
+            expected_cla: None,
             apdu_type: PacketTypes::PacketTypeNone as u8,
             #[cfg(not(any(target_os = "stax", target_os = "flex")))]
             buttons: ButtonsState::default(),
@@ -123,6 +125,13 @@ impl<const N: usize> Comm<N> {
                         handle_bolos_apdu::<N>(self, header.ins);
                         continue;
                     }
+                    // If CLA filtering is enabled, automatically reject APDUs with wrong CLA.
+                    if let Some(cla) = self.expected_cla {
+                        if header.cla != cla {
+                            let _ = self.begin_tx().send(StatusWords::BadCla);
+                            continue;
+                        }
+                    }
                     return Command::new(self, header, offset, length);
                 }
                 // Explicitly convert ApduError -> StatusWords so Into<Reply> is resolved
@@ -130,6 +139,16 @@ impl<const N: usize> Comm<N> {
                 _ => {}
             }
         }
+    }
+
+    /// Defines `Comm::expected_cla` in order to automatically reject (with `StatusWords::BadCla`)
+    /// incoming APDUs whose CLA byte differs from the given value.
+    ///
+    /// Usage:
+    /// let mut comm = Comm::new().set_expected_cla(0xE0);
+    pub fn set_expected_cla(mut self, cla: u8) -> Self {
+        self.expected_cla = Some(cla);
+        self
     }
 }
 
