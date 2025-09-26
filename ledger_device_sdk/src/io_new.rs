@@ -15,9 +15,9 @@ use crate::seph::ItcUxEvent;
 use ledger_secure_sdk_sys::seph as sys_seph;
 use ledger_secure_sdk_sys::*;
 
-#[cfg(not(any(target_os = "stax", target_os = "flex", target_os = "apex_p")))]
+#[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
 use crate::buttons::ButtonEvent;
-#[cfg(not(any(target_os = "stax", target_os = "flex", target_os = "apex_p")))]
+#[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
 use ledger_secure_sdk_sys::buttons::{get_button_event, ButtonsState};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -33,7 +33,7 @@ pub struct Comm<const N: usize = DEFAULT_BUF_SIZE> {
     expected_cla: Option<u8>,
 
     apdu_type: u8,
-    #[cfg(not(any(target_os = "stax", target_os = "flex", target_os = "apex_p")))]
+    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
     buttons: ButtonsState,
     // Pending APDU state (set by next_event_ahead callback path). When set, the buffer
     // currently holds an APDU event that must be consumed before any further io_rx call.
@@ -49,7 +49,7 @@ impl<const N: usize> Comm<N> {
             buf: [0; N],
             expected_cla: None,
             apdu_type: PacketTypes::PacketTypeNone as u8,
-            #[cfg(not(any(target_os = "stax", target_os = "flex", target_os = "apex_p")))]
+            #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
             buttons: ButtonsState::default(),
             pending_apdu: false,
             pending_header: ApduHeader {
@@ -209,7 +209,7 @@ impl<const N: usize> DecodedEvent<N> {
         let tag = seph_buffer[0];
         match Events::from(tag) {
             // BUTTON PUSH EVENT
-            #[cfg(not(any(target_os = "stax", target_os = "flex", target_os = "apex_p")))]
+            #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
             Events::ButtonPushEvent => {
                 #[cfg(feature = "nano_nbgl")]
                 unsafe {
@@ -371,7 +371,7 @@ pub enum DecodedEventType {
         length: usize,
     },
     ApduError(ApduError),
-    #[cfg(not(any(target_os = "stax", target_os = "flex", target_os = "apex_p")))]
+    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
     Button(ButtonEvent),
     #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     Touch,
