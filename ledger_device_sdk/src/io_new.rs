@@ -480,17 +480,6 @@ impl<'a, const N: usize> CommandResponse<'a, N> {
         self.len
     }
 
-    /// Set staged length explicitly after writing into `buf_mut`.
-    pub fn set_len(&mut self, n: usize) -> Result<(), CommError> {
-        // reserve 2 bytes for the status word
-        if n <= N - 2 {
-            self.len = n;
-            Ok(())
-        } else {
-            Err(CommError::Overflow)
-        }
-    }
-
     #[inline]
     fn try_append(&mut self, src: &[u8]) -> Result<(), CommError> {
         let start = self.len;
