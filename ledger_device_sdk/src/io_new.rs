@@ -1,5 +1,13 @@
 use crate::seph::{self, PacketTypes};
 
+mod event;
+pub use event::{DecodedEvent, DecodedEventType};
+
+mod bolos;
+mod callbacks;
+use bolos::handle_bolos_apdu;
+use callbacks::{fetch_apdu_header_impl, next_event_ahead_impl, reply_status_impl, set_comm};
+
 pub use crate::io_legacy::{ApduHeader, Event, Reply, StatusWords};
 
 use crate::io_callbacks::nbgl_register_callbacks;
@@ -62,9 +70,7 @@ impl<const N: usize> Comm<N> {
             pending_length: 0,
         };
 
-        unsafe {
-            CURRENT_COMM = (&mut comm as *mut Comm<N>) as *mut core::ffi::c_void;
-        }
+        set_comm::<N>(&mut comm);
         nbgl_register_callbacks(
             next_event_ahead_impl::<N>,
             fetch_apdu_header_impl::<N>,
@@ -75,7 +81,7 @@ impl<const N: usize> Comm<N> {
     }
 
     /// Receive into the internal buffer. Returns a read-only guard.
-    pub fn recv(&mut self, check_se_event: bool) -> Result<Rx<'_, N>, CommError> {
+    fn recv(&mut self, check_se_event: bool) -> Result<Rx<'_, N>, CommError> {
         let result = sys_seph::io_rx(&mut self.buf, check_se_event);
         if result < 0 {
             return Err(CommError::IoError);
@@ -165,227 +171,6 @@ impl From<ApduError> for StatusWords {
     fn from(e: ApduError) -> Self {
         match e {
             ApduError::BadLen => StatusWords::BadLen,
-        }
-    }
-}
-
-// TODO: we might not need to split DecodedEvent from DecodedEventType. Simplify.
-pub struct DecodedEvent<const N: usize> {
-    event_type: DecodedEventType,
-}
-
-impl<const N: usize> DecodedEvent<N> {
-    pub fn new(comm: &mut Comm<N>, len: usize) -> Self {
-        let pt = comm.buf[0];
-        use crate::seph::PacketTypes;
-
-        let event_type = match PacketTypes::from(pt) {
-            PacketTypes::PacketTypeSeph | PacketTypes::PacketTypeSeEvent => {
-                // Copy out SEPH payload (like original) or reinterpret in place.
-                // Optimization: we can borrow slice without copying because io_buffer stores
-                // [packet_type][payload...].
-                Self::decode_seph_event(comm, 1)
-            }
-            PacketTypes::PacketTypeRawApdu
-            | PacketTypes::PacketTypeUsbHidApdu
-            | PacketTypes::PacketTypeUsbWebusbApdu
-            | PacketTypes::PacketTypeBleApdu => Self::decode_apdu(comm, pt, 1, len),
-
-            _ => DecodedEventType::Ignored,
-        };
-        Self { event_type }
-    }
-
-    pub fn into_type(self) -> DecodedEventType {
-        self.event_type
-    }
-    pub fn from_type(event_type: DecodedEventType) -> Self {
-        Self { event_type }
-    }
-
-    fn decode_seph_event(comm: &mut Comm<N>, offset: usize) -> DecodedEventType {
-        use crate::seph::Events;
-        let seph_buffer = &comm.buf[offset..];
-        let tag = seph_buffer[0];
-        match Events::from(tag) {
-            // BUTTON PUSH EVENT
-            #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-            Events::ButtonPushEvent => {
-                #[cfg(feature = "nano_nbgl")]
-                unsafe {
-                    ux_process_button_event(seph_buffer.as_ptr() as *mut u8); // the cast to mutable can be removed on more recent SDKs
-                }
-                let button_info = seph_buffer[3] >> 1;
-                if let Some(btn_evt) = get_button_event(&mut comm.buttons, button_info) {
-                    return DecodedEventType::Button(btn_evt);
-                }
-                DecodedEventType::Ignored
-            }
-
-            // SCREEN TOUCH EVENT
-            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
-            Events::ScreenTouchEvent => unsafe {
-                ux_process_finger_event(seph_buffer.as_ptr() as *mut u8); // the cast to mutable can be removed on more recent SDKs
-                return DecodedEventType::Touch;
-            },
-
-            // TICKER EVENT
-            Events::TickerEvent => {
-                #[cfg(any(
-                    target_os = "stax",
-                    target_os = "flex",
-                    target_os = "apex_p",
-                    feature = "nano_nbgl"
-                ))]
-                unsafe {
-                    ux_process_ticker_event();
-                }
-                DecodedEventType::Ticker
-            }
-
-            // ITC EVENT
-            seph::Events::ItcEvent => {
-                let _len = u16::from_be_bytes([seph_buffer[1], seph_buffer[2]]) as usize;
-                #[cfg(any(
-                    target_os = "nanox",
-                    target_os = "stax",
-                    target_os = "flex",
-                    target_os = "apex_p"
-                ))]
-                match ItcUxEvent::from(seph_buffer[3]) {
-                    seph::ItcUxEvent::AskBlePairing => unsafe {
-                        G_ux_params.ux_id = BOLOS_UX_ASYNCHMODAL_PAIRING_REQUEST;
-                        G_ux_params.len = 20;
-                        G_ux_params.u.pairing_request.type_ = seph_buffer[4];
-                        G_ux_params.u.pairing_request.pairing_info_len = (_len - 2) as u32;
-                        for i in 0..G_ux_params.u.pairing_request.pairing_info_len as usize {
-                            G_ux_params.u.pairing_request.pairing_info[i as usize] =
-                                seph_buffer[5 + i] as i8;
-                        }
-                        G_ux_params.u.pairing_request.pairing_info
-                            [G_ux_params.u.pairing_request.pairing_info_len as usize] = 0;
-                        os_ux(&raw mut G_ux_params as *mut bolos_ux_params_t);
-                    },
-
-                    seph::ItcUxEvent::BlePairingStatus => unsafe {
-                        G_ux_params.ux_id = BOLOS_UX_ASYNCHMODAL_PAIRING_STATUS;
-                        G_ux_params.len = 0;
-                        G_ux_params.u.pairing_status.pairing_ok = seph_buffer[4];
-                        os_ux(&raw mut G_ux_params as *mut bolos_ux_params_t);
-                    },
-
-                    seph::ItcUxEvent::Redisplay => {
-                        #[cfg(any(
-                            target_os = "stax",
-                            target_os = "flex",
-                            target_os = "apex_p",
-                            feature = "nano_nbgl"
-                        ))]
-                        unsafe {
-                            nbgl_objAllowDrawing(true);
-                            nbgl_screenRedraw();
-                            nbgl_refresh();
-                        }
-                    }
-                    _ => {}
-                }
-                DecodedEventType::Ignored
-            }
-            // DEFAULT EVENT
-            _ => {
-                #[cfg(any(
-                    target_os = "stax",
-                    target_os = "flex",
-                    target_os = "apex_p",
-                    feature = "nano_nbgl"
-                ))]
-                unsafe {
-                    ux_process_default_event();
-                }
-                #[cfg(any(target_os = "nanox", target_os = "nanosplus"))]
-                if !cfg!(feature = "nano_nbgl") {
-                    crate::uxapp::UxEvent::Event.request();
-                }
-                DecodedEventType::Ignored
-            }
-        }
-    }
-
-    fn decode_apdu(
-        comm: &mut Comm<N>,
-        packet_type: u8,
-        offset: usize,
-        io_len: usize,
-    ) -> DecodedEventType {
-        use ApduError::*;
-
-        comm.apdu_type = packet_type;
-
-        let apdu_buffer = &comm.buf[offset..];
-
-        if io_len < 5 {
-            return DecodedEventType::ApduError(BadLen);
-        }
-
-        let rx_len = io_len - 1;
-
-        let header = ApduHeader {
-            cla: apdu_buffer[0],
-            ins: apdu_buffer[1],
-            p1: apdu_buffer[2],
-            p2: apdu_buffer[3],
-        };
-        if rx_len == 4 {
-            return DecodedEventType::new_apdu(header, 4, 0);
-        }
-        let first_len_byte = apdu_buffer[4];
-
-        match (first_len_byte, rx_len) {
-            (0, 5) => {
-                // Non-conforming zero-data APDU (TODO: per the standard, this should actually be read as a 256-byte long APDU; but that's likely to break things as lots)
-                DecodedEventType::new_apdu(header, 4, 0)
-            }
-            (0, 6) => DecodedEventType::ApduError(BadLen),
-            (0, _) => {
-                let len = u16::from_be_bytes([apdu_buffer[5], apdu_buffer[6]]) as usize;
-                if rx_len != len + 7 {
-                    return DecodedEventType::ApduError(BadLen);
-                }
-                DecodedEventType::new_apdu(header, 1 + 7, len)
-            }
-            (len, _) => {
-                if rx_len != len as usize + 5 {
-                    return DecodedEventType::ApduError(BadLen);
-                }
-                DecodedEventType::new_apdu(header, 1 + 5, len as usize)
-            }
-        }
-    }
-}
-
-/// High-level decoded event (no side effects).
-pub enum DecodedEventType {
-    Apdu {
-        header: ApduHeader,
-        offset: usize,
-        length: usize,
-    },
-    ApduError(ApduError),
-    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-    Button(ButtonEvent),
-    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
-    Touch,
-    Ticker,
-    // Events for which no additional handling is required after decoding it
-    Ignored,
-}
-
-impl DecodedEventType {
-    fn new_apdu(header: ApduHeader, offset: usize, length: usize) -> Self {
-        Self::Apdu {
-            header,
-            offset,
-            length,
         }
     }
 }
@@ -522,118 +307,5 @@ impl<'a, const N: usize> CommandResponse<'a, N> {
     /// Clear staged bytes length.
     pub fn clear(&mut self) {
         self.len = 0;
-    }
-}
-
-// ===== NBGL callback integration =====
-
-// Erased pointer to the Comm instance
-static mut CURRENT_COMM: *mut core::ffi::c_void = core::ptr::null_mut();
-
-// Converts the pointer back to the concrete Comm<N> type.
-unsafe fn get_comm<const N: usize>() -> &'static mut Comm<N> {
-    &mut *(CURRENT_COMM as *mut Comm<N>)
-}
-
-// Implementation wrappers specialized per const N.
-
-fn next_event_ahead_impl<const N: usize>() -> bool {
-    let comm = unsafe { get_comm::<N>() };
-    match comm.next_event().into_type() {
-        DecodedEventType::Apdu {
-            header,
-            offset,
-            length,
-        } => {
-            comm.pending_apdu = true;
-            comm.pending_header = header;
-            comm.pending_offset = offset;
-            comm.pending_length = length;
-            return true;
-        }
-        _ => {}
-    }
-    false
-}
-
-fn fetch_apdu_header_impl<const N: usize>() -> Option<ApduHeader> {
-    let comm = unsafe { get_comm::<N>() };
-    if comm.pending_apdu {
-        Some(comm.pending_header)
-    } else {
-        None
-    }
-}
-
-fn reply_status_impl<const N: usize>(reply: Reply) {
-    let comm = unsafe { get_comm::<N>() };
-    if comm.pending_apdu {
-        comm.pending_apdu = false;
-    }
-    let _ = comm.begin_response().send(reply);
-}
-
-// BOLOS APDU Handling
-fn handle_bolos_apdu<const N: usize>(comm: &mut Comm<N>, ins: u8) {
-    match ins {
-        // Get Information INS: retrieve App name and version
-        0x01 => {
-            let mut response = comm.begin_response();
-            let _ = response.append(&[0x01]);
-            const MAX_TAG_LENGTH: u8 = 32; // maximum length for the buffer containing app name/version.
-            let mut tag_buf = [0u8; MAX_TAG_LENGTH as usize];
-
-            // ---- App name ----
-
-            let name_len = unsafe {
-                os_registry_get_current_app_tag(
-                    BOLOS_TAG_APPNAME,
-                    tag_buf.as_mut_ptr(),
-                    MAX_TAG_LENGTH as u32,
-                )
-            };
-
-            if name_len > MAX_TAG_LENGTH.into() {
-                let _ = response.send(StatusWords::Panic); // this should never happen
-                return;
-            }
-
-            let _ = response.append(&[name_len as u8]);
-            let _ = response.append(&tag_buf[..name_len as usize]);
-
-            // ---- App version ----
-
-            let ver_len = unsafe {
-                os_registry_get_current_app_tag(
-                    BOLOS_TAG_APPVERSION,
-                    tag_buf.as_mut_ptr(),
-                    MAX_TAG_LENGTH as u32,
-                )
-            };
-
-            if ver_len > MAX_TAG_LENGTH.into() {
-                let _ = response.send(StatusWords::Panic); // this should never happen
-                return;
-            }
-
-            let _ = response.append(&[ver_len as u8]);
-            let _ = response.append(&tag_buf[..ver_len as usize]);
-
-            // ---- Flags ----
-            let flags_byte = unsafe { os_flags() } as u8;
-            // flags length (always 1 currently) then flags byte
-            let _ = response.append(&[1]);
-            let _ = response.append(&[flags_byte]);
-            let _ = response.send(StatusWords::Ok);
-        }
-        // Quit Application INS
-        0xa7 => {
-            let _ = comm.begin_response().send(StatusWords::Ok);
-            crate::exit_app(0);
-        }
-        // Unknown INS within BOLOS namespace
-        _ => {
-            let _ = comm.begin_response().send(StatusWords::BadIns);
-        }
     }
 }
