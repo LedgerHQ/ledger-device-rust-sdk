@@ -87,13 +87,13 @@ impl<const N: usize> Comm<N> {
     }
 
     /// Start building a message in the internal buffer. Returns a mutable guard.
-    pub fn begin_tx(&mut self) -> Tx<'_, N> {
-        Tx { comm: self, len: 0 }
+    pub fn begin_response(&mut self) -> CommandResponse<'_, N> {
+        CommandResponse { comm: self, len: 0 }
     }
 
     /// Send directly from an external slice, bypassing the internal buffer.
     pub fn send<T: Into<Reply>>(&mut self, data: &[u8], reply: T) -> Result<(), CommError> {
-        self.begin_tx().extend(data)?.send(reply).unwrap();
+        self.begin_response().extend(data)?.send(reply).unwrap();
         Ok(())
     }
 
@@ -133,7 +133,7 @@ impl<const N: usize> Comm<N> {
                     // If CLA filtering is enabled, automatically reject APDUs with wrong CLA.
                     if let Some(cla) = self.expected_cla {
                         if header.cla != cla {
-                            let _ = self.begin_tx().send(StatusWords::BadCla);
+                            let _ = self.begin_response().send(StatusWords::BadCla);
                             continue;
                         }
                     }
@@ -419,8 +419,8 @@ impl<'a, const N: usize> Command<'a, N> {
         &self.comm.buf[self.offset..self.offset + self.length]
     }
 
-    pub fn into_tx(self) -> Tx<'a, N> {
-        Tx {
+    pub fn into_response(self) -> CommandResponse<'a, N> {
+        CommandResponse {
             comm: self.comm,
             len: 0,
         }
@@ -431,13 +431,13 @@ impl<'a, const N: usize> Command<'a, N> {
     }
 
     pub fn reply<T: Into<Reply>>(self, data: &[u8], reply: T) -> Result<(), CommError> {
-        self.into_tx().extend(data)?.send(reply)?;
+        self.into_response().extend(data)?.send(reply)?;
         Ok(())
     }
 }
 
 /// Immutable read view.
-pub struct Rx<'a, const N: usize = DEFAULT_BUF_SIZE> {
+pub(crate) struct Rx<'a, const N: usize = DEFAULT_BUF_SIZE> {
     comm: &'a mut Comm<N>,
     len: usize,
 }
@@ -465,12 +465,12 @@ impl<'a, const N: usize> Rx<'a, N> {
 }
 
 /// Mutable write view for building a send.
-pub struct Tx<'a, const N: usize = DEFAULT_BUF_SIZE> {
+pub struct CommandResponse<'a, const N: usize = DEFAULT_BUF_SIZE> {
     comm: &'a mut Comm<N>,
     len: usize,
 }
 
-impl<'a, const N: usize> Tx<'a, N> {
+impl<'a, const N: usize> CommandResponse<'a, N> {
     pub fn new(comm: &'a mut Comm<N>) -> Self {
         Self { comm, len: 0 }
     }
@@ -581,7 +581,7 @@ fn reply_status_impl<const N: usize>(reply: Reply) {
     if comm.pending_apdu {
         comm.pending_apdu = false;
     }
-    let _ = comm.begin_tx().send(reply);
+    let _ = comm.begin_response().send(reply);
 }
 
 // BOLOS APDU Handling
@@ -589,8 +589,8 @@ fn handle_bolos_apdu<const N: usize>(comm: &mut Comm<N>, ins: u8) {
     match ins {
         // Get Information INS: retrieve App name and version
         0x01 => {
-            let mut tx = comm.begin_tx();
-            let _ = tx.append(&[0x01]);
+            let mut response = comm.begin_response();
+            let _ = response.append(&[0x01]);
             const MAX_TAG_LENGTH: u8 = 32; // maximum length for the buffer containing app name/version.
             let mut tag_buf = [0u8; MAX_TAG_LENGTH as usize];
 
@@ -605,12 +605,12 @@ fn handle_bolos_apdu<const N: usize>(comm: &mut Comm<N>, ins: u8) {
             };
 
             if name_len > MAX_TAG_LENGTH.into() {
-                let _ = tx.send(StatusWords::Panic); // this should never happen
+                let _ = response.send(StatusWords::Panic); // this should never happen
                 return;
             }
 
-            let _ = tx.append(&[name_len as u8]);
-            let _ = tx.append(&tag_buf[..name_len as usize]);
+            let _ = response.append(&[name_len as u8]);
+            let _ = response.append(&tag_buf[..name_len as usize]);
 
             // ---- App version ----
 
@@ -623,28 +623,28 @@ fn handle_bolos_apdu<const N: usize>(comm: &mut Comm<N>, ins: u8) {
             };
 
             if ver_len > MAX_TAG_LENGTH.into() {
-                let _ = tx.send(StatusWords::Panic); // this should never happen
+                let _ = response.send(StatusWords::Panic); // this should never happen
                 return;
             }
 
-            let _ = tx.append(&[ver_len as u8]);
-            let _ = tx.append(&tag_buf[..ver_len as usize]);
+            let _ = response.append(&[ver_len as u8]);
+            let _ = response.append(&tag_buf[..ver_len as usize]);
 
             // ---- Flags ----
             let flags_byte = unsafe { os_flags() } as u8;
             // flags length (always 1 currently) then flags byte
-            let _ = tx.append(&[1]);
-            let _ = tx.append(&[flags_byte]);
-            let _ = tx.send(StatusWords::Ok);
+            let _ = response.append(&[1]);
+            let _ = response.append(&[flags_byte]);
+            let _ = response.send(StatusWords::Ok);
         }
         // Quit Application INS
         0xa7 => {
-            let _ = comm.begin_tx().send(StatusWords::Ok);
+            let _ = comm.begin_response().send(StatusWords::Ok);
             crate::exit_app(0);
         }
         // Unknown INS within BOLOS namespace
         _ => {
-            let _ = comm.begin_tx().send(StatusWords::BadIns);
+            let _ = comm.begin_response().send(StatusWords::BadIns);
         }
     }
 }
