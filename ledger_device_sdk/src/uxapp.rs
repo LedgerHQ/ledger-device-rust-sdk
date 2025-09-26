@@ -83,6 +83,7 @@ impl UxEvent {
         ret
     }
 
+    #[cfg(not(feature = "io_new"))]
     pub fn block_and_get_event<T>(comm: &mut Comm) -> (u32, Option<Event<T>>)
     where
         T: TryFrom<ApduHeader>,

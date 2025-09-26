@@ -1,4 +1,5 @@
-use crate::io::{ApduHeader, Comm, Event, Reply};
+use crate::io::{ApduHeader, Event};
+use crate::io_callbacks::nbgl_next_event_ahead;
 use crate::nvm::*;
 use const_zero::const_zero;
 extern crate alloc;
@@ -29,8 +30,6 @@ pub use nbgl_review_status::*;
 pub use nbgl_spinner::*;
 pub use nbgl_status::*;
 pub use nbgl_streaming_review::*;
-
-static mut COMM_REF: Option<&mut Comm> = None;
 
 #[derive(Copy, Clone)]
 enum SyncNbgl {
@@ -77,19 +76,14 @@ trait SyncNBGL: Sized {
     }
 
     fn ux_sync_wait(&self, exit_on_apdu: bool) -> SyncNbgl {
-        unsafe {
-            if let Some(comm) = (*(&raw mut COMM_REF)).as_mut() {
-                while !G_ENDED {
-                    let apdu_received = comm.next_event_ahead::<ApduHeader>();
-                    if exit_on_apdu && apdu_received {
-                        return SyncNbgl::UxSyncRetApduReceived;
-                    }
-                }
-                return G_RET.into();
-            } else {
-                panic!("COMM_REF not initialized");
+        // Poll until an NBGL callback signals completion or (optionally) an APDU arrives.
+        while unsafe { !G_ENDED } {
+            let apdu_received = nbgl_next_event_ahead();
+            if exit_on_apdu && apdu_received {
+                return SyncNbgl::UxSyncRetApduReceived;
             }
         }
+        unsafe { G_RET.into() }
     }
 }
 
@@ -249,14 +243,9 @@ impl ToMessage for StatusType {
     }
 }
 
-/// Initialize the global COMM_REF variable with the provided Comm instance.
-/// This function should be called from the main function of the application.
-/// The COMM_REF variable is used by the NBGL API to detect touch events and
-/// APDU reception.
-pub fn init_comm(comm: &mut Comm) {
-    unsafe {
-        COMM_REF = Some(transmute(comm));
-    }
+pub fn init_comm(_comm: &mut crate::io::Comm) {
+    // intentionally empty; no longer used as the necessary initialization
+    // is now performed in the constructor of the Comm struct.
 }
 
 #[derive(Copy, Clone)]
