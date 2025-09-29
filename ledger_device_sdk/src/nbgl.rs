@@ -94,15 +94,20 @@ static mut G_RET: u8 = 0;
 static mut G_ENDED: bool = false;
 static mut G_CONFIRM_ASK_WHEN_TRUE: bool = false;
 static mut G_CONFIRM_ASK_WHEN_FALSE: bool = false;
-static mut G_CONFIRM_MESSAGE_WHEN_TRUE: Option<CString> = None;
-static mut G_CONFIRM_SUBMESSAGE_WHEN_TRUE: Option<CString> = None;
-static mut G_CONFIRM_OK_TEXT_WHEN_TRUE: Option<CString> = None;
-static mut G_CONFIRM_KO_TEXT_WHEN_TRUE: Option<CString> = None;
-static mut G_CONFIRM_MESSAGE_WHEN_FALSE: Option<CString> = None;
-static mut G_CONFIRM_SUBMESSAGE_WHEN_FALSE: Option<CString> = None;
-static mut G_CONFIRM_OK_TEXT_WHEN_FALSE: Option<CString> = None;
-static mut G_CONFIRM_KO_TEXT_WHEN_FALSE: Option<CString> = None;
 
+#[derive(Default)]
+struct ConfirmationStrings {
+    message: CString,
+    submessage: CString,
+    ok_text: CString,
+    ko_text: CString,
+}
+
+// Store for custom confirmation screen
+// when the user accepts or rejects
+static mut G_CONFIRM_SCREEN: [Option<ConfirmationStrings>; 2] = [None, None];
+const G_CONFIRM_SCREEN_WHEN_TRUE_IDX: usize = 0;
+const G_CONFIRM_SCREEN_WHEN_FALSE_IDX: usize = 1;
 const DEFAULT_CONFIRM_MESSAGE: &str = "Do you confirm this action?";
 const DEFAULT_CONFIRM_SUBMESSAGE: &str = "This action is irreversible.";
 const DEFAULT_CONFIRM_OK_TEXT: &str = "Confirm";
@@ -130,46 +135,22 @@ trait SyncNBGL: Sized {
 
 unsafe extern "C" fn choice_callback(confirm: bool) {
     if G_CONFIRM_ASK_WHEN_TRUE || G_CONFIRM_ASK_WHEN_FALSE {
-        let mut message = CString::default();
-        let mut submessage = CString::default();
-        let mut ok_text = CString::default();
-        let mut ko_text = CString::default();
+        let mut idx = 0usize;
         if G_CONFIRM_ASK_WHEN_TRUE && confirm {
-            message = (*(&raw const G_CONFIRM_MESSAGE_WHEN_TRUE))
-                .clone()
-                .unwrap_or_else(|| CString::new(DEFAULT_CONFIRM_MESSAGE).unwrap());
-            submessage = (*(&raw const G_CONFIRM_SUBMESSAGE_WHEN_TRUE))
-                .clone()
-                .unwrap_or_else(|| CString::new(DEFAULT_CONFIRM_SUBMESSAGE).unwrap());
-            ok_text = (*(&raw const G_CONFIRM_OK_TEXT_WHEN_TRUE))
-                .clone()
-                .unwrap_or_else(|| CString::new(DEFAULT_CONFIRM_OK_TEXT).unwrap());
-            ko_text = (*(&raw const G_CONFIRM_KO_TEXT_WHEN_TRUE))
-                .clone()
-                .unwrap_or_else(|| CString::new(DEFAULT_CONFIRM_KO_TEXT).unwrap());
+            idx = G_CONFIRM_SCREEN_WHEN_TRUE_IDX;
             G_RET = SyncNbgl::UxSyncRetApproved.into();
         } else if G_CONFIRM_ASK_WHEN_FALSE && !confirm {
-            message = (*(&raw const G_CONFIRM_MESSAGE_WHEN_FALSE))
-                .clone()
-                .unwrap_or_else(|| CString::new(DEFAULT_CONFIRM_MESSAGE).unwrap());
-            submessage = (*(&raw const G_CONFIRM_SUBMESSAGE_WHEN_FALSE))
-                .clone()
-                .unwrap_or_else(|| CString::new(DEFAULT_CONFIRM_SUBMESSAGE).unwrap());
-            ok_text = (*(&raw const G_CONFIRM_OK_TEXT_WHEN_FALSE))
-                .clone()
-                .unwrap_or_else(|| CString::new(DEFAULT_CONFIRM_OK_TEXT).unwrap());
-            ko_text = (*(&raw const G_CONFIRM_KO_TEXT_WHEN_FALSE))
-                .clone()
-                .unwrap_or_else(|| CString::new(DEFAULT_CONFIRM_KO_TEXT).unwrap());
+            idx = G_CONFIRM_SCREEN_WHEN_FALSE_IDX;
             G_RET = SyncNbgl::UxSyncRetRejected.into();
         }
+        let screen = G_CONFIRM_SCREEN[idx].as_ref().unwrap();
         nbgl_useCaseConfirm(
-            message.as_ptr() as *const c_char,
-            submessage.as_ptr() as *const c_char,
-            ok_text.as_ptr() as *const c_char,
-            ko_text.as_ptr() as *const c_char,
+            screen.message.as_ptr() as *const c_char,
+            screen.submessage.as_ptr() as *const c_char,
+            screen.ok_text.as_ptr() as *const c_char,
+            screen.ko_text.as_ptr() as *const c_char,
             Some(confirm_choice_callback),
-        )
+        );
     } else {
         G_RET = if confirm {
             SyncNbgl::UxSyncRetApproved.into()
@@ -181,16 +162,6 @@ unsafe extern "C" fn choice_callback(confirm: bool) {
 }
 
 unsafe extern "C" fn confirm_choice_callback() {
-    G_CONFIRM_ASK_WHEN_TRUE = false;
-    G_CONFIRM_ASK_WHEN_FALSE = false;
-    G_CONFIRM_MESSAGE_WHEN_TRUE = None;
-    G_CONFIRM_SUBMESSAGE_WHEN_TRUE = None;
-    G_CONFIRM_OK_TEXT_WHEN_TRUE = None;
-    G_CONFIRM_KO_TEXT_WHEN_TRUE = None;
-    G_CONFIRM_MESSAGE_WHEN_FALSE = None;
-    G_CONFIRM_SUBMESSAGE_WHEN_FALSE = None;
-    G_CONFIRM_OK_TEXT_WHEN_FALSE = None;
-    G_CONFIRM_KO_TEXT_WHEN_FALSE = None;
     G_ENDED = true;
 }
 
