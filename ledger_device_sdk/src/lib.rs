@@ -11,7 +11,6 @@ pub mod ecc;
 pub mod hash;
 pub mod hmac;
 pub(crate) mod io_callbacks;
-#[cfg(not(feature = "io_new"))]
 pub(crate) mod io_legacy;
 #[cfg(feature = "io_new")]
 pub(crate) mod io_new;
