@@ -118,5 +118,5 @@ extern "C" fn sample_main() {
         .text(status_text)
         .show(status_text == "Example confirmed");
 
-    ledger_secure_sdk_sys::exit_app(0);
+    ledger_device_sdk::exit_app(0);
 }

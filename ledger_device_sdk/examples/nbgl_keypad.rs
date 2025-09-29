@@ -33,5 +33,5 @@ extern "C" fn sample_main() {
         NbglStatus::new().text("PIN KO").show(false);
     }
 
-    ledger_secure_sdk_sys::exit_app(0);
+    ledger_device_sdk::exit_app(0);
 }

@@ -8,8 +8,8 @@ Contains:
 - Safe wrappers over common syscalls and C SDK functions
 - IO abstractions (`io` and `seph` modules)
 - Cryptographic abstractions (`ecc`, `hash` and `hmac` modules)
-- Aritmethic (simple and modular) abstraction (`math` module)
-- Persistent data storgae (`nvm` module)
+- Arithmetic (simple and modular) abstraction (`math` module)
+- Persistent data storage (`nvm` module)
 - UI/UX libraries (`nbgl` module)
 - Swap support (`libcall`module)
 

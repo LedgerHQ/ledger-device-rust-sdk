@@ -22,5 +22,5 @@ extern "C" fn sample_main() {
         loop_count -= 1;
     }
     NbglReviewStatus::new().show(true);
-    ledger_secure_sdk_sys::exit_app(0);
+    ledger_device_sdk::exit_app(0);
 }
