@@ -1,31 +1,15 @@
 #![no_std]
 #![no_main]
 
-// Force boot section to be embedded in
-use ledger_device_sdk as _;
-
 use include_gif::include_gif;
 use ledger_device_sdk::io::*;
-use ledger_device_sdk::nbgl::{
-    init_comm, Field, NbglGlyph, NbglReview, NbglReviewStatus, StatusType,
-};
-use ledger_secure_sdk_sys::*;
+use ledger_device_sdk::nbgl::{Field, NbglGlyph, NbglReview, NbglReviewStatus};
 
-#[panic_handler]
-fn panic(_: &core::panic::PanicInfo) -> ! {
-    exit_app(1);
-}
+ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    unsafe {
-        nbgl_refreshReset();
-    }
-
-    let mut comm = Comm::new();
-    // Initialize reference to Comm instance for NBGL
-    // API calls.
-    init_comm(&mut comm);
+    let _comm = Comm::new();
 
     let my_fields = [
         Field {
@@ -38,23 +22,57 @@ extern "C" fn sample_main() {
         },
         Field {
             name: "Memo",
-            value: "This is a test transaction.",
+            value: "It is a test transaction.",
         },
     ];
 
-    // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
+    #[cfg(target_os = "apex_p")]
+    const FERRIS: NbglGlyph =
+        NbglGlyph::from_include(include_gif!("examples/crab_48x48.png", NBGL));
+    #[cfg(any(target_os = "stax", target_os = "flex"))]
     const FERRIS: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
-    // Create NBGL review. Maximum number of fields and string buffer length can be customised
-    // with constant generic parameters of NbglReview. Default values are 32 and 1024 respectively.
+    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    const FERRIS: NbglGlyph =
+        NbglGlyph::from_include(include_gif!("examples/crab_14x14.png", NBGL));
+
+    // Create NBGL review
     let success = NbglReview::new()
         .titles(
             "Please review transaction",
-            "To send CRAB",
+            "Standard use case",
+            "Sign transaction\nto send CRAB",
+        )
+        .glyph(&FERRIS)
+        .show(&my_fields);
+    NbglReviewStatus::new().show(success);
+
+    let success = NbglReview::new()
+        .titles(
+            "Please review transaction",
+            "Light use case",
+            "Sign transaction\nto send CRAB",
+        )
+        .glyph(&FERRIS)
+        .light()
+        .show(&my_fields);
+    NbglReviewStatus::new().show(success);
+
+    let my_fields = [Field {
+        name: "Hash",
+        value: "0x1234567890ABCDEF1234567890ABCDEF12345678",
+    }];
+
+    let success = NbglReview::new()
+        .titles(
+            "Please review transaction",
+            "Blind signing use case",
             "Sign transaction\nto send CRAB",
         )
         .glyph(&FERRIS)
         .blind()
         .show(&my_fields);
     NbglReviewStatus::new().show(success);
+
+    ledger_device_sdk::exit_app(0);
 }

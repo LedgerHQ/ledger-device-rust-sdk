@@ -9,34 +9,52 @@ use core::ffi::{c_char, c_int};
 use core::mem::transmute;
 use ledger_secure_sdk_sys::*;
 
+pub mod nbgl_action;
 pub mod nbgl_address_review;
+pub mod nbgl_advance_review;
 pub mod nbgl_choice;
 #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 pub mod nbgl_generic_review;
+pub mod nbgl_generic_settings;
 pub mod nbgl_home_and_settings;
+pub mod nbgl_keypad;
+pub mod nbgl_navigable_content;
 pub mod nbgl_review;
+#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+pub mod nbgl_review_extended;
 pub mod nbgl_review_status;
 pub mod nbgl_spinner;
 pub mod nbgl_status;
 pub mod nbgl_streaming_review;
 
+pub use nbgl_action::*;
 pub use nbgl_address_review::*;
+pub use nbgl_advance_review::*;
 pub use nbgl_choice::*;
 #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 pub use nbgl_generic_review::*;
+pub use nbgl_generic_settings::*;
 pub use nbgl_home_and_settings::*;
+pub use nbgl_keypad::*;
 pub use nbgl_review::*;
+//pub use nbgl_navigable_content::*; // integration issue
+#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+pub use nbgl_review_extended::*;
 pub use nbgl_review_status::*;
 pub use nbgl_spinner::*;
 pub use nbgl_status::*;
 pub use nbgl_streaming_review::*;
 
-#[derive(Copy, Clone)]
-enum SyncNbgl {
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum SyncNbgl {
     UxSyncRetApproved = 0x00,
     UxSyncRetRejected = 0x01,
     UxSyncRetQuitted = 0x02,
     UxSyncRetApduReceived = 0x03,
+    UxSyncRetSkipped = 0x04,
+    UxSyncRetContinue = 0x05,
+    UxSyncRetPinValidated = 0x06,
+    UxSyncRetPinRejected = 0x07,
     UxSyncRetError = 0xFF,
 }
 
@@ -47,6 +65,10 @@ impl From<u8> for SyncNbgl {
             0x01 => SyncNbgl::UxSyncRetRejected,
             0x02 => SyncNbgl::UxSyncRetQuitted,
             0x03 => SyncNbgl::UxSyncRetApduReceived,
+            0x04 => SyncNbgl::UxSyncRetSkipped,
+            0x05 => SyncNbgl::UxSyncRetContinue,
+            0x06 => SyncNbgl::UxSyncRetPinValidated,
+            0x07 => SyncNbgl::UxSyncRetPinRejected,
             _ => SyncNbgl::UxSyncRetError,
         }
     }
@@ -59,6 +81,10 @@ impl From<SyncNbgl> for u8 {
             SyncNbgl::UxSyncRetRejected => 0x01,
             SyncNbgl::UxSyncRetQuitted => 0x02,
             SyncNbgl::UxSyncRetApduReceived => 0x03,
+            SyncNbgl::UxSyncRetSkipped => 0x04,
+            SyncNbgl::UxSyncRetContinue => 0x05,
+            SyncNbgl::UxSyncRetPinValidated => 0x06,
+            SyncNbgl::UxSyncRetPinRejected => 0x07,
             SyncNbgl::UxSyncRetError => 0xFF,
         }
     }
@@ -66,6 +92,21 @@ impl From<SyncNbgl> for u8 {
 
 static mut G_RET: u8 = 0;
 static mut G_ENDED: bool = false;
+static mut G_CONFIRM_ASK_WHEN_TRUE: bool = false;
+static mut G_CONFIRM_ASK_WHEN_FALSE: bool = false;
+static mut G_CONFIRM_MESSAGE_WHEN_TRUE: Option<CString> = None;
+static mut G_CONFIRM_SUBMESSAGE_WHEN_TRUE: Option<CString> = None;
+static mut G_CONFIRM_OK_TEXT_WHEN_TRUE: Option<CString> = None;
+static mut G_CONFIRM_KO_TEXT_WHEN_TRUE: Option<CString> = None;
+static mut G_CONFIRM_MESSAGE_WHEN_FALSE: Option<CString> = None;
+static mut G_CONFIRM_SUBMESSAGE_WHEN_FALSE: Option<CString> = None;
+static mut G_CONFIRM_OK_TEXT_WHEN_FALSE: Option<CString> = None;
+static mut G_CONFIRM_KO_TEXT_WHEN_FALSE: Option<CString> = None;
+
+const DEFAULT_CONFIRM_MESSAGE: &str = "Do you confirm this action?";
+const DEFAULT_CONFIRM_SUBMESSAGE: &str = "This action is irreversible.";
+const DEFAULT_CONFIRM_OK_TEXT: &str = "Confirm";
+const DEFAULT_CONFIRM_KO_TEXT: &str = "Cancel";
 
 trait SyncNBGL: Sized {
     fn ux_sync_init(&self) {
@@ -88,16 +129,83 @@ trait SyncNBGL: Sized {
 }
 
 unsafe extern "C" fn choice_callback(confirm: bool) {
-    G_RET = if confirm {
-        SyncNbgl::UxSyncRetApproved.into()
+    if G_CONFIRM_ASK_WHEN_TRUE || G_CONFIRM_ASK_WHEN_FALSE {
+        let mut message = CString::default();
+        let mut submessage = CString::default();
+        let mut ok_text = CString::default();
+        let mut ko_text = CString::default();
+        if G_CONFIRM_ASK_WHEN_TRUE && confirm {
+            message = (*(&raw const G_CONFIRM_MESSAGE_WHEN_TRUE))
+                .clone()
+                .unwrap_or_else(|| CString::new(DEFAULT_CONFIRM_MESSAGE).unwrap());
+            submessage = (*(&raw const G_CONFIRM_SUBMESSAGE_WHEN_TRUE))
+                .clone()
+                .unwrap_or_else(|| CString::new(DEFAULT_CONFIRM_SUBMESSAGE).unwrap());
+            ok_text = (*(&raw const G_CONFIRM_OK_TEXT_WHEN_TRUE))
+                .clone()
+                .unwrap_or_else(|| CString::new(DEFAULT_CONFIRM_OK_TEXT).unwrap());
+            ko_text = (*(&raw const G_CONFIRM_KO_TEXT_WHEN_TRUE))
+                .clone()
+                .unwrap_or_else(|| CString::new(DEFAULT_CONFIRM_KO_TEXT).unwrap());
+            G_RET = SyncNbgl::UxSyncRetApproved.into();
+        } else if G_CONFIRM_ASK_WHEN_FALSE && !confirm {
+            message = (*(&raw const G_CONFIRM_MESSAGE_WHEN_FALSE))
+                .clone()
+                .unwrap_or_else(|| CString::new(DEFAULT_CONFIRM_MESSAGE).unwrap());
+            submessage = (*(&raw const G_CONFIRM_SUBMESSAGE_WHEN_FALSE))
+                .clone()
+                .unwrap_or_else(|| CString::new(DEFAULT_CONFIRM_SUBMESSAGE).unwrap());
+            ok_text = (*(&raw const G_CONFIRM_OK_TEXT_WHEN_FALSE))
+                .clone()
+                .unwrap_or_else(|| CString::new(DEFAULT_CONFIRM_OK_TEXT).unwrap());
+            ko_text = (*(&raw const G_CONFIRM_KO_TEXT_WHEN_FALSE))
+                .clone()
+                .unwrap_or_else(|| CString::new(DEFAULT_CONFIRM_KO_TEXT).unwrap());
+            G_RET = SyncNbgl::UxSyncRetRejected.into();
+        }
+        nbgl_useCaseConfirm(
+            message.as_ptr() as *const c_char,
+            submessage.as_ptr() as *const c_char,
+            ok_text.as_ptr() as *const c_char,
+            ko_text.as_ptr() as *const c_char,
+            Some(confirm_choice_callback),
+        )
     } else {
-        SyncNbgl::UxSyncRetRejected.into()
-    };
+        G_RET = if confirm {
+            SyncNbgl::UxSyncRetApproved.into()
+        } else {
+            SyncNbgl::UxSyncRetRejected.into()
+        };
+        G_ENDED = true;
+    }
+}
+
+unsafe extern "C" fn confirm_choice_callback() {
+    G_CONFIRM_ASK_WHEN_TRUE = false;
+    G_CONFIRM_ASK_WHEN_FALSE = false;
+    G_CONFIRM_MESSAGE_WHEN_TRUE = None;
+    G_CONFIRM_SUBMESSAGE_WHEN_TRUE = None;
+    G_CONFIRM_OK_TEXT_WHEN_TRUE = None;
+    G_CONFIRM_KO_TEXT_WHEN_TRUE = None;
+    G_CONFIRM_MESSAGE_WHEN_FALSE = None;
+    G_CONFIRM_SUBMESSAGE_WHEN_FALSE = None;
+    G_CONFIRM_OK_TEXT_WHEN_FALSE = None;
+    G_CONFIRM_KO_TEXT_WHEN_FALSE = None;
+    G_ENDED = true;
+}
+
+unsafe extern "C" fn skip_callback() {
+    G_RET = SyncNbgl::UxSyncRetSkipped.into();
     G_ENDED = true;
 }
 
 unsafe extern "C" fn quit_callback() {
     G_RET = SyncNbgl::UxSyncRetQuitted.into();
+    G_ENDED = true;
+}
+
+unsafe extern "C" fn continue_callback() {
+    G_RET = SyncNbgl::UxSyncRetContinue.into();
     G_ENDED = true;
 }
 
@@ -116,6 +224,32 @@ struct CField {
     pub name: CString,
     pub value: CString,
 }
+
+impl From<&Field<'_>> for CField {
+    fn from(field: &Field) -> CField {
+        CField {
+            name: CString::new((*field).name).unwrap(),
+            value: CString::new((*field).value).unwrap(),
+        }
+    }
+}
+
+impl From<&CField> for nbgl_contentTagValue_t {
+    fn from(field: &CField) -> nbgl_contentTagValue_t {
+        nbgl_contentTagValue_t {
+            item: (*field).name.as_ptr() as *const i8,
+            value: (*field).value.as_ptr() as *const i8,
+            ..Default::default()
+        }
+    }
+}
+
+// impl From<Field<'_>> for nbgl_contentTagValue_t {
+//     fn from(field: Field) -> nbgl_contentTagValue_t {
+//         let cfield: CField = field.into();
+//         cfield.into()
+//     }
+// }
 
 pub struct NbglGlyph<'a> {
     pub width: u16,

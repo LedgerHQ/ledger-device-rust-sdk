@@ -1,39 +1,31 @@
 #![no_std]
 #![no_main]
 
-// Force boot section to be embedded in
-use ledger_device_sdk as _;
-
 use include_gif::include_gif;
 use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{
-    init_comm, CenteredInfo, CenteredInfoStyle, Field, InfoButton, InfoLongPress, InfosList,
-    NbglChoice, NbglGenericReview, NbglGlyph, NbglPageContent, NbglStatus, TagValueConfirm,
-    TagValueList, TuneIndex,
+    CenteredInfo, CenteredInfoStyle, Field, InfoButton, InfoLongPress, InfosList, NbglChoice,
+    NbglGenericReview, NbglGlyph, NbglPageContent, NbglStatus, TagValueConfirm, TagValueList,
+    TuneIndex,
 };
-use ledger_secure_sdk_sys::*;
 
 use core::ops::Not;
 
-#[panic_handler]
-fn panic(_: &core::panic::PanicInfo) -> ! {
-    exit_app(1);
-}
+ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    unsafe {
-        nbgl_refreshReset();
-    }
+    let _comm = Comm::new();
 
-    let mut comm = Comm::new();
-    // Initialize reference to Comm instance for NBGL
-    // API calls.
-    init_comm(&mut comm);
-
-    // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
+    #[cfg(target_os = "apex_p")]
+    const FERRIS: NbglGlyph =
+        NbglGlyph::from_include(include_gif!("examples/crab_48x48.png", NBGL));
+    #[cfg(any(target_os = "stax", target_os = "flex"))]
     const FERRIS: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
+    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    const FERRIS: NbglGlyph =
+        NbglGlyph::from_include(include_gif!("examples/crab_14x14.png", NBGL));
 
     let centered_info = CenteredInfo::new(
         "Sample centered info",
@@ -81,21 +73,28 @@ extern "C" fn sample_main() {
 
     let infos_list = InfosList::new(&my_example_fields);
 
-    let mut review: NbglGenericReview = NbglGenericReview::new()
+    let review: NbglGenericReview = NbglGenericReview::new()
         .add_content(NbglPageContent::CenteredInfo(centered_info))
         .add_content(NbglPageContent::InfoButton(info_button))
         .add_content(NbglPageContent::InfoLongPress(info_long_press))
         .add_content(NbglPageContent::TagValueList(tag_values_list))
-        .add_content(NbglPageContent::TagValueConfirm(tag_value_confirm))
-        .add_content(NbglPageContent::InfosList(infos_list));
+        .add_content(NbglPageContent::InfosList(infos_list))
+        .add_content(NbglPageContent::TagValueConfirm(tag_value_confirm));
 
+    #[cfg(target_os = "apex_p")]
     const IMPORTANT: NbglGlyph =
-        NbglGlyph::from_include(include_gif!("icons/Important_Circle_64px.png", NBGL));
+        NbglGlyph::from_include(include_gif!("examples/crab_48x48.png", NBGL));
+    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    const IMPORTANT: NbglGlyph =
+        NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
+    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    const IMPORTANT: NbglGlyph =
+        NbglGlyph::from_include(include_gif!("examples/crab_14x14.png", NBGL));
 
     let mut show_tx = true;
     let mut status_text = "Example rejected";
     while show_tx {
-        let confirm = review.show("Reject Example");
+        let confirm = review.show("Reject");
         if confirm {
             status_text = "Example confirmed";
             show_tx = false;
@@ -118,4 +117,6 @@ extern "C" fn sample_main() {
     NbglStatus::new()
         .text(status_text)
         .show(status_text == "Example confirmed");
+
+    ledger_device_sdk::exit_app(0);
 }

@@ -31,7 +31,7 @@
 //!
 //! Furthermore, since the data is stored in Code space, it is relocated during
 //! application installation. Therefore the address to this data must be
-//! translated: this is enforced by the [`PIC`](crate::PIC) wrapper.
+//! translated: this is enforced by the [`PIC`](ledger_secure_sdk_sys::pic) wrapper.
 //!
 //! ```
 //! let mut counter = unsafe { COUNTER.get_mut() };
@@ -84,8 +84,8 @@ pub struct AlignedStorage<T> {
 }
 
 impl<T> AlignedStorage<T> {
-    /// Create a Storage<T> initialized with a given value.
-    /// This is to set the initial value of static Storage<T>, as the value
+    /// Create a `AlignedStorage<T>` initialized with a given value.
+    /// This is to set the initial value of static `AlignedStorage<T>`, as the value
     /// member is private.
     pub const fn new(value: T) -> AlignedStorage<T> {
         AlignedStorage { value }
@@ -203,7 +203,7 @@ impl<T> AtomicStorage<T>
 where
     T: Copy,
 {
-    /// Create an AtomicStorage<T> initialized with a given value.
+    /// Create an `AtomicStorage<T>` initialized with a given value.
     pub const fn new(value: &T) -> AtomicStorage<T> {
         AtomicStorage {
             storage_a: SafeStorage::new(*value),

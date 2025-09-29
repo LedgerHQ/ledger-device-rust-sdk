@@ -11,7 +11,7 @@ impl SyncNBGL for NbglStatus {}
 impl NbglStatus {
     pub fn new() -> NbglStatus {
         NbglStatus {
-            text: CString::new("").unwrap(),
+            text: CString::default(),
         }
     }
 
@@ -25,7 +25,10 @@ impl NbglStatus {
         unsafe {
             self.ux_sync_init();
             nbgl_useCaseStatus(
-                self.text.as_ptr() as *const c_char,
+                match self.text.is_empty() {
+                    true => core::ptr::null(),
+                    false => self.text.as_ptr() as *const c_char,
+                },
                 success,
                 Some(quit_callback),
             );
