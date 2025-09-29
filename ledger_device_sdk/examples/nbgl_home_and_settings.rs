@@ -3,7 +3,7 @@
 
 use include_gif::include_gif;
 use ledger_device_sdk::io::*;
-use ledger_device_sdk::nbgl::{init_comm, NbglGlyph, NbglHomeAndSettings};
+use ledger_device_sdk::nbgl::{NbglGlyph, NbglHomeAndSettings};
 // use ledger_device_sdk::nvm::*;
 // use ledger_device_sdk::NVMData;
 
@@ -86,7 +86,6 @@ mod settings {
 #[no_mangle]
 extern "C" fn sample_main() {
     let mut comm = Comm::new();
-    init_comm(&mut comm);
 
     #[cfg(target_os = "apex_p")]
     const FERRIS: NbglGlyph =

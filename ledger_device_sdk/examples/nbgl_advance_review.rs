@@ -4,16 +4,14 @@
 use include_gif::include_gif;
 use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{
-    init_comm, Field, NbglAdvanceReview, NbglGlyph, NbglReviewStatus, StatusType, SyncNbgl,
-    TransactionType,
+    Field, NbglAdvanceReview, NbglGlyph, NbglReviewStatus, StatusType, SyncNbgl, TransactionType,
 };
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    let mut comm = Comm::new();
-    init_comm(&mut comm);
+    let _comm = Comm::new();
 
     #[cfg(target_os = "apex_p")]
     const FERRIS: NbglGlyph =

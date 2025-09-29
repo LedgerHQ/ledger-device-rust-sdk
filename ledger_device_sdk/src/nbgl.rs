@@ -45,7 +45,7 @@ pub use nbgl_spinner::*;
 pub use nbgl_status::*;
 pub use nbgl_streaming_review::*;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum SyncNbgl {
     UxSyncRetApproved = 0x00,
     UxSyncRetRejected = 0x01,

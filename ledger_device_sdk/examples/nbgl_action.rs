@@ -3,14 +3,13 @@
 
 use include_gif::include_gif;
 use ledger_device_sdk::io::*;
-use ledger_device_sdk::nbgl::{init_comm, NbglAction, NbglGlyph};
+use ledger_device_sdk::nbgl::{NbglAction, NbglGlyph};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    let mut comm = Comm::new();
-    init_comm(&mut comm);
+    let _comm = Comm::new();
 
     #[cfg(target_os = "apex_p")]
     const FERRIS: NbglGlyph =
