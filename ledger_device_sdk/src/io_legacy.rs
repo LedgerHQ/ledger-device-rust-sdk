@@ -54,6 +54,7 @@ pub enum SyscallError {
     NotSupported,
     InvalidState,
     Timeout,
+    InvalidPkiCertificate,
     Unspecified,
 }
 
@@ -69,6 +70,7 @@ impl From<u32> for SyscallError {
             8 => SyscallError::NotSupported,
             9 => SyscallError::InvalidState,
             10 => SyscallError::Timeout,
+            0x422F | 0x4230..0x4239 | 0x422D | 0x3301 | 0x422E | 0x5720 | 0x4118 => SyscallError::InvalidPkiCertificate,
             _ => SyscallError::Unspecified,
         }
     }
@@ -326,8 +328,8 @@ impl Comm {
                 return None;
             }
 
-            // Manage BOLOS specific APDUs B0xx0000
-            if self.io_buffer[1] == 0xB0 && self.io_buffer[3] == 0x00 && self.io_buffer[4] == 0x00 {
+            // Manage BOLOS specific APDUs B0xxyyzz
+            if self.io_buffer[1] == 0xB0 {
                 handle_bolos_apdu(self, self.io_buffer[2]);
                 return None;
             }
@@ -682,11 +684,15 @@ fn default_nbgl_reply_status(reply: Reply) {
     }
 }
 
+const BOLOS_INS_GET_VERSION: u8 = 0x01;
+const BOLOS_INS_QUIT: u8 = 0xa7;
+const BOLOS_INS_SET_PKI_CERT: u8 = 0x06;
+
 // BOLOS APDU Handling (see https://developers.ledger.com/docs/connectivity/ledgerJS/open-close-info-on-apps)
 fn handle_bolos_apdu(com: &mut Comm, ins: u8) {
     match ins {
         // Get Information INS: retrieve App name and version
-        0x01 => {
+        BOLOS_INS_GET_VERSION => {
             unsafe {
                 com.tx_length = 0;
                 com.io_buffer[com.tx_length] = 0x01;
@@ -717,9 +723,27 @@ fn handle_bolos_apdu(com: &mut Comm, ins: u8) {
             com.reply_ok();
         }
         // Quit Application INS
-        0xa7 => {
+        BOLOS_INS_QUIT => {
             com.reply_ok();
             crate::exit_app(0);
+        }
+        BOLOS_INS_SET_PKI_CERT => {
+            unsafe {
+                let public_key = cx_ecfp_384_public_key_t::default();
+                let err = os_pki_load_certificate(
+                    com.io_buffer[3],
+                    com.io_buffer[6..].as_mut_ptr(),
+                    com.io_buffer[5] as usize,
+                    core::ptr::null_mut(),
+                    core::ptr::null_mut(),
+                    &public_key as *const cx_ecfp_384_public_key_t as *mut cx_ecfp_384_public_key_t,
+                );
+                if err != 0 {
+                    com.reply(SyscallError::from(err));
+                    return;
+                }
+                com.reply_ok();
+            }
         }
         _ => {
             com.reply(StatusWords::BadIns);
