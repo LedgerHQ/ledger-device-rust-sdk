@@ -1,11 +1,16 @@
 use super::{Comm, StatusWords, DEFAULT_BUF_SIZE};
 use ledger_secure_sdk_sys::*;
 
+use crate::io_legacy::SyscallError;
+use crate::io_legacy::BOLOS_INS_GET_VERSION;
+use crate::io_legacy::BOLOS_INS_QUIT;
+use crate::io_legacy::BOLOS_INS_SET_PKI_CERT;
+
 /// Handle internal BOLOS APDUs (CLA = 0xB0, P1 = 0x00, P2 = 0x00).
 pub(crate) fn handle_bolos_apdu<const N: usize>(comm: &mut Comm<N>, ins: u8) {
     match ins {
         // Get Information INS: retrieve App name and version
-        0x01 => {
+        BOLOS_INS_GET_VERSION => {
             let mut response = comm.begin_response();
             let _ = response.append(&[0x01]);
             const MAX_TAG_LENGTH: u8 = 32; // maximum length for the buffer containing app name/version.
@@ -53,10 +58,26 @@ pub(crate) fn handle_bolos_apdu<const N: usize>(comm: &mut Comm<N>, ins: u8) {
             let _ = response.send(StatusWords::Ok);
         }
         // Quit Application INS
-        0xA7 | 0xa7 => {
+        BOLOS_INS_QUIT => {
             let _ = comm.begin_response().send(StatusWords::Ok);
             crate::exit_app(0);
         }
+        BOLOS_INS_SET_PKI_CERT => unsafe {
+            let public_key = cx_ecfp_384_public_key_t::default();
+            let err = os_pki_load_certificate(
+                comm.buf[3],                // P1
+                comm.buf[6..].as_mut_ptr(), // Data
+                comm.buf[5] as usize,       // Length
+                core::ptr::null_mut(),
+                core::ptr::null_mut(),
+                &public_key as *const cx_ecfp_384_public_key_t as *mut cx_ecfp_384_public_key_t,
+            );
+            if err != 0 {
+                comm.begin_response().send(SyscallError::from(err));
+                return;
+            }
+            comm.begin_response().send(StatusWords::Ok);
+        },
         // Unknown INS within BOLOS namespace
         _ => {
             let _ = comm.begin_response().send(StatusWords::BadIns);
