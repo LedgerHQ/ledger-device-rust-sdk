@@ -2,17 +2,17 @@
 #![no_main]
 
 use include_gif::include_gif;
+use ledger_device_sdk::ecc::CurvesId;
 use ledger_device_sdk::hash::HashInit;
 use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{NbglAction, NbglGlyph};
-use ledger_device_sdk::ecc::CurvesId;
 use ledger_device_sdk::pki::pki_verify_data;
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 pub enum Instruction {
     GetVersion = 0x01,
     GetAppName = 0x02,
-    CheckPki = 0x03
+    CheckPki = 0x03,
 }
 
 impl TryFrom<ApduHeader> for Instruction {
@@ -29,9 +29,8 @@ impl TryFrom<ApduHeader> for Instruction {
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    
     let mut comm = Comm::new();
-    
+
     #[cfg(target_os = "apex_p")]
     const FERRIS: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_48x48.png", NBGL));
@@ -47,7 +46,7 @@ extern "C" fn sample_main() {
         .message("Press Stop to exit")
         .action_text("Stop")
         .glyph(&FERRIS);
-    
+
     loop {
         let ins: Instruction = comm.next_command();
         match ins {
@@ -80,17 +79,22 @@ extern "C" fn sample_main() {
                 let _ = hasher.hash(&data[..], &mut hash_data);
 
                 let mut signature = [0u8; 72];
-                signature.copy_from_slice(&buffer[82..]); 
-                
-                match pki_verify_data(&mut hash_data[..], 8u8, CurvesId::Secp256k1, signature.as_mut_slice()) {
+                signature.copy_from_slice(&buffer[82..]);
+
+                match pki_verify_data(
+                    &mut hash_data[..],
+                    8u8,
+                    CurvesId::Secp256k1,
+                    signature.as_mut_slice(),
+                ) {
                     Ok(()) => {
                         ledger_device_sdk::testing::debug_print("PKI Check successful\n");
                         comm.reply_ok();
-                    },
+                    }
                     Err(err) => {
                         ledger_device_sdk::testing::debug_print("PKI Check failed\n");
                         comm.reply(err);
-                    },
+                    }
                 }
             }
         }
