@@ -4,6 +4,7 @@ use ledger_secure_sdk_sys::{
     cx_ecfp_384_public_key_t, os_pki_get_info, os_pki_verify, CERTIFICATE_TRUSTED_NAME_MAXLEN,
 };
 
+/// PKI verification errors
 pub enum PkiVerifyError {
     Success = 0,
     MissingCertificate = 1,
@@ -17,7 +18,15 @@ impl From<PkiVerifyError> for Reply {
         Reply(0x6900 + exc as u16)
     }
 }
-
+/// Verify data using the loaded certificate
+/// # Arguments
+/// * `data` - The data to verify. 
+/// * `expected_key_usage` - The expected key usage of the certificate.
+/// * `expected_curve` - The expected curve of the certificate. See `CurvesId` enum
+/// * `signature` - The signature to verify
+/// # Returns
+/// * `Ok(())` if the verification is successful
+/// * `Err(PkiVerifyError)` if the verification fails
 pub fn pki_verify_data(
     data: &mut [u8],
     expected_key_usage: u8,
