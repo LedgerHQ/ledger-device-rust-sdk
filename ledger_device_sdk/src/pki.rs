@@ -1,6 +1,8 @@
-use ledger_secure_sdk_sys::{os_pki_get_info, os_pki_verify, CERTIFICATE_TRUSTED_NAME_MAXLEN, cx_ecfp_384_public_key_t};
 use crate::ecc::CurvesId;
 use crate::io::Reply;
+use ledger_secure_sdk_sys::{
+    cx_ecfp_384_public_key_t, os_pki_get_info, os_pki_verify, CERTIFICATE_TRUSTED_NAME_MAXLEN,
+};
 
 pub enum PkiVerifyError {
     Success = 0,
@@ -22,7 +24,6 @@ pub fn pki_verify_data(
     expected_curve: CurvesId,
     signature: &mut [u8],
 ) -> Result<(), PkiVerifyError> {
-
     let certificate_name = [0u8; CERTIFICATE_TRUSTED_NAME_MAXLEN as usize];
     let mut certficate_name_len: usize = 0;
     let mut key_usage: u8 = 0;
@@ -51,7 +52,7 @@ pub fn pki_verify_data(
             data.as_mut_ptr() as *mut u8,
             data.len(),
             signature.as_mut_ptr() as *mut u8,
-            signature.len()
+            signature.len(),
         )
     };
     if err == true {
