@@ -5,7 +5,7 @@ use include_gif::include_gif;
 use ledger_device_sdk::ecc::CurvesId;
 use ledger_device_sdk::hash::HashInit;
 use ledger_device_sdk::io::*;
-use ledger_device_sdk::nbgl::{NbglAction, NbglGlyph};
+use ledger_device_sdk::nbgl::{NbglGlyph, NbglHomeAndSettings};
 use ledger_device_sdk::pki::pki_verify_data;
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
@@ -41,11 +41,16 @@ extern "C" fn sample_main() {
     const FERRIS: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_14x14.png", NBGL));
 
-    // Create NBGL action
-    let _action = NbglAction::new()
-        .message("Press Stop to exit")
-        .action_text("Stop")
-        .glyph(&FERRIS);
+    let mut home = NbglHomeAndSettings::new()
+        .glyph(&FERRIS)
+        .infos(
+            "PKI Example App",
+            env!("CARGO_PKG_VERSION"),
+            env!("CARGO_PKG_AUTHORS"),
+        )
+        .tagline("Send APDU from apdu folder");
+
+    home.show_and_return();
 
     loop {
         let ins: Instruction = comm.next_command();
