@@ -686,9 +686,9 @@ fn default_nbgl_reply_status(reply: Reply) {
     }
 }
 
-const BOLOS_INS_GET_VERSION: u8 = 0x01;
-const BOLOS_INS_QUIT: u8 = 0xa7;
-const BOLOS_INS_SET_PKI_CERT: u8 = 0x06;
+pub(crate) const BOLOS_INS_GET_VERSION: u8 = 0x01;
+pub(crate) const BOLOS_INS_QUIT: u8 = 0xa7;
+pub(crate) const BOLOS_INS_SET_PKI_CERT: u8 = 0x06;
 
 // BOLOS APDU Handling (see https://developers.ledger.com/docs/connectivity/ledgerJS/open-close-info-on-apps)
 fn handle_bolos_apdu(com: &mut Comm, ins: u8) {
@@ -732,9 +732,9 @@ fn handle_bolos_apdu(com: &mut Comm, ins: u8) {
         BOLOS_INS_SET_PKI_CERT => unsafe {
             let public_key = cx_ecfp_384_public_key_t::default();
             let err = os_pki_load_certificate(
-                com.io_buffer[3],
-                com.io_buffer[6..].as_mut_ptr(),
-                com.io_buffer[5] as usize,
+                com.io_buffer[3],                // P1
+                com.io_buffer[6..].as_mut_ptr(), // Data
+                com.io_buffer[5] as usize,       // Length
                 core::ptr::null_mut(),
                 core::ptr::null_mut(),
                 &public_key as *const cx_ecfp_384_public_key_t as *mut cx_ecfp_384_public_key_t,
