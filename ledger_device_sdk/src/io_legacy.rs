@@ -70,7 +70,9 @@ impl From<u32> for SyscallError {
             8 => SyscallError::NotSupported,
             9 => SyscallError::InvalidState,
             10 => SyscallError::Timeout,
-            0x422F | 0x4230..0x4239 | 0x422D | 0x3301 | 0x422E | 0x5720 | 0x4118 => SyscallError::InvalidPkiCertificate,
+            0x422F | 0x4230..0x4239 | 0x422D | 0x3301 | 0x422E | 0x5720 | 0x4118 => {
+                SyscallError::InvalidPkiCertificate
+            }
             _ => SyscallError::Unspecified,
         }
     }
@@ -727,24 +729,22 @@ fn handle_bolos_apdu(com: &mut Comm, ins: u8) {
             com.reply_ok();
             crate::exit_app(0);
         }
-        BOLOS_INS_SET_PKI_CERT => {
-            unsafe {
-                let public_key = cx_ecfp_384_public_key_t::default();
-                let err = os_pki_load_certificate(
-                    com.io_buffer[3],
-                    com.io_buffer[6..].as_mut_ptr(),
-                    com.io_buffer[5] as usize,
-                    core::ptr::null_mut(),
-                    core::ptr::null_mut(),
-                    &public_key as *const cx_ecfp_384_public_key_t as *mut cx_ecfp_384_public_key_t,
-                );
-                if err != 0 {
-                    com.reply(SyscallError::from(err));
-                    return;
-                }
-                com.reply_ok();
+        BOLOS_INS_SET_PKI_CERT => unsafe {
+            let public_key = cx_ecfp_384_public_key_t::default();
+            let err = os_pki_load_certificate(
+                com.io_buffer[3],
+                com.io_buffer[6..].as_mut_ptr(),
+                com.io_buffer[5] as usize,
+                core::ptr::null_mut(),
+                core::ptr::null_mut(),
+                &public_key as *const cx_ecfp_384_public_key_t as *mut cx_ecfp_384_public_key_t,
+            );
+            if err != 0 {
+                com.reply(SyscallError::from(err));
+                return;
             }
-        }
+            com.reply_ok();
+        },
         _ => {
             com.reply(StatusWords::BadIns);
         }
