@@ -20,7 +20,7 @@ impl From<PkiVerifyError> for Reply {
 }
 /// Verify data using the loaded certificate
 /// # Arguments
-/// * `data` - The data to verify. 
+/// * `data` - The data to verify.
 /// * `expected_key_usage` - The expected key usage of the certificate.
 /// * `expected_curve` - The expected curve of the certificate. See `CurvesId` enum
 /// * `signature` - The signature to verify
