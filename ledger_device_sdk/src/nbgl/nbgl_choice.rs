@@ -39,62 +39,46 @@ impl<'a> NbglChoice<'a> {
         }
     }
 
-    pub fn ask_confirmation_when_accept(
+    pub fn ask_confirmation(
         self,
         message: Option<&str>,
         submessage: Option<&str>,
         ok_text: Option<&str>,
         ko_text: Option<&str>,
+        if_accept: bool,
     ) -> NbglChoice<'a> {
-        unsafe {
-            G_CONFIRM_ASK_WHEN_TRUE = true;
-            G_CONFIRM_MESSAGE_WHEN_TRUE = match message {
-                Some(m) => Some(CString::new(m).unwrap()),
-                None => None,
-            };
-            G_CONFIRM_SUBMESSAGE_WHEN_TRUE = match submessage {
-                Some(sm) => Some(CString::new(sm).unwrap()),
-                None => None,
-            };
-            G_CONFIRM_OK_TEXT_WHEN_TRUE = match ok_text {
-                Some(ot) => Some(CString::new(ot).unwrap()),
-                None => None,
-            };
-            G_CONFIRM_KO_TEXT_WHEN_TRUE = match ko_text {
-                Some(kt) => Some(CString::new(kt).unwrap()),
-                None => None,
-            };
+        let mut screen = ConfirmationStrings::default();
+        match message {
+            Some(m) => screen.message = CString::new(m).unwrap(),
+            None => screen.message = CString::new(DEFAULT_CONFIRM_MESSAGE).unwrap(),
         }
-        self
-    }
-
-    pub fn ask_confirmation_when_reject(
-        self,
-        message: Option<&str>,
-        submessage: Option<&str>,
-        ok_text: Option<&str>,
-        ko_text: Option<&str>,
-    ) -> NbglChoice<'a> {
-        unsafe {
-            G_CONFIRM_ASK_WHEN_FALSE = true;
-            G_CONFIRM_MESSAGE_WHEN_FALSE = match message {
-                Some(m) => Some(CString::new(m).unwrap()),
-                None => None,
-            };
-            G_CONFIRM_SUBMESSAGE_WHEN_FALSE = match submessage {
-                Some(sm) => Some(CString::new(sm).unwrap()),
-                None => None,
-            };
-            G_CONFIRM_OK_TEXT_WHEN_FALSE = match ok_text {
-                Some(ot) => Some(CString::new(ot).unwrap()),
-                None => None,
-            };
-            G_CONFIRM_KO_TEXT_WHEN_FALSE = match ko_text {
-                Some(kt) => Some(CString::new(kt).unwrap()),
-                None => None,
-            };
+        match submessage {
+            Some(sm) => screen.submessage = CString::new(sm).unwrap(),
+            None => screen.submessage = CString::new(DEFAULT_CONFIRM_SUBMESSAGE).unwrap(),
         }
-        self
+        match ok_text {
+            Some(ot) => screen.ok_text = CString::new(ot).unwrap(),
+            None => screen.ok_text = CString::new(DEFAULT_CONFIRM_OK_TEXT).unwrap(),
+        }
+        match ko_text {
+            Some(kt) => screen.ko_text = CString::new(kt).unwrap(),
+            None => screen.ko_text = CString::new(DEFAULT_CONFIRM_KO_TEXT).unwrap(),
+        }
+        if if_accept {
+            #[allow(static_mut_refs)]
+            unsafe {
+                G_CONFIRM_ASK_WHEN_TRUE = true;
+                G_CONFIRM_SCREEN[G_CONFIRM_SCREEN_WHEN_TRUE_IDX] = Some(screen);
+            }
+            return self;
+        } else {
+            #[allow(static_mut_refs)]
+            unsafe {
+                G_CONFIRM_ASK_WHEN_FALSE = true;
+                G_CONFIRM_SCREEN[G_CONFIRM_SCREEN_WHEN_FALSE_IDX] = Some(screen);
+            }
+            return self;
+        }
     }
 
     pub fn show(

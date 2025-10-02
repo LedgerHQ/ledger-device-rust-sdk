@@ -32,8 +32,8 @@ extern "C" fn sample_main() {
         NbglStatus::new().text("Transaction rejected").show(false);
     } else {
         let confirmed = NbglChoice::new()
-            .ask_confirmation_when_accept(Some("Are you sure to accept ?"), Some("Accept case"), Some("Yes"), Some("No"))
-            .ask_confirmation_when_reject(Some("Are you sure to reject ?"), Some("Reject case"), Some("Yes"), Some("No"))
+            .ask_confirmation(Some("Are you sure to accept ?"), Some("Accept case"), Some("Yes"), Some("No"), true)
+            .ask_confirmation(Some("Are you sure to reject ?"), Some("Reject case"), Some("Yes"), Some("No"), false)
             .glyph(&WARNING)
             .show(
                 "The transaction cannot be trusted",
