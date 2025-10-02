@@ -7,6 +7,8 @@ use ledger_device_sdk::nbgl::{NbglGlyph, NbglHomeAndSettings};
 // use ledger_device_sdk::nvm::*;
 // use ledger_device_sdk::NVMData;
 
+use ledger_device_sdk::io::{self, Comm, DEFAULT_BUF_SIZE};
+
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
 pub enum Instruction {
@@ -85,7 +87,7 @@ mod settings {
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    let mut comm = Comm::new();
+    let mut comm: Comm<DEFAULT_BUF_SIZE> = Comm::new();
 
     #[cfg(target_os = "apex_p")]
     const FERRIS: NbglGlyph =
@@ -113,6 +115,6 @@ extern "C" fn sample_main() {
     home.show_and_return();
 
     loop {
-        let _ins: Instruction = comm.next_command();
+        let _ins = comm.next_command();
     }
 }

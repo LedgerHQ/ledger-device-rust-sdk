@@ -113,6 +113,21 @@ const DEFAULT_CONFIRM_SUBMESSAGE: &str = "This action is irreversible.";
 const DEFAULT_CONFIRM_OK_TEXT: &str = "Confirm";
 const DEFAULT_CONFIRM_KO_TEXT: &str = "Cancel";
 
+#[cfg(feature = "io_new")]
+use crate::io::{Comm, DEFAULT_BUF_SIZE};
+
+#[cfg(feature = "io_new")]
+pub struct NBGLComm<'a, const N: usize = DEFAULT_BUF_SIZE> {
+     pub comm: &'a mut Comm<N>,
+}
+
+#[cfg(feature = "io_new")]
+impl<'a, const N: usize> NBGLComm<'a, N> {
+    pub fn new(comm: &'a mut Comm<N>) -> Self {
+        NBGLComm { comm }
+    }
+}   
+
 trait SyncNBGL: Sized {
     fn ux_sync_init(&self) {
         unsafe {

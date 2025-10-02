@@ -41,20 +41,32 @@ impl<'a> NbglAction<'a> {
         }
     }
 
-    pub fn show(self) -> SyncNbgl {
+    pub fn show(self, nbgl_com: &mut NBGLComm) -> SyncNbgl {
         unsafe {
             let icon: nbgl_icon_details_t = match self.glyph {
                 Some(g) => g.into(),
                 None => nbgl_icon_details_t::default(),
             };
-            self.ux_sync_init();
+            unsafe {
+                G_RET = SyncNbgl::UxSyncRetError.into();
+                G_ENDED = false;
+            }
             nbgl_useCaseAction(
                 &icon as *const nbgl_icon_details_t,
                 self.message.as_ptr() as *const c_char,
                 self.action_text.as_ptr() as *const c_char,
                 Some(continue_callback),
             );
-            self.ux_sync_wait(false)
+            unsafe {
+                while !G_ENDED {
+                    let apdu_received = nbgl_com.comm.next_event_ahead(true)
+                        == SyncNbgl::UxSyncRetApduReceived.into();
+                    if apdu_received {
+                        return SyncNbgl::UxSyncRetApduReceived;
+                    }
+                }
+                G_RET.into()
+            }
         }
     }
 }
