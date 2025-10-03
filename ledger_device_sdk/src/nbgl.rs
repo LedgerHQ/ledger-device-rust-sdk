@@ -8,6 +8,9 @@ use alloc::{vec, vec::Vec};
 use core::ffi::{c_char, c_int};
 use core::mem::transmute;
 use ledger_secure_sdk_sys::*;
+use crate::io::Comm;
+#[cfg(feature = "io_new")]
+use crate::io::CommandResponse;
 
 pub mod nbgl_action;
 pub mod nbgl_address_review;
@@ -90,6 +93,95 @@ impl From<SyncNbgl> for u8 {
     }
 }
 
+pub enum NbglUseCase<'a> {
+    Action(NbglAction<'a>),
+    AddressReview(NbglAddressReview<'a>),
+    AdvanceReview(NbglAdvanceReview<'a>),
+    Choice(NbglChoice<'a>),
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    GenericReview(NbglGenericReview),
+    GenericSettings(NbglGenericSettings),
+    Keypad(NbglKeypad),
+    Review(NbglReview<'a>),
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    ReviewExtended(NbglReviewExtended<'a>),
+    ReviewStatus(NbglReviewStatus),
+    Spinner(NbglSpinner),
+    Status(NbglStatus),
+    StreamingReview(NbglStreamingReview),
+}
+
+pub enum NbglUseCaseData<'a> {
+    Action,
+    AddressReview { address: &'a str },
+    AdvanceReview { fields: &'a [Field<'a>] },
+    Choice { message: &'a str, submessage: &'a str, confirm_text: &'a str, cancel_text: &'a str },
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    GenericReview { reject_button_str: &'a str },
+    GenericSettings,
+    Keypad { pin: &'a [u8] },
+    Review { fields: &'a [Field<'a>] },
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    ReviewExtended { fields: &'a [Field<'a>] },
+    ReviewStatus { success: bool },
+    Spinner { text: &'a str },
+    Status { success: bool },
+    StreamingReviewStart { title: &'a str, subtitle: Option<&str> },
+    StreamingReviewNext { fields: &'a [Field<'a>] },
+    StreamingReviewFinish { finish_title: &'a str }
+}
+
+pub struct Nbgl<'a> {
+    usecase: &'a NbglUseCase<'a>,
+    comm: Option<&'a mut Comm>,
+}
+
+impl<'a> Nbgl<'a> {
+    pub fn new(usecase: &'a NbglUseCase<'a>) -> Self {
+        Nbgl { usecase, comm: None }
+    }
+
+    pub fn with_usecase(mut self, usecase: &'a NbglUseCase<'a>) -> Self {
+        self.usecase = usecase;
+        self
+    }
+
+    pub fn start(mut self, comm: &'a mut Comm) -> Self {
+        self.comm = Some(comm);
+        self
+    }
+
+    pub fn end(self) -> CommandResponse<'a> {
+        CommandResponse::new(self.comm.unwrap())
+    }  
+
+    pub fn show(&self, data: &NbglUseCaseData) -> Result<SyncNbgl, &str> {
+        match &self.usecase {
+            NbglUseCase::Action(action) => action.show(self.comm.as_mut().unwrap()),
+            NbglUseCase::AddressReview(review) => {
+                let data = match data {
+                    NbglUseCaseData::AddressReview { address } => *address,
+                    _ => panic!("Invalid data for AddressReview"),
+                };
+                review.show(data)
+            },
+            NbglUseCase::AdvanceReview(review) => review.show(self.comm.as_mut().unwrap()),
+            NbglUseCase::Choice(choice) => choice.show(self.comm.as_mut().unwrap()),
+            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+            NbglUseCase::GenericReview(review) => review.show(self.comm.as_mut().unwrap()),
+            NbglUseCase::GenericSettings(settings) => settings.show(self.comm.as_mut().unwrap()),
+            NbglUseCase::Keypad(keypad) => keypad.show(self.comm.as_mut().unwrap()),
+            NbglUseCase::Review(review) => review.show(self.comm.as_mut().unwrap()),
+            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+            NbglUseCase::ReviewExtended(review) => review.show(com),
+            NbglUseCase::ReviewStatus(status) => status.show(com),
+            NbglUseCase::Spinner(spinner) => spinner.show(com),
+            NbglUseCase::Status(status) => status.show(com),
+            NbglUseCase::StreamingReview(review) => review.show(com),
+        }
+    }
+}
+
 static mut G_RET: u8 = 0;
 static mut G_ENDED: bool = false;
 static mut G_CONFIRM_ASK_WHEN_TRUE: bool = false;
@@ -112,21 +204,6 @@ const DEFAULT_CONFIRM_MESSAGE: &str = "Do you confirm this action?";
 const DEFAULT_CONFIRM_SUBMESSAGE: &str = "This action is irreversible.";
 const DEFAULT_CONFIRM_OK_TEXT: &str = "Confirm";
 const DEFAULT_CONFIRM_KO_TEXT: &str = "Cancel";
-
-#[cfg(feature = "io_new")]
-use crate::io::{Comm, DEFAULT_BUF_SIZE};
-
-#[cfg(feature = "io_new")]
-pub struct NBGLComm<'a, const N: usize = DEFAULT_BUF_SIZE> {
-     pub comm: &'a mut Comm<N>,
-}
-
-#[cfg(feature = "io_new")]
-impl<'a, const N: usize> NBGLComm<'a, N> {
-    pub fn new(comm: &'a mut Comm<N>) -> Self {
-        NBGLComm { comm }
-    }
-}   
 
 trait SyncNBGL: Sized {
     fn ux_sync_init(&self) {

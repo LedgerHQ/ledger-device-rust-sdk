@@ -121,6 +121,24 @@ impl<const N: usize> Comm<N> {
         }
     }
 
+    pub fn nex_event_ahead(&mut self) -> bool {
+        match self.next_event().into_type() {
+            DecodedEventType::Apdu {
+                header,
+                offset,
+                length,
+            } => {
+                self.pending_apdu = true;
+                self.pending_header = header;
+                self.pending_offset = offset;
+                self.pending_length = length;
+                return true;
+            }
+            _ => {}
+        }
+        false
+    }
+
     pub fn next_command(&mut self) -> Command<'_, N> {
         loop {
             let ety = self.next_event().into_type();

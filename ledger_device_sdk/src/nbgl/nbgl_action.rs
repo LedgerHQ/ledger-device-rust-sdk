@@ -1,4 +1,5 @@
 use super::*;
+use crate::io::Comm;
 
 /// A wrapper around the asynchronous NBGL nbgl_useCaseChoice C API binding.
 /// Draws a generic choice page, described in a centered info (with configurable icon),
@@ -41,32 +42,28 @@ impl<'a> NbglAction<'a> {
         }
     }
 
-    pub fn show(self, nbgl_com: &mut NBGLComm) -> SyncNbgl {
+    pub fn show(self, com: &mut Comm) -> SyncNbgl {
         unsafe {
             let icon: nbgl_icon_details_t = match self.glyph {
                 Some(g) => g.into(),
                 None => nbgl_icon_details_t::default(),
             };
-            unsafe {
-                G_RET = SyncNbgl::UxSyncRetError.into();
-                G_ENDED = false;
-            }
+            
+            G_RET = SyncNbgl::UxSyncRetError.into();
+            G_ENDED = false;
             nbgl_useCaseAction(
                 &icon as *const nbgl_icon_details_t,
                 self.message.as_ptr() as *const c_char,
                 self.action_text.as_ptr() as *const c_char,
                 Some(continue_callback),
             );
-            unsafe {
-                while !G_ENDED {
-                    let apdu_received = nbgl_com.comm.next_event_ahead(true)
-                        == SyncNbgl::UxSyncRetApduReceived.into();
-                    if apdu_received {
-                        return SyncNbgl::UxSyncRetApduReceived;
-                    }
+            while !G_ENDED {
+                let apdu_received = com.next_event_ahead();
+                if apdu_received {
+                    return SyncNbgl::UxSyncRetApduReceived;
                 }
-                G_RET.into()
             }
+            G_RET.into()
         }
     }
 }
