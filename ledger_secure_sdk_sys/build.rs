@@ -671,22 +671,61 @@ impl SDKBuilder<'_> {
     }
 
     fn generate_heap_size(&self) -> Result<(), SDKBuildError> {
-        // Read the HEAP_SIZE environment variable, default to 8192 if not set
-        let heap_size = env::var("HEAP_SIZE").unwrap_or_else(|_| "8192".to_string());
+        let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
 
-        let heap_size_value = heap_size.parse::<u32>().unwrap();
+        // HEAP_SIZE can be either:
+        //  1. A single integer (e.g. "8192")
+        //  2. A comma-separated list of target:value pairs (e.g. "nanosplus: 8192, stax: 12288")
+        //     where target matches CARGO_CFG_TARGET_OS.
+        // If not specified, or if the current target isn't present, default to DEFAULT_HEAP_SIZE.
+        const DEFAULT_HEAP_SIZE: u32 = 8192;
+        let raw = env::var("HEAP_SIZE").unwrap_or_else(|_| DEFAULT_HEAP_SIZE.to_string());
+        let trimmed = raw.trim();
+
+        let heap_size_value: u32 = match trimmed.parse::<u32>() {
+            Ok(v) => v, // Simple numeric form
+            Err(_) => {
+                // Look for a target:value entry matching the current target_os
+                let mut selected: Option<u32> = None;
+                for entry in trimmed.split(',') {
+                    let entry = entry.trim();
+                    if entry.is_empty() {
+                        continue;
+                    }
+                    if let Some((k, v_str)) = entry.split_once(':') {
+                        if k.trim() == target_os {
+                            if let Ok(v) = v_str.trim().parse::<u32>() {
+                                selected = Some(v);
+                                break;
+                            }
+                        }
+                    }
+                }
+                selected.unwrap_or(DEFAULT_HEAP_SIZE)
+            }
+        };
+
+        // the maximum heap size is 4kb less than the total RAM size for the device
+        // (compare the SRAM size in the respective {target_os}_layout.ld files)
+        let max_heap_size = match target_os.as_str() {
+            "nanox" => 24 * 1024,
+            "nanosplus" => 36 * 1024,
+            "stax" => 32 * 1024,
+            "flex" => 32 * 1024,
+            "apex_p" => 36 * 1024,
+            _ => panic!("Unknown target OS '{target_os}'"),
+        };
 
         assert!(
-            heap_size_value >= 2048 && heap_size_value <= 24576,
-            "Invalid heap size: {heap_size}; Shall be included in [2048, 24576]"
+            (2048..=max_heap_size).contains(&heap_size_value),
+            "Invalid heap size specification '{raw}'; resolved value {heap_size_value} must be in [2048, {}] for target {}", max_heap_size, target_os
         );
 
-        // Generate the heap_size.rs file with the HEAP_SIZE value
         let out_dir = env::var("OUT_DIR").unwrap();
         let dest_path = Path::new(&out_dir).join("heap_size.rs");
         fs::write(
             &dest_path,
-            format!("pub const HEAP_SIZE: usize = {};", heap_size),
+            format!("pub const HEAP_SIZE: usize = {heap_size_value};"),
         )
         .expect("Unable to write file");
         Ok(())
