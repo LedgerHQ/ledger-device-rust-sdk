@@ -359,7 +359,7 @@ impl ToMessage for StatusType {
 /// The COMM_REF variable is used by the NBGL API to detect touch events and
 /// APDU reception.
 pub fn init_comm(comm: &mut crate::io::Comm) {
-   unsafe {
+    unsafe {
         COMM_REF = Some(transmute(comm));
     }
 }
