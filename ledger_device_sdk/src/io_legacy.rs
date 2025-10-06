@@ -158,7 +158,7 @@ pub struct ApduHeader {
 impl Comm {
     /// Creates a new [`Comm`] instance, which accepts any CLA APDU by default.
     pub fn new() -> Self {
-        let mut comm = Self {
+        Self {
             apdu_buffer: [0u8; 272],
             rx: 0,
             tx: 0,
@@ -170,19 +170,19 @@ impl Comm {
             io_buffer: [0u8; 273],
             rx_length: 0,
             tx_length: 0,
-        };
+        }
+    }
 
+    pub(crate) fn nbgl_register_comm(&mut self) {
         // Register NBGL callbacks if not already set and record current Comm singleton.
         unsafe {
-            CURRENT_COMM = &mut comm as *mut Comm;
+            CURRENT_COMM = self as *mut Comm;
         }
         nbgl_register_callbacks(
             default_nbgl_next_event_ahead,
             default_nbgl_fetch_apdu_header,
             default_nbgl_reply_status,
         );
-
-        comm
     }
 
     /// Defines [`Comm::expected_cla`] in order to reply automatically [`StatusWords::BadCla`] when
