@@ -3,13 +3,16 @@
 
 use include_gif::include_gif;
 use ledger_device_sdk::io::*;
-use ledger_device_sdk::nbgl::{Field, NbglAddressReview, NbglGlyph, NbglReviewStatus, StatusType};
+use ledger_device_sdk::nbgl::{
+    init_comm, Field, NbglAddressReview, NbglGlyph, NbglReviewStatus, StatusType,
+};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    let _comm = Comm::new();
+    let mut comm = Comm::new();
+    init_comm(&mut comm);
 
     let addr_hex = "0x1234567890ABCDEF1234567890ABCDEF12345678";
 

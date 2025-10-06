@@ -2,13 +2,14 @@
 #![no_main]
 
 use ledger_device_sdk::io::*;
-use ledger_device_sdk::nbgl::{NbglReviewStatus, NbglSpinner};
+use ledger_device_sdk::nbgl::{init_comm, NbglReviewStatus, NbglSpinner};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
 #[no_mangle]
 extern "C" fn sample_main() {
     let mut comm = Comm::new();
+    init_comm(&mut comm);
 
     NbglSpinner::new().show("Please wait...");
 

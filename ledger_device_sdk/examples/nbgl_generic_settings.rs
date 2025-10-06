@@ -2,7 +2,7 @@
 #![no_main]
 
 use ledger_device_sdk::io::*;
-use ledger_device_sdk::nbgl::NbglGenericSettings;
+use ledger_device_sdk::nbgl::{init_comm, NbglGenericSettings};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
@@ -65,7 +65,8 @@ mod settings {
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    let _comm = Comm::new();
+    let mut comm = Comm::new();
+    init_comm(&mut comm);
 
     // Display the settings screen with info.
     let settings_strings = [["Switch title", "Switch subtitle"]];
