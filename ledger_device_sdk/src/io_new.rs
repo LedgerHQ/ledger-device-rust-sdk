@@ -53,7 +53,7 @@ pub struct Comm<const N: usize = DEFAULT_BUF_SIZE> {
 
 impl<const N: usize> Comm<N> {
     pub fn new() -> Self {
-        let mut comm = Self {
+        Self {
             buf: [0; N],
             expected_cla: None,
             apdu_type: PacketTypes::PacketTypeNone as u8,
@@ -68,16 +68,17 @@ impl<const N: usize> Comm<N> {
             },
             pending_offset: 0,
             pending_length: 0,
-        };
+        }
+    }
 
-        set_comm::<N>(&mut comm);
+    pub(crate) fn init_comm(&mut self) {
+        // Register NBGL callbacks if not already set and record current Comm singleton.
+        set_comm::<N>(self);
         nbgl_register_callbacks(
             next_event_ahead_impl::<N>,
             fetch_apdu_header_impl::<N>,
             reply_status_impl::<N>,
         );
-
-        comm
     }
 
     /// Receive into the internal buffer. Returns a read-only guard.

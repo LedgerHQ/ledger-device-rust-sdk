@@ -348,9 +348,18 @@ impl ToMessage for StatusType {
     }
 }
 
-pub fn init_comm(_comm: &mut crate::io::Comm) {
-    // intentionally empty; no longer used as the necessary initialization
-    // is now performed in the constructor of the Comm struct.
+#[cfg(not(feature = "io_new"))]
+/// Initialize the global reference to the Comm instance used by Nbgl.
+/// This function should be called from the main function of the application.
+pub fn init_comm(comm: &mut crate::io::Comm) {
+    comm.init_comm();
+}
+
+#[cfg(feature = "io_new")]
+/// Initialize the global reference to the Comm instance used by Nbgl.
+/// This function should be called from the main function of the application.
+pub fn init_comm<const N: usize>(comm: &mut crate::io::Comm<N>) {
+    comm.init_comm();
 }
 
 #[derive(Copy, Clone)]
