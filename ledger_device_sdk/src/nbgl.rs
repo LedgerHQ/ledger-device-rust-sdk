@@ -352,14 +352,14 @@ impl ToMessage for StatusType {
 /// Initialize the global reference to the Comm instance used by Nbgl.
 /// This function should be called from the main function of the application.
 pub fn init_comm(comm: &mut crate::io::Comm) {
-    comm.init_comm();
+    comm.nbgl_register_comm();
 }
 
 #[cfg(feature = "io_new")]
 /// Initialize the global reference to the Comm instance used by Nbgl.
 /// This function should be called from the main function of the application.
 pub fn init_comm<const N: usize>(comm: &mut crate::io::Comm<N>) {
-    comm.init_comm();
+    comm.nbgl_register_comm();
 }
 
 #[derive(Copy, Clone)]

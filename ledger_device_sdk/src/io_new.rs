@@ -71,7 +71,7 @@ impl<const N: usize> Comm<N> {
         }
     }
 
-    pub(crate) fn init_comm(&mut self) {
+    pub(crate) fn nbgl_register_comm(&mut self) {
         // Register NBGL callbacks if not already set and record current Comm singleton.
         set_comm::<N>(self);
         nbgl_register_callbacks(

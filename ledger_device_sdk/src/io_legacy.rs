@@ -173,7 +173,7 @@ impl Comm {
         }
     }
 
-    pub(crate) fn init_comm(&mut self) {
+    pub(crate) fn nbgl_register_comm(&mut self) {
         // Register NBGL callbacks if not already set and record current Comm singleton.
         unsafe {
             CURRENT_COMM = self as *mut Comm;
