@@ -10,6 +10,7 @@
 pub mod ecc;
 pub mod hash;
 pub mod hmac;
+#[cfg(feature = "io_new")]
 pub(crate) mod io_callbacks;
 pub(crate) mod io_legacy;
 #[cfg(feature = "io_new")]

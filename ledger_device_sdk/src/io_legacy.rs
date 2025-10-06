@@ -2,8 +2,6 @@
 use ledger_secure_sdk_sys::buttons::{get_button_event, ButtonEvent, ButtonsState};
 use ledger_secure_sdk_sys::seph as sys_seph;
 use ledger_secure_sdk_sys::*;
-
-use crate::io_callbacks::nbgl_register_callbacks;
 use crate::seph;
 
 #[cfg(any(
@@ -158,7 +156,7 @@ pub struct ApduHeader {
 impl Comm {
     /// Creates a new [`Comm`] instance, which accepts any CLA APDU by default.
     pub fn new() -> Self {
-        let mut comm = Self {
+        let comm = Self {
             apdu_buffer: [0u8; 272],
             rx: 0,
             tx: 0,
@@ -171,17 +169,6 @@ impl Comm {
             rx_length: 0,
             tx_length: 0,
         };
-
-        // Register NBGL callbacks if not already set and record current Comm singleton.
-        unsafe {
-            CURRENT_COMM = &mut comm as *mut Comm;
-        }
-        nbgl_register_callbacks(
-            default_nbgl_next_event_ahead,
-            default_nbgl_fetch_apdu_header,
-            default_nbgl_reply_status,
-        );
-
         comm
     }
 
@@ -646,39 +633,6 @@ impl Comm {
     pub fn append(&mut self, m: &[u8]) {
         self.io_buffer[self.tx_length..self.tx_length + m.len()].copy_from_slice(m);
         self.tx_length += m.len();
-    }
-}
-
-static mut CURRENT_COMM: *mut Comm = core::ptr::null_mut();
-
-fn default_nbgl_next_event_ahead() -> bool {
-    unsafe {
-        if CURRENT_COMM.is_null() {
-            panic!("No Comm instance registered");
-        }
-        (*CURRENT_COMM).next_event_ahead::<ApduHeader>()
-    }
-}
-
-fn default_nbgl_fetch_apdu_header() -> Option<ApduHeader> {
-    unsafe {
-        if CURRENT_COMM.is_null() {
-            panic!("No Comm instance registered");
-        }
-        let comm = &mut *CURRENT_COMM;
-        if comm.event_pending && comm.rx_length >= 5 {
-            return Some(*comm.get_apdu_metadata());
-        }
-        None
-    }
-}
-
-fn default_nbgl_reply_status(reply: Reply) {
-    unsafe {
-        if CURRENT_COMM.is_null() {
-            panic!("No Comm instance registered");
-        }
-        (*CURRENT_COMM).reply(reply);
     }
 }
 

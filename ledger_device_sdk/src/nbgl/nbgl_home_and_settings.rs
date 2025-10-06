@@ -1,6 +1,5 @@
 use super::*;
-use crate::io::{Reply, StatusWords};
-use crate::io_callbacks::{nbgl_fetch_apdu_header, nbgl_reply_status};
+use crate::io::Reply;
 
 pub const SETTINGS_SIZE: usize = 10;
 static mut NVM_REF: Option<&mut AtomicStorage<[u8; SETTINGS_SIZE]>> = None;
@@ -231,14 +230,9 @@ impl<'a> NbglHomeAndSettings {
                 );
                 match self.ux_sync_wait(true) {
                     SyncNbgl::UxSyncRetApduReceived => {
-                        if let Some(hdr) = nbgl_fetch_apdu_header() {
-                            // Reconstruct minimal Event::Command using APDU header only.
-                            // The generic parameter T: TryFrom<ApduHeader> will parse header.
-                            if let Ok(ins) = T::try_from(hdr) {
-                                return Event::Command(ins);
-                            } else {
-                                // In case of parse error we emulate a BadIns reply.
-                                nbgl_reply_status(Reply(StatusWords::BadIns as u16));
+                        if let Some(comm) = (*(&raw mut COMM_REF)).as_mut() {
+                            if let Some(value) = comm.check_event() {
+                                return value;
                             }
                         }
                     }
