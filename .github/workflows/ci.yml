@@ -83,3 +83,32 @@ jobs:
     uses: ./.github/workflows/reusable_build_all_apps.yml
     with:
       rust_sdk_branch: ${{ github.ref }}
+
+  merge_artifacts:
+      name: Merge build artifacts
+      needs: [build-apps]
+      strategy:
+            fail-fast: false
+            matrix:
+              app-name: ["app-boilerplate-rust", "app-near", "app-sui"]
+      runs-on: ubuntu-22.04
+      steps:
+        - name: Merge artifacts
+          uses: actions/upload-artifact/merge@v4
+          with:
+            name: "${{ matrix.app-name }}_binaries"
+            pattern: "${{ matrix.app-name }}_binaries-*"
+            delete-merged: true
+
+  ragger_tests:
+   name: Run ragger tests using the reusable workflow
+   needs: merge_artifacts
+   uses: LedgerHQ/ledger-app-workflows/.github/workflows/reusable_ragger_tests.yml@v1
+   strategy:
+    fail-fast: false
+    matrix:
+      app-name: ["app-boilerplate-rust", "app-near", "app-sui"]
+   with:  
+     app_repository: LedgerHQ/${{ matrix.app-name }}
+     download_app_binaries_artifact: "${{ matrix.app-name }}_binaries"
+     app_branch_name: ${{ matrix.app-name == 'app-boilerplate-rust' && 'main' || 'develop' }}

@@ -169,3 +169,19 @@ jobs:
                 device=$(echo ${{ matrix.device }} | sed 's/+/plus/')
                 echo "Build for "$device
                 cargo ledger build $device
+                # Get the binary path and set it as an output variable
+                BINARY_PATH=$(cargo metadata --no-deps --format-version 1 | jq -r '.target_directory')/ && \
+                echo "BINARY_PATH=$BINARY_PATH" >> $GITHUB_ENV
+            
+            - name: Remove useless artifacts from previous build
+              run: |
+                find ${{ env.BINARY_PATH }} -mindepth 3 -maxdepth 3 -type d -exec rm -rf {} + && \
+                rm -rf ${{ env.BINARY_PATH }}/release
+      
+            - name: Upload binary artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                name: "${{ matrix.app-name }}_binaries-${{ matrix.device }}"
+                path: ${{env.BINARY_PATH}}
+                if-no-files-found: error
+          
