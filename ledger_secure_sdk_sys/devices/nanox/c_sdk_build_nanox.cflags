@@ -14,7 +14,7 @@
 -fno-jump-tables
 -frwpi
 --target=arm-none-eabi
--mcpu=cortex-m0plus
+-mcpu=cortex-m3
 -mlittle-endian
 -mthumb
 -Wno-unused-command-line-argument
