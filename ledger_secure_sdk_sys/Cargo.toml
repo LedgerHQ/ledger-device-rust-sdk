@@ -1,6 +1,6 @@
 [package]
 name = "ledger_secure_sdk_sys"
-version = "1.11.3"
+version = "1.11.4"
 authors = ["yhql", "agrojean-ledger", "yogh333"]
 edition = "2021"
 license.workspace = true
