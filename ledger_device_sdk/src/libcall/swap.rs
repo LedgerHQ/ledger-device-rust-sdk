@@ -18,6 +18,33 @@ pub const DEFAULT_ADDRESS_EXTRA_ID_BUF_SIZE: usize = 32;
 const DPATH_STAGE_SIZE: usize = 16;
 const AMOUNT_BUF_SIZE: usize = 16;
 
+/// Helper function to read a null-terminated C string into a fixed-size buffer
+/// Returns the buffer and the actual length read
+/// Prints a warning if truncation occurs
+fn read_c_string<const N: usize>(ptr: *const i8) -> ([u8; N], usize) {
+    let mut buffer = [0u8; N];
+
+    if ptr.is_null() {
+        return (buffer, 0);
+    }
+
+    let mut length = 0usize;
+    let mut c = unsafe { *ptr.add(length) };
+
+    while c != '\0' as i8 && length < N {
+        buffer[length] = c as u8;
+        length += 1;
+        c = unsafe { *ptr.add(length) };
+    }
+
+    // Check if truncation occurred
+    if c != '\0' as i8 && length == N {
+        debug_print("WARNING: C string truncated\n");
+    }
+
+    (buffer, length)
+}
+
 pub struct CheckAddressParams<
     const COIN_CONFIG_BUF_SIZE: usize = DEFAULT_COIN_CONFIG_BUF_SIZE,
     const ADDRESS_BUF_SIZE: usize = DEFAULT_ADDRESS_BUF_SIZE,
@@ -164,14 +191,9 @@ pub fn get_check_address_params<
     }
 
     debug_print("==> GET_REF_ADDRESS\n");
-    let mut address_length = 0usize;
-    let mut c = unsafe { *(params.address_to_check.add(address_length)) };
-    while c != '\0' as i8 && address_length < ADDRESS_BUF_SIZE {
-        check_address_params.ref_address[address_length] = c as u8;
-        address_length += 1;
-        c = unsafe { *(params.address_to_check.add(address_length)) };
-    }
-    check_address_params.ref_address_len = address_length;
+    let (address, address_len) = read_c_string::<ADDRESS_BUF_SIZE>(params.address_to_check);
+    check_address_params.ref_address = address;
+    check_address_params.ref_address_len = address_len;
 
     check_address_params.result = unsafe {
         &(*(libarg.__bindgen_anon_1.check_address as *mut check_address_parameters_t)).result
@@ -300,34 +322,15 @@ pub fn sign_tx_params<
     }
 
     debug_print("==> GET_DESTINATION_ADDRESS\n");
-    let mut dest_address_length = 0usize;
-    let mut c = unsafe { *params.destination_address.add(dest_address_length) };
-    while c != '\0' as i8 && dest_address_length < ADDRESS_BUF_SIZE {
-        create_tx_params.dest_address[dest_address_length] = c as u8;
-        dest_address_length += 1;
-        c = unsafe { *params.destination_address.add(dest_address_length) };
-    }
-    create_tx_params.dest_address_len = dest_address_length;
+    let (address, address_len) = read_c_string::<ADDRESS_BUF_SIZE>(params.destination_address);
+    create_tx_params.dest_address = address;
+    create_tx_params.dest_address_len = address_len;
 
     debug_print("==> GET_DESTINATION_ADDRESS_EXTRA_ID\n");
-    let mut dest_address_extra_id_length = 0usize;
-    if !params.destination_address_extra_id.is_null() {
-        let mut c = unsafe {
-            *params
-                .destination_address_extra_id
-                .add(dest_address_extra_id_length)
-        };
-        while c != '\0' as i8 && dest_address_extra_id_length < ADDRESS_EXTRA_ID_BUF_SIZE {
-            create_tx_params.dest_address_extra_id[dest_address_extra_id_length] = c as u8;
-            dest_address_extra_id_length += 1;
-            c = unsafe {
-                *params
-                    .destination_address_extra_id
-                    .add(dest_address_extra_id_length)
-            };
-        }
-    }
-    create_tx_params.dest_address_extra_id_len = dest_address_extra_id_length;
+    let (extra_id, extra_id_len) =
+        read_c_string::<ADDRESS_EXTRA_ID_BUF_SIZE>(params.destination_address_extra_id);
+    create_tx_params.dest_address_extra_id = extra_id;
+    create_tx_params.dest_address_extra_id_len = extra_id_len;
 
     create_tx_params.result = unsafe {
         &(*(libarg.__bindgen_anon_1.create_transaction as *mut create_transaction_parameters_t))
