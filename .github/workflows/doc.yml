@@ -12,6 +12,8 @@ env:
 jobs:
   build-docs:
     name: Build documentation
+    permissions:
+        contents: read
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
@@ -21,3 +23,24 @@ jobs:
       - name: Cargo doc
         run: |
           cargo doc -p ledger_device_sdk --no-deps --lib --target flex
+          echo "<meta http-equiv=\"refresh\" content=\"0; url=ledger_device_sdk\">" > target/flex/doc/index.html
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: target/flex/doc/
+
+# deploy to GitHub Pages
+  deploy:
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: build-docs
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
