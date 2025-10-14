@@ -1,8 +1,10 @@
+//! A wrapper around the asynchronous NBGL [nbgl_useCaseChoice](https://github.com/LedgerHQ/ledger-secure-sdk/blob/f7ba831fc72257d282060f9944644ef43b6b8e30/lib_nbgl/src/nbgl_use_case.c#L3505) C API binding.
+//!
+//! Draws a generic choice page, described in a centered info (with configurable icon),
+//! thanks to a button and a footer at the bottom of the page.
 use super::*;
 
-/// A wrapper around the asynchronous NBGL nbgl_useCaseChoice C API binding.
-/// Draws a generic choice page, described in a centered info (with configurable icon),
-/// thanks to a button and a footer at the bottom of the page.
+/// A builder to create and show a choice flow.
 pub struct NbglChoice<'a> {
     glyph: Option<&'a NbglGlyph<'a>>,
 }
@@ -10,28 +12,34 @@ pub struct NbglChoice<'a> {
 impl SyncNBGL for NbglChoice<'_> {}
 
 // To support nbgl_useCaseChoiceWithDetails
-pub enum WarningDetailsType {
-    CenteredInfoWarning,
-    QRCodeWarning,
-    BarListWarning,
-}
+// pub enum WarningDetailsType {
+//     CenteredInfoWarning,
+//     QRCodeWarning,
+//     BarListWarning,
+// }
 
 // To support nbgl_useCaseChoiceWithDetails
-impl From<WarningDetailsType> for nbgl_warningDetailsType_t {
-    fn from(wdt: WarningDetailsType) -> Self {
-        match wdt {
-            WarningDetailsType::CenteredInfoWarning => CENTERED_INFO_WARNING,
-            WarningDetailsType::QRCodeWarning => QRCODE_WARNING,
-            WarningDetailsType::BarListWarning => BAR_LIST_WARNING,
-        }
-    }
-}
+// impl From<WarningDetailsType> for nbgl_warningDetailsType_t {
+//     fn from(wdt: WarningDetailsType) -> Self {
+//         match wdt {
+//             WarningDetailsType::CenteredInfoWarning => CENTERED_INFO_WARNING,
+//             WarningDetailsType::QRCodeWarning => QRCODE_WARNING,
+//             WarningDetailsType::BarListWarning => BAR_LIST_WARNING,
+//         }
+//     }
+// }
 
 impl<'a> NbglChoice<'a> {
+    /// Creates a new choice flow builder.
     pub fn new() -> NbglChoice<'a> {
         NbglChoice { glyph: None }
     }
 
+    /// Sets the icon to display in the center of the page.
+    /// # Arguments
+    /// * `glyph` - The icon to display in the center of the page.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn glyph(self, glyph: &'a NbglGlyph) -> NbglChoice<'a> {
         NbglChoice {
             glyph: Some(glyph),
@@ -39,6 +47,16 @@ impl<'a> NbglChoice<'a> {
         }
     }
 
+    /// Configures the confirmation dialog to be shown when the user accepts or rejects the choice.
+    /// # Arguments
+    /// * `message` - The main message to display in the confirmation dialog. If `None`, a default message is used.
+    /// * `submessage` - An optional sub-message to display below the main message. If `None`, a default sub-message is used.
+    /// * `ok_text` - The text to display on the confirmation button. If `None`, a default text is used.
+    /// * `ko_text` - The text to display on the cancellation button. If `None`, a default text is used.
+    /// * `if_accept` - The `if_accept` parameter determines whether the dialog is shown when the user accepts (`true`)
+    /// or rejects (`false`) the choice.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn ask_confirmation(
         self,
         message: Option<&str>,
@@ -81,6 +99,18 @@ impl<'a> NbglChoice<'a> {
         }
     }
 
+    /// Shows the choice flow.
+    ///
+    /// # Arguments
+    ///
+    /// * `message` - The main message to display in the center of the page.
+    /// * `sub_message` - An optional sub-message to display below the main message.
+    /// * `confirm_text` - The text to display on the confirmation button.
+    /// * `cancel_text` - The text to display on the cancellation button.
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` if the user confirmed the choice, `false` otherwise.
     pub fn show(
         &self,
         message: &str,
