@@ -1,8 +1,9 @@
+//! A wrapper around the asynchronous NBGL [nbgl_useCaseKeypad](https://github.com/LedgerHQ/ledger-secure-sdk/blob/f7ba831fc72257d282060f9944644ef43b6b8e30/lib_nbgl/src/nbgl_use_case.c#L4482) C API binding.
+//!
+//! Draws a keypad for user input, allowing for PIN entry and other numeric input.
 use super::*;
 
-/// A wrapper around the asynchronous NBGL nbgl_useCaseChoice C API binding.
-/// Draws a generic choice page, described in a centered info (with configurable icon),
-/// thanks to a button and a footer at the bottom of the page.
+/// A builder to create and show a keypad for user input.
 pub struct NbglKeypad {
     title: CString,
     min_digits: u8,
@@ -28,6 +29,11 @@ unsafe extern "C" fn action_callback() {
 }
 
 impl NbglKeypad {
+    /// Creates a new keypad builder with default settings.
+    /// By default, the title is "Enter PIN", minimum and maximum digits are set to 4,
+    /// the keypad is shuffled, and input is hidden.
+    /// # Returns
+    /// Returns a new instance of `NbglKeypad`.
     pub fn new() -> NbglKeypad {
         NbglKeypad {
             title: CString::new("Enter PIN").unwrap(),
@@ -38,6 +44,11 @@ impl NbglKeypad {
         }
     }
 
+    /// Sets the title to display at the top of the keypad.
+    /// # Arguments
+    /// * `title` - The title to display at the top of the keypad.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn title(self, title: &str) -> NbglKeypad {
         NbglKeypad {
             title: CString::new(title).unwrap(),
@@ -45,13 +56,22 @@ impl NbglKeypad {
         }
     }
 
+    /// Sets the minimum number of digits required for input.
+    /// # Arguments
+    /// * `min` - The minimum number of digits required for input.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn min_digits(self, min: u8) -> NbglKeypad {
         NbglKeypad {
             min_digits: min,
             ..self
         }
     }
-
+    /// Sets the maximum number of digits allowed for input.
+    /// # Arguments
+    /// * `max` - The maximum number of digits allowed for input.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn max_digits(self, max: u8) -> NbglKeypad {
         NbglKeypad {
             max_digits: max,
@@ -59,6 +79,11 @@ impl NbglKeypad {
         }
     }
 
+    /// Sets whether the keypad should be shuffled.
+    /// # Arguments
+    /// * `shuffle` - If `true`, the keypad will be shuffled; otherwise, it will be in a fixed order.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn shuffled(self, shuffle: bool) -> NbglKeypad {
         NbglKeypad {
             shuffled: shuffle,
@@ -66,10 +91,21 @@ impl NbglKeypad {
         }
     }
 
+    /// Sets whether the input should be hidden (e.g., for PIN entry).
+    /// # Arguments
+    /// * `hide` - If `true`, the input will be hidden; otherwise, it will be visible.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn hide(self, hide: bool) -> NbglKeypad {
         NbglKeypad { hide, ..self }
     }
 
+    /// Shows the keypad and waits for user input.
+    /// # Arguments
+    /// * `pin` - A slice containing the expected PIN for validation.
+    /// # Returns
+    /// Returns `SyncNbgl::UxSyncRetPinValidated` if the entered PIN matches the expected PIN,
+    /// otherwise returns `SyncNbgl::UxSyncRetPinRejected`.
     pub fn ask(self, pin: &[u8]) -> SyncNbgl {
         unsafe {
             self.ux_sync_init();
