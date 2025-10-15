@@ -48,6 +48,7 @@ fn read_c_string<const N: usize>(ptr: *const i8) -> ([u8; N], usize) {
 pub struct CheckAddressParams<
     const COIN_CONFIG_BUF_SIZE: usize = DEFAULT_COIN_CONFIG_BUF_SIZE,
     const ADDRESS_BUF_SIZE: usize = DEFAULT_ADDRESS_BUF_SIZE,
+    const ADDRESS_EXTRA_ID_BUF_SIZE: usize = DEFAULT_ADDRESS_EXTRA_ID_BUF_SIZE,
 > {
     pub coin_config: [u8; COIN_CONFIG_BUF_SIZE],
     pub coin_config_len: usize,
@@ -58,8 +59,12 @@ pub struct CheckAddressParams<
     pub result: *mut i32,
 }
 
-impl<const COIN_CONFIG_BUF_SIZE: usize, const ADDRESS_BUF_SIZE: usize> Default
-    for CheckAddressParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE>
+impl<
+        const COIN_CONFIG_BUF_SIZE: usize,
+        const ADDRESS_BUF_SIZE: usize,
+        const ADDRESS_EXTRA_ID_BUF_SIZE: usize,
+    > Default
+    for CheckAddressParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE, ADDRESS_EXTRA_ID_BUF_SIZE>
 {
     fn default() -> Self {
         CheckAddressParams {
@@ -76,8 +81,9 @@ impl<const COIN_CONFIG_BUF_SIZE: usize, const ADDRESS_BUF_SIZE: usize> Default
 
 pub struct PrintableAmountParams<
     const COIN_CONFIG_BUF_SIZE: usize = DEFAULT_COIN_CONFIG_BUF_SIZE,
-    // Unused const generic paramer here, to allow type inference in `swap_return` fn
+    // Unused const generic parameter here, to allow type inference in `swap_return` fn
     const ADDRESS_BUF_SIZE: usize = DEFAULT_ADDRESS_BUF_SIZE,
+    const ADDRESS_EXTRA_ID_BUF_SIZE: usize = DEFAULT_ADDRESS_EXTRA_ID_BUF_SIZE,
 > {
     pub coin_config: [u8; COIN_CONFIG_BUF_SIZE],
     pub coin_config_len: usize,
@@ -87,8 +93,12 @@ pub struct PrintableAmountParams<
     pub is_fee: bool,
 }
 
-impl<const COIN_CONFIG_BUF_SIZE: usize, const ADDRESS_BUF_SIZE: usize> Default
-    for PrintableAmountParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE>
+impl<
+        const COIN_CONFIG_BUF_SIZE: usize,
+        const ADDRESS_BUF_SIZE: usize,
+        const ADDRESS_EXTRA_ID_BUF_SIZE: usize,
+    > Default
+    for PrintableAmountParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE, ADDRESS_EXTRA_ID_BUF_SIZE>
 {
     fn default() -> Self {
         PrintableAmountParams {
@@ -147,9 +157,10 @@ impl<
 pub fn get_check_address_params<
     const COIN_CONFIG_BUF_SIZE: usize,
     const ADDRESS_BUF_SIZE: usize,
+    const ADDRESS_EXTRA_ID_BUF_SIZE: usize,
 >(
     arg0: u32,
-) -> CheckAddressParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE> {
+) -> CheckAddressParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE, ADDRESS_EXTRA_ID_BUF_SIZE> {
     debug_print("=> get_check_address_params\n");
 
     let mut libarg: libargs_t = libargs_t::default();
@@ -165,8 +176,11 @@ pub fn get_check_address_params<
     let params: check_address_parameters_t =
         unsafe { *(libarg.__bindgen_anon_1.check_address as *const check_address_parameters_t) };
 
-    let mut check_address_params: CheckAddressParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE> =
-        Default::default();
+    let mut check_address_params: CheckAddressParams<
+        COIN_CONFIG_BUF_SIZE,
+        ADDRESS_BUF_SIZE,
+        ADDRESS_EXTRA_ID_BUF_SIZE,
+    > = Default::default();
 
     debug_print("==> GET_COIN_CONFIG_LENGTH\n");
     check_address_params.coin_config_len = params.coin_configuration_length as usize;
@@ -206,9 +220,10 @@ pub fn get_check_address_params<
 pub fn get_printable_amount_params<
     const COIN_CONFIG_BUF_SIZE: usize,
     const ADDRESS_BUF_SIZE: usize,
+    const ADDRESS_EXTRA_ID_BUF_SIZE: usize,
 >(
     arg0: u32,
-) -> PrintableAmountParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE> {
+) -> PrintableAmountParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE, ADDRESS_EXTRA_ID_BUF_SIZE> {
     debug_print("=> get_printable_amount_params\n");
 
     let mut libarg: libargs_t = libargs_t::default();
@@ -225,8 +240,11 @@ pub fn get_printable_amount_params<
         *(libarg.__bindgen_anon_1.get_printable_amount as *const get_printable_amount_parameters_t)
     };
 
-    let mut printable_amount_params: PrintableAmountParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE> =
-        Default::default();
+    let mut printable_amount_params: PrintableAmountParams<
+        COIN_CONFIG_BUF_SIZE,
+        ADDRESS_BUF_SIZE,
+        ADDRESS_EXTRA_ID_BUF_SIZE,
+    > = Default::default();
 
     debug_print("==> GET_COIN_CONFIG_LENGTH\n");
     printable_amount_params.coin_config_len = params.coin_configuration_length as usize;
@@ -361,11 +379,19 @@ pub enum SwapResult<
     const ADDRESS_EXTRA_ID_BUF_SIZE: usize = DEFAULT_ADDRESS_EXTRA_ID_BUF_SIZE,
 > {
     CheckAddressResult(
-        &'a mut CheckAddressParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE>,
+        &'a mut CheckAddressParams<
+            COIN_CONFIG_BUF_SIZE,
+            ADDRESS_BUF_SIZE,
+            ADDRESS_EXTRA_ID_BUF_SIZE,
+        >,
         i32,
     ),
     PrintableAmountResult(
-        &'a mut PrintableAmountParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE>,
+        &'a mut PrintableAmountParams<
+            COIN_CONFIG_BUF_SIZE,
+            ADDRESS_BUF_SIZE,
+            ADDRESS_EXTRA_ID_BUF_SIZE,
+        >,
         &'a str,
     ),
     CreateTxResult(
