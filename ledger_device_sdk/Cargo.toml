@@ -1,6 +1,6 @@
 [package]
 name = "ledger_device_sdk"
-version = "1.27.2"
+version = "1.27.3"
 authors = ["yhql", "yogh333", "agrojean-ledger", "kingofpayne"]
 edition = "2021"
 license.workspace = true
@@ -20,7 +20,7 @@ rand_core = { version = "0.6.3", default-features = false }
 zeroize = { version = "1.6.0", default-features = false }
 numtoa = "0.2.4"
 const-zero = "0.1.1"
-ledger_secure_sdk_sys = { path = "../ledger_secure_sdk_sys", version = "1.11.4" }
+ledger_secure_sdk_sys = { path = "../ledger_secure_sdk_sys", version = "1.11.5" }
 
 [features]
 debug = []
@@ -33,5 +33,5 @@ io_new = []  # switch to new 'io' module
 default = [ "heap" ]
 
 [lints.rust.unexpected_cfgs]
-level = "warn" 
+level = "warn"
 check-cfg = ['cfg(target_os, values("apex_p", "stax", "flex", "nanox", "nanosplus"))']
