@@ -1,3 +1,7 @@
+//! A wrapper around the asynchronous NBGL [nbgl_useCaseNavigableContent] C API binding.
+//!
+//! Not supported
+
 use super::*;
 
 /// A wrapper around the asynchronous NBGL nbgl_useCaseNavigableContent C API binding.

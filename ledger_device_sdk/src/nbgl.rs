@@ -1,3 +1,9 @@
+//! NBGL module
+//!
+//! This module provides a safe Rust interface to the NBGL library.
+//! It includes functions and structures to create and manage UI elements,
+//! handle user interactions, and display information on Ledger devices.
+
 use crate::io::{ApduHeader, Event};
 use crate::io_callbacks::nbgl_next_event_ahead;
 use crate::nvm::*;
@@ -18,7 +24,7 @@ pub mod nbgl_generic_review;
 pub mod nbgl_generic_settings;
 pub mod nbgl_home_and_settings;
 pub mod nbgl_keypad;
-pub mod nbgl_navigable_content;
+//pub mod nbgl_navigable_content;
 pub mod nbgl_review;
 #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 pub mod nbgl_review_extended;
@@ -27,22 +33,36 @@ pub mod nbgl_spinner;
 pub mod nbgl_status;
 pub mod nbgl_streaming_review;
 
+#[doc(inline)]
 pub use nbgl_action::*;
+#[doc(inline)]
 pub use nbgl_address_review::*;
+#[doc(inline)]
 pub use nbgl_advance_review::*;
+#[doc(inline)]
 pub use nbgl_choice::*;
+#[doc(inline)]
 #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 pub use nbgl_generic_review::*;
+#[doc(inline)]
 pub use nbgl_generic_settings::*;
+#[doc(inline)]
 pub use nbgl_home_and_settings::*;
+#[doc(inline)]
 pub use nbgl_keypad::*;
+#[doc(inline)]
 pub use nbgl_review::*;
 //pub use nbgl_navigable_content::*; // integration issue
+#[doc(inline)]
 #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 pub use nbgl_review_extended::*;
+#[doc(inline)]
 pub use nbgl_review_status::*;
+#[doc(inline)]
 pub use nbgl_spinner::*;
+#[doc(inline)]
 pub use nbgl_status::*;
+#[doc(inline)]
 pub use nbgl_streaming_review::*;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -222,6 +242,7 @@ impl From<&CField> for nbgl_contentTagValue_t {
 //     }
 // }
 
+/// Glyph structure to represent icons for NBGL
 pub struct NbglGlyph<'a> {
     pub width: u16,
     pub height: u16,
@@ -231,6 +252,15 @@ pub struct NbglGlyph<'a> {
 }
 
 impl<'a> NbglGlyph<'a> {
+    /// Creates a new instance of `NbglGlyph`.
+    /// # Arguments
+    /// * `bitmap` - A byte slice representing the bitmap data of the glyph.
+    /// * `width` - The width of the glyph in pixels.
+    /// * `height` - The height of the glyph in pixels.
+    /// * `bpp` - Bits per pixel (1, 2, or 4).
+    /// * `is_file` - A boolean indicating whether the bitmap is a file path.
+    /// # Returns
+    /// Returns a new instance of `NbglGlyph`.
     pub const fn new(
         bitmap: &'a [u8],
         width: u16,
@@ -246,6 +276,11 @@ impl<'a> NbglGlyph<'a> {
             bitmap,
         }
     }
+    /// Creates a new instance of `NbglGlyph` from a packed representation.
+    /// # Arguments
+    /// * `packed` - A tuple containing the bitmap, width, height, bpp, and is_file flag.
+    /// # Returns
+    /// Returns a new instance of `NbglGlyph`.
     pub const fn from_include(packed: (&'a [u8], u16, u16, u8, bool)) -> NbglGlyph<'a> {
         NbglGlyph {
             width: packed.1,
@@ -275,12 +310,14 @@ impl<'a> Into<nbgl_icon_details_t> for &NbglGlyph<'a> {
     }
 }
 
+/// Transaction types for NBGL review and status screens.    
 pub enum TransactionType {
     Transaction,
     Message,
     Operation,
 }
 
+/// Status types for NBGL status screens.
 pub enum StatusType {
     Transaction,
     Message,

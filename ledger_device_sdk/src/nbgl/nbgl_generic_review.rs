@@ -1,5 +1,6 @@
 use super::*;
 
+/// Enum representing the different styles available for centered info content.
 #[derive(Copy, Clone)]
 pub enum CenteredInfoStyle {
     LargeCaseInfo = 0,
@@ -166,7 +167,7 @@ impl From<&TagValueList> for nbgl_contentTagValueList_t {
     }
 }
 
-/// Structure exposed by the NBGL Rust API to the user to create a
+/// Structure exposed by the NBGL Rust API to the user to create as
 /// list of tag-value pairs and confirmation button that will be displayed
 /// on the device when using the NbglGenericReview struct.
 pub struct TagValueConfirm {

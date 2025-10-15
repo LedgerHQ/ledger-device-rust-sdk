@@ -38,7 +38,6 @@ struct InfoHolder {
     values_ptr: Vec<*const i8>,
 }
 
-/// A wrapper around the asynchronous NBGL nbgl_useCaseNavigableContent C API binding.
 pub struct NbglGenericSettings {
     title: CString,
     init_page: usize,
