@@ -1,21 +1,66 @@
+//! A wrapper around the asynchronous NBGL [nbgl_useCaseGenericReview](https://github.com/LedgerHQ/ledger-secure-sdk/blob/b68cbcf3fff5c871fc7fdbf453ca09984f530549/lib_nbgl/src/nbgl_use_case.c#L4073) C API binding.
+//!
+//! Draws a flow of pages of a review with automatic pagination depending on content
+//! to be displayed that is passed through contents.
 use super::*;
 
 /// Enum representing the different styles available for centered info content.
 #[derive(Copy, Clone)]
 pub enum CenteredInfoStyle {
-    LargeCaseInfo = 0,
+    // STAX/FLEX/APEX_P variants
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    /// text in BLACK and large case (INTER 32px), subText in black in Inter24px
+    LargeCaseInfo,
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    /// text in BLACK and large case (INTER 32px), subText in black bold
+    /// Inter24px, text3 in black Inter24px
     LargeCaseBoldInfo,
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    /// text in BLACK and large case (INTER 32px), subText in black
+    /// Inter24px text3 in dark gray Inter24px
+    LargeCaseGrayInfo,
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    /// Icon in black, a potential text in black bold 24px under it, a potential text
+    /// in dark gray (24px) under it, a potential text in black (24px) under it
     NormalInfo,
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    /// A potential text in black 32px, a potential text in black (24px) under it, a
+    /// small horizontal line under it, a potential icon under it, a potential text in
+    /// black (24px) under it
     PluginInfo,
+
+    // NANOSPLUS/NANOX variants
+    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    /// both texts regular (but '\\b' can switch to bold)
+    RegularInfo,
+    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    /// bold is used for text1 (but '\\b' can switch to regular)
+    BoldTextInfo,
+    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    /// bold is used for text1 and text2 as a white button
+    ButtonInfo,
 }
 
 impl From<CenteredInfoStyle> for nbgl_contentCenteredInfoStyle_t {
     fn from(style: CenteredInfoStyle) -> nbgl_contentCenteredInfoStyle_t {
         match style {
+            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
             CenteredInfoStyle::LargeCaseInfo => LARGE_CASE_INFO,
+            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
             CenteredInfoStyle::LargeCaseBoldInfo => LARGE_CASE_BOLD_INFO,
+            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+            CenteredInfoStyle::LargeCaseGrayInfo => LARGE_CASE_GRAY_INFO,
+            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
             CenteredInfoStyle::NormalInfo => NORMAL_INFO,
+            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
             CenteredInfoStyle::PluginInfo => PLUGIN_INFO,
+
+            #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+            CenteredInfoStyle::RegularInfo => REGULAR_INFO,
+            #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+            CenteredInfoStyle::BoldTextInfo => BOLD_TEXT1_INFO,
+            #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+            CenteredInfoStyle::ButtonInfo => BUTTON_INFO,
         }
     }
 }
@@ -267,6 +312,7 @@ impl From<&NbglPageContent>
                 let centered_info = nbgl_contentCenteredInfo_t {
                     text1: data.text1.as_ptr() as *const c_char,
                     text2: data.text2.as_ptr() as *const c_char,
+                    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
                     text3: data.text3.as_ptr() as *const c_char,
                     icon: data
                         .icon
@@ -274,6 +320,7 @@ impl From<&NbglPageContent>
                         .map_or(core::ptr::null(), |icon| icon as *const nbgl_icon_details_t),
                     onTop: data.on_top,
                     style: data.style.into(),
+                    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
                     offsetY: data.offset_y,
                     ..Default::default()
                 };
@@ -306,6 +353,7 @@ impl From<&NbglPageContent>
                 let confirm = nbgl_contentTagValueConfirm_t {
                     tagValueList: data.tag_value_list,
                     detailsButtonToken: (FIRST_USER_TOKEN + 2) as u8,
+                    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
                     tuneId: data.tune_id as u8,
                     confirmationText: data.confirmation_text.as_ptr() as *const c_char,
                     cancelText: data.cancel_text.as_ptr() as *const c_char,
@@ -330,6 +378,7 @@ impl From<&NbglPageContent>
                         .map_or(core::ptr::null(), |icon| icon as *const nbgl_icon_details_t),
                     longPressText: data.long_press_text.as_ptr() as *const c_char,
                     longPressToken: FIRST_USER_TOKEN as u8,
+                    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
                     tuneId: data.tune_id as u8,
                     ..Default::default()
                 };
@@ -350,6 +399,7 @@ impl From<&NbglPageContent>
                         .map_or(core::ptr::null(), |icon| icon as *const nbgl_icon_details_t),
                     buttonText: data.button_text.as_ptr() as *const c_char,
                     buttonToken: FIRST_USER_TOKEN as u8,
+                    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
                     tuneId: data.tune_id as u8,
                     ..Default::default()
                 };
