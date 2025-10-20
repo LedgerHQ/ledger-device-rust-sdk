@@ -1,8 +1,10 @@
+//! A wrapper around the asynchronous NBGL [nbgl_useCaseReviewStart](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L3563),
+//! [nbgl_useCaseStaticReview](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L3838), [nbgl_useCaseStaticReviewLight](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L3894) C API binding.
+//!
+//! Used to display transaction review screens.
 use super::*;
 
-/// A wrapper around the asynchronous NBGL nbgl_useCaseReviewStart,
-/// nbgl_useCaseStaticReview, nbgl_useCaseStaticReviewLight C API binding.
-/// Used to display transaction review screens.
+/// A builder to create and show an extended review flow.
 pub struct NbglReviewExtended<'a> {
     review_title: CString,
     review_subtitle: CString,
@@ -17,6 +19,9 @@ pub struct NbglReviewExtended<'a> {
 impl SyncNBGL for NbglReviewExtended<'_> {}
 
 impl<'a> NbglReviewExtended<'a> {
+    /// Creates a new extended review flow builder.
+    /// # Returns
+    /// Returns a new instance of `NbglReviewExtended`.
     pub fn new() -> NbglReviewExtended<'a> {
         NbglReviewExtended {
             review_title: CString::default(),
@@ -30,6 +35,14 @@ impl<'a> NbglReviewExtended<'a> {
         }
     }
 
+    /// Configures the first page of the review flow.
+    /// # Arguments
+    /// * `review_title` - The title to display at the top of the first page.
+    /// * `review_subtitle` - The subtitle to display below the title on the first page.
+    /// * `reject_text` - The text to display on the reject button on the first page.
+    /// * `glyph_start` - The icon to display in the center of the first page.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn first_page(
         self,
         review_title: &'a str,
@@ -46,6 +59,14 @@ impl<'a> NbglReviewExtended<'a> {
         }
     }
 
+    /// Configures the last page of the review flow.
+    /// # Arguments
+    /// * `text_end` - The text to display at the top of the last page.
+    /// * `longpress_text` - The text to display when the user long-presses the button on the last page.
+    /// * `glyph_end` - The icon to display in the center of the last page.
+    /// * `light` - If `true`, the last page will be displayed in light mode; otherwise, it will be in standard mode.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn last_page(
         self,
         text_end: &'a str,
@@ -62,6 +83,11 @@ impl<'a> NbglReviewExtended<'a> {
         }
     }
 
+    /// Starts the review flow by displaying the first page.
+    /// # Returns
+    /// Returns `SyncNbgl::UxSyncRetOK` if the user accepts the review,
+    /// `SyncNbgl::UxSyncRetUserAborted` if the user rejects it,
+    /// or another `SyncNbgl` variant in case of an error.
     pub fn start(&self) -> SyncNbgl {
         unsafe {
             let icon: nbgl_icon_details_t = match self.glyph_start {
@@ -82,6 +108,13 @@ impl<'a> NbglReviewExtended<'a> {
         }
     }
 
+    /// Shows the extended review flow with the provided fields on the review pages.
+    /// # Arguments
+    /// * `fields` - A slice of `Field` representing the tag/value pairs to display.
+    /// # Returns
+    /// Returns `SyncNbgl::UxSyncRetOK` if the user accepts the review,
+    /// `SyncNbgl::UxSyncRetUserAborted` if the user rejects it,
+    /// or another `SyncNbgl` variant in case of an error.
     pub fn show(&self, fields: &[Field]) -> SyncNbgl {
         unsafe {
             let v: Vec<CField> = fields.iter().map(|f| f.into()).collect();

@@ -1,7 +1,12 @@
+//! A wrapper around the asynchronous NBGL [nbgl_useCaseAddressReview](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L4453) C API binding.
+//!
+//! Draws a flow of pages of an extended address verification page.
+//! A back key is available on top-left of the screen, except in first page It is possible to go to next page thanks to "tap to continue".
+//! All tag/value pairs are provided in the API and the number of pages is automatically
+//! computed, the last page being a long press one
 use super::*;
 
-/// A wrapper around the asynchronous NBGL nbgl_useCaseAddressReview C API binding.
-/// Used to display address confirmation screens.
+/// A builder to create and show an address review flow.
 pub struct NbglAddressReview<'a> {
     glyph: Option<&'a NbglGlyph<'a>>,
     review_title: CString,
@@ -12,6 +17,7 @@ pub struct NbglAddressReview<'a> {
 impl SyncNBGL for NbglAddressReview<'_> {}
 
 impl<'a> NbglAddressReview<'a> {
+    /// Creates a new address review flow builder.
     pub fn new() -> NbglAddressReview<'a> {
         NbglAddressReview {
             review_title: CString::default(),
@@ -20,7 +26,11 @@ impl<'a> NbglAddressReview<'a> {
             tag_value_list: Vec::default(),
         }
     }
-
+    /// Sets the icon to display in the center of the page.
+    /// # Arguments
+    /// * `glyph` - The icon to display in the center of the page.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn glyph(self, glyph: &'a NbglGlyph) -> NbglAddressReview<'a> {
         NbglAddressReview {
             glyph: Some(glyph),
@@ -36,6 +46,11 @@ impl<'a> NbglAddressReview<'a> {
         }
     }
 
+    /// Sets the title to display at the top of the page.
+    /// # Arguments
+    /// * `review_title` - The title to display at the top of the page.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn review_title(self, review_title: &str) -> NbglAddressReview<'a> {
         NbglAddressReview {
             review_title: CString::new(review_title).unwrap(),
@@ -43,6 +58,11 @@ impl<'a> NbglAddressReview<'a> {
         }
     }
 
+    /// Sets the subtitle to display below the title at the top of the page.
+    /// # Arguments
+    /// * `review_subtitle` - The subtitle to display below the title at the top of the page.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn review_subtitle(self, review_subtitle: &str) -> NbglAddressReview<'a> {
         NbglAddressReview {
             review_subtitle: CString::new(review_subtitle).unwrap(),
@@ -50,6 +70,11 @@ impl<'a> NbglAddressReview<'a> {
         }
     }
 
+    /// Sets the list of tag/value pairs to display in the address review flow.
+    /// # Arguments
+    /// * `tag_value_list` - A slice of `Field` representing the tag/value pairs to display.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn set_tag_value_list(self, tag_value_list: &'a [Field<'a>]) -> NbglAddressReview<'a> {
         NbglAddressReview {
             tag_value_list: tag_value_list.iter().map(|f| f.into()).collect(),
@@ -57,6 +82,11 @@ impl<'a> NbglAddressReview<'a> {
         }
     }
 
+    /// Shows the address review flow.
+    /// # Arguments
+    /// * `address` - The address to review.
+    /// # Returns
+    /// Returns true if the user approved the address, false otherwise.
     pub fn show(&self, address: &str) -> bool {
         unsafe {
             let icon: nbgl_icon_details_t = match self.glyph {

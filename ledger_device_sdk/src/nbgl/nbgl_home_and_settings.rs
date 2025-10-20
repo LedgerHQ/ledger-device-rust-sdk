@@ -1,3 +1,8 @@
+//! A wrapper around the asynchronous NBGL [nbgl_useCaseHomeAndSettings](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L3454) C API binding.
+//!
+//! Draws the extended version of home page of an app (page on which we land when launching it
+//! from dashboard) with automatic support of setting display.
+//! It enables to use an action button
 use super::*;
 use crate::io::{Reply, StatusWords};
 use crate::io_callbacks::{nbgl_fetch_apdu_header, nbgl_reply_status};
@@ -40,13 +45,13 @@ const INFO_FIELDS: [*const c_char; 2] = [
     "Developer\0".as_ptr() as *const c_char,
 ];
 
+/// Initial page to display when showing the home and settings screen.
 pub enum PageIndex {
     Settings(u8),
     Home,
 }
 
-/// Used to display the home screen of the application, with an optional glyph,
-/// information fields, and settings switches.
+/// A builder to create and show a home and settings page.
 pub struct NbglHomeAndSettings {
     app_name: CString,
     tag_line: Option<CString>,
@@ -74,6 +79,9 @@ impl<'a> Default for NbglHomeAndSettings {
 }
 
 impl<'a> NbglHomeAndSettings {
+    /// Creates a new home and settings page builder.
+    /// # Returns
+    /// Returns a new instance of `NbglHomeAndSettings`.
     pub fn new() -> NbglHomeAndSettings {
         NbglHomeAndSettings {
             app_name: CString::new("").unwrap(),
@@ -90,11 +98,24 @@ impl<'a> NbglHomeAndSettings {
         }
     }
 
+    /// Sets the icon to display in the center of the page.
+    /// # Arguments
+    /// * `glyph` - The icon to display in the center of the page.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn glyph(self, glyph: &'a NbglGlyph) -> NbglHomeAndSettings {
         let icon = glyph.into();
         NbglHomeAndSettings { icon, ..self }
     }
 
+    /// Sets the application informations to display in the dedicated
+    /// page of the home screen.
+    /// # Arguments
+    /// * `app_name` - The name of the application.
+    /// * `version` - The version of the application.
+    /// * `author` - The author of the application.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn infos(
         self,
         app_name: &'a str,
@@ -113,6 +134,11 @@ impl<'a> NbglHomeAndSettings {
         }
     }
 
+    /// Sets the tagline to display below the application name on the home screen.
+    /// # Arguments
+    /// * `tagline` - The tagline to display below the application name on the home screen.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn tagline(self, tagline: &'a str) -> NbglHomeAndSettings {
         NbglHomeAndSettings {
             tag_line: Some(CString::new(tagline).unwrap()),
@@ -120,6 +146,14 @@ impl<'a> NbglHomeAndSettings {
         }
     }
 
+    /// Sets the settings to display in the settings page.
+    /// # Arguments
+    /// * `nvm_data` - A mutable reference to an `AtomicStorage` containing the settings data.
+    /// * `settings_strings` - A slice of tuples containing the setting name and description.
+    /// # Panics
+    /// Panics if the number of settings exceeds [SETTINGS_SIZE].
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn settings(
         self,
         nvm_data: &'a mut AtomicStorage<[u8; SETTINGS_SIZE]>,
@@ -145,6 +179,11 @@ impl<'a> NbglHomeAndSettings {
         }
     }
 
+    /// Sets the initial page to display when showing the home and settings screen.
+    /// # Arguments
+    /// * `page` - The initial page to display.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn set_start_page(&mut self, page: PageIndex) {
         self.start_page = page;
     }

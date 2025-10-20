@@ -1,8 +1,11 @@
+//! A wrapper around the asynchronous NBGL [nbgl_useCaseAction](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L3730) C API binding.
+//!
+//! Draws a page to represent an action, described in a centered info (with given icon),
+//! thanks to a button at the bottom of the page.
+
 use super::*;
 
-/// A wrapper around the asynchronous NBGL nbgl_useCaseChoice C API binding.
-/// Draws a generic choice page, described in a centered info (with configurable icon),
-/// thanks to a button and a footer at the bottom of the page.
+/// A builder to create and show an action page.
 pub struct NbglAction<'a> {
     message: CString,
     action_text: CString,
@@ -12,6 +15,7 @@ pub struct NbglAction<'a> {
 impl SyncNBGL for NbglAction<'_> {}
 
 impl<'a> NbglAction<'a> {
+    /// Creates a new action page builder.
     pub fn new() -> NbglAction<'a> {
         NbglAction {
             message: CString::default(),
@@ -19,7 +23,11 @@ impl<'a> NbglAction<'a> {
             glyph: None,
         }
     }
-
+    /// Sets the message to display in the center of the page.
+    /// # Arguments
+    /// * `message` - The main message to display in the center of the page.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn message(self, message: &'a str) -> NbglAction<'a> {
         NbglAction {
             message: CString::new(message).unwrap(),
@@ -27,6 +35,11 @@ impl<'a> NbglAction<'a> {
         }
     }
 
+    /// Sets the text to display on the button at the bottom of the page.
+    /// # Arguments
+    /// * `action_text` - The text to display on the button at the bottom of the page.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn action_text(self, action_text: &'a str) -> NbglAction<'a> {
         NbglAction {
             action_text: CString::new(action_text).unwrap(),
@@ -34,6 +47,11 @@ impl<'a> NbglAction<'a> {
         }
     }
 
+    /// Sets the icon to display in the center of the page.
+    /// # Arguments
+    /// * `glyph` - The icon to display in the center of the page.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn glyph(self, glyph: &'a NbglGlyph<'a>) -> NbglAction<'a> {
         NbglAction {
             glyph: Some(glyph),
@@ -41,6 +59,7 @@ impl<'a> NbglAction<'a> {
         }
     }
 
+    /// Shows the action page.
     pub fn show(self) -> SyncNbgl {
         unsafe {
             let icon: nbgl_icon_details_t = match self.glyph {

@@ -1,7 +1,9 @@
+//! A wrapper around the asynchronous NBGL [nbgl_useCaseReview](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L3874), [nbgl_useCaseReviewBlindSigning](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L3915) and [nbgl_useCaseReviewLight](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L3953) C API bindings.
+//!
+//! Used to display transaction review screens.
 use super::*;
 
-/// A wrapper around the asynchronous NBGL nbgl_useCaseReview C API binding.
-/// Used to display transaction review screens.
+/// A builder to create and show a review flow.
 pub struct NbglReview<'a> {
     title: CString,
     subtitle: CString,
@@ -15,6 +17,9 @@ pub struct NbglReview<'a> {
 impl SyncNBGL for NbglReview<'_> {}
 
 impl<'a> NbglReview<'a> {
+    /// Creates a new review flow builder.
+    /// # Returns
+    /// Returns a new instance of `NbglReview`.
     pub fn new() -> NbglReview<'a> {
         NbglReview {
             title: CString::default(),
@@ -27,10 +32,18 @@ impl<'a> NbglReview<'a> {
         }
     }
 
+    /// Sets the type of transaction being reviewed.
+    /// # Arguments
+    /// * `tx_type` - The type of transaction being reviewed.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn tx_type(self, tx_type: TransactionType) -> NbglReview<'a> {
         NbglReview { tx_type, ..self }
     }
 
+    /// Enables blind signing mode for the review.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn blind(self) -> NbglReview<'a> {
         NbglReview {
             blind: true,
@@ -38,6 +51,9 @@ impl<'a> NbglReview<'a> {
         }
     }
 
+    /// Enables light mode for the review.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn light(self) -> NbglReview<'a> {
         NbglReview {
             light: true,
@@ -45,6 +61,13 @@ impl<'a> NbglReview<'a> {
         }
     }
 
+    /// Sets the titles to display at the top and bottom of the page.
+    /// # Arguments
+    /// * `title` - The title to display at the top of the page.
+    /// * `subtitle` - The subtitle to display below the title at the top of the page.
+    /// * `finish_title` - The title to display at the bottom of the page.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn titles(
         self,
         title: &'a str,
@@ -59,6 +82,11 @@ impl<'a> NbglReview<'a> {
         }
     }
 
+    /// Sets the icon to display in the center of the page.
+    /// # Arguments
+    /// * `glyph` - The icon to display in the center of the page.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
     pub fn glyph(self, glyph: &'a NbglGlyph) -> NbglReview<'a> {
         NbglReview {
             glyph: Some(glyph),
@@ -66,6 +94,11 @@ impl<'a> NbglReview<'a> {
         }
     }
 
+    /// Shows the review flow with the provided fields on the review pages.
+    /// # Arguments
+    /// * `fields` - A slice of `Field` representing the tag/value pairs to display.
+    /// # Returns
+    /// Returns `true` if the user approved the transaction, `false` otherwise.
     pub fn show(&self, fields: &[Field]) -> bool {
         unsafe {
             let v: Vec<CField> = fields

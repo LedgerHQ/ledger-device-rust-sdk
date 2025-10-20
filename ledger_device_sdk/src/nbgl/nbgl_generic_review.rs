@@ -1,5 +1,6 @@
 use super::*;
 
+/// Enum representing the different styles available for centered info content.
 #[derive(Copy, Clone)]
 pub enum CenteredInfoStyle {
     LargeCaseInfo = 0,
