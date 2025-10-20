@@ -1,3 +1,7 @@
+//! Ledger PKI module
+//! 
+//! Provides functions to verify data using the loaded certificate.
+
 use crate::ecc::CurvesId;
 use crate::io::Reply;
 use ledger_secure_sdk_sys::{
@@ -18,17 +22,17 @@ impl From<PkiVerifyError> for Reply {
         Reply(0x6900 + exc as u16)
     }
 }
-/// Verify data using the loaded certificate
+/// Verify hash using the loaded certificate
 /// # Arguments
-/// * `data` - The data to verify.
+/// * `hash` - The hash to verify
 /// * `expected_key_usage` - The expected key usage of the certificate.
-/// * `expected_curve` - The expected curve of the certificate. See `CurvesId` enum
+/// * `expected_curve` - The expected curve of the certificate. See [CurvesId] enum
 /// * `signature` - The signature to verify
 /// # Returns
 /// * `Ok(())` if the verification is successful
 /// * `Err(PkiVerifyError)` if the verification fails
-pub fn pki_verify_data(
-    data: &mut [u8],
+pub fn pki_check_signature(
+    hash: &mut [u8],
     expected_key_usage: u8,
     expected_curve: CurvesId,
     signature: &mut [u8],
@@ -58,8 +62,8 @@ pub fn pki_verify_data(
 
     let err = unsafe {
         os_pki_verify(
-            data.as_mut_ptr() as *mut u8,
-            data.len(),
+            hash.as_mut_ptr() as *mut u8,
+            hash.len(),
             signature.as_mut_ptr() as *mut u8,
             signature.len(),
         )
