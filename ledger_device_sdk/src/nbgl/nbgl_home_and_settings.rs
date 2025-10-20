@@ -1,4 +1,4 @@
-//! A wrapper around the asynchronous NBGL [nbgl_useCaseHomeAndSettings](https://github.com/LedgerHQ/ledger-secure-sdk/blob/f7ba831fc72257d282060f9944644ef43b6b8e30/lib_nbgl/src/nbgl_use_case.c#L3375) C API binding.
+//! A wrapper around the asynchronous NBGL [nbgl_useCaseHomeAndSettings](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L3454) C API binding.
 //!
 //! Draws the extended version of home page of an app (page on which we land when launching it
 //! from dashboard) with automatic support of setting display.

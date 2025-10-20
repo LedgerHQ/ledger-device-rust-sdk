@@ -1,4 +1,4 @@
-//! A wrapper around the asynchronous NBGL [nbgl_useCaseReview](https://github.com/LedgerHQ/ledger-secure-sdk/blob/f7ba831fc72257d282060f9944644ef43b6b8e30/lib_nbgl/src/nbgl_use_case.c#L3874), [nbgl_useCaseReviewBlindSigning](https://github.com/LedgerHQ/ledger-secure-sdk/blob/f7ba831fc72257d282060f9944644ef43b6b8e30/lib_nbgl/src/nbgl_use_case.c#L3915) and [nbgl_useCaseReviewLight](https://github.com/LedgerHQ/ledger-secure-sdk/blob/f7ba831fc72257d282060f9944644ef43b6b8e30/lib_nbgl/src/nbgl_use_case.c#L4043) C API bindings.
+//! A wrapper around the asynchronous NBGL [nbgl_useCaseReview](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L3874), [nbgl_useCaseReviewBlindSigning](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L3915) and [nbgl_useCaseReviewLight](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L3953) C API bindings.
 //!
 //! Used to display transaction review screens.
 use super::*;

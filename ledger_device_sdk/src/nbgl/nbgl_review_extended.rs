@@ -1,5 +1,5 @@
-//! A wrapper around the asynchronous NBGL [nbgl_useCaseReviewStart](https://github.com/LedgerHQ/ledger-secure-sdk/blob/f7ba831fc72257d282060f9944644ef43b6b8e30/lib_nbgl/src/nbgl_use_case.c#L3684),
-//! [nbgl_useCaseStaticReview](https://github.com/LedgerHQ/ledger-secure-sdk/blob/f7ba831fc72257d282060f9944644ef43b6b8e30/lib_nbgl/src/nbgl_use_case.c#L3759), [nbgl_useCaseStaticReviewLight](https://github.com/LedgerHQ/ledger-secure-sdk/blob/f7ba831fc72257d282060f9944644ef43b6b8e30/lib_nbgl/src/nbgl_use_case.c#L3815) C API binding.
+//! A wrapper around the asynchronous NBGL [nbgl_useCaseReviewStart](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L3563),
+//! [nbgl_useCaseStaticReview](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L3838), [nbgl_useCaseStaticReviewLight](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L3894) C API binding.
 //!
 //! Used to display transaction review screens.
 use super::*;

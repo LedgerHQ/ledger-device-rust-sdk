@@ -1,4 +1,4 @@
-//! A wrapper around the asynchronous NBGL [nbgl_useCaseAddressReview](https://github.com/LedgerHQ/ledger-secure-sdk/blob/f7ba831fc72257d282060f9944644ef43b6b8e30/lib_nbgl/src/nbgl_use_case.c#L4370) C API binding.
+//! A wrapper around the asynchronous NBGL [nbgl_useCaseAddressReview](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L4453) C API binding.
 //!
 //! Draws a flow of pages of an extended address verification page.
 //! A back key is available on top-left of the screen, except in first page It is possible to go to next page thanks to "tap to continue".

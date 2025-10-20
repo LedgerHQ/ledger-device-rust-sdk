@@ -1,4 +1,4 @@
-//! A wrapper around the asynchronous NBGL [nbgl_useCaseAdvancedReview](https://github.com/LedgerHQ/ledger-secure-sdk/blob/f7ba831fc72257d282060f9944644ef43b6b8e30/lib_nbgl/src/nbgl_use_case.c#L3957) C API binding.
+//! A wrapper around the asynchronous NBGL [nbgl_useCaseAdvancedReview](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L4036) C API binding.
 //!
 //! Draws a flow of pages of a review requiring if necessary a warning page before the review.
 //! Moreover, the first and last pages of review display a top-right button, that displays more

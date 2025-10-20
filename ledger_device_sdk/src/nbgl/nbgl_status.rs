@@ -1,4 +1,4 @@
-//! A wrapper around the NBGL [nbgl_useCaseStatus](https://github.com/LedgerHQ/ledger-secure-sdk/blob/f7ba831fc72257d282060f9944644ef43b6b8e30/lib_nbgl/src/nbgl_use_case.c#L3418) C API binding.
+//! A wrapper around the NBGL [nbgl_useCaseStatus](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L3497) C API binding.
 //!
 //! Draws a transient (3s) status page, either of success or failure, with the given message
 use super::*;

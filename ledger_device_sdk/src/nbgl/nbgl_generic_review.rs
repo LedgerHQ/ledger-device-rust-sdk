@@ -167,7 +167,7 @@ impl From<&TagValueList> for nbgl_contentTagValueList_t {
     }
 }
 
-/// Structure exposed by the NBGL Rust API to the user to create as
+/// Structure exposed by the NBGL Rust API to the user to create a
 /// list of tag-value pairs and confirmation button that will be displayed
 /// on the device when using the NbglGenericReview struct.
 pub struct TagValueConfirm {

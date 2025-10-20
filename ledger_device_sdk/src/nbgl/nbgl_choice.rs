@@ -1,4 +1,4 @@
-//! A wrapper around the asynchronous NBGL [nbgl_useCaseChoice](https://github.com/LedgerHQ/ledger-secure-sdk/blob/f7ba831fc72257d282060f9944644ef43b6b8e30/lib_nbgl/src/nbgl_use_case.c#L3505) C API binding.
+//! A wrapper around the asynchronous NBGL [nbgl_useCaseChoice](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L3584) C API binding.
 //!
 //! Draws a generic choice page, described in a centered info (with configurable icon),
 //! thanks to a button and a footer at the bottom of the page.
@@ -10,24 +10,6 @@ pub struct NbglChoice<'a> {
 }
 
 impl SyncNBGL for NbglChoice<'_> {}
-
-// To support nbgl_useCaseChoiceWithDetails
-// pub enum WarningDetailsType {
-//     CenteredInfoWarning,
-//     QRCodeWarning,
-//     BarListWarning,
-// }
-
-// To support nbgl_useCaseChoiceWithDetails
-// impl From<WarningDetailsType> for nbgl_warningDetailsType_t {
-//     fn from(wdt: WarningDetailsType) -> Self {
-//         match wdt {
-//             WarningDetailsType::CenteredInfoWarning => CENTERED_INFO_WARNING,
-//             WarningDetailsType::QRCodeWarning => QRCODE_WARNING,
-//             WarningDetailsType::BarListWarning => BAR_LIST_WARNING,
-//         }
-//     }
-// }
 
 impl<'a> NbglChoice<'a> {
     /// Creates a new choice flow builder.

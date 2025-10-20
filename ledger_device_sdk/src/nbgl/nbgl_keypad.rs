@@ -1,4 +1,4 @@
-//! A wrapper around the asynchronous NBGL [nbgl_useCaseKeypad](https://github.com/LedgerHQ/ledger-secure-sdk/blob/f7ba831fc72257d282060f9944644ef43b6b8e30/lib_nbgl/src/nbgl_use_case.c#L4482) C API binding.
+//! A wrapper around the asynchronous NBGL [nbgl_useCaseKeypad](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L4565) C API binding.
 //!
 //! Draws a keypad for user input, allowing for PIN entry and other numeric input.
 use super::*;
