@@ -6,7 +6,7 @@ use ledger_device_sdk::ecc::CurvesId;
 use ledger_device_sdk::hash::HashInit;
 use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{NbglGlyph, NbglHomeAndSettings};
-use ledger_device_sdk::pki::pki_verify_data;
+use ledger_device_sdk::pki::pki_check_signature;
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 pub enum Instruction {
@@ -86,7 +86,7 @@ extern "C" fn sample_main() {
                 let mut signature = [0u8; 72];
                 signature.copy_from_slice(&buffer[82..]);
 
-                match pki_verify_data(
+                match pki_check_signature(
                     &mut hash_data[..],
                     8u8,
                     CurvesId::Secp256k1,
