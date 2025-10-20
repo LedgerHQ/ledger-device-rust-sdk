@@ -1,5 +1,5 @@
 //! Ledger PKI module
-//! 
+//!
 //! Provides functions to verify data using the loaded certificate.
 
 use crate::ecc::CurvesId;
@@ -9,11 +9,17 @@ use ledger_secure_sdk_sys::{
 };
 
 /// PKI verification errors
+/// Indicates the result of a PKI verification operation.
 pub enum PkiVerifyError {
+    /// The verification was successful.
     Success = 0,
+    /// No certificate was found.
     MissingCertificate = 1,
+    /// The certificate was not used for the correct purpose.
     WrongCertificateUsage = 2,
+    /// The certificate was not issued for the correct curve.
     WrongCertificateCurve = 3,
+    /// The signature is invalid.
     WrongSignature = 4,
 }
 
