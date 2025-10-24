@@ -3,6 +3,10 @@ name: Build all Rust apps
 on:
     workflow_call:
       inputs:
+        c_sdk_repo:
+          required: false
+          default: 'https://github.com/LedgerHQ/ledger-secure-sdk.git'
+          type: string
         c_sdk_branch:
           required: false
           default: ''
@@ -13,17 +17,21 @@ on:
           type: string
     workflow_dispatch:
       inputs:
+        c_sdk_repo:
+          required: false
+          default: 'https://github.com/LedgerHQ/ledger-secure-sdk.git'
+          type: string
         c_sdk_branch:
           required: false
           default: ''
           type: string
         rust_sdk_branch:
           required: false
-          default: ''
+          default: '' 
           type: string
 
 env:
-  C_SDK_URL: 'https://github.com/LedgerHQ/ledger-secure-sdk.git'
+  C_SDK_URL: '${{ inputs.c_sdk_repo }}'
 
 jobs:      
     retrieve-rust-apps:
