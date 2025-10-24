@@ -8,7 +8,7 @@ use std::{env, fs::File, io::BufRead, io::BufReader, io::Read, io::Write};
 
 const AUX_C_FILES: [&str; 2] = ["./src/c/src.c", "./src/c/sjlj.s"];
 
-const SDK_C_FILES: [&str; 13] = [
+const SDK_C_FILES: [&str; 14] = [
     "src/pic.c",
     "src/checks.c",
     "src/cx_stubs.S",
@@ -22,6 +22,7 @@ const SDK_C_FILES: [&str; 13] = [
     "io/src/os_io_seph_cmd.c",
     "io/src/os_io_seph_ux.c",
     "src/syscalls.c",
+    "lib_tlv/tlv_library.c",
 ];
 
 #[derive(Debug, Default, PartialEq)]
@@ -457,6 +458,8 @@ impl SDKBuilder<'_> {
             .include(self.device.c_sdk.join("lib_ux/include"))
             .include(self.device.c_sdk.join("lib_bagl/include"))
             .include(self.device.c_sdk.join("lib_nbgl/include"))
+            .include(self.device.c_sdk.join("lib_tlv"))
+            .include(self.device.c_sdk.join("lib_standard_app"))
             .include(&glyphs_path)
             .debug(true)
             .define("main", "_start")
@@ -552,6 +555,8 @@ impl SDKBuilder<'_> {
             format!("-I{bsdk}/io_legacy/include/"),
             format!("-I{bsdk}/lib_u2f/include/"),
             format!("-I{bsdk}/lib_cxng/include/"),
+            format!("-I{bsdk}/lib_tlv/"),
+            format!("-I{bsdk}/lib_standard_app/"),
         ];
         let headers = str2path(
             &self.device.c_sdk,
@@ -562,6 +567,7 @@ impl SDKBuilder<'_> {
                 "include/os_ux.h",
                 "lib_standard_app/swap_lib_calls.h",
                 "include/os_pki.h", /* pki */
+                "lib_tlv/tlv_library.h", /* tlv */
             ],
         );
 
