@@ -5,7 +5,7 @@ on:
       inputs:
         c_sdk_repo:
           required: false
-          default: 'LedgerHQ/ledger-secure-sdk.git'
+          default: 'LedgerHQ/ledger-secure-sdk'
           type: string
         c_sdk_branch:
           required: false
@@ -19,7 +19,7 @@ on:
       inputs:
         c_sdk_repo:
           required: false
-          default: 'LedgerHQ/ledger-secure-sdk.git'
+          default: 'LedgerHQ/ledger-secure-sdk'
           type: string
         c_sdk_branch:
           required: false
@@ -31,7 +31,7 @@ on:
           type: string
 
 env:
-  C_SDK_URL: 'https://github.com/${{ inputs.c_sdk_repo }}'
+  C_SDK_URL: 'https://github.com/${{ inputs.c_sdk_repo }}.git'
 
 jobs:      
     retrieve-rust-apps:
