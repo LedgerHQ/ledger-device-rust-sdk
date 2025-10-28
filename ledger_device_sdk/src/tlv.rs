@@ -20,6 +20,8 @@ pub enum Error {
     HandlerFailed,
     /// Duplicate unique tag
     DuplicateUniqueTag,
+    /// Signature verification failed
+    SignatureVerificationFailed,
 }
 
 /// Result type for TLV operations
