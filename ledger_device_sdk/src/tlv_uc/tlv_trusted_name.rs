@@ -166,7 +166,7 @@ fn on_common(d: &TlvData<'_>, out: &mut TrustedNameExtracted) -> Result<bool> {
 
         for result in hash_updates {
             if result.is_err() {
-                return Err(Error::HandlerFailed);
+                return Err(TlvError::HandlerFailed);
             }
         }
     }
@@ -285,7 +285,7 @@ pub fn parse_trusted_name_tlv(payload: &[u8], out: &mut TrustedNameOut) -> Resul
         &mut extracted.signature,
     );
     if res.is_err() {
-        return Err(Error::SignatureVerificationFailed);
+        return Err(TlvError::SignatureVerificationFailed);
     }
 
     // Copy the extracted trusted name output
@@ -307,7 +307,7 @@ fn finalize_hashes(
             *curve = CurvesId::Secp256k1;
             let res = hash_ctx.hash_sha2_256.finalize(hash);
             if res.is_err() {
-                return Err(Error::SignatureVerificationFailed);
+                return Err(TlvError::SignatureVerificationFailed);
             }
         }
         x if x
@@ -317,7 +317,7 @@ fn finalize_hashes(
             *curve = CurvesId::Secp256k1;
             let res = hash_ctx.hash_sha3_256.finalize(hash);
             if res.is_err() {
-                return Err(Error::SignatureVerificationFailed);
+                return Err(TlvError::SignatureVerificationFailed);
             }
         }
         x if x
@@ -327,7 +327,7 @@ fn finalize_hashes(
             *curve = CurvesId::Secp256k1;
             let res = hash_ctx.hash_keccak_256.finalize(hash);
             if res.is_err() {
-                return Err(Error::SignatureVerificationFailed);
+                return Err(TlvError::SignatureVerificationFailed);
             }
         }
         x if x
@@ -337,7 +337,7 @@ fn finalize_hashes(
             *curve = CurvesId::Secp256k1;
             let res = hash_ctx.hash_ripemd_160.finalize(hash);
             if res.is_err() {
-                return Err(Error::SignatureVerificationFailed);
+                return Err(TlvError::SignatureVerificationFailed);
             }
         }
         x if x == TlvTrustedNameSignerAlgorithm::TlvTrustedNameSignerAlgorithmEcdsaSha512 as u8 => {
@@ -345,7 +345,7 @@ fn finalize_hashes(
             *curve = CurvesId::Secp256k1;
             let res = hash_ctx.hash_sha2_512.finalize(hash);
             if res.is_err() {
-                return Err(Error::SignatureVerificationFailed);
+                return Err(TlvError::SignatureVerificationFailed);
             }
         }
         x if x
@@ -355,7 +355,7 @@ fn finalize_hashes(
             *curve = CurvesId::Ed25519;
             let res = hash_ctx.hash_keccak_256.finalize(hash);
             if res.is_err() {
-                return Err(Error::SignatureVerificationFailed);
+                return Err(TlvError::SignatureVerificationFailed);
             }
         }
         x if x
@@ -365,10 +365,10 @@ fn finalize_hashes(
             *curve = CurvesId::Ed25519;
             let res = hash_ctx.hash_sha3_256.finalize(hash);
             if res.is_err() {
-                return Err(Error::SignatureVerificationFailed);
+                return Err(TlvError::SignatureVerificationFailed);
             }
         }
-        _ => return Err(Error::SignatureVerificationFailed),
+        _ => return Err(TlvError::SignatureVerificationFailed),
     }
     Ok(())
 }

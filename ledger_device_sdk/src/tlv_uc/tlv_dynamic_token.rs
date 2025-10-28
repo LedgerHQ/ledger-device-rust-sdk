@@ -79,12 +79,12 @@ fn on_coin_type(d: &TlvData<'_>, out: &mut DynamicTokenExtracted) -> Result<bool
 }
 fn on_app_name(d: &TlvData<'_>, out: &mut DynamicTokenExtracted) -> Result<bool> {
     out.dynamic_token_out.app_name =
-        String::from(core::str::from_utf8(d.as_bytes()).map_err(|_| Error::LengthOverflow)?);
+        String::from(core::str::from_utf8(d.as_bytes()).map_err(|_| TlvError::LengthOverflow)?);
     Ok(true)
 }
 fn on_ticker(d: &TlvData<'_>, out: &mut DynamicTokenExtracted) -> Result<bool> {
     out.dynamic_token_out.ticker =
-        String::from(core::str::from_utf8(d.as_bytes()).map_err(|_| Error::LengthOverflow)?);
+        String::from(core::str::from_utf8(d.as_bytes()).map_err(|_| TlvError::LengthOverflow)?);
     Ok(true)
 }
 fn on_magnitude(d: &TlvData<'_>, out: &mut DynamicTokenExtracted) -> Result<bool> {
@@ -104,7 +104,7 @@ fn on_common(d: &TlvData<'_>, out: &mut DynamicTokenExtracted) -> Result<bool> {
     if d.tag != TAG_SIGNATURE {
         let result = out.hash_ctx.update(d.raw);
         if result.is_err() {
-            return Err(Error::HandlerFailed);
+            return Err(TlvError::HandlerFailed);
         }
     }
     Ok(true)
@@ -159,7 +159,7 @@ static HANDLERS: &[Handler<DynamicTokenExtracted>] = &[
 /// * `payload` - The TLV-encoded data to parse.
 /// * `out` - The output structure to fill with parsed data.
 /// # Returns
-/// Returns `Ok(())` if parsing was successful, or an `Error` otherwise.
+/// Returns `Ok(())` if parsing was successful, or an `TlvError` otherwise.
 pub fn parse_dynamic_token_tlv(payload: &[u8], out: &mut DynamicTokenOut) -> Result<()> {
     let mut extracted = DynamicTokenExtracted::default();
     extracted.hash_ctx = Sha2_256::new();
@@ -174,7 +174,7 @@ pub fn parse_dynamic_token_tlv(payload: &[u8], out: &mut DynamicTokenOut) -> Res
     let mut hash = vec![0u8; hash_size];
     let res = extracted.hash_ctx.finalize(&mut hash);
     if res.is_err() {
-        return Err(Error::SignatureVerificationFailed);
+        return Err(TlvError::SignatureVerificationFailed);
     }
 
     // Check signature with PKI certificate
@@ -185,7 +185,7 @@ pub fn parse_dynamic_token_tlv(payload: &[u8], out: &mut DynamicTokenOut) -> Res
         &mut extracted.signature,
     );
     if res.is_err() {
-        return Err(Error::SignatureVerificationFailed);
+        return Err(TlvError::SignatureVerificationFailed);
     }
 
     // Copy the extracted dynamic token output
