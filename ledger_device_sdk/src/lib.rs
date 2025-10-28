@@ -33,6 +33,7 @@ pub mod screen;
 pub mod seph;
 pub mod testing;
 pub mod tlv;
+pub mod tlv_uc;
 
 #[cfg(any(
     target_os = "stax",
