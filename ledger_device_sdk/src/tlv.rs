@@ -2,12 +2,14 @@
 //!
 //! Provides functions and types to parse TLV-encoded data.
 
+use crate::io::Reply;
+
 /// Tag type
 pub type Tag = u32;
 
 /// TLV parsing errors
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum Error {
+pub enum TlvError {
     /// Unexpected end of input
     UnexpectedEof,
     /// Invalid DER length
@@ -24,8 +26,14 @@ pub enum Error {
     SignatureVerificationFailed,
 }
 
+impl From<TlvError> for Reply {
+    fn from(exc: TlvError) -> Reply {
+        Reply(0x7000 + exc as u16)
+    }
+}
+
 /// Result type for TLV operations
-pub type Result<T> = core::result::Result<T, Error>;
+pub type Result<T> = core::result::Result<T, TlvError>;
 
 /// TLV data structure
 #[derive(Copy, Clone, Debug)]
@@ -81,7 +89,7 @@ fn set_unique(received: &mut Received, tag: Tag) -> Result<()> {
         return Ok(());
     }
     if (received.flags & f) != 0 {
-        return Err(Error::DuplicateUniqueTag);
+        return Err(TlvError::DuplicateUniqueTag);
     }
     received.flags |= f;
     Ok(())
@@ -90,7 +98,7 @@ fn set_unique(received: &mut Received, tag: Tag) -> Result<()> {
 /// Decode a DER-encoded unsigned integer
 fn der_u32(input: &[u8], off: &mut usize) -> Result<u32> {
     if *off >= input.len() {
-        return Err(Error::UnexpectedEof);
+        return Err(TlvError::UnexpectedEof);
     }
     let b0 = input[*off];
     *off += 1;
@@ -99,10 +107,10 @@ fn der_u32(input: &[u8], off: &mut usize) -> Result<u32> {
     }
     let n = (b0 & 0x7F) as usize;
     if n == 0 || n > 4 {
-        return Err(Error::InvalidDerLength);
+        return Err(TlvError::InvalidDerLength);
     }
     if *off + n > input.len() {
-        return Err(Error::UnexpectedEof);
+        return Err(TlvError::UnexpectedEof);
     }
     let mut v: u32 = 0;
     for _ in 0..n {
@@ -145,7 +153,7 @@ pub fn parse<'a, O>(cfg: &ParseCfg<'a, O>, payload: &'a [u8], tlv_out: &mut O) -
         let tag = der_u32(payload, &mut off)?;
         let len = der_u32(payload, &mut off)? as usize;
         if off + len > payload.len() {
-            return Err(Error::UnexpectedEof);
+            return Err(TlvError::UnexpectedEof);
         }
         let val = &payload[off..off + len];
         let raw = &payload[tag_start..off + len];
@@ -164,7 +172,7 @@ pub fn parse<'a, O>(cfg: &ParseCfg<'a, O>, payload: &'a [u8], tlv_out: &mut O) -
             .handlers
             .iter()
             .find(|h| h.tag == tag)
-            .ok_or(Error::UnknownTag)?;
+            .ok_or(TlvError::UnknownTag)?;
         if let Some(f) = h.func {
             if !f(&data, tlv_out)? {
                 break;
@@ -203,24 +211,24 @@ impl<'a> TlvData<'a> {
                 self.value[6],
                 self.value[7],
             ])),
-            _ => Err(Error::LengthOverflow),
+            _ => Err(TlvError::LengthOverflow),
         }
     }
     /// Get the value as a boolean
     pub fn as_bool(&self) -> Result<bool> {
         if self.value.len() != 1 {
-            return Err(Error::LengthOverflow);
+            return Err(TlvError::LengthOverflow);
         }
         Ok(self.value[0] != 0)
     }
     /// Get the value as a UTF-8 string
     pub fn as_str(&self) -> Result<&'a str> {
-        core::str::from_utf8(self.value).map_err(|_| Error::LengthOverflow)
+        core::str::from_utf8(self.value).map_err(|_| TlvError::LengthOverflow)
     }
     /// Get the value as a byte slice with bounded length
     pub fn as_bounded(&self, min: usize, max: usize) -> Result<&'a [u8]> {
         if self.value.len() < min || self.value.len() > max {
-            return Err(Error::LengthOverflow);
+            return Err(TlvError::LengthOverflow);
         }
         Ok(self.value)
     }
