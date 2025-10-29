@@ -46,11 +46,17 @@ tag_to_flag_u64!(
 /// Dynamic Token Output type
 #[derive(Default, Debug)]
 pub struct DynamicTokenOut {
+    /// Version of the dynamic token structure
     pub version: u8,
+    /// Coin type
     pub coin_type: Vec<u8>,
+    /// Application name
     pub app_name: String,
+    /// Ticker symbol
     pub ticker: String,
+    /// Magnitude
     pub magnitude: u8,
+    /// Token unique identifier
     pub tuid: Vec<u8>,
 }
 
@@ -159,7 +165,7 @@ static HANDLERS: &[Handler<DynamicTokenExtracted>] = &[
 /// * `payload` - The TLV-encoded data to parse.
 /// * `out` - The output structure to fill with parsed data.
 /// # Returns
-/// Returns `Ok(())` if parsing was successful, or an `TlvError` otherwise.
+/// Returns `Ok(())` if parsing was successful, or a `TlvError` otherwise.
 pub fn parse_dynamic_token_tlv(payload: &[u8], out: &mut DynamicTokenOut) -> Result<()> {
     let mut extracted = DynamicTokenExtracted::default();
     extracted.hash_ctx = Sha2_256::new();
