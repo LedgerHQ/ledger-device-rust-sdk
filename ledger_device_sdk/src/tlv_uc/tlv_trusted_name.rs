@@ -1,3 +1,14 @@
+//! Trusted Name TLV Parsing
+//!
+//! This module implements the following cross-application specification:
+//! https://ledgerhq.atlassian.net/wiki/spaces/TrustServices/pages/3736863735/LNS+Arch+Nano+Trusted+Names+Descriptor+Format+APIs
+//!
+//! Please refer to [tlv.rs] file for documentation on how to write your own use-case if it
+//! does not follow the above specification.
+//!
+//! The goal of this TLV use case is to associate a Blockchain address to a trusted domain name.
+//! The trusted information comes from the Ledger CAL and is forwarded by the Ledger Live.
+
 use super::*;
 use crate::ecc::CurvesId;
 use crate::hash::ripemd::Ripemd160;
@@ -21,25 +32,37 @@ enum TlvTrustedNameSignerAlgorithm {
 }
 
 /// Trusted Name TLV Tags
-const TAG_0: Tag = 0x01;
-const TAG_1: Tag = 0x02;
-const TAG_2: Tag = 0x70;
-const TAG_3: Tag = 0x71;
-const TAG_4: Tag = 0x20;
-const TAG_5: Tag = 0x23;
-const TAG_6: Tag = 0x22;
-const TAG_7: Tag = 0x72;
-const TAG_8: Tag = 0x73;
-const TAG_9: Tag = 0x12;
-const TAG_10: Tag = 0x10;
-const TAG_11: Tag = 0x13;
-const TAG_12: Tag = 0x14;
-const TAG_13: Tag = 0x15;
+const TAG_STRUCTURE_TYPE: Tag = 0x01;
+const TAG_VERSION: Tag = 0x02;
+const TAG_TRUSTED_NAME_TYPE: Tag = 0x70;
+const TAG_TRUSTED_NAME_SOURCE: Tag = 0x71;
+const TAG_TRUSTED_NAME: Tag = 0x20;
+const TAG_CHAIN_ID: Tag = 0x23;
+const TAG_ADDRESS: Tag = 0x22;
+const TAG_NFT_ID: Tag = 0x72;
+const TAG_SOURCE_CONTRACT: Tag = 0x73;
+const TAG_CHALLENGE: Tag = 0x12;
+const TAG_NOT_VALID_AFTER: Tag = 0x10;
+const TAG_SIGNER_KEY_ID: Tag = 0x13;
+const TAG_SIGNER_ALGO: Tag = 0x14;
+const TAG_DER_SIGNATURE: Tag = 0x15;
 
 // Generate the tag_to_flag_u64 function using the macro
 tag_to_flag_u64!(
-    TAG_0, TAG_1, TAG_2, TAG_3, TAG_4, TAG_5, TAG_6, TAG_7, TAG_8, TAG_9, TAG_10, TAG_11, TAG_12,
-    TAG_13
+    TAG_STRUCTURE_TYPE,
+    TAG_VERSION,
+    TAG_TRUSTED_NAME_TYPE,
+    TAG_TRUSTED_NAME_SOURCE,
+    TAG_TRUSTED_NAME,
+    TAG_CHAIN_ID,
+    TAG_ADDRESS,
+    TAG_NFT_ID,
+    TAG_SOURCE_CONTRACT,
+    TAG_CHALLENGE,
+    TAG_NOT_VALID_AFTER,
+    TAG_SIGNER_KEY_ID,
+    TAG_SIGNER_ALGO,
+    TAG_DER_SIGNATURE
 );
 
 #[derive(Default)]
@@ -54,15 +77,25 @@ struct MultipleHashContext {
 /// Trusted Name Output type
 #[derive(Default, Debug)]
 pub struct TrustedNameOut {
+    /// Version of the Trusted Name structure
     pub version: u8,
+    /// Type of the Trusted Name
     pub trusted_name_type: u8,
+    /// Source of the Trusted Name
     pub trusted_name_source: u8,
+    /// The Trusted Name itself
     pub trusted_name: Vec<u8>,
+    /// Chain ID associated with the Trusted Name
     pub chain_id: u64,
+    /// Address associated with the Trusted Name
     pub address: Vec<u8>,
+    /// NFT ID associated with the Trusted Name (optional)
     pub nft_id: Option<Vec<u8>>,
+    /// Source contract associated with the Trusted Name (optional)
     pub source_contract: Option<Vec<u8>>,
+    /// Challenge associated with the Trusted Name (optional)
     pub challenge: Option<u32>,
+    /// Not valid after timestamp associated with the Trusted Name (optional)
     pub not_valid_after: Option<u64>,
 }
 
@@ -155,7 +188,7 @@ fn on_signature(d: &TlvData<'_>, out: &mut TrustedNameExtracted) -> Result<bool>
 }
 
 fn on_common(d: &TlvData<'_>, out: &mut TrustedNameExtracted) -> Result<bool> {
-    if d.tag != TAG_13 {
+    if d.tag != TAG_DER_SIGNATURE {
         let hash_updates = [
             out.hash_ctx.hash_sha2_256.update(d.raw),
             out.hash_ctx.hash_sha2_512.update(d.raw),
@@ -177,78 +210,83 @@ fn on_common(d: &TlvData<'_>, out: &mut TrustedNameExtracted) -> Result<bool> {
 // Static handler table
 static HANDLERS: &[Handler<TrustedNameExtracted>] = &[
     Handler {
-        tag: TAG_0,
+        tag: TAG_STRUCTURE_TYPE,
         unique: true,
         func: Some(on_structure_type),
     },
     Handler {
-        tag: TAG_1,
+        tag: TAG_VERSION,
         unique: true,
         func: Some(on_version),
     },
     Handler {
-        tag: TAG_2,
+        tag: TAG_TRUSTED_NAME_TYPE,
         unique: true,
         func: Some(on_trusted_name_type),
     },
     Handler {
-        tag: TAG_3,
+        tag: TAG_TRUSTED_NAME_SOURCE,
         unique: true,
         func: Some(on_trusted_name_source),
     },
     Handler {
-        tag: TAG_4,
+        tag: TAG_TRUSTED_NAME,
         unique: true,
         func: Some(on_trusted_name),
     },
     Handler {
-        tag: TAG_5,
+        tag: TAG_CHAIN_ID,
         unique: true,
         func: Some(on_chain_id),
     },
     Handler {
-        tag: TAG_6,
+        tag: TAG_ADDRESS,
         unique: true,
         func: Some(on_address),
     },
     Handler {
-        tag: TAG_7,
+        tag: TAG_NFT_ID,
         unique: true,
         func: Some(on_nft_id),
     },
     Handler {
-        tag: TAG_8,
+        tag: TAG_SOURCE_CONTRACT,
         unique: true,
         func: Some(on_source_contract),
     },
     Handler {
-        tag: TAG_9,
+        tag: TAG_CHALLENGE,
         unique: true,
         func: Some(on_challenge),
     },
     Handler {
-        tag: TAG_10,
+        tag: TAG_NOT_VALID_AFTER,
         unique: true,
         func: Some(on_not_valid_after),
     },
     Handler {
-        tag: TAG_11,
+        tag: TAG_SIGNER_KEY_ID,
         unique: true,
         func: Some(on_signer_key_id),
     },
     Handler {
-        tag: TAG_12,
+        tag: TAG_SIGNER_ALGO,
         unique: true,
         func: Some(on_signer_algorithm),
     },
     Handler {
-        tag: TAG_13,
+        tag: TAG_DER_SIGNATURE,
         unique: true,
         func: Some(on_signature),
     },
 ];
 
 /// Parse Trusted Name TLV-encoded data
+/// # Arguments
+/// * `payload` - The TLV-encoded input data
+/// * `out` - The output TrustedNameOut structure to be filled
+/// # Returns
+/// * `Result<()>` - Ok(()) if parsing and verification succeed, Err(TlvError) otherwise
 pub fn parse_trusted_name_tlv(payload: &[u8], out: &mut TrustedNameOut) -> Result<()> {
     let mut extracted = TrustedNameExtracted::default();
 
