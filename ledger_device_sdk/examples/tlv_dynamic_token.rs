@@ -10,7 +10,7 @@ ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 pub enum Instruction {
     GetVersion = 0x01,
     GetAppName = 0x02,
-    ParseTlv = 0x03,
+    ParseTlv = 0x22,
 }
 
 impl TryFrom<ApduHeader> for Instruction {
@@ -19,7 +19,7 @@ impl TryFrom<ApduHeader> for Instruction {
         match value.ins {
             1 => Ok(Instruction::GetVersion),
             2 => Ok(Instruction::GetAppName),
-            3 => Ok(Instruction::ParseTlv),
+            0x22 => Ok(Instruction::ParseTlv),
             _ => Err(StatusWords::NothingReceived),
         }
     }
@@ -78,6 +78,10 @@ extern "C" fn sample_main() {
                 match parse_dynamic_token_tlv(&buffer, &mut out) {
                     Ok(()) => {
                         ledger_device_sdk::testing::debug_print("TLV Parsing successful\n");
+                        ledger_device_sdk::testing::debug_print(out.app_name.as_str());
+                        ledger_device_sdk::testing::debug_print("\n");
+                        ledger_device_sdk::testing::debug_print(out.ticker.as_str());
+                        ledger_device_sdk::testing::debug_print("\n");
                         comm.reply_ok();
                     }
                     Err(err) => {
