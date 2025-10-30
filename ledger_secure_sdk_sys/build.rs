@@ -457,8 +457,6 @@ impl SDKBuilder<'_> {
             .include(self.device.c_sdk.join("lib_ux/include"))
             .include(self.device.c_sdk.join("lib_bagl/include"))
             .include(self.device.c_sdk.join("lib_nbgl/include"))
-            .include(self.device.c_sdk.join("lib_tlv"))
-            .include(self.device.c_sdk.join("lib_standard_app"))
             .include(&glyphs_path)
             .debug(true)
             .define("main", "_start")
