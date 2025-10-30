@@ -5,8 +5,8 @@ use ledger_device_sdk::tag_to_flag_u64;
 use ledger_device_sdk::tlv::*;
 
 extern crate alloc;
-use alloc::vec::Vec;
 use alloc::format;
+use alloc::vec::Vec;
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
@@ -70,7 +70,7 @@ extern "C" fn sample_main() {
 
     parse(&cfg, payload, &mut out, &mut received).unwrap();
 
-     // Check that mandatory TAGs were received
+    // Check that mandatory TAGs were received
     let mandatory_tags = tag_to_flag_u64(TAG_0) | tag_to_flag_u64(TAG_1);
     if received.flags & mandatory_tags != mandatory_tags {
         ledger_device_sdk::testing::debug_print("Received flags: ");
