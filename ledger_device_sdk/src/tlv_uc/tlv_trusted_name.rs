@@ -303,10 +303,27 @@ pub fn parse_trusted_name_tlv(payload: &[u8], out: &mut TrustedNameOut) -> Resul
         hash_ripemd_160: Ripemd160::new(),
     };
 
-    let mut cfg = ParseCfg::new(HANDLERS, tag_to_flag_u64);
+    let mut received = Received::new(tag_to_flag_u64);
+
+    let mut cfg = ParseCfg::new(HANDLERS);
     cfg.common = Some(on_common);
 
-    parse(&cfg, payload, &mut extracted)?;
+    parse(&cfg, payload, &mut extracted, &mut received)?;
+
+    // Check that mandatory TAGs were received
+    let mandatory_tags = tag_to_flag_u64(TAG_STRUCTURE_TYPE)
+        | tag_to_flag_u64(TAG_VERSION)
+        | tag_to_flag_u64(TAG_TRUSTED_NAME_TYPE)
+        | tag_to_flag_u64(TAG_TRUSTED_NAME_SOURCE)
+        | tag_to_flag_u64(TAG_TRUSTED_NAME)
+        | tag_to_flag_u64(TAG_CHAIN_ID)
+        | tag_to_flag_u64(TAG_ADDRESS)
+        | tag_to_flag_u64(TAG_SIGNER_KEY_ID)
+        | tag_to_flag_u64(TAG_SIGNER_ALGO)
+        | tag_to_flag_u64(TAG_DER_SIGNATURE);
+    if received.flags & mandatory_tags != mandatory_tags {
+        return Err(TlvError::MissingMandatoryTag);
+    }
 
     // At this point, all TLV fields have been processed and the signature needs to be verified
     let mut hash = [0u8; 64];
