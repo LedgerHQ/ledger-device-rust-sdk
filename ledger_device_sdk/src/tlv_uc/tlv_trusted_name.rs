@@ -19,6 +19,7 @@ use crate::pki::pki_check_signature;
 use crate::tag_to_flag_u64;
 use ledger_secure_sdk_sys::CERTIFICATE_PUBLIC_KEY_USAGE_TRUSTED_NAME;
 extern crate alloc;
+use alloc::string::String;
 use alloc::vec::Vec;
 
 enum TlvTrustedNameSignerAlgorithm {
@@ -84,15 +85,15 @@ pub struct TrustedNameOut {
     /// Source of the Trusted Name
     pub trusted_name_source: u8,
     /// The Trusted Name itself
-    pub trusted_name: Vec<u8>,
+    pub trusted_name: String,
     /// Chain ID associated with the Trusted Name
     pub chain_id: u64,
     /// Address associated with the Trusted Name
-    pub address: Vec<u8>,
+    pub address: String,
     /// NFT ID associated with the Trusted Name (optional)
     pub nft_id: Option<Vec<u8>>,
     /// Source contract associated with the Trusted Name (optional)
-    pub source_contract: Option<Vec<u8>>,
+    pub source_contract: Option<String>,
     /// Challenge associated with the Trusted Name (optional)
     pub challenge: Option<u32>,
     /// Not valid after timestamp associated with the Trusted Name (optional)
@@ -134,7 +135,8 @@ fn on_trusted_name_source(d: &TlvData<'_>, out: &mut TrustedNameExtracted) -> Re
 }
 
 fn on_trusted_name(d: &TlvData<'_>, out: &mut TrustedNameExtracted) -> Result<bool> {
-    out.trusted_name_out.trusted_name = d.as_bytes().to_vec();
+    out.trusted_name_out.trusted_name =
+        String::from(core::str::from_utf8(d.as_bytes()).map_err(|_| TlvError::LengthOverflow)?);
     Ok(true)
 }
 
@@ -144,7 +146,8 @@ fn on_chain_id(d: &TlvData<'_>, out: &mut TrustedNameExtracted) -> Result<bool> 
 }
 
 fn on_address(d: &TlvData<'_>, out: &mut TrustedNameExtracted) -> Result<bool> {
-    out.trusted_name_out.address = d.as_bytes().to_vec();
+    out.trusted_name_out.address =
+        String::from(core::str::from_utf8(d.as_bytes()).map_err(|_| TlvError::LengthOverflow)?);
     Ok(true)
 }
 
@@ -154,7 +157,9 @@ fn on_nft_id(d: &TlvData<'_>, out: &mut TrustedNameExtracted) -> Result<bool> {
 }
 
 fn on_source_contract(d: &TlvData<'_>, out: &mut TrustedNameExtracted) -> Result<bool> {
-    out.trusted_name_out.source_contract = Some(d.as_bytes().to_vec());
+    out.trusted_name_out.source_contract = Some(String::from(
+        core::str::from_utf8(d.as_bytes()).map_err(|_| TlvError::LengthOverflow)?,
+    ));
     Ok(true)
 }
 
