@@ -24,6 +24,8 @@ pub enum TlvError {
     DuplicateUniqueTag,
     /// Signature verification failed
     SignatureVerificationFailed,
+    /// Missing mandatory tag
+    MissingMandatoryTag,
 }
 
 impl From<TlvError> for Reply {
@@ -61,15 +63,15 @@ pub struct Handler<O> {
 }
 
 /// Received tags tracker
-struct Received {
-    flags: u64,
-    tag_to_flag: fn(Tag) -> u64,
+pub struct Received {
+    pub flags: u64,
+    pub tag_to_flag: fn(Tag) -> u64,
 }
 
 /// Received tags tracker implementation
 impl Received {
     /// Create a new Received tracker
-    const fn new(map: fn(Tag) -> u64) -> Self {
+    pub const fn new(map: fn(Tag) -> u64) -> Self {
         Self {
             flags: 0,
             tag_to_flag: map,
@@ -124,8 +126,6 @@ fn der_u32(input: &[u8], off: &mut usize) -> Result<u32> {
 pub struct ParseCfg<'a, O> {
     /// Handlers
     handlers: &'a [Handler<O>],
-    /// Tag to flag mapping function
-    tag_to_flag: fn(Tag) -> u64,
     /// Common handler (called before specific)
     pub common: Option<HandlerFn<O>>,
 }
@@ -133,18 +133,21 @@ pub struct ParseCfg<'a, O> {
 /// ParseCfg implementation
 impl<'a, O> ParseCfg<'a, O> {
     /// Create a new ParseCfg
-    pub const fn new(handlers: &'a [Handler<O>], map: fn(Tag) -> u64) -> Self {
+    pub const fn new(handlers: &'a [Handler<O>]) -> Self {
         Self {
             handlers,
-            tag_to_flag: map,
             common: None,
         }
     }
 }
 
 /// Parse TLV-encoded data
-pub fn parse<'a, O>(cfg: &ParseCfg<'a, O>, payload: &'a [u8], tlv_out: &mut O) -> Result<()> {
-    let mut received = Received::new(cfg.tag_to_flag);
+pub fn parse<'a, O>(
+    cfg: &ParseCfg<'a, O>,
+    payload: &'a [u8],
+    tlv_out: &mut O,
+    received: &mut Received,
+) -> Result<()> {
     received.reset();
 
     let mut off = 0usize;
@@ -179,7 +182,7 @@ pub fn parse<'a, O>(cfg: &ParseCfg<'a, O>, payload: &'a [u8], tlv_out: &mut O) -
             }
         }
         if h.unique {
-            set_unique(&mut received, tag)?;
+            set_unique(received, tag)?;
         }
     }
     Ok(())

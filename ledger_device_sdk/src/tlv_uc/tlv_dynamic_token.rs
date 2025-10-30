@@ -170,10 +170,25 @@ pub fn parse_dynamic_token_tlv(payload: &[u8], out: &mut DynamicTokenOut) -> Res
     let mut extracted = DynamicTokenExtracted::default();
     extracted.hash_ctx = Sha2_256::new();
 
-    let mut cfg = ParseCfg::new(HANDLERS, tag_to_flag_u64);
+    let mut received = Received::new(tag_to_flag_u64);
+
+    let mut cfg = ParseCfg::new(HANDLERS);
     cfg.common = Some(on_common);
 
-    parse(&cfg, payload, &mut extracted)?;
+    parse(&cfg, payload, &mut extracted, &mut received)?;
+
+    // Check that mandatory TAGs were received
+    let mandatory_tags = tag_to_flag_u64(TAG_STRUCTURE_TYPE)
+        | tag_to_flag_u64(TAG_VERSION)
+        | tag_to_flag_u64(TAG_COIN_TYPE)
+        | tag_to_flag_u64(TAG_APP)
+        | tag_to_flag_u64(TAG_TICKER)
+        | tag_to_flag_u64(TAG_MAGNITUDE)
+        | tag_to_flag_u64(TAG_TUID)
+        | tag_to_flag_u64(TAG_SIGNATURE);
+    if received.flags & mandatory_tags != mandatory_tags {
+        return Err(TlvError::MissingMandatoryTag);
+    }
 
     // At this point, all TLV fields have been processed and the signature needs to be verified
     let hash_size = extracted.hash_ctx.get_size();
