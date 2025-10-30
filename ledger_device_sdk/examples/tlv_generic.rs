@@ -6,6 +6,7 @@ use ledger_device_sdk::tlv::*;
 
 extern crate alloc;
 use alloc::vec::Vec;
+use alloc::format;
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
@@ -46,7 +47,7 @@ static HANDLERS: &[Handler<Out>] = &[
     },
     Handler {
         tag: TAG_1,
-        unique: false,
+        unique: true,
         func: Some(on_b),
     },
     Handler {
@@ -62,10 +63,20 @@ extern "C" fn sample_main() {
 
     let mut out = Out::default();
 
-    let mut cfg = ParseCfg::new(HANDLERS, tag_to_flag_u64);
+    let mut received = Received::new(tag_to_flag_u64);
+
+    let mut cfg = ParseCfg::new(HANDLERS);
     cfg.common = Some(on_common);
 
-    parse(&cfg, payload, &mut out).unwrap();
+    parse(&cfg, payload, &mut out, &mut received).unwrap();
 
+     // Check that mandatory TAGs were received
+    let mandatory_tags = tag_to_flag_u64(TAG_0) | tag_to_flag_u64(TAG_1);
+    if received.flags & mandatory_tags != mandatory_tags {
+        ledger_device_sdk::testing::debug_print("Received flags: ");
+        ledger_device_sdk::testing::debug_print(format!("{:x}\n", received.flags).as_str());
+        ledger_device_sdk::testing::debug_print("Missing mandatory tag\n");
+        ledger_device_sdk::exit_app(1);
+    }
     ledger_device_sdk::exit_app(0);
 }
