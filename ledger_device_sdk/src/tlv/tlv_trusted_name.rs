@@ -9,7 +9,7 @@
 //! The goal of this TLV use case is to associate a Blockchain address to a trusted domain name.
 //! The trusted information comes from the Ledger CAL and is forwarded by the Ledger Live.
 
-use super::*;
+use super::tlv_generic::*;
 use crate::ecc::CurvesId;
 use crate::hash::ripemd::Ripemd160;
 use crate::hash::sha2::{Sha2_256, Sha2_512};

@@ -4,7 +4,7 @@
 use include_gif::include_gif;
 use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{NbglGlyph, NbglHomeAndSettings};
-use ledger_device_sdk::tlv_uc::{parse_dynamic_token_tlv, DynamicTokenOut};
+use ledger_device_sdk::tlv::{parse_dynamic_token_tlv, DynamicTokenOut};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 pub enum Instruction {

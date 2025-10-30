@@ -10,7 +10,7 @@
 //! purposes.
 //! The trusted information comes from the Ledger CAL and is forwarded by the Ledger Live.
 
-use super::*;
+use super::tlv_generic::*;
 use crate::ecc::CurvesId;
 use crate::hash::sha2::Sha2_256;
 use crate::hash::HashInit;
