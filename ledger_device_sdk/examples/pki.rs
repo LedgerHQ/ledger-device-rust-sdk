@@ -71,7 +71,7 @@ extern "C" fn sample_main() {
                 let buffer = match comm.get_data() {
                     Ok(buf) => buf,
                     Err(_err) => {
-                        ledger_device_sdk::testing::debug_print("Failed to get data: {}\n");
+                        ledger_device_sdk::testing::debug_print("Failed to get data \n");
                         break;
                     }
                 };

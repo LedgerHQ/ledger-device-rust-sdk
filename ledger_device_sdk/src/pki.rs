@@ -11,8 +11,6 @@ use ledger_secure_sdk_sys::{
 /// PKI verification errors
 /// Indicates the result of a PKI verification operation.
 pub enum PkiVerifyError {
-    /// The verification was successful.
-    Success = 0,
     /// No certificate was found.
     MissingCertificate = 1,
     /// The certificate was not used for the correct purpose.
@@ -44,7 +42,7 @@ pub fn pki_check_signature(
     signature: &mut [u8],
 ) -> Result<(), PkiVerifyError> {
     let certificate_name = [0u8; CERTIFICATE_TRUSTED_NAME_MAXLEN as usize];
-    let mut certficate_name_len: usize = 0;
+    let mut certificate_name_len: usize = 0;
     let mut key_usage: u8 = 0;
     let mut pub_key = cx_ecfp_384_public_key_t::default();
 
@@ -52,7 +50,7 @@ pub fn pki_check_signature(
         os_pki_get_info(
             &mut key_usage as *mut u8,
             certificate_name.as_ptr() as *mut u8,
-            &mut certficate_name_len as *mut usize,
+            &mut certificate_name_len as *mut usize,
             &mut pub_key as *mut cx_ecfp_384_public_key_t,
         )
     };
@@ -74,7 +72,7 @@ pub fn pki_check_signature(
             signature.len(),
         )
     };
-    if err == true {
+    if err {
         Ok(())
     } else {
         Err(PkiVerifyError::WrongSignature)
