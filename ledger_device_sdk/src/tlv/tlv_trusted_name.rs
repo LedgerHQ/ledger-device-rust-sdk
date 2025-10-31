@@ -1,12 +1,12 @@
-//! Trusted Name TLV Parsing
+//! Trusted Name TLV Parser
 //!
 //! This module implements the following cross-application specification:
-//! https://ledgerhq.atlassian.net/wiki/spaces/TrustServices/pages/3736863735/LNS+Arch+Nano+Trusted+Names+Descriptor+Format+APIs
+//! <https://ledgerhq.atlassian.net/wiki/spaces/TrustServices/pages/3736863735/LNS+Arch+Nano+Trusted+Names+Descriptor+Format+APIs>
 //!
-//! Please refer to [tlv.rs] file for documentation on how to write your own use-case if it
+//! Please refer to [crate::tlv::tlv_generic] for documentation on how to write your own use-case if it
 //! does not follow the above specification.
 //!
-//! The goal of this TLV use case is to associate a Blockchain address to a trusted domain name.
+//! The goal of this TLV use case is to associate a blockchain address to a trusted domain name.
 //! The trusted information comes from the Ledger CAL and is forwarded by the Ledger Live.
 
 use super::tlv_generic::*;

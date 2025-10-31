@@ -2,7 +2,9 @@
 #![no_main]
 
 use ledger_device_sdk::tag_to_flag_u64;
-use ledger_device_sdk::tlv::{parse, Handler, ParseCfg, Received, Result, Tag, TlvData};
+use ledger_device_sdk::tlv::tlv_generic::{
+    parse, Handler, ParseCfg, Received, Result, Tag, TlvData,
+};
 
 extern crate alloc;
 use alloc::format;

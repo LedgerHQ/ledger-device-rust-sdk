@@ -1,9 +1,9 @@
-//! Dynamic Token TLV Parsing
+//! Dynamic Token TLV Parser
 //!
 //! This module implements the following cross-application specification:
-//! https://ledgerhq.atlassian.net/wiki/spaces/TA/pages/5603262535/Token+Dynamic+Descriptor
+//! <https://ledgerhq.atlassian.net/wiki/spaces/TA/pages/5603262535/Token+Dynamic+Descriptor>
 //!
-//! Please refer to [tlv.rs] file for documentation on how to write your own use-case if it
+//! Please refer to [crate::tlv::tlv_generic] for documentation on how to write your own use-case if it
 //! does not follow the above specification.
 //!
 //! The goal of this TLV use case is to parse dynamic information about a token for clear signing
