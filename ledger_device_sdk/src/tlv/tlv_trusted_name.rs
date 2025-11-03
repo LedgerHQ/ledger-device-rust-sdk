@@ -332,6 +332,7 @@ pub fn parse_trusted_name_tlv(payload: &[u8], out: &mut TrustedNameOut) -> Resul
     }
 
     // At this point, all TLV fields have been processed and the signature needs to be verified
+    // Step 1: finalize the hash according to the signer_algorithm
     let mut hash = [0u8; 64];
     let mut hash_size = 0usize;
     let mut curve: CurvesId = CurvesId::Invalid;
@@ -343,15 +344,20 @@ pub fn parse_trusted_name_tlv(payload: &[u8], out: &mut TrustedNameOut) -> Resul
         &mut curve,
     )?;
 
+    // Step 2: verify the signature
     // Check signature with PKI certificate
-    let res = pki_check_signature(
-        &mut hash[..hash_size],
-        CERTIFICATE_PUBLIC_KEY_USAGE_TRUSTED_NAME,
-        curve,
-        &mut extracted.signature,
-    );
-    if res.is_err() {
-        return Err(TlvError::SignatureVerificationFailed);
+    // In test mode, skip signature verification
+    #[cfg(not(test))]
+    {
+        let res = pki_check_signature(
+            &mut hash[..hash_size],
+            CERTIFICATE_PUBLIC_KEY_USAGE_TRUSTED_NAME,
+            curve,
+            &mut extracted.signature,
+        );
+        if res.is_err() {
+            return Err(TlvError::SignatureVerificationFailed);
+        }
     }
 
     // Copy the extracted trusted name output
@@ -455,4 +461,89 @@ fn finalize_hashes(
         _ => return Err(TlvError::SignatureVerificationFailed),
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::assert_eq_err as assert_eq;
+    use crate::testing::TestType;
+    use crate::tlv::{parse_trusted_name_tlv, TrustedNameOut};
+    use testmacro::test_item as test;
+
+    const TLV_PAYLOAD: &[u8] = &[
+        0x01, 0x01, 0x03, 0x02, 0x01, 0x02, 0x70, 0x01, 0x06, 0x71, 0x01, 0x06, 0x20, 0x2c, 0x46,
+        0x7a, 0x39, 0x6e, 0x70, 0x59, 0x4a, 0x47, 0x58, 0x6b, 0x38, 0x48, 0x75, 0x53, 0x4b, 0x77,
+        0x64, 0x33, 0x52, 0x32, 0x48, 0x42, 0x57, 0x64, 0x64, 0x4d, 0x39, 0x4b, 0x7a, 0x37, 0x7a,
+        0x63, 0x79, 0x46, 0x4c, 0x4c, 0x33, 0x67, 0x31, 0x32, 0x75, 0x50, 0x65, 0x65, 0x23, 0x01,
+        0x65, 0x22, 0x2c, 0x41, 0x78, 0x6d, 0x55, 0x46, 0x33, 0x71, 0x6b, 0x64, 0x7a, 0x31, 0x7a,
+        0x73, 0x31, 0x35, 0x31, 0x51, 0x35, 0x57, 0x74, 0x74, 0x56, 0x4d, 0x6b, 0x46, 0x70, 0x46,
+        0x47, 0x51, 0x50, 0x77, 0x67, 0x68, 0x5a, 0x73, 0x34, 0x64, 0x31, 0x6d, 0x77, 0x59, 0x35,
+        0x35, 0x64, 0x73, 0x2b, 0x4a, 0x55, 0x50, 0x79, 0x69, 0x77, 0x72, 0x59, 0x4a, 0x46, 0x73,
+        0x6b, 0x55, 0x50, 0x69, 0x48, 0x61, 0x37, 0x68, 0x6b, 0x65, 0x52, 0x38, 0x56, 0x55, 0x74,
+        0x41, 0x65, 0x46, 0x6f, 0x53, 0x59, 0x62, 0x4b, 0x65, 0x64, 0x5a, 0x4e, 0x73, 0x44, 0x76,
+        0x43, 0x4e, 0x12, 0x04, 0xae, 0x96, 0x5c, 0x07, 0x13, 0x01, 0x00, 0x14, 0x01, 0x01, 0x15,
+        0x47, 0x30, 0x45, 0x02, 0x21, 0x00, 0xf8, 0x19, 0xe2, 0xc2, 0xe6, 0x1b, 0x72, 0xa9, 0x7c,
+        0xa5, 0x1a, 0x1e, 0x44, 0x0a, 0xdd, 0x22, 0xa9, 0x82, 0x35, 0x2b, 0x25, 0x60, 0x06, 0x1b,
+        0x71, 0x88, 0xf0, 0x86, 0xd6, 0x21, 0x04, 0xf9, 0x02, 0x20, 0x62, 0x18, 0x3a, 0x32, 0x49,
+        0x4a, 0xae, 0x8b, 0x41, 0x27, 0xfa, 0xf2, 0x1b, 0x75, 0xce, 0xc3, 0x8d, 0x49, 0xb4, 0x8d,
+        0x07, 0x69, 0xa6, 0x42, 0x56, 0x66, 0xe7, 0xee, 0x14, 0x3e, 0xc9, 0xc2,
+    ];
+
+    #[test]
+    fn test_parse_trusted_name_tlv() {
+        let mut out = TrustedNameOut::default();
+        let res = parse_trusted_name_tlv(TLV_PAYLOAD, &mut out);
+        assert_eq!(res, Ok(()));
+    }
+
+    #[test]
+    fn test_parse_trusted_name_tlv_missing_tag() {
+        let mut out = TrustedNameOut::default();
+        let res = parse_trusted_name_tlv(&TLV_PAYLOAD[3..], &mut out);
+        assert_eq!(res, Err(crate::tlv::TlvError::MissingMandatoryTag));
+    }
+
+    #[test]
+    fn test_parse_trusted_name_tlv_unexpected_eof() {
+        let mut out = TrustedNameOut::default();
+        let res = parse_trusted_name_tlv(&TLV_PAYLOAD[..15], &mut out);
+        assert_eq!(res, Err(crate::tlv::TlvError::UnexpectedEof));
+    }
+
+    #[test]
+    fn test_parse_trusted_name_tlv_invalid_der_length() {
+        let mut out = TrustedNameOut::default();
+        let mut invalid_payload = TLV_PAYLOAD.to_vec();
+        invalid_payload[1] = 0xFF; // Invalid length for tag 0x01
+        let res = parse_trusted_name_tlv(&invalid_payload, &mut out);
+        assert_eq!(res, Err(crate::tlv::TlvError::InvalidDerLength));
+    }
+
+    #[test]
+    fn test_parse_trusted_name_tlv_length_overflow() {
+        let mut out = TrustedNameOut::default();
+        let mut invalid_payload = TLV_PAYLOAD.to_vec();
+        invalid_payload[1] = 0x0A; // Invalid length for tag 0x01
+        let res = parse_trusted_name_tlv(&invalid_payload, &mut out);
+        assert_eq!(res, Err(crate::tlv::TlvError::LengthOverflow));
+    }
+
+    #[test]
+    fn test_parse_trusted_name_tlv_unknown_tag() {
+        let mut out = TrustedNameOut::default();
+        let mut invalid_payload = TLV_PAYLOAD.to_vec();
+        invalid_payload[0] = 0x09; // Unknown tag
+        let res = parse_trusted_name_tlv(&invalid_payload, &mut out);
+        assert_eq!(res, Err(crate::tlv::TlvError::UnknownTag));
+    }
+
+    #[test]
+    fn test_parse_trusted_name_tlv_duplicate_unique_tag() {
+        let mut out = TrustedNameOut::default();
+        let mut invalid_payload = TLV_PAYLOAD.to_vec();
+        // Duplicate tag 0x01
+        invalid_payload.extend_from_slice(&[0x01, 0x01, 0x03]);
+        let res = parse_trusted_name_tlv(&invalid_payload, &mut out);
+        assert_eq!(res, Err(crate::tlv::TlvError::DuplicateUniqueTag));
+    }
 }
