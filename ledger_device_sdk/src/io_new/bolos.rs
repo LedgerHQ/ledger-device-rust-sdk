@@ -5,6 +5,7 @@ use crate::io_legacy::SyscallError;
 use crate::io_legacy::BOLOS_INS_GET_VERSION;
 use crate::io_legacy::BOLOS_INS_QUIT;
 use crate::io_legacy::BOLOS_INS_SET_PKI_CERT;
+use crate::pki::PkiLoadCertificateError;
 
 /// Handle internal BOLOS APDUs (CLA = 0xB0, P1 = 0x00, P2 = 0x00).
 pub(crate) fn handle_bolos_apdu<const N: usize>(comm: &mut Comm<N>, ins: u8) {
@@ -73,10 +74,11 @@ pub(crate) fn handle_bolos_apdu<const N: usize>(comm: &mut Comm<N>, ins: u8) {
                 &public_key as *const cx_ecfp_384_public_key_t as *mut cx_ecfp_384_public_key_t,
             );
             if err != 0 {
-                comm.begin_response().send(SyscallError::from(err));
-                return;
+                comm.begin_response()
+                    .send(SyscallError::from(PkiLoadCertificateError::from(err)));
+            } else {
+                comm.begin_response().send(StatusWords::Ok);
             }
-            comm.begin_response().send(StatusWords::Ok);
         },
         // Unknown INS within BOLOS namespace
         _ => {

@@ -10,6 +10,7 @@ use ledger_secure_sdk_sys::{
 
 /// PKI verification errors
 /// Indicates the result of a PKI verification operation.
+#[repr(u16)]
 pub enum PkiVerifyError {
     /// No certificate was found.
     MissingCertificate = 1,
@@ -21,9 +22,11 @@ pub enum PkiVerifyError {
     WrongSignature = 4,
 }
 
+const PKI_VERIFY_ERROR_BASE: u16 = 0x6900;
+
 impl From<PkiVerifyError> for Reply {
-    fn from(exc: PkiVerifyError) -> Reply {
-        Reply(0x6900 + exc as u16)
+    fn from(e: PkiVerifyError) -> Reply {
+        Reply(PKI_VERIFY_ERROR_BASE | e as u16)
     }
 }
 /// Verify hash using the loaded certificate

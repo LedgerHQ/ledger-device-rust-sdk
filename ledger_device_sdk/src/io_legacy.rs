@@ -70,11 +70,59 @@ impl From<u32> for SyscallError {
             8 => SyscallError::NotSupported,
             9 => SyscallError::InvalidState,
             10 => SyscallError::Timeout,
-            0x422F | 0x4230..0x4239 | 0x422D | 0x3301 | 0x422E | 0x5720 | 0x4118 => {
-                SyscallError::InvalidPkiCertificate
-            }
+            11 => SyscallError::InvalidPkiCertificate,
             _ => SyscallError::Unspecified,
         }
+    }
+}
+
+#[repr(u32)]
+pub enum PkiLoadCertificateError {
+    InvalidStructureType,
+    IncorrectCertificateVersion,
+    IncorrectCertificateValidity,
+    IncorrectCertificateValidityIndex,
+    UnknownSignerKeyId,
+    UnknownSignatureAlgorithm,
+    UnknownPublicKeyId,
+    UnknownPublicKeyUsage,
+    IncorrectEllipticCurveId,
+    IncorrectSignatureAlgorithmAssociatedToPublicKey,
+    UnknownTargetDevice,
+    UnknownCertificateTag,
+    FailedToHashData,
+    ExpectedKeyUsageDoesNotMatchCertificateKeyUsage,
+    FailedToVerifySignature,
+    TrustedNameBufferTooSmall,
+}
+
+impl From<u32> for PkiLoadCertificateError {
+    fn from(e: u32) -> PkiLoadCertificateError {
+        match e {
+            0x422F => PkiLoadCertificateError::InvalidStructureType,
+            0x4230 => PkiLoadCertificateError::IncorrectCertificateVersion,
+            0x4231 => PkiLoadCertificateError::IncorrectCertificateValidity,
+            0x4232 => PkiLoadCertificateError::IncorrectCertificateValidityIndex,
+            0x4233 => PkiLoadCertificateError::UnknownSignerKeyId,
+            0x4234 => PkiLoadCertificateError::UnknownSignatureAlgorithm,
+            0x4235 => PkiLoadCertificateError::UnknownPublicKeyId,
+            0x4236 => PkiLoadCertificateError::UnknownPublicKeyUsage,
+            0x4237 => PkiLoadCertificateError::IncorrectEllipticCurveId,
+            0x4238 => PkiLoadCertificateError::IncorrectSignatureAlgorithmAssociatedToPublicKey,
+            0x4239 => PkiLoadCertificateError::UnknownTargetDevice,
+            0x422D => PkiLoadCertificateError::UnknownCertificateTag,
+            0x3301 => PkiLoadCertificateError::FailedToHashData,
+            0x422E => PkiLoadCertificateError::ExpectedKeyUsageDoesNotMatchCertificateKeyUsage,
+            0x5720 => PkiLoadCertificateError::FailedToVerifySignature,
+            0x4118 => PkiLoadCertificateError::TrustedNameBufferTooSmall,
+            _ => panic!("Unknown PKI Load Certificate Error"),
+        }
+    }
+}
+
+impl From<PkiLoadCertificateError> for SyscallError {
+    fn from(e: PkiLoadCertificateError) -> SyscallError {
+        SyscallError::InvalidPkiCertificate
     }
 }
 
@@ -740,10 +788,10 @@ fn handle_bolos_apdu(com: &mut Comm, ins: u8) {
                 &public_key as *const cx_ecfp_384_public_key_t as *mut cx_ecfp_384_public_key_t,
             );
             if err != 0 {
-                com.reply(SyscallError::from(err));
-                return;
+                com.reply(SyscallError::from(PkiLoadCertificateError::from(err)));
+            } else {
+                com.reply_ok();
             }
-            com.reply_ok();
         },
         _ => {
             com.reply(StatusWords::BadIns);
