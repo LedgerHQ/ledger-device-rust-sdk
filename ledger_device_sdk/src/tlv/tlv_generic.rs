@@ -50,6 +50,8 @@ mod tlv_core {
     }
 
     /// TLV handler function type
+    /// Parses TLV data and outputs to Output structure
+    /// Returns Ok(true) to continue parsing, Ok(false) to stop parsing
     pub type HandlerFn<O> = fn(&TlvData<'_>, &mut O) -> Result<bool>;
 
     /// TLV handler structure
@@ -90,6 +92,7 @@ mod tlv_core {
     #[inline]
     fn set_unique(received: &mut Received, tag: Tag) -> Result<()> {
         let f = (received.tag_to_flag)(tag);
+        // If the tag is not mapped to any flag, it is not unique
         if f == 0 {
             return Ok(());
         }
@@ -170,6 +173,7 @@ mod tlv_core {
                 raw,
             };
             if let Some(f) = cfg.common {
+                // Call common handler
                 if !f(&data, tlv_out)? {
                     break;
                 }
@@ -180,6 +184,8 @@ mod tlv_core {
                 .find(|h| h.tag == tag)
                 .ok_or(TlvError::UnknownTag)?;
             if let Some(f) = h.func {
+                // Call specific handler
+                // break if handler returns false
                 if !f(&data, tlv_out)? {
                     break;
                 }

@@ -66,6 +66,12 @@ tag_to_flag_u64!(
     TAG_DER_SIGNATURE
 );
 
+// Hash contexts for multiple algorithms
+// Used to compute hashes in parallel while parsing TLV data
+// for signature verification.
+// We will know the correct format to use at reception of the signer_algo tag.
+// We don't try to be clever and just calculate all hash until then.
+// Performance hit is unnoticeable. Memory footprint is negligeable.
 #[derive(Default)]
 struct MultipleHashContext {
     hash_sha2_256: Sha2_256,
@@ -354,6 +360,17 @@ pub fn parse_trusted_name_tlv(payload: &[u8], out: &mut TrustedNameOut) -> Resul
     Ok(())
 }
 
+// Helper macro to reduce boilerplate for hash finalization
+macro_rules! finalize_hash {
+    ($hash_ctx:expr, $curve_id:expr, $hash:expr, $hash_size:expr, $curve:expr) => {{
+        *$hash_size = $hash_ctx.get_size();
+        *$curve = $curve_id;
+        $hash_ctx
+            .finalize($hash)
+            .map_err(|_| TlvError::SignatureVerificationFailed)?;
+    }};
+}
+
 fn finalize_hashes(
     hash_ctx: &mut MultipleHashContext,
     signer_algorithm: u8,
@@ -363,70 +380,77 @@ fn finalize_hashes(
 ) -> Result<()> {
     match signer_algorithm {
         x if x == TlvTrustedNameSignerAlgorithm::TlvTrustedNameSignerAlgorithmEcdsaSha256 as u8 => {
-            *hash_size = hash_ctx.hash_sha2_256.get_size();
-            *curve = CurvesId::Secp256k1;
-            let res = hash_ctx.hash_sha2_256.finalize(hash);
-            if res.is_err() {
-                return Err(TlvError::SignatureVerificationFailed);
-            }
+            finalize_hash!(
+                hash_ctx.hash_sha2_256,
+                CurvesId::Secp256k1,
+                hash,
+                hash_size,
+                curve
+            );
         }
         x if x
             == TlvTrustedNameSignerAlgorithm::TlvTrustedNameSignerAlgorithmEcdsaSha3_256 as u8 =>
         {
-            *hash_size = hash_ctx.hash_sha3_256.get_size();
-            *curve = CurvesId::Secp256k1;
-            let res = hash_ctx.hash_sha3_256.finalize(hash);
-            if res.is_err() {
-                return Err(TlvError::SignatureVerificationFailed);
-            }
+            finalize_hash!(
+                hash_ctx.hash_sha3_256,
+                CurvesId::Secp256k1,
+                hash,
+                hash_size,
+                curve
+            );
         }
         x if x
             == TlvTrustedNameSignerAlgorithm::TlvTrustedNameSignerAlgorithmEcdsaKeccak256 as u8 =>
         {
-            *hash_size = hash_ctx.hash_keccak_256.get_size();
-            *curve = CurvesId::Secp256k1;
-            let res = hash_ctx.hash_keccak_256.finalize(hash);
-            if res.is_err() {
-                return Err(TlvError::SignatureVerificationFailed);
-            }
+            finalize_hash!(
+                hash_ctx.hash_keccak_256,
+                CurvesId::Secp256k1,
+                hash,
+                hash_size,
+                curve
+            );
         }
         x if x
             == TlvTrustedNameSignerAlgorithm::TlvTrustedNameSignerAlgorithmEcdsaRipemd160 as u8 =>
         {
-            *hash_size = hash_ctx.hash_ripemd_160.get_size();
-            *curve = CurvesId::Secp256k1;
-            let res = hash_ctx.hash_ripemd_160.finalize(hash);
-            if res.is_err() {
-                return Err(TlvError::SignatureVerificationFailed);
-            }
+            finalize_hash!(
+                hash_ctx.hash_ripemd_160,
+                CurvesId::Secp256k1,
+                hash,
+                hash_size,
+                curve
+            );
         }
         x if x == TlvTrustedNameSignerAlgorithm::TlvTrustedNameSignerAlgorithmEcdsaSha512 as u8 => {
-            *hash_size = hash_ctx.hash_sha2_512.get_size();
-            *curve = CurvesId::Secp256k1;
-            let res = hash_ctx.hash_sha2_512.finalize(hash);
-            if res.is_err() {
-                return Err(TlvError::SignatureVerificationFailed);
-            }
+            finalize_hash!(
+                hash_ctx.hash_sha2_512,
+                CurvesId::Secp256k1,
+                hash,
+                hash_size,
+                curve
+            );
         }
         x if x
             == TlvTrustedNameSignerAlgorithm::TlvTrustedNameSignerAlgorithmEddsaKeccak256 as u8 =>
         {
-            *hash_size = hash_ctx.hash_keccak_256.get_size();
-            *curve = CurvesId::Ed25519;
-            let res = hash_ctx.hash_keccak_256.finalize(hash);
-            if res.is_err() {
-                return Err(TlvError::SignatureVerificationFailed);
-            }
+            finalize_hash!(
+                hash_ctx.hash_keccak_256,
+                CurvesId::Ed25519,
+                hash,
+                hash_size,
+                curve
+            );
         }
         x if x
             == TlvTrustedNameSignerAlgorithm::TlvTrustedNameSignerAlgorithmEddsaSha3_256 as u8 =>
         {
-            *hash_size = hash_ctx.hash_sha3_256.get_size();
-            *curve = CurvesId::Ed25519;
-            let res = hash_ctx.hash_sha3_256.finalize(hash);
-            if res.is_err() {
-                return Err(TlvError::SignatureVerificationFailed);
-            }
+            finalize_hash!(
+                hash_ctx.hash_sha3_256,
+                CurvesId::Ed25519,
+                hash,
+                hash_size,
+                curve
+            );
         }
         _ => return Err(TlvError::SignatureVerificationFailed),
     }

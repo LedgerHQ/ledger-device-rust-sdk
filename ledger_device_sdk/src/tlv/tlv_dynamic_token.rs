@@ -191,6 +191,7 @@ pub fn parse_dynamic_token_tlv(payload: &[u8], out: &mut DynamicTokenOut) -> Res
     }
 
     // At this point, all TLV fields have been processed and the signature needs to be verified
+    // Step 1: finalize the hash
     let hash_size = extracted.hash_ctx.get_size();
     let mut hash = vec![0u8; hash_size];
     let res = extracted.hash_ctx.finalize(&mut hash);
@@ -198,17 +199,20 @@ pub fn parse_dynamic_token_tlv(payload: &[u8], out: &mut DynamicTokenOut) -> Res
         return Err(TlvError::SignatureVerificationFailed);
     }
 
-    // Check signature with PKI certificate
+    // Step 2: verify the signature of TLV payload
+    // with PKI certificate.
+    // In test mode, skip signature verification
     #[cfg(not(test))]
-    let res = pki_check_signature(
-        &mut hash,
-        CERTIFICATE_PUBLIC_KEY_USAGE_COIN_META,
-        CurvesId::Secp256k1,
-        &mut extracted.signature,
-    );
-    #[cfg(not(test))]
-    if res.is_err() {
-        return Err(TlvError::SignatureVerificationFailed);
+    {
+        let res = pki_check_signature(
+            &mut hash,
+            CERTIFICATE_PUBLIC_KEY_USAGE_COIN_META,
+            CurvesId::Secp256k1,
+            &mut extracted.signature,
+        );
+        if res.is_err() {
+            return Err(TlvError::SignatureVerificationFailed);
+        }
     }
 
     // Copy the extracted dynamic token output
