@@ -42,6 +42,7 @@ struct Device<'a> {
     pub defines: Vec<(String, Option<String>)>,
     pub cflags: Vec<String>,
     pub glyphs_folders: Vec<PathBuf>,
+    pub arm_libs: String,
     pub linker_script: String,
 }
 
@@ -173,6 +174,7 @@ impl SDKBuilder<'_> {
                         .collect::<Vec<String>>()
                 },
                 glyphs_folders: Vec::new(),
+                arm_libs: Default::default(),
                 linker_script: format!(
                     "{}/devices/nanosplus/nanosplus_layout.ld",
                     env!("CARGO_MANIFEST_DIR")
@@ -220,6 +222,7 @@ impl SDKBuilder<'_> {
                         .collect::<Vec<String>>()
                 },
                 glyphs_folders: Vec::new(),
+                arm_libs: Default::default(),
                 linker_script: format!(
                     "{}/devices/nanox/nanox_layout.ld",
                     env!("CARGO_MANIFEST_DIR")
@@ -253,6 +256,7 @@ impl SDKBuilder<'_> {
                         .collect::<Vec<String>>()
                 },
                 glyphs_folders: Vec::new(),
+                arm_libs: Default::default(),
                 linker_script: format!(
                     "{}/devices/stax/stax_layout.ld",
                     env!("CARGO_MANIFEST_DIR")
@@ -286,6 +290,7 @@ impl SDKBuilder<'_> {
                         .collect::<Vec<String>>()
                 },
                 glyphs_folders: Vec::new(),
+                arm_libs: Default::default(),
                 linker_script: format!(
                     "{}/devices/flex/flex_layout.ld",
                     env!("CARGO_MANIFEST_DIR")
@@ -319,6 +324,7 @@ impl SDKBuilder<'_> {
                         .collect::<Vec<String>>()
                 },
                 glyphs_folders: Vec::new(),
+                arm_libs: Default::default(),
                 linker_script: format!(
                     "{}/devices/apex_p/apex_p_layout.ld",
                     env!("CARGO_MANIFEST_DIR")
@@ -376,6 +382,20 @@ impl SDKBuilder<'_> {
                 }
             }
         }
+
+        // Set ARM pre-compiled libraries path
+        self.device.arm_libs = match self.device.name {
+            DeviceName::NanoX => {
+                let mut path = self.device.c_sdk.display().to_string();
+                path.push_str("/arch/st33/lib");
+                path
+            }
+            DeviceName::NanoSPlus | DeviceName::Flex | DeviceName::Stax | DeviceName::ApexP => {
+                let mut path = self.device.c_sdk.display().to_string();
+                path.push_str("/arch/st33k1/lib");
+                path
+            }
+        };
 
         // export TARGET into env for 'infos.rs'
         println!("cargo:rustc-env=TARGET={}", self.device.name);
@@ -537,6 +557,10 @@ impl SDKBuilder<'_> {
         /* Compile the SDK */
         command.compile("ledger-secure-sdk");
 
+        /* Link with libc */
+        let path = self.device.arm_libs.clone();
+        println!("cargo:rustc-link-lib=c");
+        println!("cargo:rustc-link-search={path}");
         Ok(())
     }
 

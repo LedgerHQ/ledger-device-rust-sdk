@@ -123,6 +123,7 @@ SECTIONS
 
   /DISCARD/ :
   {
+    libc.a ( * )
     *(.ARM.exidx* .gnu.linkonce.armexidx.*)
     *(.debug_info)
   }
