@@ -1,11 +1,10 @@
 use super::{Comm, StatusWords, DEFAULT_BUF_SIZE};
 use ledger_secure_sdk_sys::*;
 
-use crate::io_legacy::SyscallError;
-use crate::io_legacy::BOLOS_INS_GET_VERSION;
-use crate::io_legacy::BOLOS_INS_QUIT;
-use crate::io_legacy::BOLOS_INS_SET_PKI_CERT;
-use crate::pki::PkiLoadCertificateError;
+use crate::io_legacy::{
+    PkiLoadCertificateError, SyscallError, BOLOS_INS_GET_VERSION, BOLOS_INS_QUIT,
+    BOLOS_INS_SET_PKI_CERT,
+};
 
 /// Handle internal BOLOS APDUs (CLA = 0xB0, P1 = 0x00, P2 = 0x00).
 pub(crate) fn handle_bolos_apdu<const N: usize>(comm: &mut Comm<N>, ins: u8) {
