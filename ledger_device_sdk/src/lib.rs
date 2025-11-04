@@ -27,11 +27,12 @@ pub mod io {
 pub mod libcall;
 pub mod math;
 pub mod nvm;
+pub mod pki;
 pub mod random;
 pub mod screen;
 pub mod seph;
-
 pub mod testing;
+pub mod tlv;
 
 #[cfg(any(
     target_os = "stax",

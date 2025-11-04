@@ -54,6 +54,7 @@ pub enum SyscallError {
     NotSupported,
     InvalidState,
     Timeout,
+    InvalidPkiCertificate,
     Unspecified,
 }
 
@@ -69,8 +70,59 @@ impl From<u32> for SyscallError {
             8 => SyscallError::NotSupported,
             9 => SyscallError::InvalidState,
             10 => SyscallError::Timeout,
+            11 => SyscallError::InvalidPkiCertificate,
             _ => SyscallError::Unspecified,
         }
+    }
+}
+
+#[repr(u32)]
+pub enum PkiLoadCertificateError {
+    InvalidStructureType,
+    IncorrectCertificateVersion,
+    IncorrectCertificateValidity,
+    IncorrectCertificateValidityIndex,
+    UnknownSignerKeyId,
+    UnknownSignatureAlgorithm,
+    UnknownPublicKeyId,
+    UnknownPublicKeyUsage,
+    IncorrectEllipticCurveId,
+    IncorrectSignatureAlgorithmAssociatedToPublicKey,
+    UnknownTargetDevice,
+    UnknownCertificateTag,
+    FailedToHashData,
+    ExpectedKeyUsageDoesNotMatchCertificateKeyUsage,
+    FailedToVerifySignature,
+    TrustedNameBufferTooSmall,
+}
+
+impl From<u32> for PkiLoadCertificateError {
+    fn from(e: u32) -> PkiLoadCertificateError {
+        match e {
+            0x422F => PkiLoadCertificateError::InvalidStructureType,
+            0x4230 => PkiLoadCertificateError::IncorrectCertificateVersion,
+            0x4231 => PkiLoadCertificateError::IncorrectCertificateValidity,
+            0x4232 => PkiLoadCertificateError::IncorrectCertificateValidityIndex,
+            0x4233 => PkiLoadCertificateError::UnknownSignerKeyId,
+            0x4234 => PkiLoadCertificateError::UnknownSignatureAlgorithm,
+            0x4235 => PkiLoadCertificateError::UnknownPublicKeyId,
+            0x4236 => PkiLoadCertificateError::UnknownPublicKeyUsage,
+            0x4237 => PkiLoadCertificateError::IncorrectEllipticCurveId,
+            0x4238 => PkiLoadCertificateError::IncorrectSignatureAlgorithmAssociatedToPublicKey,
+            0x4239 => PkiLoadCertificateError::UnknownTargetDevice,
+            0x422D => PkiLoadCertificateError::UnknownCertificateTag,
+            0x3301 => PkiLoadCertificateError::FailedToHashData,
+            0x422E => PkiLoadCertificateError::ExpectedKeyUsageDoesNotMatchCertificateKeyUsage,
+            0x5720 => PkiLoadCertificateError::FailedToVerifySignature,
+            0x4118 => PkiLoadCertificateError::TrustedNameBufferTooSmall,
+            _ => panic!("Unknown PKI Load Certificate Error"),
+        }
+    }
+}
+
+impl From<PkiLoadCertificateError> for SyscallError {
+    fn from(e: PkiLoadCertificateError) -> SyscallError {
+        SyscallError::InvalidPkiCertificate
     }
 }
 
@@ -326,8 +378,8 @@ impl Comm {
                 return None;
             }
 
-            // Manage BOLOS specific APDUs B0xx0000
-            if self.io_buffer[1] == 0xB0 && self.io_buffer[3] == 0x00 && self.io_buffer[4] == 0x00 {
+            // Manage BOLOS specific APDUs B0xxyyzz
+            if self.io_buffer[1] == 0xB0 {
                 handle_bolos_apdu(self, self.io_buffer[2]);
                 return None;
             }
@@ -682,11 +734,15 @@ fn default_nbgl_reply_status(reply: Reply) {
     }
 }
 
+pub(crate) const BOLOS_INS_GET_VERSION: u8 = 0x01;
+pub(crate) const BOLOS_INS_QUIT: u8 = 0xa7;
+pub(crate) const BOLOS_INS_SET_PKI_CERT: u8 = 0x06;
+
 // BOLOS APDU Handling (see https://developers.ledger.com/docs/connectivity/ledgerJS/open-close-info-on-apps)
 fn handle_bolos_apdu(com: &mut Comm, ins: u8) {
     match ins {
         // Get Information INS: retrieve App name and version
-        0x01 => {
+        BOLOS_INS_GET_VERSION => {
             unsafe {
                 com.tx_length = 0;
                 com.io_buffer[com.tx_length] = 0x01;
@@ -717,10 +773,26 @@ fn handle_bolos_apdu(com: &mut Comm, ins: u8) {
             com.reply_ok();
         }
         // Quit Application INS
-        0xa7 => {
+        BOLOS_INS_QUIT => {
             com.reply_ok();
             crate::exit_app(0);
         }
+        BOLOS_INS_SET_PKI_CERT => unsafe {
+            let public_key = cx_ecfp_384_public_key_t::default();
+            let err = os_pki_load_certificate(
+                com.io_buffer[3],                // P1
+                com.io_buffer[6..].as_mut_ptr(), // Data
+                com.io_buffer[5] as usize,       // Length
+                core::ptr::null_mut(),
+                core::ptr::null_mut(),
+                &public_key as *const cx_ecfp_384_public_key_t as *mut cx_ecfp_384_public_key_t,
+            );
+            if err != 0 {
+                com.reply(SyscallError::from(PkiLoadCertificateError::from(err)));
+            } else {
+                com.reply_ok();
+            }
+        },
         _ => {
             com.reply(StatusWords::BadIns);
         }

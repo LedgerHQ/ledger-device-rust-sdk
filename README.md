@@ -4,11 +4,11 @@
 
 ## Crates
 
-| Crate                                            | Description                                                     | Documentation  | Latest Release |
-| ------------------------------------------------ | --------------------------------------------------------------- | -------------- | -------------- |
-| [ledger_device_sdk](./ledger_device_sdk)         | Rust SDK                                                        | [Link](https://ledgerhq.github.io/ledger-device-rust-sdk/)               | ![Dynamic TOML Badge](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FLedgerHQ%2Fledger-device-rust-sdk%2Frefs%2Fheads%2Fmaster%2Fledger_device_sdk%2FCargo.toml&query=%24.package.version&label=version) |
-| [ledger_secure_sdk_sys](./ledger_secure_sdk_sys) | [C SDK](https://github.com/LedgerHQ/ledger-secure-sdk) bindings |                | ![Dynamic TOML Badge](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FLedgerHQ%2Fledger-device-rust-sdk%2Frefs%2Fheads%2Fmaster%2Fledger_secure_sdk_sys%2FCargo.toml&query=%24.package.version&label=version) |
-| [include_gif](./include_gif)                     | Procedural macro to integrate logo in the UI/UX                 |                | ![Dynamic TOML Badge](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FLedgerHQ%2Fledger-device-rust-sdk%2Frefs%2Fheads%2Fmaster%2Finclude_gif%2FCargo.toml&query=%24.package.version&label=version) |
+| Crate                                            | Description                                                     | Documentation  | Latest Release | Changelog |
+| ------------------------------------------------ | --------------------------------------------------------------- | -------------- | -------------- | --------- |
+| [ledger_device_sdk](./ledger_device_sdk)         | Rust SDK                                                        | [Link](https://ledgerhq.github.io/ledger-device-rust-sdk/)               | ![Dynamic TOML Badge](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FLedgerHQ%2Fledger-device-rust-sdk%2Frefs%2Fheads%2Fmaster%2Fledger_device_sdk%2FCargo.toml&query=%24.package.version&label=version) | [Link](./ledger_device_sdk/CHANGELOG.md) |
+| [ledger_secure_sdk_sys](./ledger_secure_sdk_sys) | [C SDK](https://github.com/LedgerHQ/ledger-secure-sdk) bindings |                | ![Dynamic TOML Badge](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FLedgerHQ%2Fledger-device-rust-sdk%2Frefs%2Fheads%2Fmaster%2Fledger_secure_sdk_sys%2FCargo.toml&query=%24.package.version&label=version) |  [Link](./ledger_secure_sdk_sys/CHANGELOG.md) |
+| [include_gif](./include_gif)                     | Procedural macro to integrate logo in the UI/UX                 |                | ![Dynamic TOML Badge](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FLedgerHQ%2Fledger-device-rust-sdk%2Frefs%2Fheads%2Fmaster%2Finclude_gif%2FCargo.toml&query=%24.package.version&label=version) | |
 
 ## Docker builder
 

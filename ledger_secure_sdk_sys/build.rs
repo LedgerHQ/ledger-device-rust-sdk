@@ -561,6 +561,7 @@ impl SDKBuilder<'_> {
                 "include/syscalls.h",
                 "include/os_ux.h",
                 "lib_standard_app/swap_lib_calls.h",
+                "include/os_pki.h", /* pki */
             ],
         );
 
