@@ -13,7 +13,7 @@
 //! the [PKI module](crate::pki).
 //!
 //! A PKI certificate with the appropriate usage must have been received and installed beforehand.
-//! A sample application implementing this use-case is provide as part of the SDK
+//! A sample application implementing this use-case is provided as part of the SDK
 //! in the `examples` folder along with sample PKI certificate and TLV payload APDUs.
 
 use super::tlv_generic::*;
