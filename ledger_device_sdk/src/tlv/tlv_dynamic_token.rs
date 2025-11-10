@@ -3,12 +3,19 @@
 //! This module implements the following cross-application specification:
 //! <https://ledgerhq.atlassian.net/wiki/spaces/TA/pages/5603262535/Token+Dynamic+Descriptor>
 //!
-//! Please refer to [crate::tlv::tlv_generic] for documentation on how to write your own use-case if it
+//! Please refer to [TLV Generic](crate::tlv::tlv_generic) for documentation on how to write your own use-case if it
 //! does not follow the above specification.
 //!
 //! The goal of this TLV use case is to parse dynamic information about a token for clear signing
 //! purposes.
-//! The trusted information comes from the Ledger CAL and is forwarded by the Ledger Live.
+//!
+//! The trusted information comes from the Ledger CAL and is forwarded by Ledger Wallet.
+//! TLV data are signed by Ledger PKI infrastructure and the signature is verified using
+//! the [PKI module](crate::pki).
+//!
+//! A PKI certificate with the appropriate usage must have been received and installed beforehand.
+//! A sample application implementing this use-case is provided as part of the SDK
+//! in the `examples` folder along with sample PKI certificate and TLV payload APDUs.
 
 use super::tlv_generic::*;
 use crate::ecc::CurvesId;

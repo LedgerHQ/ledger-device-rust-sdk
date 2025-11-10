@@ -35,3 +35,67 @@ default = [ "heap" ]
 [lints.rust.unexpected_cfgs]
 level = "warn"
 check-cfg = ['cfg(target_os, values("apex_p", "stax", "flex", "nanox", "nanosplus"))']
+
+[[example]]
+name = "nbgl_action"
+doc-scrape-examples = true
+
+[[example]]
+name = "nbgl_address_review"
+doc-scrape-examples = true
+
+[[example]]
+name = "nbgl_advance_review"
+doc-scrape-examples = true
+
+[[example]]
+name = "nbgl_choice"
+doc-scrape-examples = true
+
+[[example]]
+name = "nbgl_generic_review"
+doc-scrape-examples = true
+
+[[example]]
+name = "nbgl_generic_settings"
+doc-scrape-examples = true
+
+[[example]]
+name = "nbgl_home_and_settings"
+doc-scrape-examples = true
+
+[[example]]
+name = "nbgl_keypad"
+doc-scrape-examples = true
+
+[[example]]
+name = "nbgl_review"
+doc-scrape-examples = true
+
+[[example]]
+name = "nbgl_review_extended"
+doc-scrape-examples = true
+
+[[example]]
+name = "nbgl_spinner"
+doc-scrape-examples = true
+
+[[example]]
+name = "nbgl_streaming_review"
+doc-scrape-examples = true
+
+[[example]]
+name = "pki"
+doc-scrape-examples = true
+
+[[example]]
+name = "tlv_dynamic_token"
+doc-scrape-examples = true
+
+[[example]]
+name = "tlv_generic"
+doc-scrape-examples = true
+
+[[example]]
+name = "tlv_trusted_name"
+doc-scrape-examples = true
