@@ -63,6 +63,9 @@ pub fn exiting_panic(_info: &PanicInfo) -> ! {
 pub use ledger_secure_sdk_sys::buttons;
 pub use ledger_secure_sdk_sys::exit_app;
 
+// re-export include_gif macro
+pub use include_gif::include_gif;
+
 use ledger_secure_sdk_sys::{pic_rs, pic_rs_mut};
 
 /// Helper macro that sets an external panic handler
