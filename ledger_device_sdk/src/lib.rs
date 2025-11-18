@@ -59,9 +59,18 @@ pub fn exiting_panic(_info: &PanicInfo) -> ! {
     ledger_secure_sdk_sys::exit_app(0);
 }
 
-// re-export exit_app
+// Re-export exit_app
 pub use ledger_secure_sdk_sys::buttons;
 pub use ledger_secure_sdk_sys::exit_app;
+
+// Re-export include_gif macro
+pub use include_gif::include_gif;
+
+// Re-export the underlying Ledger C SDK bindings when the `sys` feature is enabled.
+// This provides direct (unsafe) FFI access. Prefer the safe abstractions in this crate
+// when possible.
+#[cfg(feature = "sys")]
+pub use ledger_secure_sdk_sys as sys;
 
 use ledger_secure_sdk_sys::{pic_rs, pic_rs_mut};
 
