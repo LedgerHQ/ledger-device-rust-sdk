@@ -145,10 +145,10 @@ impl NbglStreamingReview {
                     Some(w) => {
                         let warning_details = nbgl_warning_t {
                             predefinedSet: (1u32 << W3C_RISK_DETECTED_WARN),
-                            dAppProvider: w.dapp_provider_name.as_ptr() as *const i8,
-                            reportUrl: w.report_url.as_ptr() as *const i8,
-                            reportProvider: w.report_provider.as_ptr() as *const i8,
-                            providerMessage: w.provider_message.as_ptr() as *const i8,
+                            dAppProvider: w.dapp_provider_name.as_ptr() as *const ::core::ffi::c_char,
+                            reportUrl: w.report_url.as_ptr() as *const ::core::ffi::c_char,
+                            reportProvider: w.report_provider.as_ptr() as *const ::core::ffi::c_char,
+                            providerMessage: w.provider_message.as_ptr() as *const ::core::ffi::c_char,
                             ..Default::default()
                         };
                         nbgl_useCaseAdvancedReviewStreamingStart(
@@ -271,8 +271,8 @@ impl NbglStreamingReview {
             let mut tag_value_array: Vec<nbgl_contentTagValue_t> = Vec::new();
             for field in v.iter() {
                 let val = nbgl_contentTagValue_t {
-                    item: field.name.as_ptr() as *const i8,
-                    value: field.value.as_ptr() as *const i8,
+                    item: field.name.as_ptr() as *const ::core::ffi::c_char,
+                    value: field.value.as_ptr() as *const ::core::ffi::c_char,
                     ..Default::default()
                 };
                 tag_value_array.push(val);

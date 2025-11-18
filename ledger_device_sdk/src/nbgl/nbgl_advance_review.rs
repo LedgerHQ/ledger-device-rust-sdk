@@ -161,10 +161,10 @@ impl<'a> NbglAdvanceReview<'a> {
             let warning_details = match &self.warning_details_type {
                 Some(w) => nbgl_warning_t {
                     predefinedSet: (1u32 << W3C_RISK_DETECTED_WARN),
-                    dAppProvider: w.dapp_provider_name.as_ptr() as *const i8,
-                    reportUrl: w.report_url.as_ptr() as *const i8,
-                    reportProvider: w.report_provider.as_ptr() as *const i8,
-                    providerMessage: w.provider_message.as_ptr() as *const i8,
+                    dAppProvider: w.dapp_provider_name.as_ptr() as *const ::core::ffi::c_char,
+                    reportUrl: w.report_url.as_ptr() as *const ::core::ffi::c_char,
+                    reportProvider: w.report_provider.as_ptr() as *const ::core::ffi::c_char,
+                    providerMessage: w.provider_message.as_ptr() as *const ::core::ffi::c_char,
                     ..Default::default()
                 },
                 None => nbgl_warning_t::default(),
