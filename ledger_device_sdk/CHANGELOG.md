@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.29.1] - 2025-11-28
 
 ### Changed
-    - [ledger_secure_sdk_sys]: update C SDK compilation flags
+    - Bump ledger_secure_sdk_sys to 1.12.1
 
 ## [1.29.0] - 2025-11-19
 
