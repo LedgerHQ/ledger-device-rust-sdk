@@ -88,8 +88,6 @@ jobs:
       - name: Build
         run: |
           cd ${{ inputs.app_name }}/${{ needs.call_get_app_metadata.outputs.build_directory }}
-          cargo update include_gif
-          cargo update ledger_secure_sdk_sys
           cargo update ledger_device_sdk
           # if ${{matrix.device}} is 'nanosp', transform to 'nanosplus' for cargo ledger build command
           if [ "${{ matrix.device }}" = "nanosp" ]; then
