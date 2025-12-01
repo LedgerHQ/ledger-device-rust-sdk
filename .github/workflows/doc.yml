@@ -20,7 +20,7 @@ jobs:
         contents: read
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
+      image: jcaporossi/test-devtools:latest
     steps:
       - name: Clone
         uses: actions/checkout@v4

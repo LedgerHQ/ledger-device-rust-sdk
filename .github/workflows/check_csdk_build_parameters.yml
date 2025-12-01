@@ -13,7 +13,7 @@ jobs:
   check_csdk_build_parameters:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
+      image: jcaporossi/test-devtools:latest
     strategy:
       matrix:
         target: ["nanox", "nanosplus", "stax", "flex", "apex_p"]
