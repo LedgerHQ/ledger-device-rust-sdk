@@ -145,10 +145,13 @@ impl NbglStreamingReview {
                     Some(w) => {
                         let warning_details = nbgl_warning_t {
                             predefinedSet: (1u32 << W3C_RISK_DETECTED_WARN),
-                            dAppProvider: w.dapp_provider_name.as_ptr() as *const ::core::ffi::c_char,
+                            dAppProvider: w.dapp_provider_name.as_ptr()
+                                as *const ::core::ffi::c_char,
                             reportUrl: w.report_url.as_ptr() as *const ::core::ffi::c_char,
-                            reportProvider: w.report_provider.as_ptr() as *const ::core::ffi::c_char,
-                            providerMessage: w.provider_message.as_ptr() as *const ::core::ffi::c_char,
+                            reportProvider: w.report_provider.as_ptr()
+                                as *const ::core::ffi::c_char,
+                            providerMessage: w.provider_message.as_ptr()
+                                as *const ::core::ffi::c_char,
                             ..Default::default()
                         };
                         nbgl_useCaseAdvancedReviewStreamingStart(
