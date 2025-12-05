@@ -1,0 +1,10 @@
+name: Update Rust Toolchain Nightly for all Rust apps
+on:
+    workflow_dispatch:
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "This is a placeholder job to test the workflow dispatch."
