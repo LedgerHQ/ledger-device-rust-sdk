@@ -1,10 +1,103 @@
 name: Update Rust Toolchain Nightly for all Rust apps
+
 on:
-    workflow_dispatch:
+  workflow_dispatch: # Allows manual trigger
+
+env:
+  NIGHTLY: 'nightly-2026-01-01' # Set desired nightly version here
+
+permissions:
+  contents: write # Required to push the new branch
+  pull-requests: write # Required to create the PR
 
 jobs:
-  test:
-    name: test
+  # retrieve-rust-apps:
+  #   name: Retrieve Rust Apps
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     rust_apps: ${{ steps.get_rust_apps.outputs.rust_apps }}
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #       with:
+  #         repository: LedgerHQ/ledger-device-rust-sdk
+  #         ref: 'master'
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: '3.x'
+  #     - name: Install ledgered
+  #       run: pip install ledgered
+  #     - name: Get all rust apps
+  #       id: get_rust_apps
+  #       run: |
+  #         python .github/workflows/get_rust_apps_repositories.py ${{ secrets.GITHUB_TOKEN }}
+  #         echo "rust_apps=$(cat rust_apps.json)" >> $GITHUB_OUTPUT
+  update-toolchain:
+    name: Create Update Rust Nightly Toolchain PR
+    #needs: retrieve-rust-apps
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app-name: ["app-boilerplate-rust"]
+        #include: ${{ fromJSON(needs.retrieve-rust-apps.outputs.rust_apps) }}
     steps:
-      - run: echo "This is a placeholder job to test the workflow dispatch."
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for branching
+          repository: LedgerHQ/${{ matrix.app-name }}
+          submodules: true
+          path: ${{ matrix.app-name }}
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Create Branch
+        working-directory: ${{ matrix.app-name }}
+        run: |
+          git checkout -b update_nightly
+
+      - name: Modify rust-toolchain.toml
+        working-directory: ${{ matrix.app-name }}
+        run: |
+          # Using sed for simple text replacement in CI
+          # This replaces the line starting with channel = "..." with the new version
+          sed -i 's/channel = ".*"/channel = "${{ env.NIGHTLY }}"/' rust-toolchain.toml
+          
+          # Print for verification logs
+          cat rust-toolchain.toml
+
+      - name: Commit and Push
+        id: commit_and_push
+        working-directory: ${{ matrix.app-name }}
+        run: |
+          # Check if there are changes before committing
+          if [[ -n $(git status -s) ]]; then
+            git add rust-toolchain.toml
+            git commit -m "Update rust-toolchain to latest nightly"
+            git push origin update_nightly --force
+            echo "changes_pushed=true" >> $GITHUB_OUTPUT
+          else
+            echo "No changes detected."
+            echo "changes_pushed=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Create Pull Request
+        if: steps.commit_and_push.outputs.changes_pushed == 'true'
+        working-directory: ${{ matrix.app-name }}
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          # Create PR using GitHub CLI
+          # The '|| true' prevents failure if a PR already exists
+          gh pr create \
+            --title "Update Rust Toolchain to Nightly" \
+            --body "Automated PR to update the rust-toolchain.toml file to the latest nightly version." \
+            --base main \
+            --head update_nightly \
+            --reviewer "${{ github.actor }}" || echo "PR might already exist"
