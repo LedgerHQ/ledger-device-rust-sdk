@@ -9,25 +9,29 @@ on:
         default: 'false'
         type: boolean
 
-env:
-  NIGHTLY: 'nightly-2026-01-01' # Set desired nightly version here
-
 permissions:
   contents: write # Required to push the new branch
   pull-requests: write # Required to create the PR
 
 jobs:
-  retrieve-rust-apps:
-    name: Retrieve Rust Apps
+  retrieve-info:
+    name: Retrieve Rust Apps and Nightly Version
     runs-on: ubuntu-latest
     outputs:
       rust_apps_names: ${{ steps.get_rust_apps.outputs.rust_apps_names }}
+      nightly_version: ${{ steps.read_nightly.outputs.nightly_version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           repository: LedgerHQ/ledger-device-rust-sdk
           ref: 'y333/nightly_support'
+      - name: Read Nightly Version
+        id: read_nightly
+        run: |
+          nightly=$(grep 'channel =' rust-toolchain.toml | sed 's/.*"\(.*\)".*/\1/')
+          echo "nightly_version=$nightly" >> $GITHUB_OUTPUT
+          echo "Nightly version: $nightly"
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -38,26 +42,24 @@ jobs:
         id: get_rust_apps
         run: |
           python .github/workflows/get_rust_apps.py ${{ secrets.GITHUB_TOKEN }}
-          ls -la
-          cat rust_apps_names.json
           echo "rust_apps_names=$(cat rust_apps_names.json)" >> $GITHUB_OUTPUT
   display-rust-apps:
       name: Display Rust Apps
       runs-on: ubuntu-latest
-      needs: retrieve-rust-apps
+      needs: retrieve-info
       steps:
         - name: Display Rust Apps
           run: |
-            echo "Rust apps: ${{ needs.retrieve-rust-apps.outputs.rust_apps_names }}"
+            echo "Rust apps: ${{ needs.retrieve-info.outputs.rust_apps_names }}"
   update-toolchain:
     name: Create Update Rust Nightly Toolchain PR
-    needs: retrieve-rust-apps
+    needs: retrieve-info
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         app-name: ["app-boilerplate-rust"]
-        include: ${{ fromJSON(needs.retrieve-rust-apps.outputs.rust_apps_names) }}
+        include: ${{ fromJSON(needs.retrieve-info.outputs.rust_apps_names) }}
     steps:
       - name: Install ledgered
         run: pip install ledgered --break-system-packages
@@ -87,7 +89,7 @@ jobs:
           cd $build_directory
           # Using sed for simple text replacement in CI
           # This replaces the line starting with channel = "..." with the new version
-          sed -i 's/channel = ".*"/channel = "${{ env.NIGHTLY }}"/' rust-toolchain.toml
+          sed -i 's/channel = ".*"/channel = "${{ needs.retrieve-info.outputs.nightly_version }}"/' rust-toolchain.toml
           
           # Print for verification logs
           cat rust-toolchain.toml
