@@ -1,10 +1,133 @@
 name: Update Rust Toolchain Nightly for all Rust apps
+
 on:
-    workflow_dispatch:
+  workflow_dispatch: # Allows manual trigger
+    inputs:
+      dry_run:
+        description: 'If true, the workflow will run without creating PRs'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: write # Required to push the new branch
+  pull-requests: write # Required to create the PR
 
 jobs:
-  test:
-    name: test
+  retrieve-info:
+    name: Retrieve Rust Apps and Nightly Version
     runs-on: ubuntu-latest
+    outputs:
+      rust_apps_names: ${{ steps.get_rust_apps.outputs.rust_apps_names }}
+      nightly_version: ${{ steps.read_nightly.outputs.nightly_version }}
     steps:
-      - run: echo "This is a placeholder job to test the workflow dispatch."
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          repository: LedgerHQ/ledger-device-rust-sdk
+          ref: 'master'
+      - name: Read Nightly Version
+        id: read_nightly
+        run: |
+          nightly=$(grep 'channel =' rust-toolchain.toml | sed 's/.*"\(.*\)".*/\1/')
+          echo "nightly_version=$nightly" >> $GITHUB_OUTPUT
+          echo "Nightly version: $nightly"
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - name: Install ledgered
+        run: pip install ledgered
+      - name: Get all rust apps
+        id: get_rust_apps
+        run: |
+          python .github/workflows/get_rust_apps.py ${{ secrets.GITHUB_TOKEN }}
+          echo "rust_apps_names=$(cat rust_apps_names.json)" >> $GITHUB_OUTPUT
+  display-rust-apps:
+      name: Display Rust Apps
+      runs-on: ubuntu-latest
+      needs: retrieve-info
+      steps:
+        - name: Display Rust Apps
+          run: |
+            echo "Rust apps: ${{ needs.retrieve-info.outputs.rust_apps_names }}"
+  update-toolchain:
+    name: Create Update Rust Nightly Toolchain PR
+    needs: retrieve-info
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app-name: ["app-boilerplate-rust"]
+        include: ${{ fromJSON(needs.retrieve-info.outputs.rust_apps_names) }}
+    steps:
+      - name: Install ledgered
+        run: pip install ledgered --break-system-packages
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for branching
+          repository: LedgerHQ/${{ matrix.app-name }}
+          submodules: true
+          path: ${{ matrix.app-name }}
+          token: ${{ secrets.CI_BOT_TOKEN }}
+
+      - name: Create Branch
+        working-directory: ${{ matrix.app-name }}
+        run: |
+          git checkout -b update_nightly
+
+      - name: Modify rust-toolchain.toml
+        working-directory: ${{ matrix.app-name }}
+        run: |
+          build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
+          cd $build_directory
+          # Using sed for simple text replacement in CI
+          # This replaces the line starting with channel = "..." with the new version
+          sed -i 's/channel = ".*"/channel = "${{ needs.retrieve-info.outputs.nightly_version }}"/' rust-toolchain.toml
+          
+          # Print for verification logs
+          cat rust-toolchain.toml
+
+      - name: Commit and Push
+        id: commit_and_push
+        if: ${{ inputs.dry_run == false }}
+        working-directory: ${{ matrix.app-name }}
+        run: |
+          build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
+          cd $build_directory
+          # Check if there are changes before committing
+          if [[ -n $(git status -s) ]]; then
+            echo "Changes detected, committing..."
+            git add rust-toolchain.toml
+            echo "Staging changes..."
+            git commit -m "Update rust-toolchain to latest nightly"
+            echo "Pushing changes..."
+            git push -u origin update_nightly
+            echo "changes_pushed=true" >> $GITHUB_OUTPUT
+          else
+            echo "No changes detected."
+            echo "changes_pushed=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Create Pull Request
+        if: ${{ inputs.dry_run == false && steps.commit_and_push.outputs.changes_pushed == 'true' }}
+        working-directory: ${{ matrix.app-name }}
+        env:
+          GH_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+        run: |
+          build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
+          cd $build_directory
+          # Create PR using GitHub CLI
+          # The '|| true' prevents failure if a PR already exists
+          gh pr create \
+            --title "Update Rust Toolchain to Nightly" \
+            --body "Automated PR to update the rust-toolchain.toml file to the latest nightly version." \
+            --base main \
+            --head update_nightly \
+            --reviewer "${{ github.actor }}" || echo "PR might already exist"

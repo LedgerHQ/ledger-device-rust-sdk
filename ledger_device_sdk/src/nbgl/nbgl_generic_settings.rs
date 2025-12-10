@@ -87,8 +87,8 @@ impl NbglGenericSettings {
         }
 
         self.info_list = Some(nbgl_contentInfoList_t {
-            infoTypes: self.info.fields_ptr[..].as_ptr(),
-            infoContents: self.info.values_ptr[..].as_ptr(),
+            infoTypes: self.info.fields_ptr[..].as_ptr() as *const *const ::core::ffi::c_char,
+            infoContents: self.info.values_ptr[..].as_ptr() as *const *const ::core::ffi::c_char,
             nbInfos: fields_values.len() as u8,
             infoExtensions: core::ptr::null(),
             token: 0,

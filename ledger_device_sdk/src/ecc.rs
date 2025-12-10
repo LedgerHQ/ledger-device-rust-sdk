@@ -189,7 +189,7 @@ impl<const N: usize, const TY: char> ECPrivateKey<N, TY> {
     /// [here](https://blog.rust-lang.org/inside-rust/2021/09/06/Splitting-const-generics.html#featuregeneric_const_exprs)
     pub fn public_key(&self) -> Result<ECPublicKey<{ Self::P }, TY>, CxError>
     where
-        [(); Self::P]:,
+        [(); Self::P]: Sized,
     {
         let mut pubkey = ECPublicKey::<{ Self::P }, TY>::new(self.curve);
         let err = unsafe {

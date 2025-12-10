@@ -228,8 +228,8 @@ impl From<&Field<'_>> for CField {
 impl From<&CField> for nbgl_contentTagValue_t {
     fn from(field: &CField) -> nbgl_contentTagValue_t {
         nbgl_contentTagValue_t {
-            item: (*field).name.as_ptr() as *const i8,
-            value: (*field).value.as_ptr() as *const i8,
+            item: (*field).name.as_ptr() as *const ::core::ffi::c_char,
+            value: (*field).value.as_ptr() as *const ::core::ffi::c_char,
             ..Default::default()
         }
     }

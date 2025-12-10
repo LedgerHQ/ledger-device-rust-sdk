@@ -205,7 +205,8 @@ pub fn get_check_address_params<
     }
 
     debug_print("==> GET_REF_ADDRESS\n");
-    let (address, address_len) = read_c_string::<ADDRESS_BUF_SIZE>(params.address_to_check);
+    let (address, address_len) =
+        read_c_string::<ADDRESS_BUF_SIZE>(params.address_to_check as *const i8);
     check_address_params.ref_address = address;
     check_address_params.ref_address_len = address_len;
 
@@ -274,7 +275,7 @@ pub fn get_printable_amount_params<
     debug_print("==> GET_AMOUNT_STR\n");
     printable_amount_params.amount_str = unsafe {
         &(*(libarg.__bindgen_anon_1.get_printable_amount as *mut get_printable_amount_parameters_t))
-            .printable_amount as *const i8 as *mut i8
+            .printable_amount as *const core::ffi::c_char as *mut i8
     };
 
     printable_amount_params
@@ -340,13 +341,15 @@ pub fn sign_tx_params<
     }
 
     debug_print("==> GET_DESTINATION_ADDRESS\n");
-    let (address, address_len) = read_c_string::<ADDRESS_BUF_SIZE>(params.destination_address);
+    let (address, address_len) =
+        read_c_string::<ADDRESS_BUF_SIZE>(params.destination_address as *const i8);
     create_tx_params.dest_address = address;
     create_tx_params.dest_address_len = address_len;
 
     debug_print("==> GET_DESTINATION_ADDRESS_EXTRA_ID\n");
-    let (extra_id, extra_id_len) =
-        read_c_string::<ADDRESS_EXTRA_ID_BUF_SIZE>(params.destination_address_extra_id);
+    let (extra_id, extra_id_len) = read_c_string::<ADDRESS_EXTRA_ID_BUF_SIZE>(
+        params.destination_address_extra_id as *const i8,
+    );
     create_tx_params.dest_address_extra_id = extra_id;
     create_tx_params.dest_address_extra_id_len = extra_id_len;
 
