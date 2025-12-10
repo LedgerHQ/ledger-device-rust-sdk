@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: LedgerHQ/ledger-device-rust-sdk
-          ref: 'y333/nightly_support'
+          ref: 'master'
       - name: Read Nightly Version
         id: read_nightly
         run: |

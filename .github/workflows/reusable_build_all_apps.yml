@@ -77,7 +77,7 @@ jobs:
               include: ${{ fromJSON(needs.retrieve-rust-apps.outputs.rust_apps) }}
         runs-on: ubuntu-latest
         container:
-            image: jcaporossi/test-devtools:latest
+            image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
         steps:
             - name: Install ledgered
               run: pip install ledgered --break-system-packages
