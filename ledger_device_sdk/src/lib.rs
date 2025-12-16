@@ -62,6 +62,8 @@ pub fn exiting_panic(_info: &PanicInfo) -> ! {
 // Re-export exit_app
 pub use ledger_secure_sdk_sys::buttons;
 pub use ledger_secure_sdk_sys::exit_app;
+pub use ledger_secure_sdk_sys::const_cstr;
+pub use ledger_secure_sdk_sys::infos::str_to_bytes;
 
 // Re-export include_gif macro
 pub use include_gif::include_gif;
