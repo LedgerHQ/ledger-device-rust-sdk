@@ -9,7 +9,7 @@ use core::ffi::c_void;
 use core::mem::MaybeUninit;
 
 pub mod buttons;
-mod infos;
+pub mod infos;
 pub mod seph;
 
 /// Wrapper for 'os_sched_exit'
