@@ -121,7 +121,7 @@ impl From<u32> for PkiLoadCertificateError {
 }
 
 impl From<PkiLoadCertificateError> for SyscallError {
-    fn from(e: PkiLoadCertificateError) -> SyscallError {
+    fn from(_e: PkiLoadCertificateError) -> SyscallError {
         SyscallError::InvalidPkiCertificate
     }
 }
