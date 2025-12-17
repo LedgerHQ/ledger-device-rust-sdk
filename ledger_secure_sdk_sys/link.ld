@@ -22,6 +22,10 @@ SECTIONS
     *(.text*)
     /* .rodata is moved out so we can update it */
 
+    _install_parameters = .;
+    *(.install_parameters)
+    KEEP(*(.install_parameters))
+    _einstall_parameters = .;
     . = ALIGN(PAGE_SIZE);
     _etext = .;
   } > FLASH :flash0
@@ -92,7 +96,6 @@ SECTIONS
 
     /* This symbol is used by the mutable portion of flash calculations. */
     _envram_data = .;
-    _install_parameters = .;
     /* This symbol is used by the ideompotent `pic` function as the upper
        bound of addressed to relocate. */
     _nvram_end = .;
@@ -140,6 +143,7 @@ SECTIONS
   ledger.sdk_name (INFO): { KEEP(*(ledger.sdk_name)) }
   ledger.sdk_hash (INFO): { KEEP(*(ledger.sdk_hash)) }
   ledger.sdk_graphics (INFO): { KEEP(*(ledger.sdk_graphics)) }
+  ledger.app_flags (INFO): { KEEP(*(ledger.app_flags)) }
 }
 
 PROVIDE(_nvram = ABSOLUTE(_nvram_start));
