@@ -8,6 +8,7 @@
 #![feature(generic_const_exprs)]
 #![feature(cfg_version)]
 
+mod app_info;
 pub mod ecc;
 pub mod hash;
 pub mod hmac;
@@ -61,8 +62,8 @@ pub fn exiting_panic(_info: &PanicInfo) -> ! {
 
 // Re-export exit_app
 pub use ledger_secure_sdk_sys::buttons;
-pub use ledger_secure_sdk_sys::exit_app;
 pub use ledger_secure_sdk_sys::const_cstr;
+pub use ledger_secure_sdk_sys::exit_app;
 pub use ledger_secure_sdk_sys::infos::str_to_bytes;
 
 // Re-export include_gif macro
