@@ -1,3 +1,30 @@
+//! Swap API helpers for Ledger Exchange integration.
+//!
+//! This module provides structures and helper functions to implement the Swap feature
+//! in a Ledger application. The Swap feature allows the Exchange app to call a coin app
+//! as a library to perform specific tasks:
+//!
+//! 1.  **Check Address**: Verify that a destination address belongs to the device.
+//! 2.  **Get Printable Amount**: Format an amount (and fee) for display in the Exchange app.
+//! 3.  **Sign Transaction**: Sign the swap transaction after validation.
+//!
+//! # Memory Constraints
+//!
+//! When called as a library, the coin app shares the BSS (Block Started by Symbol) memory
+//! with the Exchange app. This means:
+//!
+//! *   **No Heap Allocation**: You cannot use `Vec`, `String`, or `Box` during `CheckAddress`
+//!     and `GetPrintableAmount`. Doing so will corrupt the Exchange app's memory and cause a crash.
+//! *   **Stack Usage**: Use stack-allocated buffers (e.g., arrays, `ArrayString`) for all operations.
+//! *   **BSS Reset**: The SDK automatically resets the BSS before `SignTransaction`, so heap allocation
+//!     is safe during the signing phase.
+//!
+//! # Usage
+//!
+//! The entry point of your app should handle the `os_lib_call` argument. If it's non-zero,
+//! it means the app is being called as a library. You should then use `libcall::get_command`
+//! to determine the action and call the appropriate helper from this module.
+
 #[cfg(any(
     target_os = "stax",
     target_os = "flex",
@@ -45,19 +72,31 @@ fn read_c_string<const N: usize>(ptr: *const i8) -> ([u8; N], usize) {
     (buffer, length)
 }
 
+//  --8<-- [start:CheckAddressParams]
+/// Parameters for the `SwapCheckAddress` command.
+///
+/// This struct holds the data provided by the Exchange app to verify a destination address.
 pub struct CheckAddressParams<
     const COIN_CONFIG_BUF_SIZE: usize = DEFAULT_COIN_CONFIG_BUF_SIZE,
     const ADDRESS_BUF_SIZE: usize = DEFAULT_ADDRESS_BUF_SIZE,
     const ADDRESS_EXTRA_ID_BUF_SIZE: usize = DEFAULT_ADDRESS_EXTRA_ID_BUF_SIZE,
 > {
+    /// Coin configuration (ticker, decimals, etc.)
     pub coin_config: [u8; COIN_CONFIG_BUF_SIZE],
+    /// Length of the coin configuration
     pub coin_config_len: usize,
+    /// BIP32 derivation path (raw bytes)
     pub dpath: [u8; DPATH_STAGE_SIZE * 4],
+    /// Number of path components (u32)
     pub dpath_len: usize,
+    /// Reference address provided by the Exchange app (as a string)
     pub ref_address: [u8; ADDRESS_BUF_SIZE],
+    /// Length of the reference address
     pub ref_address_len: usize,
+    /// Pointer to the result buffer (internal use)
     pub result: *mut i32,
 }
+//  --8<-- [end:CheckAddressParams]
 
 impl<
         const COIN_CONFIG_BUF_SIZE: usize,
@@ -79,19 +118,30 @@ impl<
     }
 }
 
+//  --8<-- [start:PrintableAmountParams]
+/// Parameters for the `SwapGetPrintableAmount` command.
+///
+/// This struct holds an amount to be formatted for display.
 pub struct PrintableAmountParams<
     const COIN_CONFIG_BUF_SIZE: usize = DEFAULT_COIN_CONFIG_BUF_SIZE,
     // Unused const generic parameter here, to allow type inference in `swap_return` fn
     const ADDRESS_BUF_SIZE: usize = DEFAULT_ADDRESS_BUF_SIZE,
     const ADDRESS_EXTRA_ID_BUF_SIZE: usize = DEFAULT_ADDRESS_EXTRA_ID_BUF_SIZE,
 > {
+    /// Coin configuration
     pub coin_config: [u8; COIN_CONFIG_BUF_SIZE],
+    /// Length of the coin configuration
     pub coin_config_len: usize,
+    /// Amount to be formatted (big-endian bytes, right-aligned in 16-byte buffer)
     pub amount: [u8; AMOUNT_BUF_SIZE],
+    /// Actual length of the amount data
     pub amount_len: usize,
+    /// Pointer to the output string buffer (internal use)
     pub amount_str: *mut i8,
+    /// Whether this is a fee amount (true) or the main amount (false)
     pub is_fee: bool,
 }
+//  --8<-- [end:PrintableAmountParams]
 
 impl<
         const COIN_CONFIG_BUF_SIZE: usize,
@@ -112,23 +162,40 @@ impl<
     }
 }
 
+//  --8<-- [start:CreateTxParams]
+/// Parameters for the `SwapSignTransaction` command.
+///
+/// This struct holds the transaction details provided by the Exchange app.
+/// The coin app must validate the transaction against these parameters before signing.
 pub struct CreateTxParams<
     const COIN_CONFIG_BUF_SIZE: usize = DEFAULT_COIN_CONFIG_BUF_SIZE,
     const ADDRESS_BUF_SIZE: usize = DEFAULT_ADDRESS_BUF_SIZE,
     const ADDRESS_EXTRA_ID_BUF_SIZE: usize = DEFAULT_ADDRESS_EXTRA_ID_BUF_SIZE,
 > {
+    /// Coin configuration
     pub coin_config: [u8; COIN_CONFIG_BUF_SIZE],
+    /// Length of the coin configuration
     pub coin_config_len: usize,
+    /// Amount to be sent (big-endian bytes, right-aligned in 16-byte buffer)
     pub amount: [u8; AMOUNT_BUF_SIZE],
+    /// Actual length of the amount data
     pub amount_len: usize,
+    /// Fee amount (big-endian bytes, right-aligned in 16-byte buffer)
     pub fee_amount: [u8; AMOUNT_BUF_SIZE],
+    /// Actual length of the fee amount data
     pub fee_amount_len: usize,
+    /// Destination address (as a string)
     pub dest_address: [u8; ADDRESS_BUF_SIZE],
+    /// Length of the destination address
     pub dest_address_len: usize,
+    /// Extra ID for the destination address (e.g., memo, tag)
     pub dest_address_extra_id: [u8; ADDRESS_EXTRA_ID_BUF_SIZE],
+    /// Length of the extra ID
     pub dest_address_extra_id_len: usize,
+    /// Pointer to the result buffer (internal use)
     pub result: *mut u8,
 }
+//  --8<-- [end:CreateTxParams]
 
 impl<
         const COIN_CONFIG_BUF_SIZE: usize,
@@ -154,6 +221,15 @@ impl<
     }
 }
 
+//  --8<-- [start:get_check_address_params]
+/// Retrieves parameters for the `SwapCheckAddress` command.
+///
+/// This function parses the raw arguments provided by `os_lib_call` and populates
+/// a `CheckAddressParams` struct.
+///
+/// # Arguments
+///
+/// * `arg0` - The argument passed to the main entry point by `os_lib_call`.
 pub fn get_check_address_params<
     const COIN_CONFIG_BUF_SIZE: usize,
     const ADDRESS_BUF_SIZE: usize,
@@ -161,6 +237,7 @@ pub fn get_check_address_params<
 >(
     arg0: u32,
 ) -> CheckAddressParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE, ADDRESS_EXTRA_ID_BUF_SIZE> {
+//  --8<-- [end:get_check_address_params]
     debug_print("=> get_check_address_params\n");
 
     let mut libarg: libargs_t = libargs_t::default();
@@ -218,6 +295,15 @@ pub fn get_check_address_params<
     check_address_params
 }
 
+//  --8<-- [start:get_printable_amount_params]
+/// Retrieves parameters for the `SwapGetPrintableAmount` command.
+///
+/// This function parses the raw arguments provided by `os_lib_call` and populates
+/// a `PrintableAmountParams` struct.
+///
+/// # Arguments
+///
+/// * `arg0` - The argument passed to the main entry point by `os_lib_call`.
 pub fn get_printable_amount_params<
     const COIN_CONFIG_BUF_SIZE: usize,
     const ADDRESS_BUF_SIZE: usize,
@@ -225,6 +311,7 @@ pub fn get_printable_amount_params<
 >(
     arg0: u32,
 ) -> PrintableAmountParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE, ADDRESS_EXTRA_ID_BUF_SIZE> {
+//  --8<-- [end:get_printable_amount_params]
     debug_print("=> get_printable_amount_params\n");
 
     let mut libarg: libargs_t = libargs_t::default();
@@ -286,6 +373,22 @@ extern "C" {
     fn c_boot_std();
 }
 
+//  --8<-- [start:sign_tx_params]
+/// Retrieves parameters for the `SwapSignTransaction` command.
+///
+/// This function parses the raw arguments provided by `os_lib_call` and populates
+/// a `CreateTxParams` struct.
+///
+/// # Important Side Effect
+///
+/// This function calls `c_reset_bss()` and `c_boot_std()`. This resets the BSS memory
+/// (making heap allocation safe again) and completes the application boot process.
+/// This is necessary because the signing phase allows for standard application behavior,
+/// unlike the previous check/format phases.
+///
+/// # Arguments
+///
+/// * `arg0` - The argument passed to the main entry point by `os_lib_call`.
 pub fn sign_tx_params<
     const COIN_CONFIG_BUF_SIZE: usize,
     const ADDRESS_BUF_SIZE: usize,
@@ -293,6 +396,7 @@ pub fn sign_tx_params<
 >(
     arg0: u32,
 ) -> CreateTxParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE, ADDRESS_EXTRA_ID_BUF_SIZE> {
+//  --8<-- [end:sign_tx_params]
     debug_print("=> sign_tx_params\n");
 
     let mut libarg: libargs_t = libargs_t::default();
@@ -375,12 +479,17 @@ pub fn sign_tx_params<
     create_tx_params
 }
 
+/// Result type for Swap operations.
+///
+/// This enum wraps the result data for each of the three swap commands.
+/// It is used by `swap_return` to send the result back to the Exchange app.
 pub enum SwapResult<
     'a,
     const COIN_CONFIG_BUF_SIZE: usize = DEFAULT_COIN_CONFIG_BUF_SIZE,
     const ADDRESS_BUF_SIZE: usize = DEFAULT_ADDRESS_BUF_SIZE,
     const ADDRESS_EXTRA_ID_BUF_SIZE: usize = DEFAULT_ADDRESS_EXTRA_ID_BUF_SIZE,
 > {
+    /// Result for `SwapCheckAddress`. Contains the params and a success/failure code (1 or 0).
     CheckAddressResult(
         &'a mut CheckAddressParams<
             COIN_CONFIG_BUF_SIZE,
@@ -389,6 +498,7 @@ pub enum SwapResult<
         >,
         i32,
     ),
+    /// Result for `SwapGetPrintableAmount`. Contains the params and the formatted amount string.
     PrintableAmountResult(
         &'a mut PrintableAmountParams<
             COIN_CONFIG_BUF_SIZE,
@@ -397,12 +507,21 @@ pub enum SwapResult<
         >,
         &'a str,
     ),
+    /// Result for `SwapSignTransaction`. Contains the params and a success/failure code (1 or 0).
     CreateTxResult(
         &'a mut CreateTxParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE, ADDRESS_EXTRA_ID_BUF_SIZE>,
         u8,
     ),
 }
 
+/// Sends the result of a swap command back to the Exchange app.
+///
+/// This function writes the result to the shared memory buffer pointed to by the params
+/// and then calls `os_lib_end` to return control to the Exchange app.
+///
+/// # Arguments
+///
+/// * `res` - The result to return, wrapped in a `SwapResult` enum.
 pub fn swap_return<
     const COIN_CONFIG_BUF_SIZE: usize,
     const ADDRESS_BUF_SIZE: usize,
