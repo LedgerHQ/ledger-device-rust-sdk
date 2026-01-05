@@ -302,7 +302,7 @@ checksum = "03087c2bad5e1034e8cace5926dec053fb3790248370865f5117a7d0213354c8"
 
 [[package]]
 name = "ledger_device_sdk"
-version = "1.29.1"
+version = "1.30.0"
 dependencies = [
  "const-zero",
  "include_gif",
@@ -317,7 +317,7 @@ dependencies = [
 
 [[package]]
 name = "ledger_secure_sdk_sys"
-version = "1.12.1"
+version = "1.13.0"
 dependencies = [
  "bindgen",
  "cc",
