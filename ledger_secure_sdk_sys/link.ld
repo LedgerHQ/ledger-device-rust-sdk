@@ -26,7 +26,7 @@ SECTIONS
     _etext = .;
   } > FLASH :flash0
 
-  /* Relocations, read only, no relocations aginst the relocations themselves
+  /* Relocations, read only, no relocations against the relocations themselves
      needed! */
   _reloc_size = SIZEOF(.rel.rodata) + SIZEOF(.rel.data) + SIZEOF(.rel.nvm_data);
   .rel_flash : ALIGN(PAGE_SIZE)
@@ -48,7 +48,7 @@ SECTIONS
      relocations are needed. (So not read-only completely.) */
   .rodata : ALIGN(PAGE_SIZE)
   {
-    /* Moved here from .text so we can permantly apply relocations to it with
+    /* Moved here from .text so we can permanently apply relocations to it with
        nvm_write() */
     . = ALIGN(PAGE_SIZE);
     _rodata = .;
