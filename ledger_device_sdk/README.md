@@ -15,9 +15,9 @@ Contains:
 
 ## Supported devices
 
-|       Nano X       |    Nano S Plus     |        Stax        |       Flex         |
-| ------------------ | ------------------ | ------------------ | ------------------ |
-| :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+|       Nano X       |    Nano S Plus     |        Stax        |       Flex         |      Apex P        |
+| ------------------ | ------------------ | ------------------ | ------------------ | ------------------ |
+| :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 
 ## Usage
 
@@ -26,7 +26,7 @@ On Ubuntu, `gcc-multilib` might also be required.
 
 Using rustc nightly builds is mandatory as some unstable features are required.
 
-- `rustup default nightly-2024-12-01`
+- `rustup default nightly-2025-12-05` (or use the version specified in `rust-toolchain.toml`)
 - `rustup component add rust-src`
 - install [Clang](http://releases.llvm.org/download.html).
 - install an [ARM gcc toolchain](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads)
@@ -46,82 +46,76 @@ sudo pacman -S clang arm-none-eabi-gcc arm-none-eabi-newlib
 
 This SDK provides [custom target](https://doc.rust-lang.org/rustc/targets/custom.html) files. One for each supported device.
 
-We also provide a [Docker container](https://github.com/LedgerHQ/ledger-app-builder) to build Rust applications for Ledger devices:
+We also provide a [Docker container](https://github.com/LedgerHQ/ledger-app-builder) to build Rust applications for Ledger devices (recommended for reproducibility):
 
 ```bash
 docker pull ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
+
+# Build using Docker
+docker run --rm -v "$(pwd):/app" ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest \
+  cargo ledger build stax
 ````
 
-### Building for Nano X
+### Building your app
 
-```
-cargo build --release --target=nanox
+Using [cargo-ledger](https://github.com/LedgerHQ/cargo-ledger) (recommended):
+
+```bash
+# Install cargo-ledger
+cargo install cargo-ledger
+
+# Setup custom targets (one-time)
+cargo ledger setup
+
+# Build for your target device
+cargo ledger build nanox       # Nano X
+cargo ledger build nanosplus   # Nano S+
+cargo ledger build stax        # Stax
+cargo ledger build flex        # Flex
+cargo ledger build apex_p      # Apex P
+
+# Build and load to device
+cargo ledger build nanosplus --load
 ```
 
-### Building for Nano S+
+Alternatively, using plain cargo:
 
-```
-cargo build --release --target=nanosplus
-```
-
-### Building for Stax
-
-```
-cargo build --release --target=stax
+```bash
+cargo build --release --target=nanox       # Nano X
+cargo build --release --target=nanosplus   # Nano S+
+cargo build --release --target=stax        # Stax
+cargo build --release --target=flex        # Flex
+cargo build --release --target=apex_p      # Apex P
 ```
 
-### Building for Flex
+## Getting Started
 
-```
-cargo build --release --target=flex
-```
+For a complete application example, see the [Rust Boilerplate App](https://github.com/LedgerHQ/app-boilerplate-rust).
+
+Key concepts for Ledger app development:
+- **`#![no_std]` environment**: No standard library, use `core::` and `alloc::` types
+- **Panic handler required**: Every app must define a panic handler with `set_panic!` macro
+- **Device-specific UI**: Use `nbgl` module for touchscreen devices (Stax/Flex/Apex P), `ui` module or `nbgl` with `nano_nbgl` feature for Nano devices
+- **Testing**: Examples can be run with [Speculos](https://github.com/LedgerHQ/speculos) emulator
 
 ## Examples
-### Nano S+
-#### Build 
+
+The [`examples/`](examples/) directory contains various demonstrations. Build and run with:
+
+```bash
+# Touchscreen devices (Stax, Flex, Apex P)
+cargo run --example nbgl_home_and_settings --target stax --release \
+  --config examples/config.toml
+
+# Nano devices (S+, X) - requires nano_nbgl feature for NBGL UI
+cargo run --example nbgl_home_and_settings --target nanosplus --release \
+  --features nano_nbgl --config examples/config.toml
+
+# View all available examples
+ls examples/*.rs
 ```
-cargo build -p ledger_device_sdk --example nbgl_home_and_settings --target nanosplus --profile release --features nano_nbgl
-```
-#### Build + Run
-```
-cargo run -p ledger_device_sdk --example nbgl_home_and_settings --target nanosplus --profile release --features nano_nbgl --config ledger_device_sdk/examples/config.toml -- --api-port 5001
-```
-### Nano X
-#### Build
-```
-cargo build -p ledger_device_sdk --example nbgl_home_and_settings --target nanox --profile release --features nano_nbgl
-```
-#### Build + Run
-```
-cargo run -p ledger_device_sdk --example nbgl_home_and_settings --target nanox --profile release --features nano_nbgl --config ledger_device_sdk/examples/config.toml -- --api-port 5001
-```
-### Stax
-#### Build
-```
-cargo build -p ledger_device_sdk --example nbgl_home_and_settings --target stax --profile release
-```
-#### Build + Run
-```
-cargo run -p ledger_device_sdk --example nbgl_home_and_settings --target stax --profile release --config ledger_device_sdk/examples/config.toml
-```
-### Flex
-#### Build
-```
-cargo build -p ledger_device_sdk --example nbgl_home_and_settings --target flex --profile release
-```
-#### Build + Run
-```
-cargo run -p ledger_device_sdk --example nbgl_home_and_settings --target flex --profile release --config ledger_device_sdk/examples/config.toml
-```
-### Apex P
-#### Build
-```
-cargo build -p ledger_device_sdk --example nbgl_home_and_settings --target apex_p --profile release
-```
-#### Build + Run
-```
-cargo run -p ledger_device_sdk --example nbgl_home_and_settings --target apex_p --profile release --config ledger_device_sdk/examples/config.toml
-```
+
+**Note**: Running examples requires Speculos emulator. The `config.toml` automatically invokes Speculos as the target runner.
 
 ## Contributing
 
