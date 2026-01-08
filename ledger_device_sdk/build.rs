@@ -26,8 +26,7 @@ fn generate_install_parameters() {
 
     let metadata_str = std::str::from_utf8(&output.stdout)
         .expect("Failed to convert cargo metadata output to UTF-8");
-    let metadata = json::parse(metadata_str)
-        .expect("Failed to parse cargo metadata output");
+    let metadata = json::parse(metadata_str).expect("Failed to parse cargo metadata output");
 
     println!("cargo:warning=Looking for ledger metadata...");
 
@@ -43,7 +42,7 @@ fn generate_install_parameters() {
                     "cargo:warning=Found ledger metadata in package: {}",
                     pkg_name
                 );
-                
+
                 // Fill APP_NAME environment variable (stored in ledger.app_name section in the ELF (see info.rs))
                 let app_name = package["metadata"]["ledger"]["name"]
                     .as_str()
@@ -59,19 +58,17 @@ fn generate_install_parameters() {
                 println!("cargo:warning=APP_FLAGS is {}", app_flags);
 
                 // Generate install_params TLV blob (stored as install_parameters symbol in the ELF (see info.rs))
-                let app_version = package["version"]
-                    .as_str()
-                    .expect("version not found");
+                let app_version = package["version"].as_str().expect("version not found");
                 println!("cargo:rustc-env=APP_VERSION={}", app_version);
                 println!("cargo:warning=APP_VERSION is {}", app_version);
-                
+
                 let curves = package["metadata"]["ledger"]["curve"]
                     .members()
                     .filter_map(|v| v.as_str())
                     .map(|s| s.to_string())
                     .collect::<Vec<_>>();
                 println!("cargo:warning=curves are {:x?}", curves);
-                
+
                 let paths = package["metadata"]["ledger"]["path"]
                     .members()
                     .filter_map(|v| v.as_str())
@@ -80,15 +77,16 @@ fn generate_install_parameters() {
                 println!("cargo:warning=paths are {:x?}", paths);
 
                 // Handle optional path_slip21 field
-                let paths_slip21: Vec<String> = if !package["metadata"]["ledger"]["path_slip21"].is_null() {
-                    package["metadata"]["ledger"]["path_slip21"]
-                        .members()
-                        .filter_map(|v| v.as_str())
-                        .map(|s| s.to_string())
-                        .collect()
-                } else {
-                    Vec::new()
-                };
+                let paths_slip21: Vec<String> =
+                    if !package["metadata"]["ledger"]["path_slip21"].is_null() {
+                        package["metadata"]["ledger"]["path_slip21"]
+                            .members()
+                            .filter_map(|v| v.as_str())
+                            .map(|s| s.to_string())
+                            .collect()
+                    } else {
+                        Vec::new()
+                    };
 
                 if !paths_slip21.is_empty() {
                     println!("cargo:warning=paths_slip21 are {:x?}", paths_slip21);
