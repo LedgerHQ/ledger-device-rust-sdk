@@ -1,4 +1,4 @@
-#![warn(missing_docs)]
+//#![warn(missing_docs)]
 #![no_std]
 #![cfg_attr(test, no_main)]
 #![feature(custom_test_frameworks)]
@@ -7,7 +7,10 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 #![feature(cfg_version)]
+#![feature(const_option_ops)]
+#![feature(const_trait_impl)]
 
+mod app_info;
 pub mod ecc;
 pub mod hash;
 pub mod hmac;
