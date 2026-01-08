@@ -7,6 +7,8 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 #![feature(cfg_version)]
+#![feature(const_option_ops)]
+#![feature(const_trait_impl)]
 
 mod app_info;
 pub mod ecc;

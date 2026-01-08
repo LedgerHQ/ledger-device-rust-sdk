@@ -124,7 +124,7 @@ fn generate_install_parameters() {
                         .trim()
                 );
 
-                // Parse the TLV blob and create temp txt files for inclusion (see info.rs)
+                // Parse the TLV blob and create temp txt files for inclusion (see app_info.rs)
                 let bytes: Vec<u8> = tlv_blob
                     .trim_matches(|c| c == '[' || c == ']')
                     .split(',')
@@ -169,8 +169,20 @@ fn generate_install_parameters() {
         }
     }
 
-    // If we get here, we didn't find any ledger metadata - this is OK for non-Ledger builds
-    println!("cargo:warning=No [package.metadata.ledger] section found - skipping install parameters generation");
+    // If we get here, we didn't find any ledger metadata - this is OK for non-app builds
+    println!("cargo:warning=No [package.metadata.ledger] section found - empty install parameters generation");
+    // Write empty install parameters
+    let out_dir = std::env::var("OUT_DIR").unwrap();
+    std::fs::write(
+        std::path::Path::new(&out_dir).join("install_params.txt"),
+        "[]",
+    )
+    .unwrap();
+    std::fs::write(
+        std::path::Path::new(&out_dir).join("install_params_len.txt"),
+        "0",
+    )
+    .unwrap();
 }
 
 fn main() {
