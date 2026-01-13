@@ -5,6 +5,9 @@ use ledger_secure_sdk_sys::{libargs_t, CHECK_ADDRESS, GET_PRINTABLE_AMOUNT, SIGN
 pub mod string;
 pub mod swap;
 
+// Re-export commonly used swap types for convenience
+pub use swap::{SwapAppErrorCodeTrait, SwapError, SwapErrorCommonCode};
+
 pub enum LibCallCommand {
     SwapSignTransaction,
     SwapGetPrintableAmount,

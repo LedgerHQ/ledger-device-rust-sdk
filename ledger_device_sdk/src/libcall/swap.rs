@@ -11,6 +11,8 @@ use ledger_secure_sdk_sys::{
     libargs_s__bindgen_ty_1, libargs_t, MAX_PRINTABLE_AMOUNT_SIZE,
 };
 
+extern crate alloc;
+
 pub const DEFAULT_COIN_CONFIG_BUF_SIZE: usize = 16;
 pub const DEFAULT_ADDRESS_BUF_SIZE: usize = 64;
 pub const DEFAULT_ADDRESS_EXTRA_ID_BUF_SIZE: usize = 32;
@@ -18,6 +20,151 @@ pub const DEFAULT_ADDRESS_EXTRA_ID_BUF_SIZE: usize = 32;
 const DPATH_STAGE_SIZE: usize = 16;
 const AMOUNT_BUF_SIZE: usize = 16;
 
+/// Common swap error codes for Exchange integration.
+///
+/// These error codes are standardized across all Ledger applications to ensure
+/// consistent error reporting when called by the Exchange app during swap transactions.
+///
+/// The upper byte of the 2-byte error code must be one of these values. The lower byte
+/// can be set by the application to provide additional refinement.
+///
+/// This enum matches the C SDK definition in `swap_error_code_helpers.h`.
+///
+/// # Error Response Format
+///
+/// When returning an error in swap context, the RAPDU data should begin with:
+/// - **Byte 0**: One of these common error codes (upper byte)
+/// - **Byte 1**: Application-specific error code (lower byte, can be 0x00)
+/// - **Remaining bytes**: Optional error details (messages, field values, etc.)
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SwapErrorCommonCode {
+    /// Internal application error.
+    ///
+    /// Forward to the Firmware team for analysis.
+    ErrorInternal = 0x00,
+
+    /// The amount does not match the one validated in Exchange.
+    ///
+    /// Use when the transaction amount differs from what the user approved in Exchange.
+    ErrorWrongAmount = 0x01,
+
+    /// The destination address does not match the one validated in Exchange.
+    ///
+    /// Use when the transaction destination differs from the Exchange-validated address.
+    ErrorWrongDestination = 0x02,
+
+    /// The fees are different from what was validated in Exchange.
+    ///
+    /// Use when transaction fees don't match Exchange expectations.
+    ErrorWrongFees = 0x03,
+
+    /// The method used is invalid in Exchange context.
+    ///
+    /// Use when an unsupported transaction method/type is encountered.
+    ErrorWrongMethod = 0x04,
+
+    /// The mode used for the cross-chain hash validation is not supported.
+    ///
+    /// Only relevant for applications that handle cross chain swap, not all applications.
+    ErrorCrosschainWrongMode = 0x05,
+
+    /// The method used is invalid in cross-chain Exchange context.
+    ///
+    /// Only relevant for applications that handle cross chain swap, not all applications.
+    ErrorCrosschainWrongMethod = 0x06,
+
+    /// The hash for the cross-chain transaction does not match the validated value.
+    ///
+    /// Only relevant for applications that handle cross chain swap, not all applications.
+    ErrorCrosschainWrongHash = 0x07,
+
+    /// A generic or unspecified error not covered by specific error codes.
+    ///
+    /// Refer to the remaining bytes of the RAPDU data for further details.
+    /// Use this when the error doesn't fit into any of the above categories.
+    ErrorGeneric = 0xFF,
+}
+
+/// Trait for application-specific swap error codes.
+///
+/// This trait must be implemented by application-defined error code enums
+/// to allow them to be used with [`SwapError`]. The trait ensures the error
+/// code can be converted to a u8 for the APDU response.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// #[repr(u8)]
+/// #[derive(Clone, Copy)]
+/// pub enum MyAppErrorCode {
+///     Default = 0x00,
+///     SpecialCase = 0x01,
+/// }
+///
+/// impl SwapAppErrorCodeTrait for MyAppErrorCode {
+///     fn as_u8(self) -> u8 {
+///         self as u8
+///     }
+/// }
+/// ```
+pub trait SwapAppErrorCodeTrait: Copy {
+    /// Convert the error code to a u8 byte value.
+    fn as_u8(self) -> u8;
+}
+
+/// Swap error containing the 2-byte error code and optional descriptive message.
+///
+/// This structure encapsulates the complete error information for swap failures:
+/// - Upper byte: Common error code from [`SwapErrorCommonCode`]
+/// - Lower byte: Application-specific error code (must implement [`SwapAppErrorCodeTrait`])
+/// - Message: Optional human-readable error description with actual values
+///
+/// # Usage
+///
+/// The error bytes should be prepended to the APDU response before the optional message:
+/// ```rust,ignore
+/// comm.append(&[error.common_code as u8, error.app_code.as_u8()]);
+/// if let Some(ref msg) = error.message {
+///     comm.append(msg.as_bytes());
+/// }
+/// comm.reply(sw);
+/// ```
+///
+/// # Generic Parameter
+///
+/// * `T` - Application-specific error code type implementing [`SwapAppErrorCodeTrait`]
+pub struct SwapError<T: SwapAppErrorCodeTrait> {
+    /// Common error code (upper byte) from SDK
+    pub common_code: SwapErrorCommonCode,
+    /// Application-specific error code (lower byte)
+    pub app_code: T,
+    /// Optional descriptive error message with actual values for debugging
+    pub message: Option<alloc::string::String>,
+}
+impl<T: SwapAppErrorCodeTrait> SwapError<T> {
+    /// Create a new SwapError with a formatted message.
+    pub fn with_message(
+        common_code: SwapErrorCommonCode,
+        app_code: T,
+        message: alloc::string::String,
+    ) -> Self {
+        Self {
+            common_code,
+            app_code,
+            message: Some(message),
+        }
+    }
+
+    /// Create a new SwapError without a message.
+    pub fn without_message(common_code: SwapErrorCommonCode, app_code: T) -> Self {
+        Self {
+            common_code,
+            app_code,
+            message: None,
+        }
+    }
+}
 /// Helper function to read a null-terminated C string into a fixed-size buffer
 /// Returns the buffer and the actual length read
 /// Prints a warning if truncation occurs
