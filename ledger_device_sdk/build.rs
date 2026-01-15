@@ -94,13 +94,11 @@ fn generate_install_parameters() {
 
                 let install_params_exe = match std::env::var("LEDGER_SDK_PATH") {
                     Ok(path) => format!("{}/install_params.py", path),
-                    Err(_) => format!(
-                        "/opt/{}-secure-sdk/install_params.py",
-                        std::env::var_os("CARGO_CFG_TARGET_OS")
-                            .unwrap()
-                            .to_str()
-                            .unwrap()
-                    ),
+                    Err(_) => {
+                        let device_os = std::env::var_os("CARGO_CFG_TARGET_OS").unwrap();
+                        let device_os = device_os.to_str().unwrap().split('_').next().unwrap();
+                        format!("/opt/{}-secure-sdk/install_params.py", device_os)
+                    }
                 };
                 let mut generate_tlv_install_params = std::process::Command::new("python3");
                 generate_tlv_install_params.arg(install_params_exe.as_str());
@@ -112,7 +110,9 @@ fn generate_install_parameters() {
                     generate_tlv_install_params.arg("--curve").arg(p.as_str());
                 });
                 paths.iter().for_each(|p| {
-                    generate_tlv_install_params.arg("--path").arg(p.as_str());
+                    generate_tlv_install_params
+                        .arg("--path")
+                        .arg(p.as_str().trim_end_matches('/'));
                 });
                 paths_slip21.iter().for_each(|p| {
                     generate_tlv_install_params
