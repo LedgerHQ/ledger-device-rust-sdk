@@ -123,6 +123,13 @@ fn generate_install_parameters() {
                     .output()
                     .expect("Failed to execute install_params_generator");
 
+                if !output.status.success() {
+                    panic!(
+                        "call to install_params.py failed: {}",
+                        std::str::from_utf8(&output.stderr).unwrap()
+                    );
+                }
+
                 let tlv_blob = format!(
                     "[{}]",
                     std::str::from_utf8(output.stdout.as_slice())
