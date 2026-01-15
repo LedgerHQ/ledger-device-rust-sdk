@@ -461,7 +461,7 @@ checksum = "e7c5cedc30da3a610cac6b4ba17597bdf7152cf974e8aab3afb3d54455e371c8"
 
 [[package]]
 name = "include_gif"
-version = "1.2.4"
+version = "1.2.5"
 dependencies = [
  "flate2",
  "image",
@@ -521,7 +521,7 @@ checksum = "03087c2bad5e1034e8cace5926dec053fb3790248370865f5117a7d0213354c8"
 
 [[package]]
 name = "ledger_device_sdk"
-version = "1.30.0"
+version = "1.31.0"
 dependencies = [
  "const-zero",
  "include_gif",
@@ -537,7 +537,7 @@ dependencies = [
 
 [[package]]
 name = "ledger_secure_sdk_sys"
-version = "1.13.0"
+version = "1.14.0"
 dependencies = [
  "bindgen",
  "cc",
