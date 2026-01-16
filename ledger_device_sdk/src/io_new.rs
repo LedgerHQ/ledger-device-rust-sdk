@@ -105,6 +105,16 @@ impl<const N: usize> Comm<N> {
     }
 
     pub fn try_next_event(&mut self) -> DecodedEvent<N> {
+        // If there's a pending APDU from a callback (e.g., nbgl_next_event_ahead),
+        // return it instead of calling recv() which would return 0.
+        if self.pending_apdu {
+            self.pending_apdu = false;
+            return DecodedEvent::from_type(DecodedEventType::Apdu {
+                header: self.pending_header,
+                offset: self.pending_offset,
+                length: self.pending_length,
+            });
+        }
         self.recv(true).unwrap().decode_event()
     }
 
@@ -302,6 +312,9 @@ impl<'a, const N: usize> CommandResponse<'a, N> {
         if 0 > sys_seph::io_tx(self.comm.apdu_type, self.comm.buf[..n].as_ref(), n) {
             return Err(CommError::IoError);
         }
+        // Clear the pending APDU state after sending a reply, so the next
+        // call to try_next_event will fetch a new event from io_rx.
+        self.comm.pending_apdu = false;
         Ok(self.comm)
     }
 
