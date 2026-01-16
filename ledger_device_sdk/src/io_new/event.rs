@@ -1,5 +1,6 @@
 use super::{ApduError, ApduHeader, Comm};
 use crate::seph::{self, PacketTypes};
+use crate::testing::debug_print;
 
 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
 use crate::buttons::ButtonEvent;
@@ -178,6 +179,17 @@ impl<const N: usize> DecodedEvent<N> {
         let apdu_buffer = &comm.buf[offset..];
 
         if io_len < 5 {
+            debug_print("[event.rs:174] BadLen: io_len < 5\n");
+            debug_print("  io_len: ");
+            debug_print(core::str::from_utf8(&crate::testing::to_hex(io_len as u32)).unwrap());
+            debug_print("\n  buf[0..min(io_len,10)]: ");
+            for i in 0..core::cmp::min(io_len, 10) {
+                debug_print(
+                    core::str::from_utf8(&crate::testing::to_hex(comm.buf[i] as u32)).unwrap(),
+                );
+                debug_print(" ");
+            }
+            debug_print("\n");
             return DecodedEventType::ApduError(BadLen);
         }
 
@@ -199,16 +211,73 @@ impl<const N: usize> DecodedEvent<N> {
                 // Non-conforming zero-data APDU (TODO: per the standard, this should actually be read as a 256-byte long APDU; but that's likely to break things as lots)
                 DecodedEventType::new_apdu(header, 4, 0)
             }
-            (0, 6) => DecodedEventType::ApduError(BadLen),
+            (0, 6) => {
+                debug_print("[event.rs:195] BadLen: first_len_byte=0, rx_len=6\n");
+                debug_print("  rx_len: ");
+                debug_print(core::str::from_utf8(&crate::testing::to_hex(rx_len as u32)).unwrap());
+                debug_print("\n  buf[0..min(rx_len+1,10)]: ");
+                for i in 0..core::cmp::min(rx_len + 1, 10) {
+                    debug_print(
+                        core::str::from_utf8(&crate::testing::to_hex(comm.buf[offset + i] as u32))
+                            .unwrap(),
+                    );
+                    debug_print(" ");
+                }
+                debug_print("\n");
+                DecodedEventType::ApduError(BadLen)
+            }
             (0, _) => {
                 let len = u16::from_be_bytes([apdu_buffer[5], apdu_buffer[6]]) as usize;
                 if rx_len != len + 7 {
+                    debug_print("[event.rs:199] BadLen: first_len_byte=0, rx_len != len+7\n");
+                    debug_print("  rx_len: ");
+                    debug_print(
+                        core::str::from_utf8(&crate::testing::to_hex(rx_len as u32)).unwrap(),
+                    );
+                    debug_print("\n  expected_len+7: ");
+                    debug_print(
+                        core::str::from_utf8(&crate::testing::to_hex((len + 7) as u32)).unwrap(),
+                    );
+                    debug_print("\n  buf[0..min(rx_len+1,15)]: ");
+                    for i in 0..core::cmp::min(rx_len + 1, 15) {
+                        debug_print(
+                            core::str::from_utf8(&crate::testing::to_hex(
+                                comm.buf[offset + i] as u32,
+                            ))
+                            .unwrap(),
+                        );
+                        debug_print(" ");
+                    }
+                    debug_print("\n");
                     return DecodedEventType::ApduError(BadLen);
                 }
                 DecodedEventType::new_apdu(header, 1 + 7, len)
             }
             (len, _) => {
                 if rx_len != len as usize + 5 {
+                    debug_print("[event.rs:205] BadLen: rx_len != first_len_byte+5\n");
+                    debug_print("  rx_len: ");
+                    debug_print(
+                        core::str::from_utf8(&crate::testing::to_hex(rx_len as u32)).unwrap(),
+                    );
+                    debug_print("\n  first_len_byte: ");
+                    debug_print(core::str::from_utf8(&crate::testing::to_hex(len as u32)).unwrap());
+                    debug_print("\n  expected_len+5: ");
+                    debug_print(
+                        core::str::from_utf8(&crate::testing::to_hex((len as usize + 5) as u32))
+                            .unwrap(),
+                    );
+                    debug_print("\n  buf[0..min(rx_len+1,15)]: ");
+                    for i in 0..core::cmp::min(rx_len + 1, 15) {
+                        debug_print(
+                            core::str::from_utf8(&crate::testing::to_hex(
+                                comm.buf[offset + i] as u32,
+                            ))
+                            .unwrap(),
+                        );
+                        debug_print(" ");
+                    }
+                    debug_print("\n");
                     return DecodedEventType::ApduError(BadLen);
                 }
                 DecodedEventType::new_apdu(header, 1 + 5, len as usize)
