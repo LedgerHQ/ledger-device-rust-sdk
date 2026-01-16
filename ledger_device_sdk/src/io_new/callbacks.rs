@@ -25,6 +25,12 @@ unsafe fn get_comm<const N: usize>() -> &'static mut Comm<N> {
 
 pub(super) fn next_event_ahead_impl<const N: usize>() -> bool {
     let comm = unsafe { get_comm::<N>() };
+    // If there's already a pending APDU, return true immediately without
+    // fetching another event. This prevents consuming the same APDU repeatedly
+    // when ux_sync_wait loops with exit_on_apdu=false.
+    if comm.pending_apdu {
+        return true;
+    }
     match comm.next_event().into_type() {
         DecodedEventType::Apdu {
             header,
