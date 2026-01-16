@@ -23,6 +23,13 @@ pub struct DecodedEvent<const N: usize> {
 
 impl<const N: usize> DecodedEvent<N> {
     pub fn new(comm: &mut Comm<N>, len: usize) -> Self {
+        // If no data was received, return Ignored to avoid reading stale buffer data
+        if len == 0 {
+            return Self {
+                event_type: DecodedEventType::Ignored,
+            };
+        }
+
         let pt = comm.buf[0];
         use crate::seph::PacketTypes;
 
