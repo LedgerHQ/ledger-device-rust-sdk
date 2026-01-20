@@ -27,7 +27,10 @@ pub mod io {
     pub use super::io_new::*;
 }
 
+// not yet supported with io_new
+#[cfg(not(feature = "io_new"))]
 pub mod libcall;
+
 pub mod math;
 pub mod nvm;
 pub mod pki;
