@@ -982,19 +982,19 @@ fn clone_sdk(devicename: &DeviceName) -> PathBuf {
     let (repo_url, sdk_branch) = match devicename {
         DeviceName::NanoX => (
             Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_24",
+            "API_LEVEL_25",
         ),
         DeviceName::NanoSPlus => (
             Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_24",
+            "API_LEVEL_25",
         ),
         DeviceName::Stax => (
             Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_24",
+            "API_LEVEL_25",
         ),
         DeviceName::Flex => (
             Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_24",
+            "API_LEVEL_25",
         ),
         DeviceName::ApexP => (
             Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
