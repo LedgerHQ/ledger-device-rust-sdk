@@ -76,7 +76,7 @@ jobs:
       - name: Unit tests
         working-directory: ledger_device_sdk
         run: |
-          cargo test --target ${{ matrix.target }} --features unit_test,debug,log_trace --tests
+          cargo test --target ${{ matrix.target }} --features unit_test --tests
 
   build-apps:
     name: Build all Rust apps
