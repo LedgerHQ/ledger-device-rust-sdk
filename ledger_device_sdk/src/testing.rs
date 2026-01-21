@@ -6,6 +6,7 @@ use core::arch::asm;
 /// Debug 'print' function that uses ARM semihosting
 /// Prints only strings with no formatting
 #[cfg(feature = "debug")]
+#[deprecated(note = "Use the logging macros from log module instead")]
 pub fn debug_print(s: &str) {
     let p = s.as_bytes().as_ptr();
     for i in 0..s.len() {
@@ -20,6 +21,7 @@ pub fn debug_print(s: &str) {
     }
 }
 #[cfg(not(feature = "debug"))]
+#[deprecated(note = "Use the logging macros from log module instead")]
 pub fn debug_print(_s: &str) {}
 
 pub fn to_hex(m: u32) -> [u8; 8] {
@@ -53,23 +55,17 @@ fn to_dec(v: u32) -> [u8; 10] {
 
 #[cfg_attr(test, panic_handler)]
 pub fn test_panic(info: &PanicInfo) -> ! {
-    debug_print("Panic in ");
     let loc = info.location().unwrap();
-    debug_print(loc.file());
-    debug_print(" at line ");
     let bytes = to_dec(loc.line());
     let s = core::str::from_utf8(&bytes)
         .unwrap()
         .trim_start_matches('0');
-    debug_print(s);
-    debug_print(": ");
-    debug_print(info.message().as_str().unwrap());
-    debug_print("\n");
+    crate::log::error!("Panic in {} at line {}: {}", loc.file(), s, info.message().as_str().unwrap());
     ledger_secure_sdk_sys::exit_app(1);
 }
 
 /// Custom type used to implement tests
-#[cfg(feature = "speculos")]
+#[cfg(feature = "unit_test")]
 pub struct TestType {
     pub modname: &'static str,
     pub name: &'static str,
@@ -78,12 +74,12 @@ pub struct TestType {
 
 /// Custom test runner that uses non-formatting print functions
 /// using semihosting. Only reports 'Ok' or 'fail'.
-#[cfg(feature = "speculos")]
+#[cfg(feature = "unit_test")]
 pub fn sdk_test_runner(tests: &[&TestType]) {
     use core::ffi::c_void;
     use ledger_secure_sdk_sys::{pic, pic_rs};
     let mut failures = 0;
-    debug_print("--- Tests ---\n");
+    crate::log::info!("--- Tests ---");
     for test_ in tests {
         // (ノಠ益ಠ)ノ彡ꓛIꓒ
         let test = pic_rs(*test_);
@@ -103,17 +99,14 @@ pub fn sdk_test_runner(tests: &[&TestType]) {
         let fp = unsafe { pic(test.f as *mut c_void) };
         let fp: fn() -> Result<(), ()> = unsafe { core::mem::transmute(fp) };
         let res = fp();
-        match res {
-            Ok(()) => debug_print("\x1b[1;32m   ok   \x1b[0m"),
-            Err(()) => {
+        let res_out = match res {
+            Ok(()) => "\x1b[1;32m   ok   \x1b[0m",
+            Err(()) => {    
                 failures += 1;
-                debug_print("\x1b[1;31m  fail  \x1b[0m")
+                "\x1b[1;31m  fail  \x1b[0m"
             }
-        }
-        debug_print(modname);
-        debug_print("::");
-        debug_print(name);
-        debug_print("\n");
+        };
+        crate::log::info!("{} {}::{}", res_out, modname, name);
     }
     if failures > 0 {
         ledger_secure_sdk_sys::exit_app(1);
@@ -124,14 +117,14 @@ pub fn sdk_test_runner(tests: &[&TestType]) {
 /// This variant of `assert_eq!()` returns an error
 /// `Err(())` instead of panicking, to prevent tests
 /// from exiting on first failure
-#[cfg(feature = "speculos")]
+#[cfg(feature = "unit_test")]
 #[macro_export]
 macro_rules! assert_eq_err {
     ($left:expr, $right:expr) => {{
         match (&$left, &$right) {
             (left_val, right_val) => {
                 if !(*left_val == *right_val) {
-                    $crate::testing::debug_print("assertion failed: `(left == right)`\n");
+                    crate::log::error!("assertion failed: `(left == right)`");
                     return Err(());
                 }
             }
