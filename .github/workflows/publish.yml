@@ -6,6 +6,11 @@ on:
       - master
       - mbr/jfrog  # XXX REMOVE ME AFTER TEST
   workflow_dispatch:  # Allow manual workflow dispatch
+    inputs:
+      speculos_version:
+        description: 'Speculos version to use'
+        required: false
+        default: 'latest'
 
 jobs:
   deploy_include_gif:
@@ -20,21 +25,7 @@ jobs:
       publish: true
       release: false
       jfrog_deployment: true
-    secrets:
-      cargo_token: ${{ secrets.CARGO_CRATES_TOKEN }}
-
-  deploy_ledger_device_sdk:
-    name: Deploy ledger_device_sdk
-    uses: LedgerHQ/ledger-app-workflows/.github/workflows/reusable_crates_deployment.yml@v1
-    permissions:
-      id-token: write
-      attestations: write
-      contents: write
-    with:
-      package_directory: "ledger_device_sdk"
-      publish: true
-      release: false
-      jfrog_deployment: true
+      dry_run: ${{ github.event_name == 'workflow_dispatch' }}
     secrets:
       cargo_token: ${{ secrets.CARGO_CRATES_TOKEN }}
 
@@ -50,5 +41,22 @@ jobs:
       publish: true
       release: false
       jfrog_deployment: true
+      dry_run: ${{ github.event_name == 'workflow_dispatch' }}
+    secrets:
+      cargo_token: ${{ secrets.CARGO_CRATES_TOKEN }}
+
+  deploy_ledger_device_sdk:
+    name: Deploy ledger_device_sdk
+    uses: LedgerHQ/ledger-app-workflows/.github/workflows/reusable_crates_deployment.yml@v1
+    permissions:
+      id-token: write
+      attestations: write
+      contents: write
+    with:
+      package_directory: "ledger_device_sdk"
+      publish: true
+      release: false
+      jfrog_deployment: true
+      #dry_run: ${{ github.event_name == 'workflow_dispatch' }}
     secrets:
       cargo_token: ${{ secrets.CARGO_CRATES_TOKEN }}
