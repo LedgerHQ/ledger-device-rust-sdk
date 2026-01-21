@@ -54,7 +54,7 @@ extern "C" fn sample_main() {
         let ins: Instruction = comm.next_command();
         match ins {
             Instruction::GetVersion => {
-                ledger_device_sdk::testing::debug_print("GetVersion\n");
+                ledger_device_sdk::log::info!("GetVersion");
                 let version = [0, 1, 0]; // version 0.1.0
                 comm.append(&version);
                 comm.reply_ok();
@@ -65,11 +65,11 @@ extern "C" fn sample_main() {
                 comm.reply_ok();
             }
             Instruction::ParseTlv => {
-                ledger_device_sdk::testing::debug_print("Starting TLV Parsing\n");
+                ledger_device_sdk::log::info!("Starting TLV Parsing");
                 let buffer = match comm.get_data() {
                     Ok(buf) => buf,
                     Err(_err) => {
-                        ledger_device_sdk::testing::debug_print("Failed to get data: {}\n");
+                        ledger_device_sdk::log::info!("Failed to get data");
                         break;
                     }
                 };
@@ -77,15 +77,13 @@ extern "C" fn sample_main() {
                 let mut out = DynamicTokenOut::default();
                 match parse_dynamic_token_tlv(&buffer, &mut out) {
                     Ok(()) => {
-                        ledger_device_sdk::testing::debug_print("TLV Parsing successful\n");
-                        ledger_device_sdk::testing::debug_print(out.app_name.as_str());
-                        ledger_device_sdk::testing::debug_print("\n");
-                        ledger_device_sdk::testing::debug_print(out.ticker.as_str());
-                        ledger_device_sdk::testing::debug_print("\n");
+                        ledger_device_sdk::log::info!("TLV Parsing successful");
+                        ledger_device_sdk::log::info!("{}", out.app_name.as_str());
+                        ledger_device_sdk::log::info!("{}", out.ticker.as_str());   
                         comm.reply_ok();
                     }
                     Err(err) => {
-                        ledger_device_sdk::testing::debug_print("TLV Parsing failed\n");
+                        ledger_device_sdk::log::info!("TLV Parsing failed");
                         comm.reply(err);
                     }
                 }

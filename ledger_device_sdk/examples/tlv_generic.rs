@@ -75,9 +75,9 @@ extern "C" fn sample_main() {
     // Check that mandatory TAGs were received
     let mandatory_tags = tag_to_flag_u64(TAG_0) | tag_to_flag_u64(TAG_1);
     if received.flags & mandatory_tags != mandatory_tags {
-        ledger_device_sdk::testing::debug_print("Received flags: ");
-        ledger_device_sdk::testing::debug_print(format!("{:x}\n", received.flags).as_str());
-        ledger_device_sdk::testing::debug_print("Missing mandatory tag\n");
+        ledger_device_sdk::log::info!("Received flags: {:x}", received.flags);
+        ledger_device_sdk::log::info!("Missing mandatory tag");
+
         ledger_device_sdk::exit_app(1);
     }
     ledger_device_sdk::exit_app(0);

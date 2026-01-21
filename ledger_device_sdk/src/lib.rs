@@ -30,7 +30,7 @@ pub mod io {
 // not yet supported with io_new
 #[cfg(not(feature = "io_new"))]
 pub mod libcall;
-
+pub mod log;
 pub mod math;
 pub mod nvm;
 pub mod pki;
