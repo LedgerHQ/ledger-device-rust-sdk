@@ -113,4 +113,4 @@ macro_rules! trace {
 }
 
 // Re-export macros in the log module so they can be accessed as ledger_device_sdk::log::info!()
-pub use crate::{log, error, warn, info, debug, trace};
+pub use crate::{debug, error, info, log, trace, warn};

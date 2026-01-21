@@ -79,7 +79,7 @@ extern "C" fn sample_main() {
                     Ok(()) => {
                         ledger_device_sdk::log::info!("TLV Parsing successful");
                         ledger_device_sdk::log::info!("{}", out.app_name.as_str());
-                        ledger_device_sdk::log::info!("{}", out.ticker.as_str());   
+                        ledger_device_sdk::log::info!("{}", out.ticker.as_str());
                         comm.reply_ok();
                     }
                     Err(err) => {

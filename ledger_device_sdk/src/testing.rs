@@ -60,7 +60,12 @@ pub fn test_panic(info: &PanicInfo) -> ! {
     let s = core::str::from_utf8(&bytes)
         .unwrap()
         .trim_start_matches('0');
-    crate::log::error!("Panic in {} at line {}: {}", loc.file(), s, info.message().as_str().unwrap());
+    crate::log::error!(
+        "Panic in {} at line {}: {}",
+        loc.file(),
+        s,
+        info.message().as_str().unwrap()
+    );
     ledger_secure_sdk_sys::exit_app(1);
 }
 
@@ -101,7 +106,7 @@ pub fn sdk_test_runner(tests: &[&TestType]) {
         let res = fp();
         let res_out = match res {
             Ok(()) => "\x1b[1;32m   ok   \x1b[0m",
-            Err(()) => {    
+            Err(()) => {
                 failures += 1;
                 "\x1b[1;31m  fail  \x1b[0m"
             }

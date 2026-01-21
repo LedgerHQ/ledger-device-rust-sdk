@@ -935,7 +935,10 @@ mod tests {
 
     fn display_error_code(e: CxError) {
         let ec = crate::testing::to_hex(e.into());
-        crate::log::info!("Error code: \x1b[1;33m{}\x1b[0m", core::str::from_utf8(&ec).unwrap());
+        crate::log::info!(
+            "Error code: \x1b[1;33m{}\x1b[0m",
+            core::str::from_utf8(&ec).unwrap()
+        );
     }
 
     const TEST_HASH: &[u8; 13] = b"test_message1";
