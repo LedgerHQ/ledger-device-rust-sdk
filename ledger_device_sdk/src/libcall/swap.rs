@@ -35,7 +35,7 @@ use crate::nbgl::NbglSpinner;
 use crate::testing::debug_print;
 use ledger_secure_sdk_sys::{
     check_address_parameters_t, create_transaction_parameters_t, get_printable_amount_parameters_t,
-    libargs_s__bindgen_ty_1, libargs_t, MAX_PRINTABLE_AMOUNT_SIZE,
+    libargs_s__bindgen_ty_1, libargs_t, MAX_PRINTABLE_AMOUNT_SIZE, coin_chain_config_t,
 };
 
 extern crate alloc;
@@ -433,7 +433,7 @@ pub fn get_check_address_params<
 
     libarg.id = unsafe { *arg };
     libarg.command = unsafe { *arg.add(1) };
-    libarg.unused = unsafe { *arg.add(2) };
+    libarg.chain_config = unsafe { *arg.add(2) as *mut coin_chain_config_t };
 
     libarg.__bindgen_anon_1 = unsafe { *(arg.add(3) as *const libargs_s__bindgen_ty_1) };
 
@@ -507,7 +507,7 @@ pub fn get_printable_amount_params<
 
     libarg.id = unsafe { *arg };
     libarg.command = unsafe { *arg.add(1) };
-    libarg.unused = unsafe { *arg.add(2) };
+    libarg.chain_config = unsafe { *arg.add(2) as *mut coin_chain_config_t };
 
     libarg.__bindgen_anon_1 = unsafe { *(arg.add(3) as *const libargs_s__bindgen_ty_1) };
 
@@ -592,7 +592,7 @@ pub fn sign_tx_params<
 
     libarg.id = unsafe { *arg };
     libarg.command = unsafe { *arg.add(1) };
-    libarg.unused = unsafe { *arg.add(2) };
+    libarg.chain_config = unsafe { *arg.add(2) as *mut coin_chain_config_t };
 
     libarg.__bindgen_anon_1 = unsafe { *(arg.add(3) as *const libargs_s__bindgen_ty_1) };
 
