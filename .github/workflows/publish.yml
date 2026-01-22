@@ -4,13 +4,7 @@ on:
   push:
     branches:
       - master
-      - mbr/jfrog  # XXX REMOVE ME AFTER TEST
   workflow_dispatch:  # Allow manual workflow dispatch
-    inputs:
-      speculos_version:
-        description: 'Speculos version to use'
-        required: false
-        default: 'latest'
 
 jobs:
   deploy_include_gif:
