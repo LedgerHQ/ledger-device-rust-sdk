@@ -743,34 +743,45 @@ fn handle_bolos_apdu(com: &mut Comm, ins: u8) {
     match ins {
         // Get Information INS: retrieve App name and version
         BOLOS_INS_GET_VERSION => {
-            unsafe {
+            const APP_NAME: &[u8] = option_env!("APP_NAME").unwrap_or("Unknown").as_bytes();
+            const APP_VERSION: &[u8] = option_env!("APP_VERSION").unwrap_or("Unknown").as_bytes();
+
+            if APP_NAME.len() + APP_VERSION.len() + 5 > com.io_buffer.len() {
+                com.reply(StatusWords::Panic);
+            } else {
                 com.tx_length = 0;
                 com.io_buffer[com.tx_length] = 0x01;
                 com.tx_length += 1;
-                let len = os_registry_get_current_app_tag(
-                    BOLOS_TAG_APPNAME,
-                    &mut com.io_buffer[com.tx_length + 1] as *mut u8,
-                    (273 - com.tx_length - 2) as u32,
-                );
-                com.io_buffer[com.tx_length] = len as u8;
-                com.tx_length += 1 + (len as usize);
 
-                let len = os_registry_get_current_app_tag(
-                    BOLOS_TAG_APPVERSION,
-                    &mut com.io_buffer[com.tx_length + 1] as *mut u8,
-                    (273 - com.tx_length - 2) as u32,
-                );
-                com.io_buffer[com.tx_length] = len as u8;
-                com.tx_length += 1 + (len as usize);
+                // Name length
+                com.io_buffer[com.tx_length] = APP_NAME.len() as u8;
+                com.tx_length += 1;
+
+                // Name value
+                com.io_buffer[com.tx_length..com.tx_length + APP_NAME.len()]
+                    .copy_from_slice(APP_NAME);
+                com.tx_length += APP_NAME.len();
+
+                // Version length
+                com.io_buffer[com.tx_length] = APP_VERSION.len() as u8;
+                com.tx_length += 1;
+
+                // Version value
+                com.io_buffer[com.tx_length..com.tx_length + APP_VERSION.len()]
+                    .copy_from_slice(APP_VERSION);
+                com.tx_length += APP_VERSION.len();
 
                 // to be fixed within io tasks
                 // return OS flags to notify of platform's global state (pin lock etc)
                 com.io_buffer[com.tx_length] = 1; // flags length
                 com.tx_length += 1;
-                com.io_buffer[com.tx_length] = os_flags() as u8;
+
+                unsafe {
+                    com.io_buffer[com.tx_length] = os_flags() as u8;
+                }
                 com.tx_length += 1;
+                com.reply_ok();
             }
-            com.reply_ok();
         }
         // Quit Application INS
         BOLOS_INS_QUIT => {
