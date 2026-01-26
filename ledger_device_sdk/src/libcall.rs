@@ -1,6 +1,6 @@
 use crate::testing::debug_print;
 
-use ledger_secure_sdk_sys::{libargs_t, CHECK_ADDRESS, GET_PRINTABLE_AMOUNT, SIGN_TRANSACTION};
+use ledger_secure_sdk_sys::{libargs_t, CHECK_ADDRESS, GET_PRINTABLE_AMOUNT, SIGN_TRANSACTION, coin_chain_config_t};
 
 pub mod string;
 pub mod swap;
@@ -33,6 +33,6 @@ pub fn get_command(arg0: u32) -> LibCallCommand {
 
     libarg.id = unsafe { *arg };
     libarg.command = unsafe { *arg.add(1) };
-    libarg.unused = unsafe { *arg.add(2) };
+    libarg.chain_config = unsafe { *arg.add(2) as *mut coin_chain_config_t };
     libarg.command.into()
 }
