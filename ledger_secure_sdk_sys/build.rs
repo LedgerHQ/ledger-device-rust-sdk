@@ -8,9 +8,8 @@ use std::{env, fs::File, io::BufRead, io::BufReader, io::Read, io::Write};
 
 const AUX_C_FILES: [&str; 2] = ["./src/c/src.c", "./src/c/sjlj.s"];
 
-const SDK_C_FILES: [&str; 13] = [
+const SDK_C_FILES: [&str; 12] = [
     "src/pic.c",
-    "src/checks.c",
     "src/cx_stubs.S",
     "src/os.c",
     "src/svc_call.s",
