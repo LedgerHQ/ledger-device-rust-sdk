@@ -42,18 +42,8 @@ pub fn get_event(buttons: &mut ButtonsState) -> Option<ButtonEvent> {
 }
 
 pub fn clear_screen() {
-    #[cfg(not(feature = "speculos"))]
     unsafe {
         ledger_secure_sdk_sys::screen_clear();
-    }
-
-    #[cfg(feature = "speculos")]
-    {
-        // Speculos does not emulate the screen_clear syscall yet
-        RectFull::new()
-            .width(crate::ui::SCREEN_WIDTH as u32)
-            .height(crate::ui::SCREEN_HEIGHT as u32)
-            .erase();
     }
 }
 

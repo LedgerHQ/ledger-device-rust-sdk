@@ -56,7 +56,7 @@ extern "C" fn sample_main() {
         let ins: Instruction = comm.next_command();
         match ins {
             Instruction::GetVersion => {
-                ledger_device_sdk::testing::debug_print("GetVersion\n");
+                ledger_device_sdk::log::info!("GetVersion");
                 let version = [0, 1, 0]; // version 0.1.0
                 comm.append(&version);
                 comm.reply_ok();
@@ -67,11 +67,11 @@ extern "C" fn sample_main() {
                 comm.reply_ok();
             }
             Instruction::CheckPki => {
-                ledger_device_sdk::testing::debug_print("Starting PKI Check\n");
+                ledger_device_sdk::log::info!("Starting PKI Check");
                 let buffer = match comm.get_data() {
                     Ok(buf) => buf,
                     Err(_err) => {
-                        ledger_device_sdk::testing::debug_print("Failed to get data \n");
+                        ledger_device_sdk::log::info!("Failed to get data");
                         break;
                     }
                 };
@@ -93,11 +93,11 @@ extern "C" fn sample_main() {
                     signature.as_mut_slice(),
                 ) {
                     Ok(()) => {
-                        ledger_device_sdk::testing::debug_print("PKI Check successful\n");
+                        ledger_device_sdk::log::info!("PKI Check successful");
                         comm.reply_ok();
                     }
                     Err(err) => {
-                        ledger_device_sdk::testing::debug_print("PKI Check failed\n");
+                        ledger_device_sdk::log::info!("PKI Check failed");
                         comm.reply(err);
                     }
                 }
