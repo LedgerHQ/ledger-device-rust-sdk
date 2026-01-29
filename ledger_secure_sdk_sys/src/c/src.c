@@ -7,7 +7,6 @@
 #include "os_id.h"
 #include "os_nvm.h"
 #include "os_pic.h"
-#include "checks.h"
 
 #ifdef HAVE_IO_USB
 #include "usbd_ledger.h"
