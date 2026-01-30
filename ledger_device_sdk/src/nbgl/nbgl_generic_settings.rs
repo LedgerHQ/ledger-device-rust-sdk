@@ -152,7 +152,7 @@ impl NbglGenericSettings {
         self
     }
 
-    pub fn show(&mut self) -> SyncNbgl {
+    fn show_internal(&mut self) -> SyncNbgl {
         self.ux_sync_init();
         unsafe {
             nbgl_useCaseGenericSettings(
@@ -167,5 +167,22 @@ impl NbglGenericSettings {
             )
         }
         self.ux_sync_wait(false)
+    }
+
+    #[cfg(not(feature = "io_new"))]
+    pub fn show(&mut self) {
+        self.show_internal();
+    }
+
+    /// # Returns
+    /// Returns `Ok(())` once the user exits the settings screen,
+    /// or `Err(u8)` with the error code in case of an error.
+    #[cfg(feature = "io_new")]
+    pub fn show<const N: usize>(&mut self, _comm: &mut crate::io::Comm<N>) -> Result<(), u8> {
+        let ret = self.show_internal();
+        match ret {
+            SyncNbgl::UxSyncRetQuitted => Ok(()),
+            _ => Err(u8::from(ret)),
+        }
     }
 }

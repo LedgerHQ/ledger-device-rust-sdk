@@ -60,8 +60,17 @@ use core::panic::PanicInfo;
 /// In case of runtime problems, return an internal error and exit the app
 #[inline]
 pub fn exiting_panic(_info: &PanicInfo) -> ! {
-    let mut comm = io_legacy::Comm::new();
-    comm.reply(io_legacy::StatusWords::Panic);
+    #[cfg(not(feature = "io_new"))]
+    {
+        let mut comm = crate::io_legacy::Comm::new();
+        comm.reply(crate::io_legacy::StatusWords::Panic);
+    }
+    #[cfg(feature = "io_new")]
+    {
+        crate::io_new::callbacks::send_panic_reply(crate::io_new::Reply::from(
+            crate::io_new::StatusWords::Panic,
+        ));
+    }
     ledger_secure_sdk_sys::exit_app(0);
 }
 

@@ -10,15 +10,56 @@ use super::{Comm, DecodedEventType};
 // Erased pointer to the Comm instance (generic parameter erased).
 static mut CURRENT_COMM: *mut core::ffi::c_void = core::ptr::null_mut();
 
+// Type-erased panic reply function.
+static mut PANIC_REPLY_FN: Option<fn(Reply)> = None;
+
 pub(super) fn set_comm<const N: usize>(comm: &mut Comm<N>) {
     unsafe {
         CURRENT_COMM = (comm as *mut Comm<N>) as *mut core::ffi::c_void;
     }
 }
 
+pub(super) fn clear_comm() {
+    unsafe {
+        CURRENT_COMM = core::ptr::null_mut();
+    }
+}
+
+pub(super) fn is_comm_null() -> bool {
+    unsafe { CURRENT_COMM.is_null() }
+}
+
 // Converts the pointer back to the concrete Comm<N> type.
 unsafe fn get_comm<const N: usize>() -> &'static mut Comm<N> {
     &mut *(CURRENT_COMM as *mut Comm<N>)
+}
+
+/// Register a type-erased panic handler for the current Comm instance.
+pub(super) fn register_panic_handler<const N: usize>() {
+    unsafe {
+        PANIC_REPLY_FN = Some(panic_reply_impl::<N>);
+    }
+}
+
+pub(super) fn clear_panic_handler() {
+    unsafe {
+        PANIC_REPLY_FN = None;
+    }
+}
+
+/// Send a panic reply if a Comm instance is registered.
+pub fn send_panic_reply(reply: Reply) {
+    unsafe {
+        if let Some(f) = PANIC_REPLY_FN {
+            f(reply);
+        }
+        // If no panic handler is registered, silently skip (device is already panicking)
+    }
+}
+
+fn panic_reply_impl<const N: usize>(reply: Reply) {
+    let comm = unsafe { get_comm::<N>() };
+    let _ = comm.begin_response().send(reply);
 }
 
 // Implementation wrappers specialized per const N.

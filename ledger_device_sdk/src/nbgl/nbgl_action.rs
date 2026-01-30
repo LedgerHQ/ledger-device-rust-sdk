@@ -59,8 +59,7 @@ impl<'a> NbglAction<'a> {
         }
     }
 
-    /// Shows the action page.
-    pub fn show(self) -> SyncNbgl {
+    fn show_internal(self) -> SyncNbgl {
         unsafe {
             let icon: nbgl_icon_details_t = match self.glyph {
                 Some(g) => g.into(),
@@ -75,5 +74,24 @@ impl<'a> NbglAction<'a> {
             );
             self.ux_sync_wait(false)
         }
+    }
+
+    /// Shows the action page.
+    /// # Returns
+    /// Returns `Ok(())` when the action button is pressed,
+    /// or `Err(u8)` with the error code in case of an error.
+    #[cfg(feature = "io_new")]
+    pub fn show<const N: usize>(self, _comm: &mut crate::io::Comm<N>) -> Result<(), u8> {
+        let ret = self.show_internal();
+        match ret {
+            SyncNbgl::UxSyncRetContinue => Ok(()),
+            _ => Err(u8::from(ret)),
+        }
+    }
+
+    /// Shows the action page.
+    #[cfg(not(feature = "io_new"))]
+    pub fn show(self) -> SyncNbgl {
+        self.show_internal()
     }
 }

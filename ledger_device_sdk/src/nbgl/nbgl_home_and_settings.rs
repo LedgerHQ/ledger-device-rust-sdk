@@ -188,11 +188,8 @@ impl<'a> NbglHomeAndSettings {
         self.start_page = page;
     }
 
-    /// Show the home screen and settings page.
-    /// This function will block until an APDU is received or the user quits the app.
-    /// DEPRECATED as it constraints to refresh screen for every received APDU.
-    /// Use `show_and_return` instead.
-    pub fn show<T: TryFrom<ApduHeader>>(&mut self) -> Event<T>
+    /// Show the home screen and settings page (internal implementation).
+    fn show_internal<T: TryFrom<ApduHeader>>(&mut self) -> Event<T>
     where
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
@@ -290,6 +287,35 @@ impl<'a> NbglHomeAndSettings {
                 }
             }
         }
+    }
+
+    /// Show the home screen and settings page.
+    /// This function will block until an APDU is received or the user quits the app.
+    /// DEPRECATED as it constraints to refresh screen for every received APDU.
+    /// Use `show_and_return` instead.
+    /// # Arguments
+    /// * `_comm` - Mutable reference to Comm.
+    #[cfg(feature = "io_new")]
+    pub fn show<T: TryFrom<ApduHeader>, const N: usize>(
+        &mut self,
+        _comm: &mut crate::io::Comm<N>,
+    ) -> Event<T>
+    where
+        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
+    {
+        self.show_internal()
+    }
+
+    /// Show the home screen and settings page.
+    /// This function will block until an APDU is received or the user quits the app.
+    /// DEPRECATED as it constraints to refresh screen for every received APDU.
+    /// Use `show_and_return` instead.
+    #[cfg(not(feature = "io_new"))]
+    pub fn show<T: TryFrom<ApduHeader>>(&mut self) -> Event<T>
+    where
+        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
+    {
+        self.show_internal()
     }
 
     /// Show the home screen and settings page.
