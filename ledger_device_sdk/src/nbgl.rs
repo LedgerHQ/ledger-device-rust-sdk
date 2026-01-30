@@ -393,10 +393,9 @@ pub fn init_comm(comm: &mut crate::io::Comm) {
 }
 
 #[cfg(feature = "io_new")]
-/// Initialize the global reference to the Comm instance used by Nbgl.
-/// This function should be called from the main function of the application.
 pub fn init_comm<const N: usize>(comm: &mut crate::io::Comm<N>) {
-    comm.nbgl_register_comm();
+    // Note: When using the `io_new` feature, this function is not needed as
+    // registration happens automatically in `Comm::new()`.
 }
 
 #[derive(Copy, Clone)]

@@ -152,7 +152,7 @@ impl NbglGenericSettings {
         self
     }
 
-    pub fn show(&mut self) -> SyncNbgl {
+    fn show_internal(&mut self) -> SyncNbgl {
         self.ux_sync_init();
         unsafe {
             nbgl_useCaseGenericSettings(
@@ -167,5 +167,17 @@ impl NbglGenericSettings {
             )
         }
         self.ux_sync_wait(false)
+    }
+
+    // TODO: return () instead?
+
+    #[cfg(feature = "io_new")]
+    pub fn show<const N: usize>(&mut self, _comm: &mut crate::io::Comm<N>) -> SyncNbgl {
+        self.show_internal()
+    }
+
+    #[cfg(not(feature = "io_new"))]
+    pub fn show(&mut self) -> SyncNbgl {
+        self.show_internal()
     }
 }

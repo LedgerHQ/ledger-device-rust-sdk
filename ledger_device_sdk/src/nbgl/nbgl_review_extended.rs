@@ -108,14 +108,8 @@ impl<'a> NbglReviewExtended<'a> {
         }
     }
 
-    /// Shows the extended review flow with the provided fields on the review pages.
-    /// # Arguments
-    /// * `fields` - A slice of `Field` representing the tag/value pairs to display.
-    /// # Returns
-    /// Returns `SyncNbgl::UxSyncRetOK` if the user accepts the review,
-    /// `SyncNbgl::UxSyncRetUserAborted` if the user rejects it,
-    /// or another `SyncNbgl` variant in case of an error.
-    pub fn show(&self, fields: &[Field]) -> SyncNbgl {
+    /// Shows the extended review flow with the provided fields on the review pages (internal implementation).
+    fn show_internal(&self, fields: &[Field]) -> SyncNbgl {
         unsafe {
             let v: Vec<CField> = fields.iter().map(|f| f.into()).collect();
             let mut tag_value_array: Vec<nbgl_contentTagValue_t> = Vec::new();
@@ -160,5 +154,36 @@ impl<'a> NbglReviewExtended<'a> {
             }
             self.ux_sync_wait(false)
         }
+    }
+
+    // TODO: return () instead?
+
+    /// Shows the extended review flow with the provided fields on the review pages.
+    /// # Arguments
+    /// * `_comm` - Mutable reference to Comm.
+    /// * `fields` - A slice of `Field` representing the tag/value pairs to display.
+    /// # Returns
+    /// Returns `SyncNbgl::UxSyncRetOK` if the user accepts the review,
+    /// `SyncNbgl::UxSyncRetUserAborted` if the user rejects it,
+    /// or another `SyncNbgl` variant in case of an error.
+    #[cfg(feature = "io_new")]
+    pub fn show<const N: usize>(
+        &self,
+        _comm: &mut crate::io::Comm<N>,
+        fields: &[Field],
+    ) -> SyncNbgl {
+        self.show_internal(fields)
+    }
+
+    /// Shows the extended review flow with the provided fields on the review pages.
+    /// # Arguments
+    /// * `fields` - A slice of `Field` representing the tag/value pairs to display.
+    /// # Returns
+    /// Returns `SyncNbgl::UxSyncRetOK` if the user accepts the review,
+    /// `SyncNbgl::UxSyncRetUserAborted` if the user rejects it,
+    /// or another `SyncNbgl` variant in case of an error.
+    #[cfg(not(feature = "io_new"))]
+    pub fn show(&self, fields: &[Field]) -> SyncNbgl {
+        self.show_internal(fields)
     }
 }
