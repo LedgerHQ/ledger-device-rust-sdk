@@ -100,13 +100,7 @@ impl NbglKeypad {
         NbglKeypad { hide, ..self }
     }
 
-    /// Shows the keypad and waits for user input.
-    /// # Arguments
-    /// * `pin` - A slice containing the expected PIN for validation.
-    /// # Returns
-    /// Returns `SyncNbgl::UxSyncRetPinValidated` if the entered PIN matches the expected PIN,
-    /// otherwise returns `SyncNbgl::UxSyncRetPinRejected`.
-    pub fn ask(self, pin: &[u8]) -> SyncNbgl {
+    fn ask_internal(self, pin: &[u8]) -> SyncNbgl {
         unsafe {
             self.ux_sync_init();
             nbgl_useCaseKeypad(
@@ -126,5 +120,27 @@ impl NbglKeypad {
                 return SyncNbgl::UxSyncRetPinRejected;
             }
         }
+    }
+
+    /// Shows the keypad and waits for user input.
+    /// # Arguments
+    /// * `pin` - A slice containing the expected PIN for validation.
+    /// # Returns
+    /// Returns `true` if the entered PIN matches the expected PIN,
+    /// otherwise returns `false`.
+    #[cfg(feature = "io_new")]
+    pub fn ask<const N: usize>(self, _comm: &mut crate::io::Comm<N>, pin: &[u8]) -> bool {
+        self.ask_internal(pin) == SyncNbgl::UxSyncRetPinValidated
+    }
+
+    /// Shows the keypad and waits for user input.
+    /// # Arguments
+    /// * `pin` - A slice containing the expected PIN for validation.
+    /// # Returns
+    /// Returns `SyncNbgl::UxSyncRetPinValidated` if the entered PIN matches the expected PIN,
+    /// otherwise returns `SyncNbgl::UxSyncRetPinRejected`.
+    #[cfg(not(feature = "io_new"))]
+    pub fn ask(self, pin: &[u8]) -> SyncNbgl {
+        self.ask_internal(pin)
     }
 }

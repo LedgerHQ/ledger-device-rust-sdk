@@ -65,7 +65,7 @@ impl NbglNavigableContent {
         NbglNavigableContent { nb_pages, ..self }
     }
 
-    pub fn show(&self) {
+    fn show_internal(&self) {
         unsafe {
             self.ux_sync_init();
             nbgl_useCaseNavigableContent(
@@ -81,5 +81,15 @@ impl NbglNavigableContent {
             );
             self.ux_sync_wait(false);
         }
+    }
+
+    #[cfg(feature = "io_new")]
+    pub fn show<const N: usize>(&self, _comm: &mut crate::io::Comm<N>) {
+        self.show_internal()
+    }
+
+    #[cfg(not(feature = "io_new"))]
+    pub fn show(&self) {
+        self.show_internal()
     }
 }

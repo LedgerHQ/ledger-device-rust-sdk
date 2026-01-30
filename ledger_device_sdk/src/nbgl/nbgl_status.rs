@@ -29,13 +29,7 @@ impl NbglStatus {
         }
     }
 
-    /// Shows the status page with the provided text.
-    /// # Arguments
-    /// * `success` - If `true`, shows a success status; otherwise, shows a failure status.
-    /// # Returns
-    /// This function does not return any value.
-    /// The status page is displayed for 3 seconds before automatically disappearing.
-    pub fn show(&self, success: bool) {
+    fn show_internal(&self, success: bool) {
         unsafe {
             self.ux_sync_init();
             nbgl_useCaseStatus(
@@ -48,5 +42,28 @@ impl NbglStatus {
             );
             self.ux_sync_wait(false);
         }
+    }
+
+    /// Shows the status page with the provided text.
+    /// # Arguments
+    /// * `_comm` - Mutable reference to Comm.
+    /// * `success` - If `true`, shows a success status; otherwise, shows a failure status.
+    /// # Returns
+    /// This function does not return any value.
+    /// The status page is displayed for 3 seconds before automatically disappearing.
+    #[cfg(feature = "io_new")]
+    pub fn show<const N: usize>(&self, _comm: &mut crate::io::Comm<N>, success: bool) {
+        self.show_internal(success)
+    }
+
+    /// Shows the status page with the provided text.
+    /// # Arguments
+    /// * `success` - If `true`, shows a success status; otherwise, shows a failure status.
+    /// # Returns
+    /// This function does not return any value.
+    /// The status page is displayed for 3 seconds before automatically disappearing.
+    #[cfg(not(feature = "io_new"))]
+    pub fn show(&self, success: bool) {
+        self.show_internal(success)
     }
 }

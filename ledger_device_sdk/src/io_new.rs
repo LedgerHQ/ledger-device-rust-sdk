@@ -4,7 +4,7 @@ mod event;
 pub use event::{DecodedEvent, DecodedEventType};
 
 mod bolos;
-mod callbacks;
+pub(crate) mod callbacks;
 use bolos::handle_bolos_apdu;
 use callbacks::{fetch_apdu_header_impl, next_event_ahead_impl, reply_status_impl, set_comm};
 
@@ -53,7 +53,7 @@ pub struct Comm<const N: usize = DEFAULT_BUF_SIZE> {
 
 impl<const N: usize> Comm<N> {
     pub fn new() -> Self {
-        Self {
+        let mut comm = Self {
             buf: [0; N],
             expected_cla: None,
             apdu_type: PacketTypes::PacketTypeNone as u8,
@@ -68,7 +68,20 @@ impl<const N: usize> Comm<N> {
             },
             pending_offset: 0,
             pending_length: 0,
+        };
+
+        // Check for singleton violation
+        unsafe {
+            if !callbacks::is_comm_null() {
+                panic!("Attempted to create multiple Comm instances. Only one Comm can exist at a time.");
+            }
         }
+
+        // Auto-register NBGL callbacks and panic handler
+        comm.nbgl_register_comm();
+        callbacks::register_panic_handler::<N>();
+
+        comm
     }
 
     pub(crate) fn nbgl_register_comm(&mut self) {
@@ -321,5 +334,12 @@ impl<'a, const N: usize> CommandResponse<'a, N> {
     /// Clear staged bytes length.
     pub fn clear(&mut self) {
         self.len = 0;
+    }
+}
+
+impl<const N: usize> Drop for Comm<N> {
+    fn drop(&mut self) {
+        callbacks::clear_comm();
+        callbacks::clear_panic_handler();
     }
 }
