@@ -414,7 +414,7 @@ impl NbglGenericReview {
             .collect()
     }
 
-    pub fn show(&self, reject_button_str: &str) -> bool {
+    fn show_internal(&self, reject_button_str: &str) -> bool {
         unsafe {
             let c_content_list: Vec<nbgl_content_t> = self.to_c_content_list();
 
@@ -446,5 +446,19 @@ impl NbglGenericReview {
                 }
             }
         }
+    }
+
+    #[cfg(feature = "io_new")]
+    pub fn show<const N: usize>(
+        &self,
+        _comm: &mut crate::io::Comm<N>,
+        reject_button_str: &str,
+    ) -> bool {
+        self.show_internal(reject_button_str)
+    }
+
+    #[cfg(not(feature = "io_new"))]
+    pub fn show(&self, reject_button_str: &str) -> bool {
+        self.show_internal(reject_button_str)
     }
 }

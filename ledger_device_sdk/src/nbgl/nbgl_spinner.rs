@@ -24,6 +24,28 @@ impl NbglSpinner {
         }
     }
 
+    fn show_internal(&mut self, text: &str) {
+        self.text[self.write_idx] = CString::new(text).unwrap();
+        self.read_idx = self.write_idx;
+        self.write_idx = (self.write_idx + 1) % 2;
+        unsafe {
+            nbgl_useCaseSpinner(self.text[self.read_idx].as_ptr() as *const c_char);
+        }
+    }
+
+    /// Shows the spinner with the current text.
+    /// Every call make the spinner "turn" to the next text.
+    /// # Arguments
+    /// * `_comm` - Mutable reference to Comm.
+    /// * `text` - The text to display below the spinner.
+    /// # Returns
+    /// This function does not return any value.
+    /// The spinner will "turn" automatically every 800 ms, provided the IO event loop is running to process TickerEvents.
+    #[cfg(feature = "io_new")]
+    pub fn show<const N: usize>(&mut self, _comm: &mut crate::io::Comm<N>, text: &str) {
+        self.show_internal(text)
+    }
+
     /// Shows the spinner with the current text.
     /// Every call make the spinner "turn" to the next text.
     /// # Arguments
@@ -31,12 +53,8 @@ impl NbglSpinner {
     /// # Returns
     /// This function does not return any value.
     /// The spinner will "turn" automatically every 800 ms, provided the IO event loop is running to process TickerEvents.
+    #[cfg(not(feature = "io_new"))]
     pub fn show(&mut self, text: &str) {
-        self.text[self.write_idx] = CString::new(text).unwrap();
-        self.read_idx = self.write_idx;
-        self.write_idx = (self.write_idx + 1) % 2;
-        unsafe {
-            nbgl_useCaseSpinner(self.text[self.read_idx].as_ptr() as *const c_char);
-        }
+        self.show_internal(text)
     }
 }
