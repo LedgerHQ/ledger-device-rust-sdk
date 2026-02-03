@@ -1,7 +1,10 @@
 use ledger_secure_sdk_sys::seph as sys_seph;
 use ledger_secure_sdk_sys::*;
 
+#[cfg(not(feature = "io_new"))]
 use crate::io::Reply;
+
+#[cfg(not(feature = "io_new"))]
 use crate::io::{ApduHeader, Comm, Event};
 
 pub use ledger_secure_sdk_sys::BOLOS_UX_CANCEL;

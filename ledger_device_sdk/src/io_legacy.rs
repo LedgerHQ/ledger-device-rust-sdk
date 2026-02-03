@@ -1,3 +1,7 @@
+// We suppress dead code warnings, as many of the members defined in this module are not used
+// with io_new. This can be removed once the migration to io_new is completed.
+#![cfg_attr(feature = "io_new", allow(dead_code))]
+
 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
 use ledger_secure_sdk_sys::buttons::{get_button_event, ButtonEvent, ButtonsState};
 use ledger_secure_sdk_sys::seph as sys_seph;
