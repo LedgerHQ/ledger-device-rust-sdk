@@ -1,4 +1,4 @@
-use crate::seph::{self, PacketTypes};
+use crate::seph::PacketTypes;
 
 mod event;
 pub use event::{DecodedEvent, DecodedEventType};
@@ -12,16 +12,7 @@ pub use crate::io_legacy::{ApduHeader, Event, Reply, StatusWords};
 
 use crate::io_callbacks::nbgl_register_callbacks;
 
-#[cfg(any(
-    target_os = "nanox",
-    target_os = "stax",
-    target_os = "flex",
-    target_os = "apex_p"
-))]
-use crate::seph::ItcUxEvent;
-
 use ledger_secure_sdk_sys::seph as sys_seph;
-use ledger_secure_sdk_sys::*;
 
 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
 use crate::buttons::ButtonEvent;
@@ -71,10 +62,10 @@ impl<const N: usize> Comm<N> {
         };
 
         // Check for singleton violation
-        unsafe {
-            if !callbacks::is_comm_null() {
-                panic!("Attempted to create multiple Comm instances. Only one Comm can exist at a time.");
-            }
+        if !callbacks::is_comm_null() {
+            panic!(
+                "Attempted to create multiple Comm instances. Only one Comm can exist at a time."
+            );
         }
 
         // Auto-register NBGL callbacks and panic handler
@@ -262,10 +253,6 @@ impl<'a, const N: usize> Rx<'a, N> {
     pub fn as_slice(&self) -> &[u8] {
         &self.comm.buf[..self.len]
     }
-    pub fn len(&self) -> usize {
-        self.len
-    }
-    pub fn consume(self) -> () {}
 
     /// Decode into a higher-level event. No replies are sent, but UX-related and other OS interactions are dealt with.
     pub fn decode_event(self) -> DecodedEvent<N> {
