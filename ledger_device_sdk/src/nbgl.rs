@@ -65,8 +65,23 @@ pub use nbgl_status::*;
 #[doc(inline)]
 pub use nbgl_streaming_review::*;
 
+#[cfg(not(feature = "io_new"))]
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum SyncNbgl {
+    UxSyncRetApproved = 0x00,
+    UxSyncRetRejected = 0x01,
+    UxSyncRetQuitted = 0x02,
+    UxSyncRetApduReceived = 0x03,
+    UxSyncRetSkipped = 0x04,
+    UxSyncRetContinue = 0x05,
+    UxSyncRetPinValidated = 0x06,
+    UxSyncRetPinRejected = 0x07,
+    UxSyncRetError = 0xFF,
+}
+
+#[cfg(feature = "io_new")]
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub(crate) enum SyncNbgl {
     UxSyncRetApproved = 0x00,
     UxSyncRetRejected = 0x01,
     UxSyncRetQuitted = 0x02,

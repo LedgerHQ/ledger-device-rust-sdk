@@ -169,15 +169,22 @@ impl NbglGenericSettings {
         self.ux_sync_wait(false)
     }
 
-    // TODO: return () instead?
-
-    #[cfg(feature = "io_new")]
-    pub fn show<const N: usize>(&mut self, _comm: &mut crate::io::Comm<N>) -> SyncNbgl {
-        self.show_internal()
+    #[cfg(not(feature = "io_new"))]
+    pub fn show(&mut self) {
+        self.show_internal();
     }
 
-    #[cfg(not(feature = "io_new"))]
-    pub fn show(&mut self) -> SyncNbgl {
-        self.show_internal()
+    /// # Returns
+    /// Returns `Ok(true)` if the action is approved,
+    /// `Ok(false)` if the action is rejected,
+    /// or `Err(u8)` with the error code in case of an error.
+    #[cfg(feature = "io_new")]
+    pub fn show<const N: usize>(&mut self, _comm: &mut crate::io::Comm<N>) -> Result<bool, u8> {
+        let ret = self.show_internal();
+        match ret {
+            SyncNbgl::UxSyncRetApproved => Ok(true),
+            SyncNbgl::UxSyncRetRejected => Ok(false),
+            _ => Err(u8::from(ret)),
+        }
     }
 }

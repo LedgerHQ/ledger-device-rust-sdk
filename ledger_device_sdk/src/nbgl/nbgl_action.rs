@@ -76,12 +76,17 @@ impl<'a> NbglAction<'a> {
         }
     }
 
-    // TODO: return () instead?
-
     /// Shows the action page.
+    /// # Returns
+    /// Returns `Ok(())` when the action button is pressed,
+    /// or `Err(u8)` with the error code in case of an error.
     #[cfg(feature = "io_new")]
-    pub fn show<const N: usize>(self, _comm: &mut crate::io::Comm<N>) -> SyncNbgl {
-        self.show_internal()
+    pub fn show<const N: usize>(self, _comm: &mut crate::io::Comm<N>) -> Result<(), u8> {
+        let ret = self.show_internal();
+        match ret {
+            SyncNbgl::UxSyncRetContinue => Ok(()),
+            _ => Err(u8::from(ret)),
+        }
     }
 
     /// Shows the action page.

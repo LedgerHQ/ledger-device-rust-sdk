@@ -182,21 +182,26 @@ impl<'a> NbglAdvanceReview<'a> {
         }
     }
 
-    // TODO: return () instead?
-
     /// Shows the advanced review flow.
     /// # Arguments
     /// * `_comm` - Mutable reference to Comm.
     /// * `fields` - A slice of `Field` representing the tag/value pairs to display.
     /// # Returns
-    /// Returns a `SyncNbgl` instance to manage the synchronous NBGL flow.
+    /// Returns `Ok(true)` if the user accepts the review,
+    /// `Ok(false)` if the user rejects it,
+    /// or `Err(u8)` with the error code in case of an error.
     #[cfg(feature = "io_new")]
     pub fn show<const N: usize>(
         &self,
         _comm: &mut crate::io::Comm<N>,
         fields: &[Field],
-    ) -> SyncNbgl {
-        self.show_internal(fields)
+    ) -> Result<bool, u8> {
+        let ret = self.show_internal(fields);
+        match ret {
+            SyncNbgl::UxSyncRetApproved => Ok(true),
+            SyncNbgl::UxSyncRetRejected => Ok(false),
+            _ => Err(u8::from(ret)),
+        }
     }
 
     /// Shows the advanced review flow.

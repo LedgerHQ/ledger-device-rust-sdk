@@ -83,12 +83,7 @@ impl<'a> NbglReviewExtended<'a> {
         }
     }
 
-    /// Starts the review flow by displaying the first page.
-    /// # Returns
-    /// Returns `SyncNbgl::UxSyncRetOK` if the user accepts the review,
-    /// `SyncNbgl::UxSyncRetUserAborted` if the user rejects it,
-    /// or another `SyncNbgl` variant in case of an error.
-    pub fn start(&self) -> SyncNbgl {
+    fn start_internal(&self) -> SyncNbgl {
         unsafe {
             let icon: nbgl_icon_details_t = match self.glyph_start {
                 Some(g) => g.into(),
@@ -106,6 +101,31 @@ impl<'a> NbglReviewExtended<'a> {
             );
             self.ux_sync_wait(false)
         }
+    }
+
+    /// Starts the review flow by displaying the first page.
+    /// # Returns
+    /// Returns `Ok(true)`` if the user accepts the review,
+    /// `Ok(false)` if the user rejects it,
+    /// or `Err(u8)` with the error code in case of an error.
+    #[cfg(feature = "io_new")]
+    pub fn start(&self) -> Result<bool, u8> {
+        let ret = self.start_internal();
+        match ret {
+            SyncNbgl::UxSyncRetContinue => Ok(true),
+            SyncNbgl::UxSyncRetRejected => Ok(false),
+            _ => Err(u8::from(ret)),
+        }
+    }
+
+    /// Starts the review flow by displaying the first page.
+    /// # Returns
+    /// Returns `SyncNbgl::UxSyncRetContinue` if the user accepts the review,
+    /// `SyncNbgl::UxSyncRetRejected` if the user rejects it,
+    /// or another `SyncNbgl` variant in case of an error.
+    #[cfg(not(feature = "io_new"))]
+    pub fn start(&self) -> SyncNbgl {
+        self.start_internal()
     }
 
     /// Shows the extended review flow with the provided fields on the review pages (internal implementation).
@@ -156,23 +176,26 @@ impl<'a> NbglReviewExtended<'a> {
         }
     }
 
-    // TODO: return () instead?
-
     /// Shows the extended review flow with the provided fields on the review pages.
     /// # Arguments
     /// * `_comm` - Mutable reference to Comm.
     /// * `fields` - A slice of `Field` representing the tag/value pairs to display.
     /// # Returns
-    /// Returns `SyncNbgl::UxSyncRetOK` if the user accepts the review,
-    /// `SyncNbgl::UxSyncRetUserAborted` if the user rejects it,
-    /// or another `SyncNbgl` variant in case of an error.
+    /// Returns `Ok(true)` if the user accepts the review,
+    /// `Ok(false)` if the user rejects it,
+    /// or `Err(u8)` with the error code in case of an error.
     #[cfg(feature = "io_new")]
     pub fn show<const N: usize>(
         &self,
         _comm: &mut crate::io::Comm<N>,
         fields: &[Field],
-    ) -> SyncNbgl {
-        self.show_internal(fields)
+    ) -> Result<bool, u8> {
+        let ret = self.show_internal(fields);
+        match ret {
+            SyncNbgl::UxSyncRetApproved => Ok(true),
+            SyncNbgl::UxSyncRetRejected => Ok(false),
+            _ => Err(u8::from(ret)),
+        }
     }
 
     /// Shows the extended review flow with the provided fields on the review pages.
