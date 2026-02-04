@@ -33,6 +33,8 @@ log_info = ["log_warn"]
 log_debug = ["log_info"]
 log_trace = ["log_debug"]
 unit_test = ["debug", "log_trace"]
+# backward compatibility for Sui app
+speculos = ["unit_test"]
 heap = [ "ledger_secure_sdk_sys/heap" ]
 nano_nbgl = [ "ledger_secure_sdk_sys/nano_nbgl" ]
 debug_csdk = [ "ledger_secure_sdk_sys/debug_csdk" ]
