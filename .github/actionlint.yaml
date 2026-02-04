@@ -1,0 +1,4 @@
+version: 1
+self-hosted-runner:
+  labels:
+    - public-ledgerhq-shared-small
