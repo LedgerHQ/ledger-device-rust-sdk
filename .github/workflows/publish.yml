@@ -7,9 +7,36 @@ on:
   workflow_dispatch:  # Allow manual workflow dispatch
 
 jobs:
+  check_versions:
+    runs-on: public-ledgerhq-shared-small
+    steps:
+      - name: Clone
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          repository: ${{ github.repository }}
+          ref: ${{ github.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check versions against changelogs
+        run: |
+          for crate in $(cargo metadata --no-deps --format-version=1 | jq -r '.packages[].name' | grep -v 'testmacro'); do
+            changelog_version=$(grep -Po '(?<=## \[)(\d+\.)+[^\]]' "$crate"/CHANGELOG.md | head -n 1)
+            cargo_version=$(cargo metadata --format-version=1 --no-deps |\
+                              jq -r --arg PACKAGE_NAME "$crate" '.packages[] | select(.name == $PACKAGE_NAME) | .version')
+            if [ "${changelog_version}" == "${cargo_version}" ]; then
+              echo "[INFO] cargo '${cargo_version}' and CHANGELOG '${changelog_version}' versions match."
+            else
+              echo "[ERROR] In crate $crate, cargo '${cargo_version}' and CHANGELOG '${changelog_version}' versions do not match. Aborting."
+              exit 1
+            fi
+          done
+
   deploy_include_gif:
     name: Deploy include_gif
     uses: LedgerHQ/ledger-app-workflows/.github/workflows/reusable_crates_deployment.yml@v1
+    needs: check_versions
     permissions:
       id-token: write
       attestations: write
@@ -26,6 +53,7 @@ jobs:
   deploy_ledger_secure_sdk_sys:
     name: Deploy ledger_secure_sdk_sys
     uses: LedgerHQ/ledger-app-workflows/.github/workflows/reusable_crates_deployment.yml@v1
+    needs: check_versions
     permissions:
       id-token: write
       attestations: write
@@ -42,6 +70,7 @@ jobs:
   deploy_ledger_device_sdk:
     name: Deploy ledger_device_sdk
     uses: LedgerHQ/ledger-app-workflows/.github/workflows/reusable_crates_deployment.yml@v1
+    needs: check_versions
     permissions:
       id-token: write
       attestations: write
@@ -51,6 +80,6 @@ jobs:
       publish: true
       release: false
       jfrog_deployment: true
-      #dry_run: ${{ github.event_name == 'workflow_dispatch' }}
+      dry_run: ${{ github.event_name == 'workflow_dispatch' }}
     secrets:
       cargo_token: ${{ secrets.CARGO_CRATES_TOKEN }}
