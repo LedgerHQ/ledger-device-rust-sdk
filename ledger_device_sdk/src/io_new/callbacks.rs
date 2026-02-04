@@ -25,6 +25,7 @@ pub(super) fn clear_comm() {
     }
 }
 
+#[allow(dead_code)]
 pub(super) fn is_comm_null() -> bool {
     unsafe { CURRENT_COMM.is_null() }
 }
@@ -35,7 +36,7 @@ unsafe fn get_comm<const N: usize>() -> &'static mut Comm<N> {
 }
 
 /// Register a type-erased panic handler for the current Comm instance.
-pub(super) fn register_panic_handler<const N: usize>() {
+pub fn register_panic_handler<const N: usize>() {
     unsafe {
         PANIC_REPLY_FN = Some(panic_reply_impl::<N>);
     }
