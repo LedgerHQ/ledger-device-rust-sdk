@@ -11,9 +11,9 @@ description = "Ledger device Rust SDK"
 serde_json = "1.0"
 
 [dev-dependencies]
-# enable the 'speculos' feature when testing
+# enable the 'unit_test' feature when testing
 # https://github.com/rust-lang/cargo/issues/2911#issuecomment-749580481
-ledger_device_sdk = { path = ".", features = ["speculos"] }
+ledger_device_sdk = { path = ".", features = ["unit_test"] }
 testmacro = { path = "../testmacro"}
 
 [dependencies]
@@ -26,8 +26,13 @@ const-zero = "0.1.1"
 ledger_secure_sdk_sys = { path = "../ledger_secure_sdk_sys", version = "1.14.0" }
 
 [features]
-debug = []
-speculos = []
+debug = ["log_error"]
+log_error = []
+log_warn = ["log_error"]
+log_info = ["log_warn"]
+log_debug = ["log_info"]
+log_trace = ["log_debug"]
+unit_test = ["debug", "log_trace"]
 heap = [ "ledger_secure_sdk_sys/heap" ]
 nano_nbgl = [ "ledger_secure_sdk_sys/nano_nbgl" ]
 debug_csdk = [ "ledger_secure_sdk_sys/debug_csdk" ]

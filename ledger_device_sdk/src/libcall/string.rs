@@ -118,7 +118,7 @@ impl<const N: usize> TryFrom<&str> for CustomString<N> {
 ///
 /// let val: [u8; 32] = token amount (32 bytes / 256 bits);
 /// let s: CustomString<79> = uint256_to_integer(&val); // max number of decimal digits for Uint256 = 78 (+ 1 spare for '.')
-/// testing::debug_print(s.print().unwrap());
+/// crate::log::info!(s.as_str());
 pub fn uint256_to_integer(value: &[u8; 32]) -> CustomString<79> {
     let mut s: CustomString<79> = CustomString::new();
 

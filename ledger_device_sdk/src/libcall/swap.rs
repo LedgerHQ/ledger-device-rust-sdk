@@ -32,7 +32,6 @@
     feature = "nano_nbgl"
 ))]
 use crate::nbgl::NbglSpinner;
-use crate::testing::debug_print;
 use ledger_secure_sdk_sys::{
     check_address_parameters_t, create_transaction_parameters_t, get_printable_amount_parameters_t,
     libargs_s__bindgen_ty_1, libargs_t, MAX_PRINTABLE_AMOUNT_SIZE,
@@ -253,7 +252,7 @@ fn read_c_string<const N: usize>(ptr: *const i8) -> ([u8; N], usize) {
 
     // Check if truncation occurred
     if c != '\0' as i8 && length == N {
-        debug_print("WARNING: C string truncated\n");
+        crate::log::warn!("C string truncated");
     }
 
     (buffer, length)
@@ -425,7 +424,7 @@ pub fn get_check_address_params<
     arg0: u32,
 ) -> CheckAddressParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE, ADDRESS_EXTRA_ID_BUF_SIZE> {
     //  --8<-- [end:get_check_address_params]
-    debug_print("=> get_check_address_params\n");
+    crate::log::info!("=> get_check_address_params");
 
     let mut libarg: libargs_t = libargs_t::default();
 
@@ -446,10 +445,10 @@ pub fn get_check_address_params<
         ADDRESS_EXTRA_ID_BUF_SIZE,
     > = Default::default();
 
-    debug_print("==> GET_COIN_CONFIG_LENGTH\n");
+    crate::log::info!("==> GET_COIN_CONFIG_LENGTH");
     check_address_params.coin_config_len = params.coin_configuration_length as usize;
 
-    debug_print("==> GET_COIN_CONFIG \n");
+    crate::log::info!("==> GET_COIN_CONFIG");
     unsafe {
         params.coin_configuration.copy_to_nonoverlapping(
             check_address_params.coin_config.as_mut_ptr(),
@@ -459,16 +458,16 @@ pub fn get_check_address_params<
         );
     }
 
-    debug_print("==> GET_DPATH_LENGTH\n");
+    crate::log::info!("==> GET_DPATH_LENGTH");
     check_address_params.dpath_len =
         DPATH_STAGE_SIZE.min(unsafe { *(params.address_parameters as *const u8) as usize });
 
-    debug_print("==> GET_DPATH \n");
+    crate::log::info!("==> GET_DPATH");
     for i in 1..1 + check_address_params.dpath_len * 4 {
         check_address_params.dpath[i - 1] = unsafe { *(params.address_parameters.add(i)) };
     }
 
-    debug_print("==> GET_REF_ADDRESS\n");
+    crate::log::info!("==> GET_REF_ADDRESS");
     let (address, address_len) =
         read_c_string::<ADDRESS_BUF_SIZE>(params.address_to_check as *const i8);
     check_address_params.ref_address = address;
@@ -499,7 +498,7 @@ pub fn get_printable_amount_params<
     arg0: u32,
 ) -> PrintableAmountParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE, ADDRESS_EXTRA_ID_BUF_SIZE> {
     //  --8<-- [end:get_printable_amount_params]
-    debug_print("=> get_printable_amount_params\n");
+    crate::log::info!("=> get_printable_amount_params");
 
     let mut libarg: libargs_t = libargs_t::default();
 
@@ -521,10 +520,10 @@ pub fn get_printable_amount_params<
         ADDRESS_EXTRA_ID_BUF_SIZE,
     > = Default::default();
 
-    debug_print("==> GET_COIN_CONFIG_LENGTH\n");
+    crate::log::info!("==> GET_COIN_CONFIG_LENGTH");
     printable_amount_params.coin_config_len = params.coin_configuration_length as usize;
 
-    debug_print("==> GET_COIN_CONFIG \n");
+    crate::log::info!("==> GET_COIN_CONFIG");
     unsafe {
         params.coin_configuration.copy_to_nonoverlapping(
             printable_amount_params.coin_config.as_mut_ptr(),
@@ -534,19 +533,19 @@ pub fn get_printable_amount_params<
         );
     }
 
-    debug_print("==> GET_IS_FEE\n");
+    crate::log::info!("==> GET_IS_FEE");
     printable_amount_params.is_fee = params.is_fee == true;
 
-    debug_print("==> GET_AMOUNT_LENGTH\n");
+    crate::log::info!("==> GET_AMOUNT_LENGTH");
     printable_amount_params.amount_len = AMOUNT_BUF_SIZE.min(params.amount_length as usize);
 
-    debug_print("==> GET_AMOUNT\n");
+    crate::log::info!("==> GET_AMOUNT");
     for i in 0..printable_amount_params.amount_len {
         printable_amount_params.amount[AMOUNT_BUF_SIZE - printable_amount_params.amount_len + i] =
             unsafe { *(params.amount.add(i)) };
     }
 
-    debug_print("==> GET_AMOUNT_STR\n");
+    crate::log::info!("==> GET_AMOUNT_STR");
     printable_amount_params.amount_str = unsafe {
         &(*(libarg.__bindgen_anon_1.get_printable_amount as *mut get_printable_amount_parameters_t))
             .printable_amount as *const core::ffi::c_char as *mut i8
@@ -584,7 +583,7 @@ pub fn sign_tx_params<
     arg0: u32,
 ) -> CreateTxParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE, ADDRESS_EXTRA_ID_BUF_SIZE> {
     //  --8<-- [end:sign_tx_params]
-    debug_print("=> sign_tx_params\n");
+    crate::log::info!("=> sign_tx_params");
 
     let mut libarg: libargs_t = libargs_t::default();
 
@@ -606,10 +605,10 @@ pub fn sign_tx_params<
         ADDRESS_EXTRA_ID_BUF_SIZE,
     > = Default::default();
 
-    debug_print("==> GET_COIN_CONFIG_LENGTH\n");
+    crate::log::info!("==> GET_COIN_CONFIG_LENGTH");
     create_tx_params.coin_config_len = params.coin_configuration_length as usize;
 
-    debug_print("==> GET_COIN_CONFIG \n");
+    crate::log::info!("==> GET_COIN_CONFIG");
     unsafe {
         params.coin_configuration.copy_to_nonoverlapping(
             create_tx_params.coin_config.as_mut_ptr(),
@@ -617,27 +616,27 @@ pub fn sign_tx_params<
         );
     }
 
-    debug_print("==> GET_AMOUNT\n");
+    crate::log::info!("==> GET_AMOUNT");
     create_tx_params.amount_len = AMOUNT_BUF_SIZE.min(params.amount_length as usize);
     for i in 0..create_tx_params.amount_len {
         create_tx_params.amount[AMOUNT_BUF_SIZE - create_tx_params.amount_len + i] =
             unsafe { *(params.amount.add(i)) };
     }
 
-    debug_print("==> GET_FEE\n");
+    crate::log::info!("==> GET_FEE");
     create_tx_params.fee_amount_len = AMOUNT_BUF_SIZE.min(params.fee_amount_length as usize);
     for i in 0..create_tx_params.fee_amount_len {
         create_tx_params.fee_amount[AMOUNT_BUF_SIZE - create_tx_params.fee_amount_len + i] =
             unsafe { *(params.fee_amount.add(i)) };
     }
 
-    debug_print("==> GET_DESTINATION_ADDRESS\n");
+    crate::log::info!("==> GET_DESTINATION_ADDRESS");
     let (address, address_len) =
         read_c_string::<ADDRESS_BUF_SIZE>(params.destination_address as *const i8);
     create_tx_params.dest_address = address;
     create_tx_params.dest_address_len = address_len;
 
-    debug_print("==> GET_DESTINATION_ADDRESS_EXTRA_ID\n");
+    crate::log::info!("==> GET_DESTINATION_ADDRESS_EXTRA_ID");
     let (extra_id, extra_id_len) = read_c_string::<ADDRESS_EXTRA_ID_BUF_SIZE>(
         params.destination_address_extra_id as *const i8,
     );
