@@ -217,6 +217,15 @@ void link_pass_nvram(
   void* nvram_prev = *nvram_prev_val_ptr;
   void* envram_prev = nvram_prev + (envram_ptr - nvram_ptr);
 
+  // If NVM was wiped/corrupted, treat it as first run:
+  // use link-time nvram range as "previous" range.
+  // This makes link_pass_nvram resilient to the .nvram section being zeroed out, which is
+  // currently the behavior in speculos.
+  if (nvram_prev == (void*)0x0 || nvram_prev == (void*)0xFFFFFFFF) {
+      nvram_prev = nvram_ptr;
+      envram_prev = envram_ptr;
+  }
+
   void* link_pass_in_progress_tag = (void*) 0x1;
   if (nvram_prev == link_pass_in_progress_tag) {
       // This indicates that the previous link_pass did not complete successfully
