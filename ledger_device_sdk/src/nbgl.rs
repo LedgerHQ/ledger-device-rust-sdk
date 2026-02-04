@@ -408,10 +408,7 @@ pub fn init_comm(comm: &mut crate::io::Comm) {
 }
 
 #[cfg(feature = "io_new")]
-pub fn init_comm<const N: usize>(_comm: &mut crate::io::Comm<N>) {
-    // Note: When using the `io_new` feature, this function is not needed as
-    // registration happens automatically in `Comm::new()`.
-}
+pub use crate::io::init_comm;
 
 #[derive(Copy, Clone)]
 pub enum TuneIndex {
