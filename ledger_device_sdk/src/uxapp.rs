@@ -69,15 +69,9 @@ impl UxEvent {
     pub fn block() -> u32 {
         let mut ret = unsafe { os_sched_last_status(TASK_BOLOS_UX as u32) } as u32;
         while ret == BOLOS_UX_IGNORE || ret == BOLOS_UX_CONTINUE {
-            if unsafe { os_sched_is_running(TASK_SUBTASKS_START as u32) }
-                != BOLOS_TRUE.try_into().unwrap()
-            {
-                let mut spi_buffer = [0u8; 256];
-                sys_seph::io_rx(&mut spi_buffer, true);
-                UxEvent::Event.request();
-            } else {
-                unsafe { os_sched_yield(BOLOS_UX_OK as u8) };
-            }
+            let mut spi_buffer = [0u8; 256];
+            sys_seph::io_rx(&mut spi_buffer, true);
+            UxEvent::Event.request();
             ret = unsafe { os_sched_last_status(TASK_BOLOS_UX as u32) } as u32;
         }
         ret
@@ -92,21 +86,15 @@ impl UxEvent {
         let mut ret = unsafe { os_sched_last_status(TASK_BOLOS_UX as u32) } as u32;
         let mut event = None;
         while ret == BOLOS_UX_IGNORE || ret == BOLOS_UX_CONTINUE {
-            if unsafe { os_sched_is_running(TASK_SUBTASKS_START as u32) }
-                != BOLOS_TRUE.try_into().unwrap()
-            {
-                let status = sys_seph::io_rx(&mut comm.io_buffer, true);
-                if status > 0 {
-                    event = comm.decode_event(status)
-                }
+            let status = sys_seph::io_rx(&mut comm.io_buffer, true);
+            if status > 0 {
+                event = comm.decode_event(status)
+            }
 
-                UxEvent::Event.request();
+            UxEvent::Event.request();
 
-                if let Option::Some(Event::Command(_)) = event {
-                    return (ret, event);
-                }
-            } else {
-                unsafe { os_sched_yield(BOLOS_UX_OK as u8) };
+            if let Option::Some(Event::Command(_)) = event {
+                return (ret, event);
             }
             ret = unsafe { os_sched_last_status(TASK_BOLOS_UX as u32) } as u32;
         }
