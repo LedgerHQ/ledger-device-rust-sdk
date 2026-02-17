@@ -111,7 +111,7 @@ void link_pass(
     PRINTHEXC("First reloc: ", reloc_start->r_offset);
 
     // Loop over the rodata entries - we could loop over the
-    // correct seciton, but this also works.
+    // correct section, but this also works.
     for (Elf32_Rel* reloc = reloc_start; reloc < reloc_end; reloc++) {
       // This is the (absolute) elf *load* address of the relocation.
       link_addr_t abs_offset = reloc->r_offset;
