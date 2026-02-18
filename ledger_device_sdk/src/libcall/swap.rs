@@ -37,6 +37,11 @@ use ledger_secure_sdk_sys::{
     libargs_s__bindgen_ty_1, libargs_t, MAX_PRINTABLE_AMOUNT_SIZE,
 };
 
+#[cfg(feature = "io_new")]
+use crate::io::CommError;
+#[cfg(feature = "io_new")]
+use crate::io::CommandResponse;
+
 extern crate alloc;
 
 pub const DEFAULT_COIN_CONFIG_BUF_SIZE: usize = 16;
@@ -220,6 +225,7 @@ impl<T: SwapAppErrorCodeTrait> SwapError<T> {
     ///     return Err(AppSW::SwapFail);
     /// }
     /// ```
+    #[cfg(not(feature = "io_new"))]
     pub fn append_to_comm(&self, comm: &mut crate::io::Comm) -> [u8; 2] {
         let error_bytes = [self.common_code as u8, self.app_code.as_u8()];
         comm.append(&error_bytes);
@@ -227,6 +233,19 @@ impl<T: SwapAppErrorCodeTrait> SwapError<T> {
             comm.append(msg.as_bytes());
         }
         error_bytes
+    }
+
+    #[cfg(feature = "io_new")]
+    pub fn append_to_response<const N: usize>(
+        &self,
+        response: &mut CommandResponse<'_, N>,
+    ) -> Result<[u8; 2], CommError> {
+        let error_bytes = [self.common_code as u8, self.app_code.as_u8()];
+        response.append(&error_bytes)?;
+        if let Some(ref msg) = self.message {
+            response.append(msg.as_bytes())?;
+        }
+        Ok(error_bytes)
     }
 }
 //  --8<-- [end:error_code_api]

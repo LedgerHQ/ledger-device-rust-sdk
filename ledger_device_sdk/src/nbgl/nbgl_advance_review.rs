@@ -134,12 +134,7 @@ impl<'a> NbglAdvanceReview<'a> {
         }
     }
 
-    /// Shows the advanced review flow.
-    /// # Arguments
-    /// * `fields` - A slice of `Field` representing the tag/value pairs to display.
-    /// # Returns
-    /// Returns a `SyncNbgl` instance to manage the synchronous NBGL flow.
-    pub fn show(&self, fields: &[Field]) -> SyncNbgl {
+    fn show_internal(&self, fields: &[Field]) -> SyncNbgl {
         unsafe {
             let v: Vec<CField> = fields.iter().map(|f| f.into()).collect();
             let mut tag_value_array: Vec<nbgl_contentTagValue_t> = Vec::new();
@@ -185,5 +180,37 @@ impl<'a> NbglAdvanceReview<'a> {
 
             self.ux_sync_wait(false)
         }
+    }
+
+    /// Shows the advanced review flow.
+    /// # Arguments
+    /// * `_comm` - Mutable reference to Comm.
+    /// * `fields` - A slice of `Field` representing the tag/value pairs to display.
+    /// # Returns
+    /// Returns `Ok(true)` if the user accepts the review,
+    /// `Ok(false)` if the user rejects it,
+    /// or `Err(u8)` with the error code in case of an error.
+    #[cfg(feature = "io_new")]
+    pub fn show<const N: usize>(
+        &self,
+        _comm: &mut crate::io::Comm<N>,
+        fields: &[Field],
+    ) -> Result<bool, u8> {
+        let ret = self.show_internal(fields);
+        match ret {
+            SyncNbgl::UxSyncRetApproved => Ok(true),
+            SyncNbgl::UxSyncRetRejected => Ok(false),
+            _ => Err(u8::from(ret)),
+        }
+    }
+
+    /// Shows the advanced review flow.
+    /// # Arguments
+    /// * `fields` - A slice of `Field` representing the tag/value pairs to display.
+    /// # Returns
+    /// Returns a `SyncNbgl` instance to manage the synchronous NBGL flow.
+    #[cfg(not(feature = "io_new"))]
+    pub fn show(&self, fields: &[Field]) -> SyncNbgl {
+        self.show_internal(fields)
     }
 }

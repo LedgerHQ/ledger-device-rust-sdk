@@ -1,4 +1,4 @@
-use super::{Comm, StatusWords, DEFAULT_BUF_SIZE};
+use super::{Comm, StatusWords};
 use ledger_secure_sdk_sys::*;
 
 use crate::io_legacy::{
@@ -54,10 +54,11 @@ pub(crate) fn handle_bolos_apdu<const N: usize>(comm: &mut Comm<N>, ins: u8) {
                 &public_key as *const cx_ecfp_384_public_key_t as *mut cx_ecfp_384_public_key_t,
             );
             if err != 0 {
-                comm.begin_response()
+                let _ = comm
+                    .begin_response()
                     .send(SyscallError::from(PkiLoadCertificateError::from(err)));
             } else {
-                comm.begin_response().send(StatusWords::Ok);
+                let _ = comm.begin_response().send(StatusWords::Ok);
             }
         },
         // Unknown INS within BOLOS namespace
