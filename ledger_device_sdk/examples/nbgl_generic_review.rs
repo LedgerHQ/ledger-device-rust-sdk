@@ -28,6 +28,7 @@ extern "C" fn sample_main() {
     const FERRIS: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_14x14.png", NBGL));
 
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     let centered_info = CenteredInfo::new(
         "Sample centered info",
         "Generic text",
@@ -36,6 +37,15 @@ extern "C" fn sample_main() {
         true,
         CenteredInfoStyle::LargeCaseBoldInfo,
         0,
+    );
+
+    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    let centered_info = CenteredInfo::new(
+        "Sample centered info",
+        "Generic text",
+        Some(&FERRIS),
+        true,
+        CenteredInfoStyle::RegularInfo,
     );
 
     let info_button = InfoButton::new(
@@ -75,11 +85,11 @@ extern "C" fn sample_main() {
     let infos_list = InfosList::new(&my_example_fields);
 
     let review: NbglGenericReview = NbglGenericReview::new()
-        .add_content(NbglPageContent::CenteredInfo(centered_info))
-        .add_content(NbglPageContent::InfoButton(info_button))
-        .add_content(NbglPageContent::InfoLongPress(info_long_press))
-        .add_content(NbglPageContent::TagValueList(tag_values_list))
-        .add_content(NbglPageContent::InfosList(infos_list))
+        // .add_content(NbglPageContent::CenteredInfo(centered_info))
+        // .add_content(NbglPageContent::InfoButton(info_button))
+        // .add_content(NbglPageContent::InfoLongPress(info_long_press))
+        //.add_content(NbglPageContent::TagValueList(tag_values_list));
+        //.add_content(NbglPageContent::InfosList(infos_list));
         .add_content(NbglPageContent::TagValueConfirm(tag_value_confirm));
 
     #[cfg(target_os = "apex_p")]

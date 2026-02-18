@@ -3,19 +3,36 @@ use super::*;
 /// Enum representing the different styles available for centered info content.
 #[derive(Copy, Clone)]
 pub enum CenteredInfoStyle {
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     LargeCaseInfo = 0,
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     LargeCaseBoldInfo,
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     NormalInfo,
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     PluginInfo,
+    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    RegularInfo = 0,
+    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    BoldText1Info,
+    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    ButtonInfo,
 }
 
 impl From<CenteredInfoStyle> for nbgl_contentCenteredInfoStyle_t {
     fn from(style: CenteredInfoStyle) -> nbgl_contentCenteredInfoStyle_t {
+        #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
         match style {
             CenteredInfoStyle::LargeCaseInfo => LARGE_CASE_INFO,
             CenteredInfoStyle::LargeCaseBoldInfo => LARGE_CASE_BOLD_INFO,
             CenteredInfoStyle::NormalInfo => NORMAL_INFO,
             CenteredInfoStyle::PluginInfo => PLUGIN_INFO,
+        }
+        #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+        match style {
+            CenteredInfoStyle::RegularInfo => REGULAR_INFO,
+            CenteredInfoStyle::BoldText1Info => BOLD_TEXT1_INFO,
+            CenteredInfoStyle::ButtonInfo => BUTTON_INFO,
         }
     }
 }
@@ -26,10 +43,12 @@ impl From<CenteredInfoStyle> for nbgl_contentCenteredInfoStyle_t {
 pub struct CenteredInfo {
     text1: CString,
     text2: CString,
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     text3: CString,
     icon: Option<nbgl_icon_details_t>,
     on_top: bool,
     style: CenteredInfoStyle,
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     offset_y: i16,
 }
 
@@ -37,19 +56,21 @@ impl CenteredInfo {
     pub fn new(
         text1: &str,
         text2: &str,
-        text3: &str,
+        #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))] text3: &str,
         icon: Option<&NbglGlyph>,
         on_top: bool,
         style: CenteredInfoStyle,
-        offset_y: i16,
+        #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))] offset_y: i16,
     ) -> CenteredInfo {
         CenteredInfo {
             text1: CString::new(text1).unwrap(),
             text2: CString::new(text2).unwrap(),
+            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
             text3: CString::new(text3).unwrap(),
             icon: icon.map_or(None, |g| Some(g.into())),
             on_top: on_top,
             style: style,
+            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
             offset_y: offset_y,
         }
     }
@@ -267,6 +288,7 @@ impl From<&NbglPageContent>
                 let centered_info = nbgl_contentCenteredInfo_t {
                     text1: data.text1.as_ptr() as *const c_char,
                     text2: data.text2.as_ptr() as *const c_char,
+                    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
                     text3: data.text3.as_ptr() as *const c_char,
                     icon: data
                         .icon
@@ -274,6 +296,7 @@ impl From<&NbglPageContent>
                         .map_or(core::ptr::null(), |icon| icon as *const nbgl_icon_details_t),
                     onTop: data.on_top,
                     style: data.style.into(),
+                    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
                     offsetY: data.offset_y,
                     ..Default::default()
                 };
