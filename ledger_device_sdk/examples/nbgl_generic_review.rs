@@ -41,7 +41,7 @@ extern "C" fn sample_main() {
 
     #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
     let centered_info = CenteredInfo::new(
-        "Sample centered info",
+        "Centered info",
         "Generic text",
         Some(&FERRIS),
         true,
@@ -55,6 +55,7 @@ extern "C" fn sample_main() {
         TuneIndex::Success,
     );
 
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     let info_long_press = InfoLongPress::new(
         "Validate to send token",
         Some(&FERRIS),
@@ -84,12 +85,18 @@ extern "C" fn sample_main() {
 
     let infos_list = InfosList::new(&my_example_fields);
 
-    let review: NbglGenericReview = NbglGenericReview::new()
-        // .add_content(NbglPageContent::CenteredInfo(centered_info))
-        // .add_content(NbglPageContent::InfoButton(info_button))
-        // .add_content(NbglPageContent::InfoLongPress(info_long_press))
-        //.add_content(NbglPageContent::TagValueList(tag_values_list));
-        //.add_content(NbglPageContent::InfosList(infos_list));
+    let mut review = NbglGenericReview::new()
+        .add_content(NbglPageContent::CenteredInfo(centered_info))
+        .add_content(NbglPageContent::InfoButton(info_button));
+
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    {
+        review = review.add_content(NbglPageContent::InfoLongPress(info_long_press));
+    }
+
+    review = review
+        .add_content(NbglPageContent::TagValueList(tag_values_list))
+        .add_content(NbglPageContent::InfosList(infos_list))
         .add_content(NbglPageContent::TagValueConfirm(tag_value_confirm));
 
     #[cfg(target_os = "apex_p")]
