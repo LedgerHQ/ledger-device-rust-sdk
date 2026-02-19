@@ -11,25 +11,44 @@ pub(crate) fn handle_bolos_apdu<const N: usize>(comm: &mut Comm<N>, ins: u8) {
     match ins {
         // Get Information INS: retrieve App name and version
         BOLOS_INS_GET_VERSION => {
-            const APP_NAME: &[u8] = option_env!("APP_NAME").unwrap_or("Unknown").as_bytes();
-            const APP_VERSION: &[u8] = option_env!("APP_VERSION").unwrap_or("Unknown").as_bytes();
-
             let mut response = comm.begin_response();
+            let _ = response.append(&[0x01]);
+            const MAX_TAG_LENGTH: u8 = 32; // maximum length for the buffer containing app name/version.
+            let mut tag_buf = [0u8; MAX_TAG_LENGTH as usize];
 
-            if APP_NAME.len() + APP_VERSION.len() + 5 > N {
+            // ---- App name ----
+            let name_len = unsafe {
+                os_registry_get_current_app_tag(
+                    BOLOS_TAG_APPNAME,
+                    tag_buf.as_mut_ptr(),
+                    MAX_TAG_LENGTH as u32,
+                )
+            };
+
+            if name_len > MAX_TAG_LENGTH.into() {
                 let _ = response.send(StatusWords::Panic); // this should never happen
                 return;
             }
 
-            let _ = response.append(&[0x01]);
+            let _ = response.append(&[name_len as u8]);
+            let _ = response.append(&tag_buf[..name_len as usize]);
 
-            // Name length and value
-            let _ = response.append(&[APP_NAME.len() as u8]);
-            let _ = response.append(APP_NAME);
+            // ---- App version ----
+            let ver_len = unsafe {
+                os_registry_get_current_app_tag(
+                    BOLOS_TAG_APPVERSION,
+                    tag_buf.as_mut_ptr(),
+                    MAX_TAG_LENGTH as u32,
+                )
+            };
 
-            // Version length and value
-            let _ = response.append(&[APP_VERSION.len() as u8]);
-            let _ = response.append(APP_VERSION);
+            if ver_len > MAX_TAG_LENGTH.into() {
+                let _ = response.send(StatusWords::Panic); // this should never happen
+                return;
+            }
+
+            let _ = response.append(&[ver_len as u8]);
+            let _ = response.append(&tag_buf[..ver_len as usize]);
 
             // ---- Flags ----
             let flags_byte = unsafe { os_flags() } as u8;
