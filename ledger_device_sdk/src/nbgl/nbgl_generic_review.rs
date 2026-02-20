@@ -115,6 +115,26 @@ impl CenteredInfo {
     }
 }
 
+impl From<&CenteredInfo> for nbgl_contentCenteredInfo_t {
+    fn from(info: &CenteredInfo) -> nbgl_contentCenteredInfo_t {
+        nbgl_contentCenteredInfo_t {
+            text1: info.text1.as_ptr() as *const c_char,
+            text2: info.text2.as_ptr() as *const c_char,
+            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+            text3: info.text3.as_ptr() as *const c_char,
+            icon: info
+                .icon
+                .as_ref()
+                .map_or(core::ptr::null(), |icon| icon as *const nbgl_icon_details_t),
+            onTop: info.on_top,
+            style: info.style.into(),
+            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+            offsetY: info.offset_y,
+            ..Default::default()
+        }
+    }
+}
+
 /// A confirmation screen with a "long press" button for use with
 /// [`NbglGenericReview`].
 ///
@@ -148,6 +168,22 @@ impl InfoLongPress {
             icon: icon.map_or(None, |g| Some(g.into())),
             long_press_text: CString::new(long_press_text).unwrap(),
             tune_id: tune_id,
+        }
+    }
+}
+
+impl From<&InfoLongPress> for nbgl_contentInfoLongPress_t {
+    fn from(info: &InfoLongPress) -> nbgl_contentInfoLongPress_t {
+        nbgl_contentInfoLongPress_t {
+            text: info.text.as_ptr() as *const c_char,
+            icon: info
+                .icon
+                .as_ref()
+                .map_or(core::ptr::null(), |icon| icon as *const nbgl_icon_details_t),
+            longPressText: info.long_press_text.as_ptr() as *const c_char,
+            longPressToken: FIRST_USER_TOKEN as u8,
+            tuneId: info.tune_id as u8,
+            ..Default::default()
         }
     }
 }
@@ -189,17 +225,36 @@ impl InfoButton {
     }
 }
 
+impl From<&InfoButton> for nbgl_contentInfoButton_t {
+    fn from(info: &InfoButton) -> nbgl_contentInfoButton_t {
+        nbgl_contentInfoButton_t {
+            text: info.text.as_ptr() as *const c_char,
+            icon: info
+                .icon
+                .as_ref()
+                .map_or(core::ptr::null(), |icon| icon as *const nbgl_icon_details_t),
+            buttonText: info.button_text.as_ptr() as *const c_char,
+            buttonToken: FIRST_USER_TOKEN as u8,
+            tuneId: info.tune_id as u8,
+            ..Default::default()
+        }
+    }
+}
+
 /// A list of tag/value pairs for use with [`NbglGenericReview`].
 ///
 /// Each pair is rendered as a labelled field (tag on the left, value on the
 /// right). Display options control the maximum number of lines per value,
 /// text casing, and word-wrapping behaviour.
 pub struct TagValueList {
+    _cfields: Vec<CField>,
+    /// Vector of C-compatible strings representing the tag/value pairs.
     pairs: Vec<nbgl_contentTagValue_t>,
-    _items: Vec<CString>,
-    _values: Vec<CString>,
+    /// Maximum number of lines allowed for each value before truncation.
     nb_max_lines_for_value: u8,
+    /// If `true`, values are rendered in a smaller font.
     small_case_for_value: bool,
+    /// If `true`, long values are word-wrapped instead of truncated.
     wrapping: bool,
 }
 
@@ -208,7 +263,7 @@ impl TagValueList {
     ///
     /// # Arguments
     ///
-    /// * `pairs` — Slice of [`Field`] items, each containing a `name` (tag)
+    /// * `tvl` — Slice of [`Field`] items, each containing a `name` (tag)
     ///   and a `value`.
     /// * `nb_max_lines_for_value` — Maximum number of lines allowed for each
     ///   value before truncation.
@@ -217,30 +272,16 @@ impl TagValueList {
     /// * `wrapping` — If `true`, long values are word-wrapped instead of
     ///   truncated.
     pub fn new(
-        pairs: &[Field],
+        tvl: &[Field],
         nb_max_lines_for_value: u8,
         small_case_for_value: bool,
         wrapping: bool,
     ) -> TagValueList {
-        let mut c_field_strings: Vec<nbgl_contentTagValue_t> = Vec::with_capacity(pairs.len());
-        let mut c_field_names: Vec<CString> = Vec::with_capacity(pairs.len());
-        let mut c_field_values: Vec<CString> = Vec::with_capacity(pairs.len());
-        for field in pairs {
-            let name = CString::new(field.name).unwrap();
-            let value = CString::new(field.value).unwrap();
-            let tag_value = nbgl_contentTagValue_t {
-                item: name.as_ptr() as *const c_char,
-                value: value.as_ptr() as *const c_char,
-                ..Default::default()
-            };
-            c_field_strings.push(tag_value);
-            c_field_names.push(name);
-            c_field_values.push(value);
-        }
+        let cfields: Vec<CField> = tvl.iter().map(|field| field.into()).collect();
+        let pairs: Vec<nbgl_contentTagValue_t> = cfields.iter().map(|pair| pair.into()).collect();
         TagValueList {
-            pairs: c_field_strings,
-            _items: c_field_names,
-            _values: c_field_values,
+            _cfields: cfields,
+            pairs: pairs,
             nb_max_lines_for_value,
             small_case_for_value,
             wrapping,
@@ -249,17 +290,17 @@ impl TagValueList {
 }
 
 impl From<&TagValueList> for nbgl_contentTagValueList_t {
-    fn from(list: &TagValueList) -> nbgl_contentTagValueList_t {
-        let list = nbgl_contentTagValueList_t {
-            pairs: list.pairs.as_ptr() as *const nbgl_contentTagValue_t,
-            nbPairs: list.pairs.len() as u8,
-            nbMaxLinesForValue: list.nb_max_lines_for_value,
+    fn from(tvl: &TagValueList) -> nbgl_contentTagValueList_t {
+        let nbgl_content_tvl = nbgl_contentTagValueList_t {
+            pairs: tvl.pairs.as_ptr() as *const nbgl_contentTagValue_t,
+            nbPairs: tvl.pairs.len() as u8,
+            nbMaxLinesForValue: tvl.nb_max_lines_for_value,
             token: FIRST_USER_TOKEN as u8,
-            smallCaseForValue: list.small_case_for_value,
-            wrapping: list.wrapping,
+            smallCaseForValue: tvl.small_case_for_value,
+            wrapping: tvl.wrapping,
             ..Default::default()
         };
-        list
+        nbgl_content_tvl
     }
 }
 
@@ -300,6 +341,21 @@ impl TagValueConfirm {
             tune_id: tune_id,
             confirmation_text: confirmation_text_cstring,
             cancel_text: cancel_text_cstring,
+        }
+    }
+}
+
+impl From<&TagValueConfirm> for nbgl_contentTagValueConfirm_t {
+    fn from(tvc: &TagValueConfirm) -> nbgl_contentTagValueConfirm_t {
+        nbgl_contentTagValueConfirm_t {
+            tagValueList: tvc.tag_value_list,
+            detailsButtonToken: (FIRST_USER_TOKEN + 2) as u8,
+            tuneId: tvc.tune_id as u8,
+            confirmationText: tvc.confirmation_text.as_ptr() as *const c_char,
+            cancelText: tvc.cancel_text.as_ptr() as *const c_char,
+            confirmationToken: FIRST_USER_TOKEN as u8,
+            cancelToken: (FIRST_USER_TOKEN + 1) as u8,
+            ..Default::default()
         }
     }
 }
@@ -346,6 +402,17 @@ impl InfosList {
     }
 }
 
+impl From<&InfosList> for nbgl_contentInfoList_t {
+    fn from(infos_list: &InfosList) -> nbgl_contentInfoList_t {
+        nbgl_contentInfoList_t {
+            infoTypes: infos_list.info_types_ptr.as_ptr() as *const *const c_char,
+            infoContents: infos_list.info_contents_ptr.as_ptr() as *const *const c_char,
+            nbInfos: infos_list.info_types_cstrings.len() as u8,
+            ..Default::default()
+        }
+    }
+}
+
 unsafe extern "C" fn action_callback(token: c_int, _index: u8, _page: c_int) {
     if token == FIRST_USER_TOKEN as i32 {
         G_RET = SyncNbgl::UxSyncRetApproved.into();
@@ -384,134 +451,51 @@ pub enum NbglPageContent {
     InfosList(InfosList),
 }
 
-impl From<&NbglPageContent>
-    for (
-        nbgl_content_u,
-        nbgl_contentType_t,
-        nbgl_contentActionCallback_t,
-    )
-{
-    fn from(
-        content: &NbglPageContent,
-    ) -> (
-        nbgl_content_u,
-        nbgl_contentType_t,
-        nbgl_contentActionCallback_t,
-    ) {
+impl From<&NbglPageContent> for nbgl_content_t {
+    fn from(content: &NbglPageContent) -> nbgl_content_t {
         match content {
-            NbglPageContent::CenteredInfo(data) => {
-                let centered_info = nbgl_contentCenteredInfo_t {
-                    text1: data.text1.as_ptr() as *const c_char,
-                    text2: data.text2.as_ptr() as *const c_char,
-                    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
-                    text3: data.text3.as_ptr() as *const c_char,
-                    icon: data
-                        .icon
-                        .as_ref()
-                        .map_or(core::ptr::null(), |icon| icon as *const nbgl_icon_details_t),
-                    onTop: data.on_top,
-                    style: data.style.into(),
-                    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
-                    offsetY: data.offset_y,
-                    ..Default::default()
-                };
-                (
-                    nbgl_content_u {
-                        centeredInfo: centered_info,
-                    },
-                    CENTERED_INFO,
-                    None,
-                )
-            }
-            NbglPageContent::TagValueList(data) => {
-                let tag_list = nbgl_contentTagValueList_t {
-                    pairs: data.pairs.as_ptr() as *const nbgl_contentTagValue_t,
-                    nbPairs: data.pairs.len() as u8,
-                    nbMaxLinesForValue: data.nb_max_lines_for_value,
-                    smallCaseForValue: data.small_case_for_value,
-                    wrapping: data.wrapping,
-                    ..Default::default()
-                };
-                (
-                    nbgl_content_u {
-                        tagValueList: tag_list,
-                    },
-                    TAG_VALUE_LIST,
-                    None,
-                )
-            }
-            NbglPageContent::TagValueConfirm(data) => {
-                let confirm = nbgl_contentTagValueConfirm_t {
-                    tagValueList: data.tag_value_list,
-                    detailsButtonToken: (FIRST_USER_TOKEN + 2) as u8,
-                    tuneId: data.tune_id as u8,
-                    confirmationText: data.confirmation_text.as_ptr() as *const c_char,
-                    cancelText: data.cancel_text.as_ptr() as *const c_char,
-                    confirmationToken: FIRST_USER_TOKEN as u8,
-                    cancelToken: (FIRST_USER_TOKEN + 1) as u8,
-                    ..Default::default()
-                };
-                (
-                    nbgl_content_u {
-                        tagValueConfirm: confirm,
-                    },
-                    TAG_VALUE_CONFIRM,
-                    Some(action_callback),
-                )
-            }
-            NbglPageContent::InfoLongPress(data) => {
-                let long_press = nbgl_contentInfoLongPress_t {
-                    text: data.text.as_ptr() as *const c_char,
-                    icon: data
-                        .icon
-                        .as_ref()
-                        .map_or(core::ptr::null(), |icon| icon as *const nbgl_icon_details_t),
-                    longPressText: data.long_press_text.as_ptr() as *const c_char,
-                    longPressToken: FIRST_USER_TOKEN as u8,
-                    tuneId: data.tune_id as u8,
-                    ..Default::default()
-                };
-                (
-                    nbgl_content_u {
-                        infoLongPress: long_press,
-                    },
-                    INFO_LONG_PRESS,
-                    Some(action_callback),
-                )
-            }
-            NbglPageContent::InfoButton(data) => {
-                let button = nbgl_contentInfoButton_t {
-                    text: data.text.as_ptr() as *const c_char,
-                    icon: data
-                        .icon
-                        .as_ref()
-                        .map_or(core::ptr::null(), |icon| icon as *const nbgl_icon_details_t),
-                    buttonText: data.button_text.as_ptr() as *const c_char,
-                    buttonToken: FIRST_USER_TOKEN as u8,
-                    tuneId: data.tune_id as u8,
-                    ..Default::default()
-                };
-                (
-                    nbgl_content_u { infoButton: button },
-                    INFO_BUTTON,
-                    Some(action_callback),
-                )
-            }
-            NbglPageContent::InfosList(data) => {
-                let infos_list = nbgl_contentInfoList_t {
-                    infoTypes: data.info_types_ptr.as_ptr() as *const *const c_char,
-                    infoContents: data.info_contents_ptr.as_ptr() as *const *const c_char,
-                    nbInfos: data.info_types_cstrings.len() as u8,
-                    ..Default::default()
-                };
-                (
-                    nbgl_content_u {
-                        infosList: infos_list,
-                    },
-                    INFOS_LIST,
-                    None,
-                )
-            }
+            NbglPageContent::CenteredInfo(data) => nbgl_content_t {
+                content: nbgl_content_u {
+                    centeredInfo: data.into(),
+                },
+                type_: CENTERED_INFO,
+                contentActionCallback: None,
+            },
+            NbglPageContent::TagValueList(data) => nbgl_content_t {
+                content: nbgl_content_u {
+                    tagValueList: data.into(),
+                },
+                type_: TAG_VALUE_LIST,
+                contentActionCallback: None,
+            },
+            NbglPageContent::TagValueConfirm(data) => nbgl_content_t {
+                content: nbgl_content_u {
+                    tagValueConfirm: data.into(),
+                },
+                type_: TAG_VALUE_CONFIRM,
+                contentActionCallback: Some(action_callback),
+            },
+            NbglPageContent::InfoLongPress(data) => nbgl_content_t {
+                content: nbgl_content_u {
+                    infoLongPress: data.into(),
+                },
+                type_: INFO_LONG_PRESS,
+                contentActionCallback: Some(action_callback),
+            },
+            NbglPageContent::InfoButton(data) => nbgl_content_t {
+                content: nbgl_content_u {
+                    infoButton: data.into(),
+                },
+                type_: INFO_BUTTON,
+                contentActionCallback: Some(action_callback),
+            },
+            NbglPageContent::InfosList(data) => nbgl_content_t {
+                content: nbgl_content_u {
+                    infosList: data.into(),
+                },
+                type_: INFOS_LIST,
+                contentActionCallback: None,
+            },
         }
     }
 }
@@ -566,14 +550,7 @@ impl NbglGenericReview {
     fn to_c_content_list(&self) -> Vec<nbgl_content_t> {
         self.content_list
             .iter()
-            .map(|content| {
-                let (c_struct, content_type, action_callback) = content.into();
-                nbgl_content_t {
-                    content: c_struct,
-                    contentActionCallback: action_callback,
-                    type_: content_type,
-                }
-            })
+            .map(|content| content.into())
             .collect()
     }
 
