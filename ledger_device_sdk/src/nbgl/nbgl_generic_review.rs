@@ -1,20 +1,40 @@
 use super::*;
 
-/// Enum representing the different styles available for centered info content.
+/// Visual style for a [`CenteredInfo`] content element.
+///
+/// The available variants differ by device family:
+///
+/// **Stax / Flex / Apex P:**
+/// - [`LargeCaseInfo`](CenteredInfoStyle::LargeCaseInfo) — large-case text.
+/// - [`LargeCaseBoldInfo`](CenteredInfoStyle::LargeCaseBoldInfo) — large-case bold text.
+/// - [`NormalInfo`](CenteredInfoStyle::NormalInfo) — normal (default) text.
+/// - [`PluginInfo`](CenteredInfoStyle::PluginInfo) — plugin-oriented layout.
+///
+/// **Nano S+ / Nano X:**
+/// - [`RegularInfo`](CenteredInfoStyle::RegularInfo) — regular text.
+/// - [`BoldText1Info`](CenteredInfoStyle::BoldText1Info) — bold primary text.
+/// - [`ButtonInfo`](CenteredInfoStyle::ButtonInfo) — button-style text.
 #[derive(Copy, Clone)]
 pub enum CenteredInfoStyle {
+    /// Large-case text style (Stax / Flex / Apex P only).
     #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     LargeCaseInfo = 0,
+    /// Large-case bold text style (Stax / Flex / Apex P only).
     #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     LargeCaseBoldInfo,
+    /// Normal text style (Stax / Flex / Apex P only).
     #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     NormalInfo,
+    /// Plugin-oriented layout style (Stax / Flex / Apex P only).
     #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     PluginInfo,
+    /// Regular text style (Nano S+ / Nano X only).
     #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
     RegularInfo = 0,
+    /// Bold primary text style (Nano S+ / Nano X only).
     #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
     BoldText1Info,
+    /// Button-style text (Nano S+ / Nano X only).
     #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
     ButtonInfo,
 }
@@ -37,9 +57,15 @@ impl From<CenteredInfoStyle> for nbgl_contentCenteredInfoStyle_t {
     }
 }
 
-/// Structure exposed by the NBGL Rust API to the user to create a
-/// centered info screen that will be displayed on the device
-/// when using the NbglGenericReview struct.
+/// A centered information screen for use with [`NbglGenericReview`].
+///
+/// Displays up to two (Nano) or three (Stax/Flex/Apex P) lines of text
+/// with an optional icon, positioned either at the top of the page or
+/// vertically centered. The visual appearance is controlled by a
+/// [`CenteredInfoStyle`].
+///
+/// On Stax / Flex / Apex P an additional `offset_y` parameter allows
+/// fine-tuning the vertical position of the content.
 pub struct CenteredInfo {
     text1: CString,
     text2: CString,
@@ -53,6 +79,19 @@ pub struct CenteredInfo {
 }
 
 impl CenteredInfo {
+    /// Creates a new [`CenteredInfo`].
+    ///
+    /// # Arguments
+    ///
+    /// * `text1` — Primary text line.
+    /// * `text2` — Secondary text line.
+    /// * `text3` — *(Stax / Flex / Apex P only)* Tertiary text line.
+    /// * `icon` — Optional glyph displayed alongside the text.
+    /// * `on_top` — If `true`, the content is pinned to the top of the page;
+    ///   otherwise it is vertically centered.
+    /// * `style` — The [`CenteredInfoStyle`] that controls the visual layout.
+    /// * `offset_y` — *(Stax / Flex / Apex P only)* Vertical pixel offset
+    ///   applied to the content.
     pub fn new(
         text1: &str,
         text2: &str,
@@ -76,9 +115,12 @@ impl CenteredInfo {
     }
 }
 
-/// Structure exposed by the NBGL Rust API to the user to create a
-/// "long press" button to confirm some information that will be displayed
-/// on the device when using the NbglGenericReview struct.
+/// A confirmation screen with a "long press" button for use with
+/// [`NbglGenericReview`].
+///
+/// The user must press and hold the button to confirm, which helps prevent
+/// accidental approvals. An optional icon and descriptive text are shown
+/// above the button.
 pub struct InfoLongPress {
     text: CString,
     icon: Option<nbgl_icon_details_t>,
@@ -87,6 +129,14 @@ pub struct InfoLongPress {
 }
 
 impl InfoLongPress {
+    /// Creates a new [`InfoLongPress`].
+    ///
+    /// # Arguments
+    ///
+    /// * `text` — Descriptive text displayed above the button.
+    /// * `icon` — Optional glyph displayed alongside the text.
+    /// * `long_press_text` — Label shown on the long-press button itself.
+    /// * `tune_id` — [`TuneIndex`] of the sound played on button activation.
     pub fn new(
         text: &str,
         icon: Option<&NbglGlyph>,
@@ -102,9 +152,12 @@ impl InfoLongPress {
     }
 }
 
-/// Structure exposed by the NBGL Rust API to the user to create a
-/// button to confirm some information that will be displayed
-/// on the device when using the NbglGenericReview struct.
+/// A confirmation screen with an action button for use with
+/// [`NbglGenericReview`].
+///
+/// Similar to [`InfoLongPress`] but uses a regular tap button instead of a
+/// long-press gesture. An optional icon and descriptive text are shown
+/// above the button.
 pub struct InfoButton {
     text: CString,
     icon: Option<nbgl_icon_details_t>,
@@ -113,6 +166,14 @@ pub struct InfoButton {
 }
 
 impl InfoButton {
+    /// Creates a new [`InfoButton`].
+    ///
+    /// # Arguments
+    ///
+    /// * `text` — Descriptive text displayed above the button.
+    /// * `icon` — Optional glyph displayed alongside the text.
+    /// * `button_text` — Label shown on the button.
+    /// * `tune_id` — [`TuneIndex`] of the sound played on button activation.
     pub fn new(
         text: &str,
         icon: Option<&NbglGlyph>,
@@ -128,9 +189,11 @@ impl InfoButton {
     }
 }
 
-/// Structure exposed by the NBGL Rust API to the user to create a
-/// tag/value list screen that will be displayed on the device when
-/// using the NbglGenericReview struct.
+/// A list of tag/value pairs for use with [`NbglGenericReview`].
+///
+/// Each pair is rendered as a labelled field (tag on the left, value on the
+/// right). Display options control the maximum number of lines per value,
+/// text casing, and word-wrapping behaviour.
 pub struct TagValueList {
     pairs: Vec<nbgl_contentTagValue_t>,
     _items: Vec<CString>,
@@ -141,6 +204,18 @@ pub struct TagValueList {
 }
 
 impl TagValueList {
+    /// Creates a new [`TagValueList`].
+    ///
+    /// # Arguments
+    ///
+    /// * `pairs` — Slice of [`Field`] items, each containing a `name` (tag)
+    ///   and a `value`.
+    /// * `nb_max_lines_for_value` — Maximum number of lines allowed for each
+    ///   value before truncation.
+    /// * `small_case_for_value` — If `true`, values are rendered in a smaller
+    ///   font.
+    /// * `wrapping` — If `true`, long values are word-wrapped instead of
+    ///   truncated.
     pub fn new(
         pairs: &[Field],
         nb_max_lines_for_value: u8,
@@ -188,9 +263,12 @@ impl From<&TagValueList> for nbgl_contentTagValueList_t {
     }
 }
 
-/// Structure exposed by the NBGL Rust API to the user to create a
-/// list of tag-value pairs and confirmation button that will be displayed
-/// on the device when using the NbglGenericReview struct.
+/// A tag/value list combined with confirm and cancel buttons for use with
+/// [`NbglGenericReview`].
+///
+/// This is a convenience wrapper that pairs a [`TagValueList`] with two
+/// action buttons (confirm / cancel) so the user can review a set of
+/// fields and then approve or reject in a single content element.
 pub struct TagValueConfirm {
     tag_value_list: nbgl_contentTagValueList_t,
     tune_id: TuneIndex,
@@ -199,6 +277,16 @@ pub struct TagValueConfirm {
 }
 
 impl TagValueConfirm {
+    /// Creates a new [`TagValueConfirm`].
+    ///
+    /// # Arguments
+    ///
+    /// * `tag_value_list` — Reference to a previously constructed
+    ///   [`TagValueList`] containing the fields to display.
+    /// * `tune_id` — [`TuneIndex`] of the sound played on confirmation.
+    /// * `confirmation_text` — Label for the confirm button
+    ///   (e.g. `"Approve"`).
+    /// * `cancel_text` — Label for the cancel button (e.g. `"Reject"`).
     pub fn new(
         tag_value_list: &TagValueList,
         tune_id: TuneIndex,
@@ -216,9 +304,12 @@ impl TagValueConfirm {
     }
 }
 
-/// Structure exposed by the NBGL Rust API to the user to create a
-/// list of information fields that will be displayed on the device
-/// when using the NbglGenericReview struct.
+/// A read-only list of information fields for use with
+/// [`NbglGenericReview`].
+///
+/// Unlike [`TagValueList`], this variant has no display-tuning options
+/// and is intended for simple informational screens (e.g. app version,
+/// developer name) rather than transaction review data.
 pub struct InfosList {
     info_types_cstrings: Vec<CString>,
     _info_contents_cstrings: Vec<CString>,
@@ -227,6 +318,12 @@ pub struct InfosList {
 }
 
 impl InfosList {
+    /// Creates a new [`InfosList`].
+    ///
+    /// # Arguments
+    ///
+    /// * `infos` — Slice of [`Field`] items. Each field's `name` is used as
+    ///   the label and `value` as the corresponding content.
     pub fn new(infos: &[Field]) -> InfosList {
         let info_types_cstrings: Vec<CString> = infos
             .iter()
@@ -258,14 +355,32 @@ unsafe extern "C" fn action_callback(token: c_int, _index: u8, _page: c_int) {
     G_ENDED = true;
 }
 
-/// Represents the different types of content that can be displayed
-/// on the device when using the NbglGenericReview add_content method.
+/// Content element that can be added to an [`NbglGenericReview`] via
+/// [`NbglGenericReview::add_content`].
+///
+/// Each variant wraps one of the dedicated content structs exposed by
+/// this module:
+///
+/// | Variant | Underlying type | Typical use |
+/// |---|---|---|
+/// | `CenteredInfo` | [`CenteredInfo`] | Static informational screen |
+/// | `InfoLongPress` | [`InfoLongPress`] | Long-press confirmation |
+/// | `InfoButton` | [`InfoButton`] | Tap-button confirmation |
+/// | `TagValueList` | [`TagValueList`] | Field review (no buttons) |
+/// | `TagValueConfirm` | [`TagValueConfirm`] | Field review with confirm/cancel |
+/// | `InfosList` | [`InfosList`] | Read-only info list |
 pub enum NbglPageContent {
+    /// Centered information screen.
     CenteredInfo(CenteredInfo),
+    /// Long-press confirmation screen.
     InfoLongPress(InfoLongPress),
+    /// Tap-button confirmation screen.
     InfoButton(InfoButton),
+    /// Tag/value pair list without action buttons.
     TagValueList(TagValueList),
+    /// Tag/value pair list with confirm and cancel buttons.
     TagValueConfirm(TagValueConfirm),
+    /// Read-only information list.
     InfosList(InfosList),
 }
 
@@ -401,10 +516,23 @@ impl From<&NbglPageContent>
     }
 }
 
-/// A wrapper around the asynchronous NBGL nbgl_useCaseGenericReview C API binding.
-/// Used to display custom built review screens. User can add different kind of
-/// contents (CenteredInfo, InfoLongPress, InfoButton, TagValueList, TagValueConfirm, InfosList)
-/// to the review screen using the add_content method.
+/// Builder for a multi-page generic review screen backed by the NBGL
+/// `nbgl_useCaseGenericReview` C API.
+///
+/// Use this when you need full control over the pages shown during a
+/// review flow. Content elements are added one by one with
+/// [`add_content`](NbglGenericReview::add_content) and then presented
+/// to the user via [`show`](NbglGenericReview::show).
+///
+/// # Example
+///
+/// ```rust,ignore
+/// let approved = NbglGenericReview::new()
+///     .add_content(NbglPageContent::TagValueConfirm(
+///         TagValueConfirm::new(&fields, TuneIndex::TapCasual, "Approve", "Reject"),
+///     ))
+///     .show("Reject transaction");
+/// ```
 pub struct NbglGenericReview {
     content_list: Vec<NbglPageContent>,
 }
@@ -412,17 +540,29 @@ pub struct NbglGenericReview {
 impl SyncNBGL for NbglGenericReview {}
 
 impl NbglGenericReview {
+    /// Creates an empty [`NbglGenericReview`] with no content pages.
     pub fn new() -> NbglGenericReview {
         NbglGenericReview {
             content_list: Vec::new(),
         }
     }
 
+    /// Appends a content page to the review.
+    ///
+    /// This method consumes and returns `self` so that calls can be chained:
+    ///
+    /// ```rust,ignore
+    /// let review = NbglGenericReview::new()
+    ///     .add_content(NbglPageContent::CenteredInfo(info))
+    ///     .add_content(NbglPageContent::TagValueList(fields));
+    /// ```
     pub fn add_content(mut self, content: NbglPageContent) -> NbglGenericReview {
         self.content_list.push(content);
         self
     }
 
+    /// Converts the Rust content list into the C representation expected by
+    /// the NBGL library.
     fn to_c_content_list(&self) -> Vec<nbgl_content_t> {
         self.content_list
             .iter()
@@ -437,6 +577,16 @@ impl NbglGenericReview {
             .collect()
     }
 
+    /// Displays the review to the user and blocks until a decision is made.
+    ///
+    /// A reject button labelled with `reject_button_str` is shown on the
+    /// final page. The method returns `true` if the user approved the review
+    /// and `false` if they rejected it.
+    ///
+    /// # Arguments
+    ///
+    /// * `reject_button_str` — Text for the reject/cancel button displayed
+    ///   at the end of the review flow (e.g. `"Reject transaction"`).
     pub fn show(&self, reject_button_str: &str) -> bool {
         unsafe {
             let c_content_list: Vec<nbgl_content_t> = self.to_c_content_list();
