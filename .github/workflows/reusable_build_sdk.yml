@@ -20,8 +20,7 @@ on:
         type: string
       rust_sdk_branch:
         description: 'Branch of the Rust SDK to build'
-        required: false
-        default: ''
+        required: true
         type: string
   workflow_dispatch:
     inputs:
@@ -42,8 +41,7 @@ on:
         type: string
       rust_sdk_branch:
         description: 'Branch of the Rust SDK to build'
-        required: false
-        default: ''
+        required: true
         type: string
 
 env:
@@ -65,7 +63,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.rust_sdk_repo }}
-          ref: ${{ inputs.rust_sdk_branch || github.ref }}
+          ref: ${{ inputs.rust_sdk_branch }}
 
       - name: Setup C SDK
         if: ${{ inputs.c_sdk_branch != '' }}

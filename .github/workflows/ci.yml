@@ -3,20 +3,22 @@ name: Run cargo clippy, cargo fmt, build and Unit+Integration tests
 on:
   push:
     branches:
-      develop
-      master
+      - develop
+      - master
   pull_request:
     branches:
-      master
-      develop
+      - master
+      - develop
   workflow_dispatch:
     inputs:
       name:
         description: 'Manually triggered'
       rust_sdk_branch:
+        description: 'Git branch or tag of the Rust SDK to use for this run'
         required: true
         type: string
       c_sdk_branch:
+        description: 'Git branch or tag of the Ledger C SDK to use for this run'
         required: true
         type: string
 
