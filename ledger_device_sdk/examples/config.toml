@@ -1,8 +1,8 @@
 [target.nanox]
-runner = "speculos -m nanox --display=headless"
+runner = "speculos -m nanox --display=headless --api-port 5001"
 
 [target.nanosplus]
-runner = "speculos -m nanosp --display=headless"
+runner = "speculos -m nanosp --display=headless --api-port 5001"
 
 [target.stax]
 runner = "speculos --model stax"
