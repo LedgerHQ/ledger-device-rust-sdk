@@ -1,0 +1,20 @@
+name: Allow only develop -> master PRs
+
+on:
+  pull_request:
+    branches:
+      - master
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+
+jobs:
+  enforce:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Block PRs not coming from develop
+        run: |
+          echo "Base branch: ${{ github.base_ref }}"
+          echo "Head branch: ${{ github.head_ref }}"
+          if [ "${{ github.head_ref }}" != "develop" ]; then
+            echo "::error::Only pull requests from 'develop' into 'master' are allowed."
+            exit 1
+          fi
