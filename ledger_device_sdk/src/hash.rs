@@ -13,6 +13,7 @@ pub enum HashError {
     InvalidParameter,
     InvalidOutputLength,
     InternalError,
+    InternalErrorWithCode(u32),
 }
 
 impl From<u32> for HashError {
