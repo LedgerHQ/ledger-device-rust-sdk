@@ -3,12 +3,24 @@ name: Run cargo clippy, cargo fmt, build and Unit+Integration tests
 on:
   push:
     branches:
-      master
+      - develop
+      - master
   pull_request:
+    branches:
+      - master
+      - develop
   workflow_dispatch:
     inputs:
       name:
         description: 'Manually triggered'
+      rust_sdk_branch:
+        description: 'Git branch or tag of the Rust SDK to use for this run'
+        required: true
+        type: string
+      c_sdk_branch:
+        description: 'Git branch or tag of the Ledger C SDK to use for this run'
+        required: true
+        type: string
 
 env:
   CARGO_TERM_COLOR: always
@@ -43,24 +55,32 @@ jobs:
         run: |
           cargo fmt --all --check
 
-  build:
-    name: Build SDK
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
-    strategy:
-      matrix:
-        target: ["nanox", "nanosplus", "stax", "flex", "apex_p"]
-    steps:
-      - name: Clone
-        uses: actions/checkout@v4
-      - name: Cargo build
-        working-directory: ledger_device_sdk
-        run: |
-          cargo build --target ${{ matrix.target }}
-          if [[ "${{ matrix.target }}" == "nanosplus" || "${{ matrix.target }}" == "nanox" ]]; then
-            cargo build --target ${{ matrix.target }} --features nano_nbgl;
-          fi
+  build_master:
+    name: Build SDK (master)
+    if: >-
+      github.event_name != 'workflow_dispatch' &&
+      (github.base_ref || github.ref_name) == 'master'
+    uses: ./.github/workflows/reusable_build_sdk.yml
+    with:
+      rust_sdk_branch: ${{ github.ref }}
+
+  build_develop:
+    name: Build SDK (develop)
+    if: >-
+      github.event_name != 'workflow_dispatch' &&
+      (github.base_ref || github.ref_name) == 'develop'
+    uses: ./.github/workflows/reusable_build_sdk.yml
+    with:
+      rust_sdk_branch: ${{ github.ref }}
+      c_sdk_branch: master
+
+  build_manual:
+    name: Build SDK (manual)
+    if: github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/reusable_build_sdk.yml
+    with:
+      rust_sdk_branch: ${{ inputs.rust_sdk_branch }}
+      c_sdk_branch: ${{ inputs.c_sdk_branch }}
 
   test:
     name: Run unit and integration tests
@@ -78,8 +98,29 @@ jobs:
         run: |
           cargo test --target ${{ matrix.target }} --features unit_test --tests
 
-  build-apps:
-    name: Build all Rust apps
+  build-apps_master:
+    name: Build all Rust apps (master)
+    if: >-
+      github.event_name != 'workflow_dispatch' &&
+      (github.base_ref || github.ref_name) == 'master'
     uses: ./.github/workflows/reusable_build_all_apps.yml
     with:
       rust_sdk_branch: ${{ github.ref }}
+
+  build-apps_develop:
+    name: Build all Rust apps (develop)
+    if: >-
+      github.event_name != 'workflow_dispatch' &&
+      (github.base_ref || github.ref_name) == 'develop'
+    uses: ./.github/workflows/reusable_build_all_apps.yml
+    with:
+      rust_sdk_branch: ${{ github.ref }}
+      c_sdk_branch: master
+
+  build-apps_manual:
+    name: Build all Rust apps (manual)
+    if: github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/reusable_build_all_apps.yml
+    with:
+      rust_sdk_branch: ${{ inputs.rust_sdk_branch }}
+      c_sdk_branch: ${{ inputs.c_sdk_branch }}
