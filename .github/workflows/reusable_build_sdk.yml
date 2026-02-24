@@ -1,0 +1,81 @@
+name: Build Rust SDK
+
+on:
+  workflow_call:
+    inputs:
+      c_sdk_repo:
+        description: 'Repository of the C SDK (e.g. LedgerHQ/ledger-secure-sdk)'
+        required: false
+        default: 'LedgerHQ/ledger-secure-sdk'
+        type: string
+      c_sdk_branch:
+        description: 'Branch of the C SDK to use. Leave empty to use the default from ledger-app-builder.'
+        required: false
+        default: ''
+        type: string
+      rust_sdk_repo:
+        description: 'Repository of the Rust SDK (e.g. LedgerHQ/ledger-device-rust-sdk)'
+        required: false
+        default: 'LedgerHQ/ledger-device-rust-sdk'
+        type: string
+      rust_sdk_branch:
+        description: 'Branch of the Rust SDK to build'
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      c_sdk_repo:
+        description: 'Repository of the C SDK (e.g. LedgerHQ/ledger-secure-sdk)'
+        required: false
+        default: 'LedgerHQ/ledger-secure-sdk'
+        type: string
+      c_sdk_branch:
+        description: 'Branch of the C SDK to use. Leave empty to use the default from ledger-app-builder.'
+        required: false
+        default: ''
+        type: string
+      rust_sdk_repo:
+        description: 'Repository of the Rust SDK (e.g. LedgerHQ/ledger-device-rust-sdk)'
+        required: false
+        default: 'LedgerHQ/ledger-device-rust-sdk'
+        type: string
+      rust_sdk_branch:
+        description: 'Branch of the Rust SDK to build'
+        required: true
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+  C_SDK_URL: 'https://github.com/${{ inputs.c_sdk_repo }}.git'
+
+jobs:
+  build:
+    name: Build SDK for ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ["nanox", "nanosplus", "stax", "flex", "apex_p"]
+    steps:
+      - name: Clone Rust SDK
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.rust_sdk_repo }}
+          ref: ${{ inputs.rust_sdk_branch }}
+
+      - name: Setup C SDK
+        if: ${{ inputs.c_sdk_branch != '' }}
+        run: |
+          git clone $C_SDK_URL --branch ${{ inputs.c_sdk_branch }} --single-branch /tmp/c_sdk
+          echo "LEDGER_SDK_PATH=/tmp/c_sdk" >> $GITHUB_ENV
+          echo "Using C SDK from $C_SDK_URL branch ${{ inputs.c_sdk_branch }}"
+
+      - name: Cargo build
+        working-directory: ledger_device_sdk
+        run: |
+          cargo build --target ${{ matrix.target }}
+          if [[ "${{ matrix.target }}" == "nanosplus" || "${{ matrix.target }}" == "nanox" ]]; then
+            cargo build --target ${{ matrix.target }} --features nano_nbgl
+          fi
