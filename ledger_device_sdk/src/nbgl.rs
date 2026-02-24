@@ -19,7 +19,6 @@ pub mod nbgl_action;
 pub mod nbgl_address_review;
 pub mod nbgl_advance_review;
 pub mod nbgl_choice;
-#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 pub mod nbgl_generic_review;
 pub mod nbgl_generic_settings;
 pub mod nbgl_home_and_settings;
@@ -42,7 +41,6 @@ pub use nbgl_advance_review::*;
 #[doc(inline)]
 pub use nbgl_choice::*;
 #[doc(inline)]
-#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 pub use nbgl_generic_review::*;
 #[doc(inline)]
 pub use nbgl_generic_settings::*;
@@ -200,7 +198,6 @@ unsafe extern "C" fn continue_callback() {
     G_ENDED = true;
 }
 
-#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 unsafe extern "C" fn rejected_callback() {
     G_RET = SyncNbgl::UxSyncRetRejected.into();
     G_ENDED = true;
