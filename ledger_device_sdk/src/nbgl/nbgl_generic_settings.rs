@@ -170,8 +170,8 @@ impl NbglGenericSettings {
     }
 
     #[cfg(not(feature = "io_new"))]
-    pub fn show(&mut self) {
-        self.show_internal();
+    pub fn show(&mut self) -> SyncNbgl {
+        self.show_internal()
     }
 
     /// # Returns
