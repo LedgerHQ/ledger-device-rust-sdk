@@ -119,6 +119,7 @@ jobs:
                 cat $cargo_toml_path
 
             - name: Build
+              shell: bash
               run: |
                 # Clone C SDK if provided
                 if [ -n "${{ inputs.c_sdk_branch }}" ]; then
