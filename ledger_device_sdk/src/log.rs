@@ -134,18 +134,22 @@ impl Write for DBG {
 #[cfg(feature = "debug")]
 #[macro_export]
 macro_rules! log {
-    (target: $target:expr, $lvl:expr, $fmt:literal $($arg:tt)*) => ({
+    ($lvl:expr, $fmt:literal $($arg:tt)*) => ({
         use core::fmt::Write;
         let _ = core::write!($crate::log::DBG, concat!("[{}] {}:{}: ", $fmt, "\r\n"), $lvl, core::file!(), core::line!() $($arg)*);
     });
-    ($lvl:expr, $fmt:literal $($arg:tt)*) => ($crate::log!(target: core::module_path!(), $lvl, $fmt $($arg)*))
 }
 
 #[cfg(not(feature = "debug"))]
 #[macro_export]
 macro_rules! log {
-    (target: $target:expr, $lvl:expr, $fmt:literal $($arg:tt)*) => ({ });
-    ($lvl:expr, $fmt:literal $($arg:tt)*) => ($crate::log!(target: core::module_path!(), $lvl, $fmt $($arg)*))
+    ($lvl:expr, $fmt:literal $($arg:tt)*) => {
+        // Type-checked but never evaluated — arguments are type-checked but not evaluated in production
+        if false {
+            let _ = $lvl;
+            let _ = ::core::format_args!($fmt $($arg)*);
+        }
+    };
 }
 
 #[cfg(feature = "log_error")]
@@ -156,7 +160,9 @@ macro_rules! error {
 #[cfg(not(feature = "log_error"))]
 #[macro_export]
 macro_rules! error {
-    ($fmt:literal $($arg:tt)*) => {{}};
+    ($fmt:literal $($arg:tt)*) => {
+        if false { let _ = ::core::format_args!($fmt $($arg)*); }
+    };
 }
 
 #[cfg(feature = "log_warn")]
@@ -167,7 +173,9 @@ macro_rules! warn {
 #[cfg(not(feature = "log_warn"))]
 #[macro_export]
 macro_rules! warn {
-    ($fmt:literal $($arg:tt)*) => {{}};
+    ($fmt:literal $($arg:tt)*) => {
+        if false { let _ = ::core::format_args!($fmt $($arg)*); }
+    };
 }
 
 #[cfg(feature = "log_info")]
@@ -178,7 +186,9 @@ macro_rules! info {
 #[cfg(not(feature = "log_info"))]
 #[macro_export]
 macro_rules! info {
-    ($fmt:literal $($arg:tt)*) => {{}};
+    ($fmt:literal $($arg:tt)*) => {
+        if false { let _ = ::core::format_args!($fmt $($arg)*); }
+    };
 }
 
 #[cfg(feature = "log_debug")]
@@ -189,7 +199,9 @@ macro_rules! debug {
 #[cfg(not(feature = "log_debug"))]
 #[macro_export]
 macro_rules! debug {
-    ($fmt:literal $($arg:tt)*) => {{}};
+    ($fmt:literal $($arg:tt)*) => {
+        if false { let _ = ::core::format_args!($fmt $($arg)*); }
+    };
 }
 
 #[cfg(feature = "log_trace")]
@@ -200,7 +212,9 @@ macro_rules! trace {
 #[cfg(not(feature = "log_trace"))]
 #[macro_export]
 macro_rules! trace {
-    ($fmt:literal $($arg:tt)*) => {{}};
+    ($fmt:literal $($arg:tt)*) => {
+        if false { let _ = ::core::format_args!($fmt $($arg)*); }
+    };
 }
 
 // Re-export macros in the log module so they can be accessed as ledger_device_sdk::log::info!()
