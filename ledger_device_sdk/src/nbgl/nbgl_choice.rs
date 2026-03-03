@@ -81,19 +81,7 @@ impl<'a> NbglChoice<'a> {
         }
     }
 
-    /// Shows the choice flow.
-    ///
-    /// # Arguments
-    ///
-    /// * `message` - The main message to display in the center of the page.
-    /// * `sub_message` - An optional sub-message to display below the main message.
-    /// * `confirm_text` - The text to display on the confirmation button.
-    /// * `cancel_text` - The text to display on the cancellation button.
-    ///
-    /// # Returns
-    ///
-    /// Returns `true` if the user confirmed the choice, `false` otherwise.
-    pub fn show(
+    fn show_internal(
         &self,
         message: &str,
         sub_message: &str,
@@ -143,5 +131,45 @@ impl<'a> NbglChoice<'a> {
                 }
             }
         }
+    }
+
+    /// Shows the choice flow.
+    /// # Arguments
+    /// * `_comm` - Mutable reference to Comm.
+    /// * `message` - The main message to display in the center of the page.
+    /// * `sub_message` - An optional sub-message to display below the main message.
+    /// * `confirm_text` - The text to display on the confirmation button.
+    /// * `cancel_text` - The text to display on the cancellation button.
+    /// # Returns
+    /// Returns `true` if the user confirmed the choice, `false` otherwise.
+    #[cfg(feature = "io_new")]
+    pub fn show<const N: usize>(
+        &self,
+        _comm: &mut crate::io::Comm<N>,
+        message: &str,
+        sub_message: &str,
+        confirm_text: &str,
+        cancel_text: &str,
+    ) -> bool {
+        self.show_internal(message, sub_message, confirm_text, cancel_text)
+    }
+
+    /// Shows the choice flow.
+    /// # Arguments
+    /// * `message` - The main message to display in the center of the page.
+    /// * `sub_message` - An optional sub-message to display below the main message.
+    /// * `confirm_text` - The text to display on the confirmation button.
+    /// * `cancel_text` - The text to display on the cancellation button.
+    /// # Returns
+    /// Returns `true` if the user confirmed the choice, `false` otherwise.
+    #[cfg(not(feature = "io_new"))]
+    pub fn show(
+        &self,
+        message: &str,
+        sub_message: &str,
+        confirm_text: &str,
+        cancel_text: &str,
+    ) -> bool {
+        self.show_internal(message, sub_message, confirm_text, cancel_text)
     }
 }
