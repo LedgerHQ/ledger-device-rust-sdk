@@ -134,25 +134,22 @@ impl Write for DBG {
 #[cfg(feature = "debug")]
 #[macro_export]
 macro_rules! log {
-    (target: $target:expr, $lvl:expr, $fmt:literal $($arg:tt)*) => ({
+    ($lvl:expr, $fmt:literal $($arg:tt)*) => ({
         use core::fmt::Write;
         let _ = core::write!($crate::log::DBG, concat!("[{}] {}:{}: ", $fmt, "\r\n"), $lvl, core::file!(), core::line!() $($arg)*);
     });
-    ($lvl:expr, $fmt:literal $($arg:tt)*) => ($crate::log!(target: core::module_path!(), $lvl, $fmt $($arg)*))
 }
 
 #[cfg(not(feature = "debug"))]
 #[macro_export]
 macro_rules! log {
-    (target: $target:expr, $lvl:expr, $fmt:literal $($arg:tt)*) => {
-        // Type-checked but never evaluated — arguments have no side effects in production
+    ($lvl:expr, $fmt:literal $($arg:tt)*) => {
+        // Type-checked but never evaluated — arguments are type-checked but not evaluated in production
         if false {
-            let _ = $target;
             let _ = $lvl;
             let _ = ::core::format_args!($fmt $($arg)*);
         }
     };
-    ($lvl:expr, $fmt:literal $($arg:tt)*) => ($crate::log!(target: ::core::module_path!(), $lvl, $fmt $($arg)*))
 }
 
 #[cfg(feature = "log_error")]
