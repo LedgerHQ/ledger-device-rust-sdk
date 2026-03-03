@@ -74,8 +74,11 @@ jobs:
 
       - name: Cargo build
         working-directory: ledger_device_sdk
+        shell: bash
         run: |
+          echo "Building SDK for ${{matrix.target}}"
           cargo build --target ${{ matrix.target }}
           if [[ "${{ matrix.target }}" == "nanosplus" || "${{ matrix.target }}" == "nanox" ]]; then
+            echo "Building with nano_nbgl feature for ${{matrix.target}}"
             cargo build --target ${{ matrix.target }} --features nano_nbgl
           fi
