@@ -1,4 +1,4 @@
-use core::cell::{Cell, UnsafeCell};
+use core::cell::UnsafeCell;
 use core::mem::MaybeUninit;
 
 use crate::seph::PacketTypes;
@@ -19,6 +19,10 @@ use ledger_secure_sdk_sys::seph as sys_seph;
 /// Default buffer size for `Comm` when no custom size is specified.
 pub const DEFAULT_BUF_SIZE: usize = 273;
 
+/// Global flag ensuring only one `CommStorage` instance is ever initialized.
+// SAFETY: the runtime is single-threaded, so direct reads/writes are safe.
+static mut COMM_INITIALIZED: bool = false;
+
 /// Static storage container for a `Comm<N>` instance.
 ///
 /// This type provides safe static storage for `Comm` instances, ensuring that
@@ -36,10 +40,11 @@ pub const DEFAULT_BUF_SIZE: usize = 273;
 /// ```
 pub struct CommStorage<const N: usize = DEFAULT_BUF_SIZE> {
     inner: UnsafeCell<MaybeUninit<Comm<N>>>,
-    initialized: Cell<bool>,
 }
 
-// SAFETY: single-threaded runtime, with initialization guarded by a flag.
+// SAFETY: single-threaded runtime; initialization is guarded by the global
+// COMM_INITIALIZED Cell, which ensures write access to `inner` happens
+// exactly once.
 unsafe impl<const N: usize> Sync for CommStorage<N> {}
 
 impl<const N: usize> CommStorage<N> {
@@ -49,7 +54,6 @@ impl<const N: usize> CommStorage<N> {
     pub const fn new() -> Self {
         Self {
             inner: UnsafeCell::new(MaybeUninit::uninit()),
-            initialized: Cell::new(false),
         }
     }
 
@@ -64,14 +68,17 @@ impl<const N: usize> CommStorage<N> {
     /// This method must be called on a static `CommStorage` instance to ensure
     /// the returned reference has a `'static` lifetime.
     pub fn init(&'static self, comm: Comm<N>) -> &'static mut Comm<N> {
-        // Panic if already initialized
-        if self.initialized.get() {
+        // Check the global flag to guarantee at most one CommStorage is ever
+        // initialized, even if multiple statics are declared.
+        // SAFETY: single-threaded runtime; no concurrent access is possible.
+        if unsafe { COMM_INITIALIZED } {
             panic!("CommStorage already initialized. Only one Comm instance can exist.");
         }
-        self.initialized.set(true);
+        unsafe { COMM_INITIALIZED = true };
 
-        // SAFETY: We just verified this is the first and only initialization.
-        // The storage is static, so the reference is valid for 'static.
+        // SAFETY: We set COMM_INITIALIZED to true above; since the runtime is
+        // single-threaded, this branch runs exactly once. The storage is
+        // static, so the returned reference is valid for 'static.
         unsafe {
             let ptr = self.inner.get();
             (*ptr).write(comm);
@@ -419,6 +426,9 @@ impl<const N: usize> Drop for Comm<N> {
     fn drop(&mut self) {
         callbacks::clear_comm();
         callbacks::clear_panic_handler();
+        // Allow a new CommStorage to be initialized after this one is dropped.
+        // SAFETY: single-threaded runtime; no concurrent access is possible.
+        unsafe { COMM_INITIALIZED = false };
     }
 }
 
