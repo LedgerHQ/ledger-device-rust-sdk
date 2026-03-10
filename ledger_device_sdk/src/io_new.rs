@@ -241,9 +241,9 @@ impl<const N: usize> Comm<N> {
                     offset,
                     length,
                 } => {
-                    // Handle BOLOS internal APDUs (CLA = 0xB0, P1 = 0x00, P2 = 0x00) internally
+                    // Handle BOLOS internal APDUs (CLA = 0xB0) internally
                     // and continue looping until an application APDU arrives.
-                    if header.cla == 0xB0 && header.p1 == 0x00 && header.p2 == 0x00 {
+                    if header.cla == 0xB0 {
                         handle_bolos_apdu::<N>(self, header.ins);
                         continue;
                     }
