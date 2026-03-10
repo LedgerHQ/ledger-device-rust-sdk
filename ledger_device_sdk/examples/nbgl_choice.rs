@@ -30,7 +30,9 @@ extern "C" fn sample_main() {
     );
 
     if back_to_safety {
-        NbglStatus::new().text("Transaction rejected").show(comm, false);
+        NbglStatus::new()
+            .text("Transaction rejected")
+            .show(comm, false);
     } else {
         let confirmed = NbglChoice::new()
             .ask_confirmation(Some("Are you sure to accept ?"), Some("Accept case"), Some("Yes"), Some("No"), true)
