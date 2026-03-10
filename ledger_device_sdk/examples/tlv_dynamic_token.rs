@@ -2,11 +2,13 @@
 #![no_main]
 
 use include_gif::include_gif;
-use ledger_device_sdk::io::*;
-use ledger_device_sdk::nbgl::{NbglGlyph, NbglHomeAndSettings};
+use ledger_device_sdk::io::{ApduHeader, StatusWords};
+use ledger_device_sdk::nbgl::{init_comm, NbglGlyph, NbglHomeAndSettings};
 use ledger_device_sdk::tlv::{parse_dynamic_token_tlv, DynamicTokenOut};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
+ledger_device_sdk::define_comm!(COMM);
+
 pub enum Instruction {
     GetVersion = 0x01,
     GetAppName = 0x02,
@@ -27,7 +29,7 @@ impl TryFrom<ApduHeader> for Instruction {
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    let mut comm = Comm::new();
+    let comm = init_comm(&COMM);
 
     #[cfg(target_os = "apex_p")]
     const FERRIS: NbglGlyph =
@@ -51,42 +53,38 @@ extern "C" fn sample_main() {
     home.show_and_return();
 
     loop {
-        let ins: Instruction = comm.next_command();
+        let cmd = comm.next_command();
+        let ins = cmd.decode::<Instruction>();
         match ins {
-            Instruction::GetVersion => {
+            Ok(Instruction::GetVersion) => {
                 ledger_device_sdk::log::info!("GetVersion");
                 let version = [0, 1, 0]; // version 0.1.0
-                comm.append(&version);
-                comm.reply_ok();
+                let _ = cmd.reply(&version, StatusWords::Ok);
             }
-            Instruction::GetAppName => {
+            Ok(Instruction::GetAppName) => {
                 let app_name = b"Dynamic Token Example";
-                comm.append(app_name);
-                comm.reply_ok();
+                let _ = cmd.reply(app_name, StatusWords::Ok);
             }
-            Instruction::ParseTlv => {
+            Ok(Instruction::ParseTlv) => {
                 ledger_device_sdk::log::info!("Starting TLV Parsing");
-                let buffer = match comm.get_data() {
-                    Ok(buf) => buf,
-                    Err(_err) => {
-                        ledger_device_sdk::log::info!("Failed to get data");
-                        break;
-                    }
-                };
+                let buffer = cmd.get_data();
 
                 let mut out = DynamicTokenOut::default();
-                match parse_dynamic_token_tlv(&buffer, &mut out) {
+                match parse_dynamic_token_tlv(buffer, &mut out) {
                     Ok(()) => {
                         ledger_device_sdk::log::info!("TLV Parsing successful");
                         ledger_device_sdk::log::info!("{}", out.app_name.as_str());
                         ledger_device_sdk::log::info!("{}", out.ticker.as_str());
-                        comm.reply_ok();
+                        let _ = cmd.reply(&[], StatusWords::Ok);
                     }
                     Err(err) => {
                         ledger_device_sdk::log::info!("TLV Parsing failed");
-                        comm.reply(err);
+                        let _ = cmd.reply(&[], err);
                     }
                 }
+            }
+            Err(sw) => {
+                let _ = cmd.reply(&[], sw);
             }
         }
     }

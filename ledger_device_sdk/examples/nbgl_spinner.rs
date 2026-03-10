@@ -1,15 +1,14 @@
 #![no_std]
 #![no_main]
 
-use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{init_comm, NbglReviewStatus, NbglSpinner};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
+ledger_device_sdk::define_comm!(COMM);
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    let mut comm = Comm::new();
-    init_comm(&mut comm);
+    let comm = init_comm(&COMM);
 
     NbglSpinner::new().show("Please wait...");
 
@@ -19,9 +18,9 @@ extern "C" fn sample_main() {
     // every 800ms.
     let mut loop_count = 50;
     while loop_count > 0 {
-        comm.next_event::<ApduHeader>();
+        comm.next_event();
         loop_count -= 1;
     }
-    NbglReviewStatus::new().show(true);
+    NbglReviewStatus::new().show(comm, true);
     ledger_device_sdk::exit_app(0);
 }

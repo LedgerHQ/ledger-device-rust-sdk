@@ -2,18 +2,17 @@
 #![no_main]
 
 use include_gif::include_gif;
-use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{
-    init_comm, Field, NbglAdvanceReview, NbglGlyph, NbglReviewStatus, StatusType, SyncNbgl,
+    init_comm, Field, NbglAdvanceReview, NbglGlyph, NbglReviewStatus, StatusType,
     TransactionType,
 };
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
+ledger_device_sdk::define_comm!(COMM);
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    let mut comm = Comm::new();
-    init_comm(&mut comm);
+    let comm = init_comm(&COMM);
 
     #[cfg(target_os = "apex_p")]
     const FERRIS: NbglGlyph =
@@ -52,18 +51,18 @@ extern "C" fn sample_main() {
             Some("Provider Message"),
         );
 
-    let success = advance_review.show(&my_fields);
+    let success = advance_review.show(comm, &my_fields);
 
     match success {
-        SyncNbgl::UxSyncRetApproved => {
+        Ok(true) => {
             NbglReviewStatus::new()
                 .status_type(StatusType::Transaction)
-                .show(true);
+                .show(comm, true);
         }
-        SyncNbgl::UxSyncRetRejected => {
+        Ok(false) => {
             NbglReviewStatus::new()
                 .status_type(StatusType::Transaction)
-                .show(false);
+                .show(comm, false);
         }
         _ => {}
     }
