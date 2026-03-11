@@ -14,7 +14,7 @@ jobs:
     name: Build and test SDK (${{ matrix.target }})
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
     strategy:
       fail-fast: false
       matrix:
@@ -28,12 +28,19 @@ jobs:
           rustup toolchain install nightly --component rust-src
           rustup target add thumbv6m-none-eabi --toolchain nightly
           cargo +nightly ledger setup -t custom_target_nightly
-          rustup override set nightly
           echo "Rust version:"
-          rustc --version
+          rustc +nightly --version
+
+      - name: Override rust-toolchain.toml to use latest nightly
+        run: |
+          printf '[toolchain]\nchannel = "nightly"\n' > rust-toolchain.toml
+          echo 'Overridden rust-toolchain.toml:'
+          cat rust-toolchain.toml
 
       - name: Build SDK
         working-directory: ledger_device_sdk
+        env:
+          RUSTFLAGS: "-Zunstable-options"
         run: |
           cargo build --target ${{ matrix.target }}
           if [[ "${{ matrix.target }}" == "nanosplus" || "${{ matrix.target }}" == "nanox" ]]; then
@@ -43,4 +50,6 @@ jobs:
 
       - name: Run unit tests
         working-directory: ledger_device_sdk
+        env:
+          RUSTFLAGS: "-Zunstable-options"
         run: cargo test --target ${{ matrix.target }} --features unit_test --tests

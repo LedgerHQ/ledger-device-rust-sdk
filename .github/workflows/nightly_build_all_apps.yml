@@ -32,7 +32,7 @@ jobs:
     needs: retrieve-rust-apps
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
     strategy:
       fail-fast: false
       matrix:
@@ -61,11 +61,13 @@ jobs:
       - name: Override rust-toolchain.toml to use latest nightly
         run: |
           build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
-          echo -e '[toolchain]\nchannel = "nightly"' > $build_directory/rust-toolchain.toml
+          printf '[toolchain]\nchannel = "nightly"\n' > $build_directory/rust-toolchain.toml
           echo "Overridden rust-toolchain.toml:"
           cat $build_directory/rust-toolchain.toml
 
       - name: Build
+        env:
+          RUSTFLAGS: "-Zunstable-options"
         run: |
           build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
           cd $build_directory
