@@ -2,17 +2,16 @@
 #![no_main]
 
 use include_gif::include_gif;
-use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{
     init_comm, Field, NbglAddressReview, NbglGlyph, NbglReviewStatus, StatusType,
 };
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
+ledger_device_sdk::define_comm!(COMM);
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    let mut comm = Comm::new();
-    init_comm(&mut comm);
+    let comm = init_comm(&COMM);
 
     let addr_hex = "0x1234567890ABCDEF1234567890ABCDEF12345678";
 
@@ -31,11 +30,11 @@ extern "C" fn sample_main() {
         .glyph(&FERRIS)
         .review_title("Verify Address")
         .review_subtitle("Check carefully")
-        .show(addr_hex);
+        .show(comm, addr_hex);
 
     NbglReviewStatus::new()
         .status_type(StatusType::Address)
-        .show(success);
+        .show(comm, success);
 
     let my_fields = [
         Field {
@@ -53,11 +52,11 @@ extern "C" fn sample_main() {
         .review_title("Verify Address")
         .review_subtitle("Check carefully")
         .set_tag_value_list(&my_fields)
-        .show(addr_hex);
+        .show(comm, addr_hex);
 
     NbglReviewStatus::new()
         .status_type(StatusType::Address)
-        .show(success);
+        .show(comm, success);
 
     ledger_device_sdk::exit_app(0);
 }

@@ -1,6 +1,6 @@
 [package]
 name = "ledger_device_sdk"
-version = "1.33.1"
+version = "1.34.0"
 authors = ["Ledger"]
 edition = "2021"
 license.workspace = true
@@ -17,7 +17,7 @@ ledger_device_sdk = { path = ".", features = ["unit_test"] }
 testmacro = { path = "../testmacro"}
 
 [dependencies]
-include_gif = {path = "../include_gif", version = "1.2.5"}
+include_gif = { path = "../include_gif", version = "1.2.6" }
 num-traits = { version = "0.2.14", default-features = false }
 rand_core = { version = "0.6.3", default-features = false }
 zeroize = { version = "1.6.0", default-features = false }
@@ -56,58 +56,72 @@ check-cfg = ['cfg(target_os, values("apex_p", "stax", "flex", "nanox", "nanosplu
 [[example]]
 name = "nbgl_action"
 doc-scrape-examples = true
+required-features = ["io_new"]
 
 [[example]]
 name = "nbgl_address_review"
 doc-scrape-examples = true
+required-features = ["io_new"]
 
 [[example]]
 name = "nbgl_advance_review"
 doc-scrape-examples = true
+required-features = ["io_new"]
 
 [[example]]
 name = "nbgl_choice"
 doc-scrape-examples = true
+required-features = ["io_new"]
 
 [[example]]
 name = "nbgl_generic_review"
 doc-scrape-examples = true
+required-features = ["io_new"]
 
 [[example]]
 name = "nbgl_generic_settings"
 doc-scrape-examples = true
+required-features = ["io_new"]
 
 [[example]]
 name = "nbgl_home_and_settings"
 doc-scrape-examples = true
+required-features = ["io_new"]
 
 [[example]]
 name = "nbgl_keypad"
 doc-scrape-examples = true
+required-features = ["io_new"]
 
 [[example]]
 name = "nbgl_review"
 doc-scrape-examples = true
+required-features = ["io_new"]
 
 [[example]]
 name = "nbgl_review_extended"
 doc-scrape-examples = true
+required-features = ["io_new"]
 
 [[example]]
 name = "nbgl_spinner"
 doc-scrape-examples = true
+required-features = ["io_new"]
 
 [[example]]
 name = "nbgl_streaming_review"
 doc-scrape-examples = true
+required-features = ["io_new"]
 
 [[example]]
 name = "pki"
 doc-scrape-examples = true
+required-features = ["io_new"]
 
 [[example]]
 name = "tlv_dynamic_token"
 doc-scrape-examples = true
+required-features = ["io_new"]
 
 [[example]]
 name = "tlv_generic"
@@ -116,3 +130,4 @@ doc-scrape-examples = true
 [[example]]
 name = "tlv_trusted_name"
 doc-scrape-examples = true
+required-features = ["io_new"]

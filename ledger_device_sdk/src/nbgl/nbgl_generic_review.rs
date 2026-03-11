@@ -554,17 +554,7 @@ impl NbglGenericReview {
             .collect()
     }
 
-    /// Displays the review to the user and blocks until a decision is made.
-    ///
-    /// A reject button labelled with `reject_button_str` is shown on the
-    /// final page. The method returns `true` if the user approved the review
-    /// and `false` if they rejected it.
-    ///
-    /// # Arguments
-    ///
-    /// * `reject_button_str` — Text for the reject/cancel button displayed
-    ///   at the end of the review flow (e.g. `"Reject transaction"`).
-    pub fn show(&self, reject_button_str: &str) -> bool {
+    fn show_internal(&self, reject_button_str: &str) -> bool {
         unsafe {
             let c_content_list: Vec<nbgl_content_t> = self.to_c_content_list();
 
@@ -596,5 +586,40 @@ impl NbglGenericReview {
                 }
             }
         }
+    }
+
+    /// Displays the review to the user and blocks until a decision is made.
+    ///
+    /// A reject button labelled with `reject_button_str` is shown on the
+    /// final page. The method returns `true` if the user approved the review
+    /// and `false` if they rejected it.
+    ///
+    /// # Arguments
+    ///
+    /// * `_comm` - Mutable reference to Comm.
+    /// * `reject_button_str` — Text for the reject/cancel button displayed
+    ///   at the end of the review flow (e.g. `"Reject transaction"`).
+    #[cfg(feature = "io_new")]
+    pub fn show<const N: usize>(
+        &self,
+        _comm: &mut crate::io::Comm<N>,
+        reject_button_str: &str,
+    ) -> bool {
+        self.show_internal(reject_button_str)
+    }
+
+    /// Displays the review to the user and blocks until a decision is made.
+    ///
+    /// A reject button labelled with `reject_button_str` is shown on the
+    /// final page. The method returns `true` if the user approved the review
+    /// and `false` if they rejected it.
+    ///
+    /// # Arguments
+    ///
+    /// * `reject_button_str` — Text for the reject/cancel button displayed
+    ///   at the end of the review flow (e.g. `"Reject transaction"`).
+    #[cfg(not(feature = "io_new"))]
+    pub fn show(&self, reject_button_str: &str) -> bool {
+        self.show_internal(reject_button_str)
     }
 }

@@ -2,12 +2,13 @@
 #![no_main]
 
 use include_gif::include_gif;
-use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{init_comm, NbglGlyph, NbglHomeAndSettings};
 // use ledger_device_sdk::nvm::*;
 // use ledger_device_sdk::NVMData;
+use ledger_device_sdk::io::{ApduHeader, StatusWords};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
+ledger_device_sdk::define_comm!(COMM);
 
 pub enum Instruction {
     GetVersion,
@@ -85,8 +86,7 @@ mod settings {
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    let mut comm = Comm::new();
-    init_comm(&mut comm);
+    let comm = init_comm(&COMM);
 
     #[cfg(target_os = "apex_p")]
     const FERRIS: NbglGlyph =
@@ -114,6 +114,6 @@ extern "C" fn sample_main() {
     home.show_and_return();
 
     loop {
-        let _ins: Instruction = comm.next_command();
+        let _ins = comm.next_command();
     }
 }

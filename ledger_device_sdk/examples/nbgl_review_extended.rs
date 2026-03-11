@@ -2,17 +2,14 @@
 #![no_main]
 
 use include_gif::include_gif;
-use ledger_device_sdk::io::*;
-use ledger_device_sdk::nbgl::{
-    init_comm, Field, NbglGlyph, NbglReviewExtended, NbglReviewStatus, SyncNbgl,
-};
+use ledger_device_sdk::nbgl::{init_comm, Field, NbglGlyph, NbglReviewExtended, NbglReviewStatus};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
+ledger_device_sdk::define_comm!(COMM);
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    let mut comm = Comm::new();
-    init_comm(&mut comm);
+    let comm = init_comm(&COMM);
 
     #[cfg(target_os = "apex_p")]
     const FERRIS: NbglGlyph =
@@ -54,23 +51,23 @@ extern "C" fn sample_main() {
             false, // Light mode for the last page
         );
 
-    let next = review.start();
+    let next = review.start(comm);
     match next {
-        SyncNbgl::UxSyncRetContinue => {
-            let success = review.show(&my_fields);
+        Ok(true) => {
+            let success = review.show(comm, &my_fields);
             match success {
-                SyncNbgl::UxSyncRetApproved => {
+                Ok(true) => {
                     // The user approved the transaction
-                    NbglReviewStatus::new().show(true);
+                    NbglReviewStatus::new().show(comm, true);
                 }
                 _ => {
                     // The user rejected the transaction or an error occurred
-                    NbglReviewStatus::new().show(false);
+                    NbglReviewStatus::new().show(comm, false);
                 }
             }
         }
         _ => {
-            NbglReviewStatus::new().show(false); // The user rejected the transaction or an error occurred
+            NbglReviewStatus::new().show(comm, false); // The user rejected the transaction or an error occurred
         }
     }
 
@@ -80,23 +77,23 @@ extern "C" fn sample_main() {
         &FERRIS,
         true, // Light mode for the last page
     );
-    let next = review.start();
+    let next = review.start(comm);
     match next {
-        SyncNbgl::UxSyncRetContinue => {
-            let success = review.show(&my_fields);
+        Ok(true) => {
+            let success = review.show(comm, &my_fields);
             match success {
-                SyncNbgl::UxSyncRetApproved => {
+                Ok(true) => {
                     // The user approved the transaction
-                    NbglReviewStatus::new().show(true);
+                    NbglReviewStatus::new().show(comm, true);
                 }
                 _ => {
                     // The user rejected the transaction or an error occurred
-                    NbglReviewStatus::new().show(false);
+                    NbglReviewStatus::new().show(comm, false);
                 }
             }
         }
         _ => {
-            NbglReviewStatus::new().show(false); // The user rejected the transaction or an error occurred
+            NbglReviewStatus::new().show(comm, false); // The user rejected the transaction or an error occurred
         }
     }
 

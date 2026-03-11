@@ -2,7 +2,6 @@
 #![no_main]
 
 use include_gif::include_gif;
-use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{
     init_comm, CenteredInfo, CenteredInfoStyle, Field, InfoButton, InfoLongPress, InfosList,
     NbglChoice, NbglGenericReview, NbglGlyph, NbglPageContent, NbglStatus, TagValueConfirm,
@@ -12,11 +11,11 @@ use ledger_device_sdk::nbgl::{
 use core::ops::Not;
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
+ledger_device_sdk::define_comm!(COMM);
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    let mut comm = Comm::new();
-    init_comm(&mut comm);
+    let comm = init_comm(&COMM);
 
     #[cfg(target_os = "apex_p")]
     const FERRIS: NbglGlyph =
@@ -112,7 +111,7 @@ extern "C" fn sample_main() {
     let mut show_tx = true;
     let mut status_text = "Example rejected";
     while show_tx {
-        let confirm = review.show("Reject");
+        let confirm = review.show(comm, "Reject");
         if confirm {
             status_text = "Example confirmed";
             show_tx = false;
@@ -120,6 +119,7 @@ extern "C" fn sample_main() {
             show_tx = NbglChoice::new()
                 .glyph(&IMPORTANT)
                 .show(
+                    comm,
                     "Reject transaction?",
                     "",
                     "Yes, reject",
@@ -134,7 +134,7 @@ extern "C" fn sample_main() {
     }
     NbglStatus::new()
         .text(status_text)
-        .show(status_text == "Example confirmed");
+        .show(comm, status_text == "Example confirmed");
 
     ledger_device_sdk::exit_app(0);
 }

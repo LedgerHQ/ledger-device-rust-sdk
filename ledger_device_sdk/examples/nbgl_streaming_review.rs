@@ -2,18 +2,17 @@
 #![no_main]
 
 use include_gif::include_gif;
-use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{
     init_comm, Field, NbglGlyph, NbglReviewStatus, NbglStreamingReview, NbglStreamingReviewStatus,
     TransactionType,
 };
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
+ledger_device_sdk::define_comm!(COMM);
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    let mut comm = Comm::new();
-    init_comm(&mut comm);
+    let comm = init_comm(&COMM);
 
     #[cfg(target_os = "apex_p")]
     const FERRIS: NbglGlyph =
@@ -53,7 +52,7 @@ extern "C" fn sample_main() {
         .glyph(&FERRIS)
         .tx_type(TransactionType::Transaction);
     if !review.start("Streaming example", Some("Standard")) {
-        NbglReviewStatus::new().show(false);
+        NbglReviewStatus::new().show(comm, false);
         ledger_secure_sdk_sys::exit_app(0);
     }
     let mut success: Option<bool> = None;
@@ -72,11 +71,11 @@ extern "C" fn sample_main() {
     }
     match success {
         Some(b) => {
-            NbglReviewStatus::new().show(b);
+            NbglReviewStatus::new().show(comm, b);
         }
         None => {
             let success = review.finish("Sign to send token\n");
-            NbglReviewStatus::new().show(success);
+            NbglReviewStatus::new().show(comm, success);
         }
     }
 
@@ -86,7 +85,7 @@ extern "C" fn sample_main() {
         .skippable()
         .tx_type(TransactionType::Transaction);
     if !review.start("Streaming example", Some("Skippable")) {
-        NbglReviewStatus::new().show(false);
+        NbglReviewStatus::new().show(comm, false);
         ledger_secure_sdk_sys::exit_app(0);
     }
     let mut success: Option<bool> = None;
@@ -105,11 +104,11 @@ extern "C" fn sample_main() {
     }
     match success {
         Some(b) => {
-            NbglReviewStatus::new().show(b);
+            NbglReviewStatus::new().show(comm, b);
         }
         None => {
             let success = review.finish("Sign to send token\n");
-            NbglReviewStatus::new().show(success);
+            NbglReviewStatus::new().show(comm, success);
         }
     }
 
@@ -120,7 +119,7 @@ extern "C" fn sample_main() {
         .blind()
         .tx_type(TransactionType::Transaction);
     if !review.start("Streaming example", Some("Blind Signing")) {
-        NbglReviewStatus::new().show(false);
+        NbglReviewStatus::new().show(comm, false);
         ledger_secure_sdk_sys::exit_app(0);
     }
     let mut success: Option<bool> = None;
@@ -139,11 +138,11 @@ extern "C" fn sample_main() {
     }
     match success {
         Some(b) => {
-            NbglReviewStatus::new().show(b);
+            NbglReviewStatus::new().show(comm, b);
         }
         None => {
             let success = review.finish("Sign to send token\n");
-            NbglReviewStatus::new().show(success);
+            NbglReviewStatus::new().show(comm, success);
         }
     }
 
@@ -160,7 +159,7 @@ extern "C" fn sample_main() {
             Some("Provider Message"),
         );
     if !review.start("Streaming example", Some("Blind Signing")) {
-        NbglReviewStatus::new().show(false);
+        NbglReviewStatus::new().show(comm, false);
         ledger_secure_sdk_sys::exit_app(0);
     }
     let mut success: Option<bool> = None;
@@ -179,11 +178,11 @@ extern "C" fn sample_main() {
     }
     match success {
         Some(b) => {
-            NbglReviewStatus::new().show(b);
+            NbglReviewStatus::new().show(comm, b);
         }
         None => {
             let success = review.finish("Sign to send token\n");
-            NbglReviewStatus::new().show(success);
+            NbglReviewStatus::new().show(comm, success);
         }
     }
 

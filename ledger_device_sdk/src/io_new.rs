@@ -1,27 +1,129 @@
-use crate::seph::{self, PacketTypes};
+use core::cell::UnsafeCell;
+use core::mem::MaybeUninit;
+
+use crate::seph::PacketTypes;
 
 mod event;
 pub use event::{DecodedEvent, DecodedEventType};
 
 mod bolos;
-mod callbacks;
+pub(crate) mod callbacks;
 use bolos::handle_bolos_apdu;
-use callbacks::{fetch_apdu_header_impl, next_event_ahead_impl, reply_status_impl, set_comm};
 
 pub use crate::io_legacy::{ApduHeader, Event, Reply, StatusWords};
 
 use crate::io_callbacks::nbgl_register_callbacks;
 
-#[cfg(any(
-    target_os = "nanox",
-    target_os = "stax",
-    target_os = "flex",
-    target_os = "apex_p"
-))]
-use crate::seph::ItcUxEvent;
-
 use ledger_secure_sdk_sys::seph as sys_seph;
-use ledger_secure_sdk_sys::*;
+
+/// Default buffer size for `Comm` when no custom size is specified.
+pub const DEFAULT_BUF_SIZE: usize = 273;
+
+/// Global flag ensuring only one `CommStorage` instance is ever initialized.
+// SAFETY: the runtime is single-threaded, so direct reads/writes are safe.
+static mut COMM_INITIALIZED: bool = false;
+
+/// Static storage container for a `Comm<N>` instance.
+///
+/// This type provides safe static storage for `Comm` instances, ensuring that
+/// the pointer registered with NBGL callbacks remains valid for the lifetime
+/// of the application.
+///
+/// Use the [`define_comm!`] macro to declare instances of this type.
+///
+/// # Example
+///
+/// ```ignore
+/// ledger_device_sdk::define_comm!(COMM);
+/// // or with custom buffer size:
+/// ledger_device_sdk::define_comm!(COMM, 512);
+/// ```
+pub struct CommStorage<const N: usize = DEFAULT_BUF_SIZE> {
+    inner: UnsafeCell<MaybeUninit<Comm<N>>>,
+}
+
+// SAFETY: single-threaded runtime; initialization is guarded by the global
+// COMM_INITIALIZED Cell, which ensures write access to `inner` happens
+// exactly once.
+unsafe impl<const N: usize> Sync for CommStorage<N> {}
+
+impl<const N: usize> CommStorage<N> {
+    /// Creates a new uninitialized `CommStorage`.
+    ///
+    /// This is a const fn, suitable for use in static declarations.
+    pub const fn new() -> Self {
+        Self {
+            inner: UnsafeCell::new(MaybeUninit::uninit()),
+        }
+    }
+
+    /// Initializes the storage with a `Comm<N>` instance and returns a static reference.
+    ///
+    /// # Panics
+    ///
+    /// Panics if called more than once (the storage can only be initialized once).
+    ///
+    /// # Safety
+    ///
+    /// This method must be called on a static `CommStorage` instance to ensure
+    /// the returned reference has a `'static` lifetime.
+    pub fn init(&'static self, comm: Comm<N>) -> &'static mut Comm<N> {
+        // Check the global flag to guarantee at most one CommStorage is ever
+        // initialized, even if multiple statics are declared.
+        // SAFETY: single-threaded runtime; no concurrent access is possible.
+        if unsafe { COMM_INITIALIZED } {
+            panic!("CommStorage already initialized. Only one Comm instance can exist.");
+        }
+        unsafe { COMM_INITIALIZED = true };
+
+        // SAFETY: We set COMM_INITIALIZED to true above; since the runtime is
+        // single-threaded, this branch runs exactly once. The storage is
+        // static, so the returned reference is valid for 'static.
+        unsafe {
+            let ptr = self.inner.get();
+            (*ptr).write(comm);
+            (*ptr).assume_init_mut()
+        }
+    }
+}
+
+/// Declares a static `CommStorage` with the given name and optional buffer size.
+///
+/// This macro creates static storage for a `Comm<N>` instance. The storage must be
+/// initialized using [`init_comm`] before use.
+///
+/// # Usage
+///
+/// ```ignore
+/// // With default buffer size (273 bytes):
+/// ledger_device_sdk::define_comm!(COMM);
+///
+/// // With custom buffer size:
+/// ledger_device_sdk::define_comm!(COMM, 512);
+/// ```
+///
+/// # Example
+///
+/// ```ignore
+/// use ledger_device_sdk::{define_comm, init_comm};
+///
+/// define_comm!(COMM);
+///
+/// fn main() {
+///     let comm = init_comm(&COMM);
+///     // Use comm...
+/// }
+/// ```
+#[macro_export]
+macro_rules! define_comm {
+    ($name:ident) => {
+        static $name: $crate::io::CommStorage<{ $crate::io::DEFAULT_BUF_SIZE }> =
+            $crate::io::CommStorage::new();
+    };
+    ($name:ident, $size:expr) => {
+        static $name: $crate::io::CommStorage<$size> = $crate::io::CommStorage::new();
+    };
+}
 
 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
 use crate::buttons::ButtonEvent;
@@ -33,8 +135,6 @@ pub enum CommError {
     Overflow,
     IoError,
 }
-
-pub const DEFAULT_BUF_SIZE: usize = 273;
 
 pub struct Comm<const N: usize = DEFAULT_BUF_SIZE> {
     buf: [u8; N],
@@ -73,11 +173,11 @@ impl<const N: usize> Comm<N> {
 
     pub(crate) fn nbgl_register_comm(&mut self) {
         // Register NBGL callbacks if not already set and record current Comm singleton.
-        set_comm::<N>(self);
+        callbacks::set_comm::<N>(self);
         nbgl_register_callbacks(
-            next_event_ahead_impl::<N>,
-            fetch_apdu_header_impl::<N>,
-            reply_status_impl::<N>,
+            callbacks::next_event_ahead_impl::<N>,
+            callbacks::fetch_apdu_header_impl::<N>,
+            callbacks::reply_status_impl::<N>,
         );
     }
 
@@ -141,9 +241,9 @@ impl<const N: usize> Comm<N> {
                     offset,
                     length,
                 } => {
-                    // Handle BOLOS internal APDUs (CLA = 0xB0, P1 = 0x00, P2 = 0x00) internally
+                    // Handle BOLOS internal APDUs (CLA = 0xB0) internally
                     // and continue looping until an application APDU arrives.
-                    if header.cla == 0xB0 && header.p1 == 0x00 && header.p2 == 0x00 {
+                    if header.cla == 0xB0 {
                         handle_bolos_apdu::<N>(self, header.ins);
                         continue;
                     }
@@ -167,10 +267,12 @@ impl<const N: usize> Comm<N> {
     /// incoming APDUs whose CLA byte differs from the given value.
     ///
     /// Usage:
-    /// let mut comm = Comm::new().set_expected_cla(0xE0);
-    pub fn set_expected_cla(mut self, cla: u8) -> Self {
+    /// ```ignore
+    /// let mut comm = Comm::new();
+    /// comm.set_expected_cla(0xE0);
+    /// ```
+    pub fn set_expected_cla(&mut self, cla: u8) {
         self.expected_cla = Some(cla);
-        self
     }
 }
 
@@ -249,10 +351,6 @@ impl<'a, const N: usize> Rx<'a, N> {
     pub fn as_slice(&self) -> &[u8] {
         &self.comm.buf[..self.len]
     }
-    pub fn len(&self) -> usize {
-        self.len
-    }
-    pub fn consume(self) -> () {}
 
     /// Decode into a higher-level event. No replies are sent, but UX-related and other OS interactions are dealt with.
     pub fn decode_event(self) -> DecodedEvent<N> {
@@ -322,4 +420,49 @@ impl<'a, const N: usize> CommandResponse<'a, N> {
     pub fn clear(&mut self) {
         self.len = 0;
     }
+}
+
+impl<const N: usize> Drop for Comm<N> {
+    fn drop(&mut self) {
+        callbacks::clear_comm();
+        callbacks::clear_panic_handler();
+        // Allow a new CommStorage to be initialized after this one is dropped.
+        // SAFETY: single-threaded runtime; no concurrent access is possible.
+        unsafe { COMM_INITIALIZED = false };
+    }
+}
+
+/// Initializes the `Comm` instance in static storage and registers NBGL callbacks.
+///
+/// This function combines the creation of a `Comm` instance, its storage in static memory,
+/// and registration with NBGL in a single convenient call.
+///
+/// # Arguments
+///
+/// * `storage` - A reference to a static `CommStorage<N>` (typically created with [`define_comm!`])
+///
+/// # Usage
+///
+/// ```ignore
+/// // With default buffer size (273 bytes):
+/// ledger_device_sdk::define_comm!(COMM);
+/// let comm = ledger_device_sdk::init_comm(&COMM);
+///
+/// // With custom buffer size:
+/// ledger_device_sdk::define_comm!(COMM, 512);
+/// let comm = ledger_device_sdk::init_comm(&COMM);
+/// ```
+///
+/// # Returns
+///
+/// Returns `&'static mut Comm<N>` - a static mutable reference to the initialized `Comm` instance.
+///
+/// # Panics
+///
+/// Panics if called more than once (only one `Comm` instance can exist per application).
+pub fn init_comm<const N: usize>(storage: &'static CommStorage<N>) -> &'static mut Comm<N> {
+    let comm_ref = storage.init(Comm::new());
+    comm_ref.nbgl_register_comm();
+    callbacks::register_panic_handler::<N>();
+    comm_ref
 }

@@ -2,15 +2,14 @@
 #![no_main]
 
 use include_gif::include_gif;
-use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{init_comm, NbglChoice, NbglGlyph, NbglStatus};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
+ledger_device_sdk::define_comm!(COMM);
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    let mut comm = Comm::new();
-    init_comm(&mut comm);
+    let comm = init_comm(&COMM);
 
     #[cfg(target_os = "apex_p")]
     const WARNING: NbglGlyph =
@@ -23,6 +22,7 @@ extern "C" fn sample_main() {
         NbglGlyph::from_include(include_gif!("examples/crab_14x14.png", NBGL));
 
     let back_to_safety = NbglChoice::new().glyph(&WARNING).show(
+        comm,
         "Security risk detected",
         "It may not be safe to sign this transaction. To continue, you'll need to review the risk.",
         "Back to safety",
@@ -30,13 +30,16 @@ extern "C" fn sample_main() {
     );
 
     if back_to_safety {
-        NbglStatus::new().text("Transaction rejected").show(false);
+        NbglStatus::new()
+            .text("Transaction rejected")
+            .show(comm, false);
     } else {
         let confirmed = NbglChoice::new()
             .ask_confirmation(Some("Are you sure to accept ?"), Some("Accept case"), Some("Yes"), Some("No"), true)
             .ask_confirmation(Some("Are you sure to reject ?"), Some("Reject case"), Some("Yes"), Some("No"), false)
             .glyph(&WARNING)
             .show(
+                comm,
                 "The transaction cannot be trusted",
                 "Your Ledger cannot decode this transaction. If you sign it, you could be authorizing malicious actions that can drain your wallet.\n\nLearn more: ledger.com/e8",
                 "I accept the risk",
@@ -49,7 +52,7 @@ extern "C" fn sample_main() {
             } else {
                 "Transaction rejected"
             })
-            .show(confirmed);
+            .show(comm, confirmed);
     }
 
     ledger_device_sdk::exit_app(0);

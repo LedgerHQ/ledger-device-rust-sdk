@@ -94,12 +94,7 @@ impl<'a> NbglReview<'a> {
         }
     }
 
-    /// Shows the review flow with the provided fields on the review pages.
-    /// # Arguments
-    /// * `fields` - A slice of `Field` representing the tag/value pairs to display.
-    /// # Returns
-    /// Returns `true` if the user approved the transaction, `false` otherwise.
-    pub fn show(&self, fields: &[Field]) -> bool {
+    fn show_internal(&self, fields: &[Field]) -> bool {
         unsafe {
             let v: Vec<CField> = fields
                 .iter()
@@ -210,5 +205,26 @@ impl<'a> NbglReview<'a> {
                 }
             }
         }
+    }
+
+    /// Shows the review flow with the provided fields on the review pages.
+    /// # Arguments
+    /// * `_comm` - Mutable reference to Comm.
+    /// * `fields` - A slice of `Field` representing the tag/value pairs to display.
+    /// # Returns
+    /// Returns `true` if the user approved the transaction, `false` otherwise.
+    #[cfg(feature = "io_new")]
+    pub fn show<const N: usize>(&self, _comm: &mut crate::io::Comm<N>, fields: &[Field]) -> bool {
+        self.show_internal(fields)
+    }
+
+    /// Shows the review flow with the provided fields on the review pages.
+    /// # Arguments
+    /// * `fields` - A slice of `Field` representing the tag/value pairs to display.
+    /// # Returns
+    /// Returns `true` if the user approved the transaction, `false` otherwise.
+    #[cfg(not(feature = "io_new"))]
+    pub fn show(&self, fields: &[Field]) -> bool {
+        self.show_internal(fields)
     }
 }

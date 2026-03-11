@@ -1,0 +1,76 @@
+name: Build all Rust apps with latest Rust nightly
+
+on:
+  workflow_dispatch:
+  # schedule:
+  #   # Every Monday at 4 AM UTC
+  #   - cron: '0 4 * * 1'
+
+jobs:
+  retrieve-rust-apps:
+    name: Retrieve Rust Apps
+    runs-on: ubuntu-latest
+    outputs:
+      rust_apps: ${{ steps.get_rust_apps.outputs.rust_apps }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - name: Install ledgered
+        run: pip install ledgered
+      - name: Get all rust apps
+        id: get_rust_apps
+        run: |
+          python .github/workflows/get_rust_apps.py ${{ secrets.GITHUB_TOKEN }}
+          echo "rust_apps=$(cat rust_apps.json)" >> $GITHUB_OUTPUT
+
+  build:
+    name: Build ${{ matrix.app-name }} (${{ matrix.device }})
+    needs: retrieve-rust-apps
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app-name: ["app-boilerplate-rust"]
+        device: ["nanos+", "nanox", "stax", "flex", "apex_p"]
+        include: ${{ fromJSON(needs.retrieve-rust-apps.outputs.rust_apps) }}
+    steps:
+      - name: Install latest Rust nightly
+        run: |
+          rustup toolchain install nightly --component rust-src
+          rustup target add thumbv6m-none-eabi --toolchain nightly
+          cargo +nightly ledger setup -t custom_target_nightly
+          echo "RUST_NIGHTLY=nightly" >> $GITHUB_ENV
+          echo "Rust nightly version:"
+          rustc +nightly --version
+
+      - name: Install ledgered
+        run: pip install ledgered --break-system-packages
+
+      - name: Clone App
+        uses: actions/checkout@v4
+        with:
+          repository: LedgerHQ/${{ matrix.app-name }}
+          submodules: true
+
+      - name: Override rust-toolchain.toml to use latest nightly
+        run: |
+          build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
+          printf '[toolchain]\nchannel = "nightly"\n' > $build_directory/rust-toolchain.toml
+          echo "Overridden rust-toolchain.toml:"
+          cat $build_directory/rust-toolchain.toml
+
+      - name: Build
+        env:
+          RUSTFLAGS: "-Zunstable-options"
+        run: |
+          build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
+          cd $build_directory
+          device=$(echo ${{ matrix.device }} | sed 's/+/plus/')
+          echo "Building ${{ matrix.app-name }} for $device with latest Rust nightly"
+          cargo ledger build $device
