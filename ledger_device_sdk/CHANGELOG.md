@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.34.0] - 2026-03-11
+
+### Changed
+    - Integrates io_new's version of the Comm object with Nbgl,
+      and also with the new libcall module.
+    - Ports all SDK examples from the legacy io module (io_legacy) to
+      the new io_new module.
+
 ## [1.33.1] - 2026-03-03
 
 ### Changed
