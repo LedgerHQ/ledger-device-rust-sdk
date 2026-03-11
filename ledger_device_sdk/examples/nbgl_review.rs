@@ -2,15 +2,14 @@
 #![no_main]
 
 use include_gif::include_gif;
-use ledger_device_sdk::io::*;
 use ledger_device_sdk::nbgl::{init_comm, Field, NbglGlyph, NbglReview, NbglReviewStatus};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
+ledger_device_sdk::define_comm!(COMM);
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    let mut comm = Comm::new();
-    init_comm(&mut comm);
+    let comm = init_comm(&COMM);
 
     let my_fields = [
         Field {
@@ -45,8 +44,8 @@ extern "C" fn sample_main() {
             "Sign transaction\nto send CRAB",
         )
         .glyph(&FERRIS)
-        .show(&my_fields);
-    NbglReviewStatus::new().show(success);
+        .show(comm, &my_fields);
+    NbglReviewStatus::new().show(comm, success);
 
     let success = NbglReview::new()
         .titles(
@@ -56,8 +55,8 @@ extern "C" fn sample_main() {
         )
         .glyph(&FERRIS)
         .light()
-        .show(&my_fields);
-    NbglReviewStatus::new().show(success);
+        .show(comm, &my_fields);
+    NbglReviewStatus::new().show(comm, success);
 
     let my_fields = [Field {
         name: "Hash",
@@ -72,8 +71,8 @@ extern "C" fn sample_main() {
         )
         .glyph(&FERRIS)
         .blind()
-        .show(&my_fields);
-    NbglReviewStatus::new().show(success);
+        .show(comm, &my_fields);
+    NbglReviewStatus::new().show(comm, success);
 
     ledger_device_sdk::exit_app(0);
 }
