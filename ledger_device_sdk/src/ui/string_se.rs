@@ -4,7 +4,7 @@ use crate::ui::screen_util::{draw, screen_update};
 use core::ffi::c_void;
 use ledger_secure_sdk_sys;
 
-extern "C" {
+unsafe extern "C" {
     fn pic(link_address: *mut c_void) -> *mut c_void;
 }
 
