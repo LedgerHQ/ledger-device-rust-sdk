@@ -5,7 +5,7 @@ static mut SWITCH_ARRAY: [nbgl_contentSwitch_t; SETTINGS_SIZE] =
     [unsafe { const_zero!(nbgl_contentSwitch_t) }; SETTINGS_SIZE];
 
 /// Callback triggered by the NBGL API  when a setting switch is toggled.
-unsafe extern "C" fn settings_callback(token: c_int, _index: u8, _page: c_int) {
+unsafe extern "C" fn settings_callback(token: c_int, _index: u8, _page: c_int) { unsafe {
     let idx = token - FIRST_USER_TOKEN as i32;
     if idx < 0 || idx >= SETTINGS_SIZE as i32 {
         panic!("Invalid token.");
@@ -28,7 +28,7 @@ unsafe extern "C" fn settings_callback(token: c_int, _index: u8, _page: c_int) {
         }
         data.update(&switch_values);
     }
-}
+}}
 
 #[derive(Default)]
 struct InfoHolder {

@@ -573,7 +573,7 @@ pub fn get_printable_amount_params<
     printable_amount_params
 }
 
-extern "C" {
+unsafe extern "C" {
     fn c_reset_bss();
     fn c_boot_std();
 }

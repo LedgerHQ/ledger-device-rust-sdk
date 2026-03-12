@@ -59,7 +59,7 @@ static HANDLERS: &[Handler<Out>] = &[
     }, // accept & ignore
 ];
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "C" fn sample_main() {
     let payload: &[u8] = &[0x01, 0x03, b'a', b'b', b'c', 0x02, 0x01, b'x'];
 

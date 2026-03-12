@@ -84,7 +84,7 @@ pub trait HashInit: Sized {
 }
 
 macro_rules! impl_hash {
-    ($typename:ident, $ctxname:ident, $initfname:ident, $size:expr) => {
+    ($typename:ident, $ctxname:ident, $initfname:ident, $size:expr_2021) => {
         #[derive(Default)]
         #[allow(non_camel_case_types)]
         pub struct $typename {

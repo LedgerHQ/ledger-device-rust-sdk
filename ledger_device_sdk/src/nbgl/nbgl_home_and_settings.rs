@@ -13,7 +13,7 @@ static mut SWITCH_ARRAY: [nbgl_contentSwitch_t; SETTINGS_SIZE] =
     [unsafe { const_zero!(nbgl_contentSwitch_t) }; SETTINGS_SIZE];
 
 /// Callback triggered by the NBGL API when a setting switch is toggled.
-unsafe extern "C" fn settings_callback(token: c_int, _index: u8, _page: c_int) {
+unsafe extern "C" fn settings_callback(token: c_int, _index: u8, _page: c_int) { unsafe {
     let idx = token - FIRST_USER_TOKEN as i32;
     if idx < 0 || idx >= SETTINGS_SIZE as i32 {
         panic!("Invalid token.");
@@ -36,7 +36,7 @@ unsafe extern "C" fn settings_callback(token: c_int, _index: u8, _page: c_int) {
         }
         data.update(&switch_values);
     }
-}
+}}
 
 /// Informations fields name to display in the dedicated
 /// page of the home screen.
@@ -270,12 +270,12 @@ impl<'a> NbglHomeAndSettings {
                         if let Some(hdr) = nbgl_fetch_apdu_header() {
                             // Reconstruct minimal Event::Command using APDU header only.
                             // The generic parameter T: TryFrom<ApduHeader> will parse header.
-                            if let Ok(ins) = T::try_from(hdr) {
+                            match T::try_from(hdr) { Ok(ins) => {
                                 return Event::Command(ins);
-                            } else {
+                            } _ => {
                                 // In case of parse error we emulate a BadIns reply.
                                 nbgl_reply_status(Reply(StatusWords::BadIns as u16));
-                            }
+                            }}
                         }
                     }
                     SyncNbgl::UxSyncRetQuitted => {

@@ -170,7 +170,7 @@ impl<T> SingleStorage<T> for SafeStorage<T> {
 /// Aligning to the required page size is done through a macro
 /// as `#[repr(align(N))]` does not accept variable 'N'
 macro_rules! atomic_storage {
-    ($n:expr) => {
+    ($n:expr_2021) => {
         #[repr(align($n))]
         pub struct AtomicStorage<T> {
             // We must keep the storage B in another page, so when we update the

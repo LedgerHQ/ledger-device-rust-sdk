@@ -166,7 +166,7 @@ trait SyncNBGL: Sized {
     }
 }
 
-unsafe extern "C" fn choice_callback(confirm: bool) {
+unsafe extern "C" fn choice_callback(confirm: bool) { unsafe {
     if G_CONFIRM_ASK_WHEN_TRUE || G_CONFIRM_ASK_WHEN_FALSE {
         let mut idx = 0usize;
         if G_CONFIRM_ASK_WHEN_TRUE && confirm {
@@ -192,31 +192,31 @@ unsafe extern "C" fn choice_callback(confirm: bool) {
         };
         G_ENDED = true;
     }
-}
+}}
 
-unsafe extern "C" fn confirm_choice_callback() {
+unsafe extern "C" fn confirm_choice_callback() { unsafe {
     G_ENDED = true;
-}
+}}
 
-unsafe extern "C" fn skip_callback() {
+unsafe extern "C" fn skip_callback() { unsafe {
     G_RET = SyncNbgl::UxSyncRetSkipped.into();
     G_ENDED = true;
-}
+}}
 
-unsafe extern "C" fn quit_callback() {
+unsafe extern "C" fn quit_callback() { unsafe {
     G_RET = SyncNbgl::UxSyncRetQuitted.into();
     G_ENDED = true;
-}
+}}
 
-unsafe extern "C" fn continue_callback() {
+unsafe extern "C" fn continue_callback() { unsafe {
     G_RET = SyncNbgl::UxSyncRetContinue.into();
     G_ENDED = true;
-}
+}}
 
-unsafe extern "C" fn rejected_callback() {
+unsafe extern "C" fn rejected_callback() { unsafe {
     G_RET = SyncNbgl::UxSyncRetRejected.into();
     G_ENDED = true;
-}
+}}
 
 pub struct Field<'a> {
     pub name: &'a str,

@@ -125,7 +125,7 @@ pub fn sdk_test_runner(tests: &[&TestType]) {
 #[cfg(feature = "unit_test")]
 #[macro_export]
 macro_rules! assert_eq_err {
-    ($left:expr, $right:expr) => {{
+    ($left:expr_2021, $right:expr_2021) => {{
         match (&$left, &$right) {
             (left_val, right_val) => {
                 if !(*left_val == *right_val) {

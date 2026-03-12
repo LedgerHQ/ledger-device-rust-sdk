@@ -302,7 +302,7 @@ impl Default for Ed25519Stream {
 }
 
 macro_rules! check_cx_ok {
-    ($fn_call:expr) => {{
+    ($fn_call:expr_2021) => {{
         let err = unsafe { $fn_call };
         if err != CX_OK {
             return Err(err.into());
@@ -778,7 +778,7 @@ impl SeedDerive for Stark256 {
 /// Each curve has a method `new()` that takes no arguments and returns the correctly
 /// const-typed `ECPrivateKey`.
 macro_rules! impl_curve {
-    ($typename:ident, $size:expr, $curvetype:expr) => {
+    ($typename:ident, $size:expr_2021, $curvetype:expr_2021) => {
         pub struct $typename {}
         impl $typename {
             #[allow(clippy::new_ret_no_self)]

@@ -134,7 +134,7 @@ impl Write for DBG {
 #[cfg(feature = "debug")]
 #[macro_export]
 macro_rules! log {
-    ($lvl:expr, $fmt:literal $($arg:tt)*) => ({
+    ($lvl:expr_2021, $fmt:literal $($arg:tt)*) => ({
         use core::fmt::Write;
         let _ = core::write!($crate::log::DBG, concat!("[{}] {}:{}: ", $fmt, "\r\n"), $lvl, core::file!(), core::line!() $($arg)*);
     });
