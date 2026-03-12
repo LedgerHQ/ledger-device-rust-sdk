@@ -69,7 +69,7 @@ extern "C" fn heap_init() {
     unsafe { HEAP.init(&raw mut HEAP_MEM as usize, HEAP_SIZE) }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[cfg(any(not(feature = "heap")))]
 extern "C" fn heap_init() {}
 
