@@ -27,7 +27,7 @@ impl TryFrom<ApduHeader> for Instruction {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "C" fn sample_main() {
     let comm = init_comm(&COMM);
 

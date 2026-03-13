@@ -50,10 +50,12 @@ struct CriticalSection;
 #[cfg(feature = "heap")]
 critical_section::set_impl!(CriticalSection);
 
-/// Default empty implementation as we don't have concurrency.
+/// Default no-op implementation as we don't have concurrency.
 #[cfg(feature = "heap")]
 unsafe impl critical_section::Impl for CriticalSection {
-    unsafe fn acquire() -> RawRestoreState {}
+    unsafe fn acquire() -> RawRestoreState {
+        ()
+    }
     unsafe fn release(_restore_state: RawRestoreState) {}
 }
 

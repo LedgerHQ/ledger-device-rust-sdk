@@ -13,7 +13,7 @@ mod settings {
 
     // This is necessary to store the object in NVM and not in RAM
     const SETTINGS_SIZE: usize = 10;
-    #[link_section = ".nvm_data"]
+    #[unsafe(link_section = ".nvm_data")]
     static mut DATA: NVMData<AtomicStorage<[u8; SETTINGS_SIZE]>> =
         NVMData::new(AtomicStorage::new(&[0u8; SETTINGS_SIZE]));
 
@@ -63,7 +63,7 @@ mod settings {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "C" fn sample_main() {
     let comm = init_comm(&COMM);
 

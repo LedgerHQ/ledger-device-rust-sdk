@@ -18,8 +18,9 @@ static mut PIN_BUFFER: [u8; 16] = [0x00; 16];
 
 unsafe extern "C" fn pin_callback(pin: *const u8, pin_len: u8) {
     unsafe {
-        for i in 0..pin_len {
-            PIN_BUFFER[i as usize] = *pin.add(i.into());
+        let len = (pin_len as usize).min(PIN_BUFFER.len());
+        for i in 0..len {
+            PIN_BUFFER[i] = *pin.add(i);
         }
         G_ENDED = true;
     }
@@ -77,9 +78,11 @@ impl NbglKeypad {
     /// # Returns
     /// Returns the builder itself to allow method chaining.
     pub fn max_digits(self, max: u8) -> NbglKeypad {
-        NbglKeypad {
-            max_digits: max,
-            ..self
+        unsafe {
+            NbglKeypad {
+                max_digits: max.min(PIN_BUFFER.len() as u8),
+                ..self
+            }
         }
     }
 
