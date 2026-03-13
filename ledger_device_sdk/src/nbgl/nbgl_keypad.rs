@@ -14,11 +14,12 @@ pub struct NbglKeypad {
 
 impl SyncNBGL for NbglKeypad {}
 
-static mut PIN_BUFFER: [u8; 16] = [0x00; 16];
+const PIN_BUFFER_SIZE: usize = 16;
+static mut PIN_BUFFER: [u8; PIN_BUFFER_SIZE] = [0x00; PIN_BUFFER_SIZE];
 
 unsafe extern "C" fn pin_callback(pin: *const u8, pin_len: u8) {
     unsafe {
-        let len = (pin_len as usize).min(PIN_BUFFER.len());
+        let len = (pin_len as usize).min(PIN_BUFFER_SIZE);
         for i in 0..len {
             PIN_BUFFER[i] = *pin.add(i);
         }
@@ -78,11 +79,9 @@ impl NbglKeypad {
     /// # Returns
     /// Returns the builder itself to allow method chaining.
     pub fn max_digits(self, max: u8) -> NbglKeypad {
-        unsafe {
-            NbglKeypad {
-                max_digits: max.min(PIN_BUFFER.len() as u8),
-                ..self
-            }
+        NbglKeypad {
+            max_digits: max.min(PIN_BUFFER_SIZE as u8),
+            ..self
         }
     }
 
