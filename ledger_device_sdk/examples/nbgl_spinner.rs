@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use ledger_device_sdk::nbgl::{init_comm, NbglReviewStatus, NbglSpinner};
+use ledger_device_sdk::nbgl::{NbglReviewStatus, NbglSpinner, init_comm};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 ledger_device_sdk::define_comm!(COMM);

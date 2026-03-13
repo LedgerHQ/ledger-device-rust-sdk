@@ -1,15 +1,15 @@
 #![no_std]
 #![no_main]
 
-use ledger_device_sdk::nbgl::{init_comm, NbglGenericSettings};
+use ledger_device_sdk::nbgl::{NbglGenericSettings, init_comm};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 ledger_device_sdk::define_comm!(COMM);
 
 mod settings {
 
-    use ledger_device_sdk::nvm::*;
     use ledger_device_sdk::NVMData;
+    use ledger_device_sdk::nvm::*;
 
     // This is necessary to store the object in NVM and not in RAM
     const SETTINGS_SIZE: usize = 10;

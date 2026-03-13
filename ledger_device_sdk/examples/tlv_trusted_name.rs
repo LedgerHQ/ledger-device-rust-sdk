@@ -3,8 +3,8 @@
 
 use include_gif::include_gif;
 use ledger_device_sdk::io::{ApduHeader, StatusWords};
-use ledger_device_sdk::nbgl::{init_comm, NbglGlyph, NbglHomeAndSettings};
-use ledger_device_sdk::tlv::{parse_trusted_name_tlv, TrustedNameOut};
+use ledger_device_sdk::nbgl::{NbglGlyph, NbglHomeAndSettings, init_comm};
+use ledger_device_sdk::tlv::{TrustedNameOut, parse_trusted_name_tlv};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 ledger_device_sdk::define_comm!(COMM);

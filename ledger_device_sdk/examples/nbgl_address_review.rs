@@ -3,7 +3,7 @@
 
 use include_gif::include_gif;
 use ledger_device_sdk::nbgl::{
-    init_comm, Field, NbglAddressReview, NbglGlyph, NbglReviewStatus, StatusType,
+    Field, NbglAddressReview, NbglGlyph, NbglReviewStatus, StatusType, init_comm,
 };
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);

@@ -33,8 +33,8 @@
 ))]
 use crate::nbgl::NbglSpinner;
 use ledger_secure_sdk_sys::{
-    check_address_parameters_t, create_transaction_parameters_t, get_printable_amount_parameters_t,
-    libargs_s__bindgen_ty_1, libargs_t, MAX_PRINTABLE_AMOUNT_SIZE,
+    MAX_PRINTABLE_AMOUNT_SIZE, check_address_parameters_t, create_transaction_parameters_t,
+    get_printable_amount_parameters_t, libargs_s__bindgen_ty_1, libargs_t,
 };
 
 #[cfg(feature = "io_new")]
@@ -304,10 +304,10 @@ pub struct CheckAddressParams<
 //  --8<-- [end:CheckAddressParams]
 
 impl<
-        const COIN_CONFIG_BUF_SIZE: usize,
-        const ADDRESS_BUF_SIZE: usize,
-        const ADDRESS_EXTRA_ID_BUF_SIZE: usize,
-    > Default
+    const COIN_CONFIG_BUF_SIZE: usize,
+    const ADDRESS_BUF_SIZE: usize,
+    const ADDRESS_EXTRA_ID_BUF_SIZE: usize,
+> Default
     for CheckAddressParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE, ADDRESS_EXTRA_ID_BUF_SIZE>
 {
     fn default() -> Self {
@@ -349,10 +349,10 @@ pub struct PrintableAmountParams<
 //  --8<-- [end:PrintableAmountParams]
 
 impl<
-        const COIN_CONFIG_BUF_SIZE: usize,
-        const ADDRESS_BUF_SIZE: usize,
-        const ADDRESS_EXTRA_ID_BUF_SIZE: usize,
-    > Default
+    const COIN_CONFIG_BUF_SIZE: usize,
+    const ADDRESS_BUF_SIZE: usize,
+    const ADDRESS_EXTRA_ID_BUF_SIZE: usize,
+> Default
     for PrintableAmountParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE, ADDRESS_EXTRA_ID_BUF_SIZE>
 {
     fn default() -> Self {
@@ -403,11 +403,10 @@ pub struct CreateTxParams<
 //  --8<-- [end:CreateTxParams]
 
 impl<
-        const COIN_CONFIG_BUF_SIZE: usize,
-        const ADDRESS_BUF_SIZE: usize,
-        const ADDRESS_EXTRA_ID_BUF_SIZE: usize,
-    > Default
-    for CreateTxParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE, ADDRESS_EXTRA_ID_BUF_SIZE>
+    const COIN_CONFIG_BUF_SIZE: usize,
+    const ADDRESS_BUF_SIZE: usize,
+    const ADDRESS_EXTRA_ID_BUF_SIZE: usize,
+> Default for CreateTxParams<COIN_CONFIG_BUF_SIZE, ADDRESS_BUF_SIZE, ADDRESS_EXTRA_ID_BUF_SIZE>
 {
     fn default() -> Self {
         CreateTxParams {

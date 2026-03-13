@@ -3,8 +3,8 @@
 
 use include_gif::include_gif;
 use ledger_device_sdk::nbgl::{
-    init_comm, Field, NbglGlyph, NbglReviewStatus, NbglStreamingReview, NbglStreamingReviewStatus,
-    TransactionType,
+    Field, NbglGlyph, NbglReviewStatus, NbglStreamingReview, NbglStreamingReviewStatus,
+    TransactionType, init_comm,
 };
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);

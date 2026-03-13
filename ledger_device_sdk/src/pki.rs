@@ -5,7 +5,7 @@
 use crate::ecc::CurvesId;
 use crate::io::Reply;
 use ledger_secure_sdk_sys::{
-    cx_ecfp_384_public_key_t, os_pki_get_info, os_pki_verify, CERTIFICATE_TRUSTED_NAME_MAXLEN,
+    CERTIFICATE_TRUSTED_NAME_MAXLEN, cx_ecfp_384_public_key_t, os_pki_get_info, os_pki_verify,
 };
 
 /// PKI verification errors

@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use ledger_device_sdk::nbgl::{init_comm, NbglKeypad, NbglStatus};
+use ledger_device_sdk::nbgl::{NbglKeypad, NbglStatus, init_comm};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 ledger_device_sdk::define_comm!(COMM);

@@ -16,17 +16,21 @@ impl SyncNBGL for NbglKeypad {}
 
 static mut PIN_BUFFER: [u8; 16] = [0x00; 16];
 
-unsafe extern "C" fn pin_callback(pin: *const u8, pin_len: u8) { unsafe {
-    for i in 0..pin_len {
-        PIN_BUFFER[i as usize] = *pin.add(i.into());
+unsafe extern "C" fn pin_callback(pin: *const u8, pin_len: u8) {
+    unsafe {
+        for i in 0..pin_len {
+            PIN_BUFFER[i as usize] = *pin.add(i.into());
+        }
+        G_ENDED = true;
     }
-    G_ENDED = true;
-}}
+}
 
-unsafe extern "C" fn action_callback() { unsafe {
-    G_RET = SyncNbgl::UxSyncRetPinRejected.into();
-    G_ENDED = true;
-}}
+unsafe extern "C" fn action_callback() {
+    unsafe {
+        G_RET = SyncNbgl::UxSyncRetPinRejected.into();
+        G_ENDED = true;
+    }
+}
 
 impl NbglKeypad {
     /// Creates a new keypad builder with default settings.

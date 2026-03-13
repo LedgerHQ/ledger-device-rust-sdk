@@ -2,7 +2,7 @@
 #![no_main]
 
 use include_gif::include_gif;
-use ledger_device_sdk::nbgl::{init_comm, NbglGlyph, NbglHomeAndSettings};
+use ledger_device_sdk::nbgl::{NbglGlyph, NbglHomeAndSettings, init_comm};
 // use ledger_device_sdk::nvm::*;
 // use ledger_device_sdk::NVMData;
 use ledger_device_sdk::io::{ApduHeader, StatusWords};
@@ -29,8 +29,8 @@ impl TryFrom<ApduHeader> for Instruction {
 
 mod settings {
 
-    use ledger_device_sdk::nvm::*;
     use ledger_device_sdk::NVMData;
+    use ledger_device_sdk::nvm::*;
 
     // This is necessary to store the object in NVM and not in RAM
     const SETTINGS_SIZE: usize = 10;

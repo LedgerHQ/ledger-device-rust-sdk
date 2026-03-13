@@ -2,7 +2,7 @@
 #![no_main]
 
 use include_gif::include_gif;
-use ledger_device_sdk::nbgl::{init_comm, NbglChoice, NbglGlyph, NbglStatus};
+use ledger_device_sdk::nbgl::{NbglChoice, NbglGlyph, NbglStatus, init_comm};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 ledger_device_sdk::define_comm!(COMM);

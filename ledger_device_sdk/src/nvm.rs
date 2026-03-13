@@ -40,8 +40,8 @@
 //! println!("counter value is {}", *counter.get_ref());
 //! ```
 
-use ledger_secure_sdk_sys::nvm_write;
 use AtomicStorageElem::{StorageA, StorageB};
+use ledger_secure_sdk_sys::nvm_write;
 
 // Warning: currently alignment is fixed by magic values everywhere, since
 // rust does not allow using a constant in repr(align(...))

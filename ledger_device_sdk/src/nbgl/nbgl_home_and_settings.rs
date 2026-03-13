@@ -13,30 +13,32 @@ static mut SWITCH_ARRAY: [nbgl_contentSwitch_t; SETTINGS_SIZE] =
     [unsafe { const_zero!(nbgl_contentSwitch_t) }; SETTINGS_SIZE];
 
 /// Callback triggered by the NBGL API when a setting switch is toggled.
-unsafe extern "C" fn settings_callback(token: c_int, _index: u8, _page: c_int) { unsafe {
-    let idx = token - FIRST_USER_TOKEN as i32;
-    if idx < 0 || idx >= SETTINGS_SIZE as i32 {
-        panic!("Invalid token.");
-    }
-
-    let setting_idx: usize = idx as usize;
-
-    match SWITCH_ARRAY[setting_idx].initState {
-        OFF_STATE => SWITCH_ARRAY[setting_idx].initState = ON_STATE,
-        ON_STATE => SWITCH_ARRAY[setting_idx].initState = OFF_STATE,
-        _ => panic!("Invalid state."),
-    }
-
-    if let Some(data) = (*(&raw mut NVM_REF)).as_mut() {
-        let mut switch_values: [u8; SETTINGS_SIZE] = *data.get_ref();
-        if switch_values[setting_idx] == OFF_STATE {
-            switch_values[setting_idx] = ON_STATE;
-        } else {
-            switch_values[setting_idx] = OFF_STATE;
+unsafe extern "C" fn settings_callback(token: c_int, _index: u8, _page: c_int) {
+    unsafe {
+        let idx = token - FIRST_USER_TOKEN as i32;
+        if idx < 0 || idx >= SETTINGS_SIZE as i32 {
+            panic!("Invalid token.");
         }
-        data.update(&switch_values);
+
+        let setting_idx: usize = idx as usize;
+
+        match SWITCH_ARRAY[setting_idx].initState {
+            OFF_STATE => SWITCH_ARRAY[setting_idx].initState = ON_STATE,
+            ON_STATE => SWITCH_ARRAY[setting_idx].initState = OFF_STATE,
+            _ => panic!("Invalid state."),
+        }
+
+        if let Some(data) = (*(&raw mut NVM_REF)).as_mut() {
+            let mut switch_values: [u8; SETTINGS_SIZE] = *data.get_ref();
+            if switch_values[setting_idx] == OFF_STATE {
+                switch_values[setting_idx] = ON_STATE;
+            } else {
+                switch_values[setting_idx] = OFF_STATE;
+            }
+            data.update(&switch_values);
+        }
     }
-}}
+}
 
 /// Informations fields name to display in the dedicated
 /// page of the home screen.
@@ -270,12 +272,15 @@ impl<'a> NbglHomeAndSettings {
                         if let Some(hdr) = nbgl_fetch_apdu_header() {
                             // Reconstruct minimal Event::Command using APDU header only.
                             // The generic parameter T: TryFrom<ApduHeader> will parse header.
-                            match T::try_from(hdr) { Ok(ins) => {
-                                return Event::Command(ins);
-                            } _ => {
-                                // In case of parse error we emulate a BadIns reply.
-                                nbgl_reply_status(Reply(StatusWords::BadIns as u16));
-                            }}
+                            match T::try_from(hdr) {
+                                Ok(ins) => {
+                                    return Event::Command(ins);
+                                }
+                                _ => {
+                                    // In case of parse error we emulate a BadIns reply.
+                                    nbgl_reply_status(Reply(StatusWords::BadIns as u16));
+                                }
+                            }
                         }
                     }
                     SyncNbgl::UxSyncRetQuitted => {

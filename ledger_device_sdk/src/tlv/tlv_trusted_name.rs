@@ -18,10 +18,10 @@
 
 use super::tlv_generic::*;
 use crate::ecc::CurvesId;
+use crate::hash::HashInit;
 use crate::hash::ripemd::Ripemd160;
 use crate::hash::sha2::{Sha2_256, Sha2_512};
 use crate::hash::sha3::{Keccak256, Sha3_256};
-use crate::hash::HashInit;
 use crate::pki::pki_check_signature;
 use crate::tag_to_flag_u64;
 use ledger_secure_sdk_sys::CERTIFICATE_PUBLIC_KEY_USAGE_TRUSTED_NAME;
@@ -474,7 +474,7 @@ fn finalize_hashes(
 mod tests {
     use crate::assert_eq_err as assert_eq;
     use crate::testing::TestType;
-    use crate::tlv::{parse_trusted_name_tlv, TrustedNameOut};
+    use crate::tlv::{TrustedNameOut, parse_trusted_name_tlv};
     use testmacro::test_item as test;
 
     const TLV_PAYLOAD: &[u8] = &[

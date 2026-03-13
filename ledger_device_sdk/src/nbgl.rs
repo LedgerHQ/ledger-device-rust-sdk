@@ -166,57 +166,69 @@ trait SyncNBGL: Sized {
     }
 }
 
-unsafe extern "C" fn choice_callback(confirm: bool) { unsafe {
-    if G_CONFIRM_ASK_WHEN_TRUE || G_CONFIRM_ASK_WHEN_FALSE {
-        let mut idx = 0usize;
-        if G_CONFIRM_ASK_WHEN_TRUE && confirm {
-            idx = G_CONFIRM_SCREEN_WHEN_TRUE_IDX;
-            G_RET = SyncNbgl::UxSyncRetApproved.into();
-        } else if G_CONFIRM_ASK_WHEN_FALSE && !confirm {
-            idx = G_CONFIRM_SCREEN_WHEN_FALSE_IDX;
-            G_RET = SyncNbgl::UxSyncRetRejected.into();
-        }
-        let screen = G_CONFIRM_SCREEN[idx].as_ref().unwrap();
-        nbgl_useCaseConfirm(
-            screen.message.as_ptr() as *const c_char,
-            screen.submessage.as_ptr() as *const c_char,
-            screen.ok_text.as_ptr() as *const c_char,
-            screen.ko_text.as_ptr() as *const c_char,
-            Some(confirm_choice_callback),
-        );
-    } else {
-        G_RET = if confirm {
-            SyncNbgl::UxSyncRetApproved.into()
+unsafe extern "C" fn choice_callback(confirm: bool) {
+    unsafe {
+        if G_CONFIRM_ASK_WHEN_TRUE || G_CONFIRM_ASK_WHEN_FALSE {
+            let mut idx = 0usize;
+            if G_CONFIRM_ASK_WHEN_TRUE && confirm {
+                idx = G_CONFIRM_SCREEN_WHEN_TRUE_IDX;
+                G_RET = SyncNbgl::UxSyncRetApproved.into();
+            } else if G_CONFIRM_ASK_WHEN_FALSE && !confirm {
+                idx = G_CONFIRM_SCREEN_WHEN_FALSE_IDX;
+                G_RET = SyncNbgl::UxSyncRetRejected.into();
+            }
+            let screen = G_CONFIRM_SCREEN[idx].as_ref().unwrap();
+            nbgl_useCaseConfirm(
+                screen.message.as_ptr() as *const c_char,
+                screen.submessage.as_ptr() as *const c_char,
+                screen.ok_text.as_ptr() as *const c_char,
+                screen.ko_text.as_ptr() as *const c_char,
+                Some(confirm_choice_callback),
+            );
         } else {
-            SyncNbgl::UxSyncRetRejected.into()
-        };
+            G_RET = if confirm {
+                SyncNbgl::UxSyncRetApproved.into()
+            } else {
+                SyncNbgl::UxSyncRetRejected.into()
+            };
+            G_ENDED = true;
+        }
+    }
+}
+
+unsafe extern "C" fn confirm_choice_callback() {
+    unsafe {
         G_ENDED = true;
     }
-}}
+}
 
-unsafe extern "C" fn confirm_choice_callback() { unsafe {
-    G_ENDED = true;
-}}
+unsafe extern "C" fn skip_callback() {
+    unsafe {
+        G_RET = SyncNbgl::UxSyncRetSkipped.into();
+        G_ENDED = true;
+    }
+}
 
-unsafe extern "C" fn skip_callback() { unsafe {
-    G_RET = SyncNbgl::UxSyncRetSkipped.into();
-    G_ENDED = true;
-}}
+unsafe extern "C" fn quit_callback() {
+    unsafe {
+        G_RET = SyncNbgl::UxSyncRetQuitted.into();
+        G_ENDED = true;
+    }
+}
 
-unsafe extern "C" fn quit_callback() { unsafe {
-    G_RET = SyncNbgl::UxSyncRetQuitted.into();
-    G_ENDED = true;
-}}
+unsafe extern "C" fn continue_callback() {
+    unsafe {
+        G_RET = SyncNbgl::UxSyncRetContinue.into();
+        G_ENDED = true;
+    }
+}
 
-unsafe extern "C" fn continue_callback() { unsafe {
-    G_RET = SyncNbgl::UxSyncRetContinue.into();
-    G_ENDED = true;
-}}
-
-unsafe extern "C" fn rejected_callback() { unsafe {
-    G_RET = SyncNbgl::UxSyncRetRejected.into();
-    G_ENDED = true;
-}}
+unsafe extern "C" fn rejected_callback() {
+    unsafe {
+        G_RET = SyncNbgl::UxSyncRetRejected.into();
+        G_ENDED = true;
+    }
+}
 
 pub struct Field<'a> {
     pub name: &'a str,

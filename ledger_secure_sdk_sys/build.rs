@@ -715,7 +715,9 @@ impl SDKBuilder<'_> {
 
         assert!(
             (2048..=max_heap_size).contains(&heap_size_value),
-            "Invalid heap size specification '{raw}'; resolved value {heap_size_value} must be in [2048, {}] for target {}", max_heap_size, target_os
+            "Invalid heap size specification '{raw}'; resolved value {heap_size_value} must be in [2048, {}] for target {}",
+            max_heap_size,
+            target_os
         );
 
         let out_dir = env::var("OUT_DIR").unwrap();

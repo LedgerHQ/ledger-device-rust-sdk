@@ -3,9 +3,9 @@
 
 use include_gif::include_gif;
 use ledger_device_sdk::nbgl::{
-    init_comm, CenteredInfo, CenteredInfoStyle, Field, InfoButton, InfoLongPress, InfosList,
-    NbglChoice, NbglGenericReview, NbglGlyph, NbglPageContent, NbglStatus, TagValueConfirm,
-    TagValueList, TuneIndex,
+    CenteredInfo, CenteredInfoStyle, Field, InfoButton, InfoLongPress, InfosList, NbglChoice,
+    NbglGenericReview, NbglGlyph, NbglPageContent, NbglStatus, TagValueConfirm, TagValueList,
+    TuneIndex, init_comm,
 };
 
 use core::ops::Not;
