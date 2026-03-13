@@ -375,7 +375,7 @@ pub fn parse_trusted_name_tlv(payload: &[u8], out: &mut TrustedNameOut) -> Resul
 
 // Helper macro to reduce boilerplate for hash finalization
 macro_rules! finalize_hash {
-    ($hash_ctx:expr_2021, $curve_id:expr_2021, $hash:expr_2021, $hash_size:expr_2021, $curve:expr_2021) => {{
+    ($hash_ctx:expr, $curve_id:expr, $hash:expr, $hash_size:expr, $curve:expr) => {{
         *$hash_size = $hash_ctx.get_size();
         *$curve = $curve_id;
         $hash_ctx

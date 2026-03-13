@@ -91,7 +91,7 @@ use ledger_secure_sdk_sys::{pic_rs, pic_rs_mut};
 /// as the project's current panic handler
 #[macro_export]
 macro_rules! set_panic {
-    ($f:expr_2021) => {
+    ($f:expr) => {
         use core::panic::PanicInfo;
         #[panic_handler]
         fn panic(info: &PanicInfo) -> ! {
