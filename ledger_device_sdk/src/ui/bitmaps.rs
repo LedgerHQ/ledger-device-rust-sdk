@@ -58,7 +58,7 @@ use include_gif::include_gif;
 
 pub const BLANK: [u8; 1024] = [0u8; 1024];
 
-extern "C" {
+unsafe extern "C" {
     /// The bitmap for the back icon.
     pub static C_icon_back_bitmap: [u8; 25];
 }
@@ -68,7 +68,7 @@ pub static BACK: Glyph = Glyph {
     height: ledger_secure_sdk_sys::GLYPH_icon_back_HEIGHT,
     inverted: false,
 };
-extern "C" {
+unsafe extern "C" {
     /// The bitmap for the back_x icon.
     pub static C_icon_back_x_bitmap: [u8; 25];
 }
@@ -78,7 +78,7 @@ pub static BACK_X: Glyph = Glyph {
     height: ledger_secure_sdk_sys::GLYPH_icon_back_x_HEIGHT,
     inverted: false,
 };
-extern "C" {
+unsafe extern "C" {
     /// The bitmap for the coggle icon.
     pub static C_icon_coggle_bitmap: [u8; 25];
 }
@@ -88,7 +88,7 @@ pub static COGGLE: Glyph = Glyph {
     height: ledger_secure_sdk_sys::GLYPH_icon_coggle_HEIGHT,
     inverted: false,
 };
-extern "C" {
+unsafe extern "C" {
     /// The bitmap for the processing icon.
     pub static C_icon_down_bitmap: [u8; 4];
 }
@@ -98,7 +98,7 @@ pub static DOWN_ARROW: Glyph = Glyph {
     height: ledger_secure_sdk_sys::GLYPH_icon_down_HEIGHT,
     inverted: false,
 };
-extern "C" {
+unsafe extern "C" {
     /// The bitmap for the left arrow icon.
     pub static C_icon_left_bitmap: [u8; 4];
 }
@@ -108,7 +108,7 @@ pub static LEFT_ARROW: Glyph = Glyph {
     height: ledger_secure_sdk_sys::GLYPH_icon_left_HEIGHT,
     inverted: false,
 };
-extern "C" {
+unsafe extern "C" {
     /// The bitmap for the right arrow icon.
     pub static C_icon_right_bitmap: [u8; 4];
 }
@@ -118,7 +118,7 @@ pub static RIGHT_ARROW: Glyph = Glyph {
     height: ledger_secure_sdk_sys::GLYPH_icon_right_HEIGHT,
     inverted: false,
 };
-extern "C" {
+unsafe extern "C" {
     /// The bitmap for the up arrow icon.
     pub static C_icon_up_bitmap: [u8; 4];
 }
@@ -128,7 +128,7 @@ pub static UP_ARROW: Glyph = Glyph {
     height: ledger_secure_sdk_sys::GLYPH_icon_up_HEIGHT,
     inverted: false,
 };
-extern "C" {
+unsafe extern "C" {
     /// The bitmap for the certificate icon.
     pub static C_icon_certificate_bitmap: [u8; 25];
 }
@@ -138,7 +138,7 @@ pub static CERTIFICATE: Glyph = Glyph {
     height: ledger_secure_sdk_sys::GLYPH_icon_certificate_HEIGHT,
     inverted: false,
 };
-extern "C" {
+unsafe extern "C" {
     /// The bitmap for the crossmark icon.
     pub static C_icon_crossmark_bitmap: [u8; 25];
 }
@@ -150,7 +150,7 @@ pub static CROSSMARK: Glyph = Glyph {
 };
 // This is a special case for the cross icon, which is a GIF (used by client apps)
 pub const CROSS: Glyph = Glyph::from_include(include_gif!("icons/icon_cross_badge.gif"));
-extern "C" {
+unsafe extern "C" {
     /// The bitmap for the dashboard icon.
     pub static C_icon_dashboard_bitmap: [u8; 25];
 }
@@ -160,7 +160,7 @@ pub static DASHBOARD: Glyph = Glyph {
     height: ledger_secure_sdk_sys::GLYPH_icon_dashboard_HEIGHT,
     inverted: false,
 };
-extern "C" {
+unsafe extern "C" {
     /// The bitmap for the dashboard x icon.
     pub static C_icon_dashboard_x_bitmap: [u8; 25];
 }
@@ -170,7 +170,7 @@ pub static DASHBOARD_X: Glyph = Glyph {
     height: ledger_secure_sdk_sys::GLYPH_icon_dashboard_x_HEIGHT,
     inverted: false,
 };
-extern "C" {
+unsafe extern "C" {
     /// The bitmap for the eye icon.
     pub static C_icon_eye_bitmap: [u8; 25];
 }
@@ -180,7 +180,7 @@ pub static EYE: Glyph = Glyph {
     height: ledger_secure_sdk_sys::GLYPH_icon_eye_HEIGHT,
     inverted: false,
 };
-extern "C" {
+unsafe extern "C" {
     /// The bitmap for the processing icon.
     pub static C_icon_processing_bitmap: [u8; 25];
 }
@@ -190,7 +190,7 @@ pub static PROCESSING: Glyph = Glyph {
     height: ledger_secure_sdk_sys::GLYPH_icon_processing_HEIGHT,
     inverted: false,
 };
-extern "C" {
+unsafe extern "C" {
     /// The bitmap for the validate icon.
     pub static C_icon_validate_14_bitmap: [u8; 25];
 }
@@ -202,7 +202,7 @@ pub static VALIDATE_14: Glyph = Glyph {
 };
 // This is a special case for the checkmark icon, which is a GIF (used by client apps)
 pub const CHECKMARK: Glyph = Glyph::from_include(include_gif!("icons/badge_check.gif"));
-extern "C" {
+unsafe extern "C" {
     /// The bitmap for the warning icon.
     pub static C_icon_warning_bitmap: [u8; 25];
 }

@@ -2,8 +2,8 @@ use super::{Comm, StatusWords};
 use ledger_secure_sdk_sys::*;
 
 use crate::io_legacy::{
-    PkiLoadCertificateError, SyscallError, BOLOS_INS_GET_VERSION, BOLOS_INS_QUIT,
-    BOLOS_INS_SET_PKI_CERT,
+    BOLOS_INS_GET_VERSION, BOLOS_INS_QUIT, BOLOS_INS_SET_PKI_CERT, PkiLoadCertificateError,
+    SyscallError,
 };
 
 /// Handle internal BOLOS APDUs (CLA = 0xB0, P1 = 0x00, P2 = 0x00).

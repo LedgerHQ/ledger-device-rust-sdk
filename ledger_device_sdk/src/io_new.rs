@@ -128,7 +128,7 @@ macro_rules! define_comm {
 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
 use crate::buttons::ButtonEvent;
 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-use ledger_secure_sdk_sys::buttons::{get_button_event, ButtonsState};
+use ledger_secure_sdk_sys::buttons::{ButtonsState, get_button_event};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CommError {

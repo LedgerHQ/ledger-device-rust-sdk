@@ -1,4 +1,4 @@
-use ledger_secure_sdk_sys::{libargs_t, CHECK_ADDRESS, GET_PRINTABLE_AMOUNT, SIGN_TRANSACTION};
+use ledger_secure_sdk_sys::{CHECK_ADDRESS, GET_PRINTABLE_AMOUNT, SIGN_TRANSACTION, libargs_t};
 
 pub mod string;
 pub mod swap;

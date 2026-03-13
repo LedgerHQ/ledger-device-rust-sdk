@@ -7,7 +7,7 @@ mod canary {
     // will panic if corruption is detected.
     // This might later be removed if such protection is provided in the C SDK.
 
-    extern "C" {
+    unsafe extern "C" {
         /// Stack canary symbol provided by the linker script
         static mut app_stack_canary: u32;
     }

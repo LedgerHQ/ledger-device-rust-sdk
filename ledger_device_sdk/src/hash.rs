@@ -1,6 +1,6 @@
 use ledger_secure_sdk_sys::{
-    cx_hash_final, cx_hash_get_size, cx_hash_no_throw, cx_hash_t, cx_hash_update,
-    CX_INVALID_PARAMETER, CX_LAST, CX_OK,
+    CX_INVALID_PARAMETER, CX_LAST, CX_OK, cx_hash_final, cx_hash_get_size, cx_hash_no_throw,
+    cx_hash_t, cx_hash_update,
 };
 
 pub mod blake2;
@@ -143,9 +143,9 @@ pub(crate) use impl_hash;
 #[cfg(test)]
 mod tests {
     use crate::assert_eq_err as assert_eq;
+    use crate::hash::HashInit;
     use crate::hash::sha2::Sha2_256;
     use crate::hash::sha3::*;
-    use crate::hash::HashInit;
     use crate::testing::TestType;
     use testmacro::test_item as test;
 

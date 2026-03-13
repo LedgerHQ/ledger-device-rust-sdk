@@ -2,10 +2,11 @@ use core::default::Default;
 use core::fmt::Display;
 use core::ops::{Add, AddAssign, Mul, Rem, RemAssign, Sub, SubAssign};
 use ledger_secure_sdk_sys::{
-    cx_math_add_no_throw, cx_math_addm_no_throw, cx_math_cmp_no_throw, cx_math_invintm_no_throw,
-    cx_math_invprimem_no_throw, cx_math_is_prime_no_throw, cx_math_modm_no_throw,
-    cx_math_mult_no_throw, cx_math_multm_no_throw, cx_math_next_prime_no_throw,
-    cx_math_powm_no_throw, cx_math_sub_no_throw, cx_math_subm_no_throw, CX_OK,
+    CX_OK, cx_math_add_no_throw, cx_math_addm_no_throw, cx_math_cmp_no_throw,
+    cx_math_invintm_no_throw, cx_math_invprimem_no_throw, cx_math_is_prime_no_throw,
+    cx_math_modm_no_throw, cx_math_mult_no_throw, cx_math_multm_no_throw,
+    cx_math_next_prime_no_throw, cx_math_powm_no_throw, cx_math_sub_no_throw,
+    cx_math_subm_no_throw,
 };
 
 #[derive(Debug, Copy, Clone)]

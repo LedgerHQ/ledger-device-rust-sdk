@@ -19,8 +19,8 @@
 
 use super::tlv_generic::*;
 use crate::ecc::CurvesId;
-use crate::hash::sha2::Sha2_256;
 use crate::hash::HashInit;
+use crate::hash::sha2::Sha2_256;
 use crate::pki::pki_check_signature;
 use crate::tag_to_flag_u64;
 use ledger_secure_sdk_sys::CERTIFICATE_PUBLIC_KEY_USAGE_COIN_META;
@@ -232,7 +232,7 @@ pub fn parse_dynamic_token_tlv(payload: &[u8], out: &mut DynamicTokenOut) -> Res
 mod tests {
     use crate::assert_eq_err as assert_eq;
     use crate::testing::TestType;
-    use crate::tlv::{parse_dynamic_token_tlv, DynamicTokenOut};
+    use crate::tlv::{DynamicTokenOut, parse_dynamic_token_tlv};
     use testmacro::test_item as test;
 
     const TLV_PAYLOAD: &[u8] = &[

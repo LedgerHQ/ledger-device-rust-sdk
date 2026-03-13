@@ -6,27 +6,29 @@ static mut SWITCH_ARRAY: [nbgl_contentSwitch_t; SETTINGS_SIZE] =
 
 /// Callback triggered by the NBGL API  when a setting switch is toggled.
 unsafe extern "C" fn settings_callback(token: c_int, _index: u8, _page: c_int) {
-    let idx = token - FIRST_USER_TOKEN as i32;
-    if idx < 0 || idx >= SETTINGS_SIZE as i32 {
-        panic!("Invalid token.");
-    }
-
-    let setting_idx: usize = idx as usize;
-
-    match SWITCH_ARRAY[setting_idx].initState {
-        OFF_STATE => SWITCH_ARRAY[setting_idx].initState = ON_STATE,
-        ON_STATE => SWITCH_ARRAY[setting_idx].initState = OFF_STATE,
-        _ => panic!("Invalid state."),
-    }
-
-    if let Some(data) = (*(&raw mut NVM_REF)).as_mut() {
-        let mut switch_values: [u8; SETTINGS_SIZE] = *data.get_ref();
-        if switch_values[setting_idx] == OFF_STATE {
-            switch_values[setting_idx] = ON_STATE;
-        } else {
-            switch_values[setting_idx] = OFF_STATE;
+    unsafe {
+        let idx = token - FIRST_USER_TOKEN as i32;
+        if idx < 0 || idx >= SETTINGS_SIZE as i32 {
+            panic!("Invalid token.");
         }
-        data.update(&switch_values);
+
+        let setting_idx: usize = idx as usize;
+
+        match SWITCH_ARRAY[setting_idx].initState {
+            OFF_STATE => SWITCH_ARRAY[setting_idx].initState = ON_STATE,
+            ON_STATE => SWITCH_ARRAY[setting_idx].initState = OFF_STATE,
+            _ => panic!("Invalid state."),
+        }
+
+        if let Some(data) = (*(&raw mut NVM_REF)).as_mut() {
+            let mut switch_values: [u8; SETTINGS_SIZE] = *data.get_ref();
+            if switch_values[setting_idx] == OFF_STATE {
+                switch_values[setting_idx] = ON_STATE;
+            } else {
+                switch_values[setting_idx] = OFF_STATE;
+            }
+            data.update(&switch_values);
+        }
     }
 }
 

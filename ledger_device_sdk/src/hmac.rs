@@ -1,7 +1,7 @@
 //! Hash-based message authentication code (HMAC) related functions
 use ledger_secure_sdk_sys::{
-    cx_hmac_final, cx_hmac_no_throw, cx_hmac_t, cx_hmac_update, CX_INVALID_PARAMETER, CX_LAST,
-    CX_OK,
+    CX_INVALID_PARAMETER, CX_LAST, CX_OK, cx_hmac_final, cx_hmac_no_throw, cx_hmac_t,
+    cx_hmac_update,
 };
 
 pub mod ripemd;
@@ -129,8 +129,8 @@ pub(crate) use impl_hmac;
 #[cfg(test)]
 mod tests {
     use crate::assert_eq_err as assert_eq;
-    use crate::hmac::ripemd::Ripemd160;
     use crate::hmac::HMACInit;
+    use crate::hmac::ripemd::Ripemd160;
     use crate::testing::TestType;
     use testmacro::test_item as test;
 
