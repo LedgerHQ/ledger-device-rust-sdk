@@ -1,7 +1,7 @@
 use ledger_secure_sdk_sys::*;
 use zeroize::Zeroize;
 
-use crate::hash::{sha2::Sha2_512, HashInit};
+use crate::hash::{HashInit, sha2::Sha2_512};
 
 mod stark;
 

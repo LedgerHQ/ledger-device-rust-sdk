@@ -1,4 +1,4 @@
-extern "C" {
+unsafe extern "C" {
     fn screen_clear();
     fn screen_update();
     fn screen_set_keepout(x: u32, y: u32, width: u32, height: u32);

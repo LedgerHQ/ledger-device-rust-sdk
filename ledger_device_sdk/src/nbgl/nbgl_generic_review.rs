@@ -414,12 +414,14 @@ impl From<&InfosList> for nbgl_contentInfoList_t {
 }
 
 unsafe extern "C" fn action_callback(token: c_int, _index: u8, _page: c_int) {
-    if token == FIRST_USER_TOKEN as i32 {
-        G_RET = SyncNbgl::UxSyncRetApproved.into();
-    } else if token == (FIRST_USER_TOKEN + 1) as i32 {
-        G_RET = SyncNbgl::UxSyncRetRejected.into();
+    unsafe {
+        if token == FIRST_USER_TOKEN as i32 {
+            G_RET = SyncNbgl::UxSyncRetApproved.into();
+        } else if token == (FIRST_USER_TOKEN + 1) as i32 {
+            G_RET = SyncNbgl::UxSyncRetRejected.into();
+        }
+        G_ENDED = true;
     }
-    G_ENDED = true;
 }
 
 /// Content element that can be added to an [`NbglGenericReview`] via

@@ -3,7 +3,7 @@
 #![cfg_attr(feature = "io_new", allow(dead_code))]
 
 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-use ledger_secure_sdk_sys::buttons::{get_button_event, ButtonEvent, ButtonsState};
+use ledger_secure_sdk_sys::buttons::{ButtonEvent, ButtonsState, get_button_event};
 use ledger_secure_sdk_sys::seph as sys_seph;
 use ledger_secure_sdk_sys::*;
 

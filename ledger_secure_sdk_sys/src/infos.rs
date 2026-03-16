@@ -15,7 +15,7 @@ pub const fn str_to_bytes<const N: usize>(s: &str) -> [u8; N] {
 macro_rules! const_cstr {
     ($name: ident, $section: literal, $in_str: expr) => {
         #[used]
-        #[link_section = $section]
+        #[unsafe(link_section = $section)]
         static $name: [u8; $in_str.len() + 1] = str_to_bytes($in_str);
     };
 }

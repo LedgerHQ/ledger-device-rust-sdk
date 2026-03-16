@@ -100,12 +100,12 @@ macro_rules! set_panic {
     };
 }
 
-extern "C" {
+unsafe extern "C" {
     fn c_main();
 }
 
-#[link_section = ".boot"]
-#[no_mangle]
+#[unsafe(link_section = ".boot")]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     // Main is in C until the try_context can be set properly from Rust
     unsafe { c_main() };
@@ -146,7 +146,7 @@ impl<T> Pic<T> {
 }
 
 // Needed for `NVMData<T>` to function properly
-extern "C" {
+unsafe extern "C" {
     // This is a linker script symbol defining the beginning of
     // the .nvm_data section. Declaring it as a static u32
     // (as is usually done) will result in a r9-indirect memory
@@ -202,7 +202,7 @@ impl<T> NVMData<T> {
 }
 
 #[cfg(test)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 fn sample_main() {
     test_main();
 }

@@ -3,8 +3,8 @@
 
 use include_gif::include_gif;
 use ledger_device_sdk::io::{ApduHeader, StatusWords};
-use ledger_device_sdk::nbgl::{init_comm, NbglGlyph, NbglHomeAndSettings};
-use ledger_device_sdk::tlv::{parse_dynamic_token_tlv, DynamicTokenOut};
+use ledger_device_sdk::nbgl::{NbglGlyph, NbglHomeAndSettings, init_comm};
+use ledger_device_sdk::tlv::{DynamicTokenOut, parse_dynamic_token_tlv};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 ledger_device_sdk::define_comm!(COMM);
@@ -27,7 +27,7 @@ impl TryFrom<ApduHeader> for Instruction {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "C" fn sample_main() {
     let comm = init_comm(&COMM);
 
