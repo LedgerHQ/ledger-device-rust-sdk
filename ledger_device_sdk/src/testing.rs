@@ -15,7 +15,7 @@ use core::arch::asm;
 ///    to get the high-water mark in bytes.
 ///
 /// # Safety
-/// These functions use inline assembly to read the current frame pointer
+/// These functions use inline assembly to read the current stack pointer (`sp`)
 /// and directly write to the stack memory region. They must only be called
 /// from the app's main execution context (not from interrupts).
 pub struct StackTracker;
@@ -35,7 +35,7 @@ impl StackTracker {
 
         let stack_lowest = &raw const _stack as *mut u8;
         let stack_current: *mut u8;
-        // Read the current frame address (equivalent to __builtin_frame_address(0) in C)
+        // Read the current stack pointer (SP) into stack_current
         unsafe {
             core::arch::asm!("mov {}, sp", out(reg) stack_current);
         }
@@ -63,7 +63,6 @@ impl StackTracker {
 
         let stack_lowest = &raw const _stack as usize;
         let stack_top = &raw const _estack as usize;
-        let stack_length = stack_top - stack_lowest;
         let stack_current: usize;
         unsafe {
             core::arch::asm!("mov {}, sp", out(reg) stack_current);
@@ -80,7 +79,7 @@ impl StackTracker {
         }
 
         // Usage = from the high-water mark to the top of the stack
-        stack_lowest + stack_length - (ptr as usize) + 1
+        stack_top - (ptr as usize)
     }
 }
 
@@ -112,19 +111,19 @@ pub(crate) fn handle_stack_consumption_apdu(p1: u8, p2: u8, com: &mut crate::io_
         return;
     }
 
-    let status: i32 = match p1 {
+    let status: u32 = match p1 {
         MODE_INITIALIZATION => {
             StackTracker::init();
-            0
+            0u32
         }
-        MODE_RETRIEVAL => StackTracker::get_usage() as i32,
+        MODE_RETRIEVAL => u32::try_from(StackTracker::get_usage()).unwrap_or(u32::MAX),
         _ => {
             com.reply(StatusWords::BadP1P2);
             return;
         }
     };
 
-    // Encode as 4-byte big-endian, matching C SDK's U4BE_ENCODE
+    // Encode as 4-byte big-endian, matching C SDK's U4BE_ENCODE (unsigned 32-bit)
     let bytes = status.to_be_bytes();
     com.append(&bytes);
     com.reply_ok();
@@ -149,12 +148,12 @@ pub(crate) fn handle_stack_consumption_apdu_new<const N: usize>(
         return;
     }
 
-    let status: i32 = match p1 {
+    let status: u32 = match p1 {
         MODE_INITIALIZATION => {
             StackTracker::init();
-            0
+            0u32
         }
-        MODE_RETRIEVAL => StackTracker::get_usage() as i32,
+        MODE_RETRIEVAL => u32::try_from(StackTracker::get_usage()).unwrap_or(u32::MAX),
         _ => {
             let _ = comm.begin_response().send(StatusWords::BadP1P2);
             return;
