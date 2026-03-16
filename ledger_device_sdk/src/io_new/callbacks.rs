@@ -32,7 +32,7 @@ pub(super) fn is_comm_null() -> bool {
 
 // Converts the pointer back to the concrete Comm<N> type.
 unsafe fn get_comm<const N: usize>() -> &'static mut Comm<N> {
-    &mut *(CURRENT_COMM as *mut Comm<N>)
+    unsafe { &mut *(CURRENT_COMM as *mut Comm<N>) }
 }
 
 /// Register a type-erased panic handler for the current Comm instance.
