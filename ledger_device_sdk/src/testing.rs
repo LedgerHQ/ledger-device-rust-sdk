@@ -3,6 +3,170 @@ use core::panic::PanicInfo;
 #[cfg(feature = "debug")]
 use core::arch::asm;
 
+/// Stack consumption measurement utility.
+///
+/// Implements the same paint/measure mechanism as the C SDK's
+/// `get_stack_consumption` (behind `DEBUG_OS_STACK_CONSUMPTION`).
+///
+/// Usage:
+/// 1. Call [`StackTracker::init`] early in your app (e.g. right after `Comm::new()`).
+///    This paints the unused portion of the stack with a known pattern.
+/// 2. After the operation you want to measure, call [`StackTracker::get_usage`]
+///    to get the high-water mark in bytes.
+///
+/// # Safety
+/// These functions use inline assembly to read the current frame pointer
+/// and directly write to the stack memory region. They must only be called
+/// from the app's main execution context (not from interrupts).
+pub struct StackTracker;
+
+const STACK_INIT_VALUE: u8 = 0xFF;
+
+impl StackTracker {
+    /// Paint the unused portion of the application stack with a known pattern.
+    ///
+    /// This writes `0xFF` from `_stack` (bottom of stack region) up to the
+    /// current stack pointer, preserving the currently active stack frames.
+    /// The canary (just below `_stack`) is not touched.
+    pub fn init() {
+        unsafe extern "C" {
+            unsafe static _stack: u8;
+        }
+
+        let stack_lowest = &raw const _stack as *mut u8;
+        let stack_current: *mut u8;
+        // Read the current frame address (equivalent to __builtin_frame_address(0) in C)
+        unsafe {
+            core::arch::asm!("mov {}, sp", out(reg) stack_current);
+        }
+
+        // Paint from the bottom of the stack region up to the current SP
+        let mut ptr = stack_lowest;
+        while ptr < stack_current {
+            unsafe {
+                core::ptr::write_volatile(ptr, STACK_INIT_VALUE);
+                ptr = ptr.add(1);
+            }
+        }
+    }
+
+    /// Measure the stack high-water mark since the last [`init`](Self::init) call.
+    ///
+    /// Returns the number of bytes of stack that have been used (overwritten
+    /// since initialization). Scans from `_stack` upward to find the first
+    /// byte that is no longer `0xFF`.
+    pub fn get_usage() -> usize {
+        unsafe extern "C" {
+            unsafe static _stack: u8;
+            unsafe static _estack: u8;
+        }
+
+        let stack_lowest = &raw const _stack as usize;
+        let stack_top = &raw const _estack as usize;
+        let stack_length = stack_top - stack_lowest;
+        let stack_current: usize;
+        unsafe {
+            core::arch::asm!("mov {}, sp", out(reg) stack_current);
+        }
+
+        // Scan from the bottom up to find the first non-0xFF byte
+        let mut ptr = stack_lowest as *const u8;
+        let limit = stack_current as *const u8;
+        while ptr < limit {
+            if unsafe { core::ptr::read_volatile(ptr) } != STACK_INIT_VALUE {
+                break;
+            }
+            ptr = unsafe { ptr.add(1) };
+        }
+
+        // Usage = from the high-water mark to the top of the stack
+        stack_lowest + stack_length - (ptr as usize) + 1
+    }
+}
+
+// C SDK protocol constants (from os_debug.h)
+const MODE_INITIALIZATION: u8 = 0x00;
+const MODE_RETRIEVAL: u8 = 0x01;
+#[allow(dead_code)]
+const SYSCALL_STACK_TYPE: u8 = 0x00;
+const APP_STACK_TYPE: u8 = 0x01;
+
+/// Handle the stack consumption BOLOS APDU (INS=0x57) for io_legacy.
+///
+/// Matches the C SDK's `get_stack_consumption` protocol:
+/// - P1=0x00: Initialize (paint stack), response = 4 bytes big-endian 0
+/// - P1=0x01: Retrieve usage, response = 4 bytes big-endian usage in bytes
+/// - P2=0x01: App stack (the only type supported in Rust apps)
+#[cfg(feature = "stack_usage")]
+pub(crate) fn handle_stack_consumption_apdu(p1: u8, p2: u8, com: &mut crate::io_legacy::Comm) {
+    use crate::io_legacy::StatusWords;
+
+    if p1 > MODE_RETRIEVAL || p2 > APP_STACK_TYPE {
+        com.reply(StatusWords::BadP1P2);
+        return;
+    }
+
+    if p2 != APP_STACK_TYPE {
+        // Syscall stack monitoring is not available in Rust apps
+        com.reply(StatusWords::BadP1P2);
+        return;
+    }
+
+    let status: i32 = match p1 {
+        MODE_INITIALIZATION => {
+            StackTracker::init();
+            0
+        }
+        MODE_RETRIEVAL => StackTracker::get_usage() as i32,
+        _ => {
+            com.reply(StatusWords::BadP1P2);
+            return;
+        }
+    };
+
+    // Encode as 4-byte big-endian, matching C SDK's U4BE_ENCODE
+    let bytes = status.to_be_bytes();
+    com.append(&bytes);
+    com.reply_ok();
+}
+
+/// Handle the stack consumption BOLOS APDU (INS=0x57) for io_new.
+#[cfg(all(feature = "stack_usage", feature = "io_new"))]
+pub(crate) fn handle_stack_consumption_apdu_new<const N: usize>(
+    p1: u8,
+    p2: u8,
+    comm: &mut crate::io_new::Comm<N>,
+) {
+    use crate::io_new::StatusWords;
+
+    if p1 > MODE_RETRIEVAL || p2 > APP_STACK_TYPE {
+        let _ = comm.begin_response().send(StatusWords::BadP1P2);
+        return;
+    }
+
+    if p2 != APP_STACK_TYPE {
+        let _ = comm.begin_response().send(StatusWords::BadP1P2);
+        return;
+    }
+
+    let status: i32 = match p1 {
+        MODE_INITIALIZATION => {
+            StackTracker::init();
+            0
+        }
+        MODE_RETRIEVAL => StackTracker::get_usage() as i32,
+        _ => {
+            let _ = comm.begin_response().send(StatusWords::BadP1P2);
+            return;
+        }
+    };
+
+    let bytes = status.to_be_bytes();
+    let mut response = comm.begin_response();
+    let _ = response.append(&bytes);
+    let _ = response.send(StatusWords::Ok);
+}
+
 /// Debug 'print' function that uses ARM semihosting
 /// Prints only strings with no formatting
 #[cfg(feature = "debug")]

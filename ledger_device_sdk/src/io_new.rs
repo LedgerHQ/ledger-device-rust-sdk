@@ -244,7 +244,7 @@ impl<const N: usize> Comm<N> {
                     // Handle BOLOS internal APDUs (CLA = 0xB0) internally
                     // and continue looping until an application APDU arrives.
                     if header.cla == 0xB0 {
-                        handle_bolos_apdu::<N>(self, header.ins);
+                        handle_bolos_apdu::<N>(self, header.ins, header.p1, header.p2);
                         continue;
                     }
                     // If CLA filtering is enabled, automatically reject APDUs with wrong CLA.
