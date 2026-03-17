@@ -20,7 +20,7 @@ use core::arch::asm;
 /// from the app's main execution context (not from interrupts).
 pub struct StackTracker;
 
-const STACK_INIT_VALUE: u8 = 0xFF;
+const STACK_INIT_VALUE: u8 = 0xAC; // Arbitrary non-zero value to mark unused stack bytes
 
 unsafe extern "C" {
     // Section-relative BSS symbols from the linker script.
@@ -32,7 +32,7 @@ unsafe extern "C" {
 impl StackTracker {
     /// Paint the unused portion of the application stack with a known pattern.
     ///
-    /// This writes `0xFF` from `_stack` (bottom of stack region) up to the
+    /// This writes STACK_INIT_VALUE from `_stack` (bottom of stack region) up to the
     /// current stack pointer, preserving the currently active stack frames.
     /// The canary (just below `_stack`) is not touched.
     pub fn init() {
@@ -56,7 +56,7 @@ impl StackTracker {
     ///
     /// Returns the number of bytes of stack that have been used (overwritten
     /// since initialization). Scans from `_stack` upward to find the first
-    /// byte that is no longer `0xFF`.
+    /// byte that is no longer STACK_INIT_VALUE.
     pub fn get_usage() -> usize {
         let stack_lowest = &raw const _stack as usize;
         let stack_top = &raw const _estack as usize;
@@ -65,7 +65,7 @@ impl StackTracker {
             core::arch::asm!("mov {}, sp", out(reg) stack_current);
         }
 
-        // Scan from the bottom up to find the first non-0xFF byte
+        // Scan from the bottom up to find the first byte that is no longer STACK_INIT_VALUE
         let mut ptr = stack_lowest as *const u8;
         let limit = stack_current as *const u8;
         while ptr < limit {
