@@ -22,6 +22,13 @@ pub struct StackTracker;
 
 const STACK_INIT_VALUE: u8 = 0xFF;
 
+unsafe extern "C" {
+    // Section-relative BSS symbols from the linker script.
+    // Their addresses are properly relocated at load time via PIC.
+    unsafe static _stack: u8;
+    unsafe static _estack: u8;
+}
+
 impl StackTracker {
     /// Paint the unused portion of the application stack with a known pattern.
     ///
@@ -29,13 +36,8 @@ impl StackTracker {
     /// current stack pointer, preserving the currently active stack frames.
     /// The canary (just below `_stack`) is not touched.
     pub fn init() {
-        unsafe extern "C" {
-            unsafe static _stack: u8;
-        }
-
         let stack_lowest = &raw const _stack as *mut u8;
         let stack_current: *mut u8;
-        // Read the current stack pointer (SP) into stack_current
         unsafe {
             core::arch::asm!("mov {}, sp", out(reg) stack_current);
         }
@@ -56,11 +58,6 @@ impl StackTracker {
     /// since initialization). Scans from `_stack` upward to find the first
     /// byte that is no longer `0xFF`.
     pub fn get_usage() -> usize {
-        unsafe extern "C" {
-            unsafe static _stack: u8;
-            unsafe static _estack: u8;
-        }
-
         let stack_lowest = &raw const _stack as usize;
         let stack_top = &raw const _estack as usize;
         let stack_current: usize;
