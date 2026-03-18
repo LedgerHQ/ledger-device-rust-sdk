@@ -22,8 +22,13 @@ pub enum CurvesId {
     Bls12381G1 = CX_CURVE_BLS12_381_G1, // unsupported in speculos
     FRP256v1 = CX_CURVE_FRP256V1,       // unsupported in speculos
     Stark256 = CX_CURVE_Stark256,
+    Bls12377G1 = CX_CURVE_BLS12_377_G1,
+    Pallas = CX_CURVE_PALLAS,
+    Vesta = CX_CURVE_VESTA,
     Ed25519 = CX_CURVE_Ed25519,
     Ed448 = CX_CURVE_Ed448,           // unsupported in speculos
+    EdBLS12 = CX_CURVE_EdBLS12,
+    JubJub = CX_CURVE_JUBJUB,     
     Curve25519 = CX_CURVE_Curve25519, // unsupported in speculos
     Curve448 = CX_CURVE_Curve448,     // unsupported in speculos
     Secp521r1 = CX_CURVE_SECP521R1,   // unsupported in speculos
@@ -809,6 +814,7 @@ impl_curve!(BrainpoolP512R1, 64, 'W');
 impl_curve!(BrainpoolP512T1, 64, 'W');
 impl_curve!(Stark256, 32, 'W');
 impl_curve!(Ed25519, 32, 'E');
+impl_curve!(JubJub, 32, 'E' );
 // impl_curve!( FRP256v1, 32, 'W' );
 // impl_curve!( Ed448, 57, 'E' );
 
