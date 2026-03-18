@@ -39,6 +39,7 @@ heap = [ "ledger_secure_sdk_sys/heap" ]
 nano_nbgl = [ "ledger_secure_sdk_sys/nano_nbgl" ]
 debug_csdk = [ "ledger_secure_sdk_sys/debug_csdk" ]
 io_new = []  # switch to new 'io' module
+stack_usage = []
 
 # When enabled, this feature re-exports the `ledger_secure_sdk_sys` crate containing the
 # Ledger C SDK bindings through the `sys` module. Use it to access low-level (unsafe) FFI

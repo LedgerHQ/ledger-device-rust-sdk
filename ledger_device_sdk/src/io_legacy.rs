@@ -384,7 +384,12 @@ impl Comm {
 
             // Manage BOLOS specific APDUs B0xxyyzz
             if self.io_buffer[1] == 0xB0 {
-                handle_bolos_apdu(self, self.io_buffer[2]);
+                handle_bolos_apdu(
+                    self,
+                    self.io_buffer[2],
+                    self.io_buffer[3],
+                    self.io_buffer[4],
+                );
                 return None;
             }
 
@@ -741,9 +746,11 @@ fn default_nbgl_reply_status(reply: Reply) {
 pub(crate) const BOLOS_INS_GET_VERSION: u8 = 0x01;
 pub(crate) const BOLOS_INS_QUIT: u8 = 0xa7;
 pub(crate) const BOLOS_INS_SET_PKI_CERT: u8 = 0x06;
+#[cfg(feature = "stack_usage")]
+pub(crate) const BOLOS_INS_STACK_CONSUMPTION: u8 = 0x57;
 
 // BOLOS APDU Handling (see https://developers.ledger.com/docs/connectivity/ledgerJS/open-close-info-on-apps)
-fn handle_bolos_apdu(com: &mut Comm, ins: u8) {
+fn handle_bolos_apdu(com: &mut Comm, ins: u8, p1: u8, p2: u8) {
     match ins {
         // Get Information INS: retrieve App name and version
         BOLOS_INS_GET_VERSION => {
@@ -797,6 +804,10 @@ fn handle_bolos_apdu(com: &mut Comm, ins: u8) {
                 com.reply_ok();
             }
         },
+        #[cfg(feature = "stack_usage")]
+        BOLOS_INS_STACK_CONSUMPTION => {
+            crate::testing::handle_stack_consumption_apdu(p1, p2, com);
+        }
         _ => {
             com.reply(StatusWords::BadIns);
         }

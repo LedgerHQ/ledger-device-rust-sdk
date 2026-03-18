@@ -113,11 +113,12 @@ SECTIONS
     . = ALIGN(4);
     app_stack_canary = .;
     . += 4;
-    _stack_validation = .;
-    . = _stack_validation + STACK_SIZE;
-    _stack = ABSOLUTE(END_STACK) - STACK_SIZE;
-    _estack = ABSOLUTE(END_STACK);
+    _stack = .;
+    . = END_STACK;
+    _estack = .;
   } > SRAM :sram
+
+  ASSERT( (_estack - _stack) >= STACK_MIN_SIZE, "stack section too small" )
 
   .stack_sizes (INFO):
   {
