@@ -751,6 +751,7 @@ pub(crate) const BOLOS_INS_STACK_CONSUMPTION: u8 = 0x57;
 
 // BOLOS APDU Handling (see https://developers.ledger.com/docs/connectivity/ledgerJS/open-close-info-on-apps)
 fn handle_bolos_apdu(com: &mut Comm, ins: u8, p1: u8, p2: u8) {
+    let _ = (p1, p2); // Some instructions may not use these parameters, avoid warnings
     match ins {
         // Get Information INS: retrieve App name and version
         BOLOS_INS_GET_VERSION => {

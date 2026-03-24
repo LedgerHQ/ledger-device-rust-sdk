@@ -81,10 +81,13 @@ impl StackTracker {
 }
 
 // C SDK protocol constants (from os_debug.h)
+#[cfg(feature = "stack_usage")]
 const MODE_INITIALIZATION: u8 = 0x00;
+#[cfg(feature = "stack_usage")]
 const MODE_RETRIEVAL: u8 = 0x01;
 #[allow(dead_code)]
 const SYSCALL_STACK_TYPE: u8 = 0x00;
+#[cfg(feature = "stack_usage")]
 const APP_STACK_TYPE: u8 = 0x01;
 
 /// Handle the stack consumption BOLOS APDU (INS=0x57) for io_legacy.

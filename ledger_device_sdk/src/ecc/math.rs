@@ -1,8 +1,6 @@
 use super::*;
 use crate::bn::*;
 use crate::check_cx_ok;
-use core::ffi::c_int;
-use ledger_secure_sdk_sys::*;
 
 // ---------------------------------------------------------------------------
 // Curve domain parameter identifier

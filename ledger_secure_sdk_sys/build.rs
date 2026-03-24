@@ -594,6 +594,7 @@ impl SDKBuilder<'_> {
             .prepend_enum_name(false)
             .generate_comments(false)
             .derive_default(true)
+            .wrap_unsafe_ops(true)
             .use_core();
 
         // Target specific files
