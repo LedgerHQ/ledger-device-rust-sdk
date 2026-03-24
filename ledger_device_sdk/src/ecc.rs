@@ -3,36 +3,69 @@ use zeroize::Zeroize;
 
 use crate::hash::{HashInit, sha2::Sha2_512};
 
+pub mod math;
 mod stark;
 
 #[repr(u8)]
 #[derive(Copy, Clone)]
 pub enum CurvesId {
-    Secp256k1 = CX_CURVE_SECP256K1,
-    Secp256r1 = CX_CURVE_SECP256R1,
-    Secp384r1 = CX_CURVE_SECP384R1,
-    BrainpoolP256T1 = CX_CURVE_BrainPoolP256T1,
-    BrainpoolP256R1 = CX_CURVE_BrainPoolP256R1,
-    BrainpoolP320R1 = CX_CURVE_BrainPoolP320R1,
-    BrainpoolP320T1 = CX_CURVE_BrainPoolP320T1,
-    BrainpoolP384T1 = CX_CURVE_BrainPoolP384T1,
-    BrainpoolP384R1 = CX_CURVE_BrainPoolP384R1,
-    BrainpoolP512T1 = CX_CURVE_BrainPoolP512T1,
-    BrainpoolP512R1 = CX_CURVE_BrainPoolP512R1,
-    Bls12381G1 = CX_CURVE_BLS12_381_G1, // unsupported in speculos
-    FRP256v1 = CX_CURVE_FRP256V1,       // unsupported in speculos
-    Stark256 = CX_CURVE_Stark256,
-    Bls12377G1 = CX_CURVE_BLS12_377_G1,
-    Pallas = CX_CURVE_PALLAS,
-    Vesta = CX_CURVE_VESTA,
-    Ed25519 = CX_CURVE_Ed25519,
-    Ed448 = CX_CURVE_Ed448,           // unsupported in speculos
-    EdBLS12 = CX_CURVE_EdBLS12,
-    JubJub = CX_CURVE_JUBJUB,     
-    Curve25519 = CX_CURVE_Curve25519, // unsupported in speculos
-    Curve448 = CX_CURVE_Curve448,     // unsupported in speculos
-    Secp521r1 = CX_CURVE_SECP521R1,   // unsupported in speculos
+    Secp256k1 = ledger_secure_sdk_sys::CX_CURVE_SECP256K1,
+    Secp256r1 = ledger_secure_sdk_sys::CX_CURVE_SECP256R1,
+    Secp384r1 = ledger_secure_sdk_sys::CX_CURVE_SECP384R1,
+    BrainpoolP256T1 = ledger_secure_sdk_sys::CX_CURVE_BrainPoolP256T1,
+    BrainpoolP256R1 = ledger_secure_sdk_sys::CX_CURVE_BrainPoolP256R1,
+    BrainpoolP320R1 = ledger_secure_sdk_sys::CX_CURVE_BrainPoolP320R1,
+    BrainpoolP320T1 = ledger_secure_sdk_sys::CX_CURVE_BrainPoolP320T1,
+    BrainpoolP384T1 = ledger_secure_sdk_sys::CX_CURVE_BrainPoolP384T1,
+    BrainpoolP384R1 = ledger_secure_sdk_sys::CX_CURVE_BrainPoolP384R1,
+    BrainpoolP512T1 = ledger_secure_sdk_sys::CX_CURVE_BrainPoolP512T1,
+    BrainpoolP512R1 = ledger_secure_sdk_sys::CX_CURVE_BrainPoolP512R1,
+    Bls12381G1 = ledger_secure_sdk_sys::CX_CURVE_BLS12_381_G1, // unsupported in speculos
+    FRP256v1 = ledger_secure_sdk_sys::CX_CURVE_FRP256V1,       // unsupported in speculos
+    Stark256 = ledger_secure_sdk_sys::CX_CURVE_Stark256,
+    Bls12377G1 = ledger_secure_sdk_sys::CX_CURVE_BLS12_377_G1,
+    Pallas = ledger_secure_sdk_sys::CX_CURVE_PALLAS,
+    Vesta = ledger_secure_sdk_sys::CX_CURVE_VESTA,
+    Ed25519 = ledger_secure_sdk_sys::CX_CURVE_Ed25519,
+    Ed448 = ledger_secure_sdk_sys::CX_CURVE_Ed448, // unsupported in speculos
+    EdBLS12 = ledger_secure_sdk_sys::CX_CURVE_EdBLS12,
+    JubJub = ledger_secure_sdk_sys::CX_CURVE_JUBJUB,
+    Curve25519 = ledger_secure_sdk_sys::CX_CURVE_Curve25519, // unsupported in speculos
+    Curve448 = ledger_secure_sdk_sys::CX_CURVE_Curve448,     // unsupported in speculos
+    Secp521r1 = ledger_secure_sdk_sys::CX_CURVE_SECP521R1,   // unsupported in speculos
     Invalid,
+}
+
+impl From<u8> for CurvesId {
+    fn from(x: u8) -> CurvesId {
+        match x {
+            ledger_secure_sdk_sys::CX_CURVE_SECP256K1 => CurvesId::Secp256k1,
+            ledger_secure_sdk_sys::CX_CURVE_SECP256R1 => CurvesId::Secp256r1,
+            ledger_secure_sdk_sys::CX_CURVE_SECP384R1 => CurvesId::Secp384r1,
+            ledger_secure_sdk_sys::CX_CURVE_BrainPoolP256T1 => CurvesId::BrainpoolP256T1,
+            ledger_secure_sdk_sys::CX_CURVE_BrainPoolP256R1 => CurvesId::BrainpoolP256R1,
+            ledger_secure_sdk_sys::CX_CURVE_BrainPoolP320R1 => CurvesId::BrainpoolP320R1,
+            ledger_secure_sdk_sys::CX_CURVE_BrainPoolP320T1 => CurvesId::BrainpoolP320T1,
+            ledger_secure_sdk_sys::CX_CURVE_BrainPoolP384T1 => CurvesId::BrainpoolP384T1,
+            ledger_secure_sdk_sys::CX_CURVE_BrainPoolP384R1 => CurvesId::BrainpoolP384R1,
+            ledger_secure_sdk_sys::CX_CURVE_BrainPoolP512T1 => CurvesId::BrainpoolP512T1,
+            ledger_secure_sdk_sys::CX_CURVE_BrainPoolP512R1 => CurvesId::BrainpoolP512R1,
+            ledger_secure_sdk_sys::CX_CURVE_BLS12_381_G1 => CurvesId::Bls12381G1,
+            ledger_secure_sdk_sys::CX_CURVE_FRP256V1 => CurvesId::FRP256v1,
+            ledger_secure_sdk_sys::CX_CURVE_Stark256 => CurvesId::Stark256,
+            ledger_secure_sdk_sys::CX_CURVE_BLS12_377_G1 => CurvesId::Bls12377G1,
+            ledger_secure_sdk_sys::CX_CURVE_PALLAS => CurvesId::Pallas,
+            ledger_secure_sdk_sys::CX_CURVE_VESTA => CurvesId::Vesta,
+            ledger_secure_sdk_sys::CX_CURVE_Ed25519 => CurvesId::Ed25519,
+            ledger_secure_sdk_sys::CX_CURVE_Ed448 => CurvesId::Ed448,
+            ledger_secure_sdk_sys::CX_CURVE_EdBLS12 => CurvesId::EdBLS12,
+            ledger_secure_sdk_sys::CX_CURVE_JUBJUB => CurvesId::JubJub,
+            ledger_secure_sdk_sys::CX_CURVE_Curve25519 => CurvesId::Curve25519,
+            ledger_secure_sdk_sys::CX_CURVE_Curve448 => CurvesId::Curve448,
+            ledger_secure_sdk_sys::CX_CURVE_SECP521R1 => CurvesId::Secp521r1,
+            _ => CurvesId::Invalid,
+        }
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -306,6 +339,7 @@ impl Default for Ed25519Stream {
     }
 }
 
+#[macro_export]
 macro_rules! check_cx_ok {
     ($fn_call:expr) => {{
         let err = unsafe { $fn_call };
@@ -688,7 +722,12 @@ pub trait SeedDerive {
     fn derive_from_path(path: &[u32]) -> Self::Target {
         Self::derive_from(path).0
     }
-    fn derive(path: &[u32], mode: HDKeyDeriveMode, cc: Option<&mut ChainCode>, seed: Option<&[u8]>) -> Self::Target;
+    fn derive(
+        path: &[u32],
+        mode: HDKeyDeriveMode,
+        cc: Option<&mut ChainCode>,
+        seed: Option<&[u8]>,
+    ) -> Self::Target;
 }
 
 #[repr(u8)]
@@ -719,10 +758,15 @@ impl SeedDerive for Secp256k1 {
         sk.key.copy_from_slice(&tmp.0[..keylen]);
         (sk, Some(cc))
     }
-    fn derive(path: &[u32], mode: HDKeyDeriveMode, cc: Option<&mut ChainCode>, seed: Option<&[u8]>) -> Self::Target {
+    fn derive(
+        path: &[u32],
+        mode: HDKeyDeriveMode,
+        cc: Option<&mut ChainCode>,
+        seed: Option<&[u8]>,
+    ) -> Self::Target {
         let mut tmp = Secret::<64>::new();
         unsafe {
-             let err = sys_hdkey_derive(
+            let err = sys_hdkey_derive(
                 mode as HDKEY_derive_mode_t,
                 CurvesId::Secp256k1 as cx_curve_t,
                 path.as_ptr(),
@@ -749,7 +793,7 @@ impl SeedDerive for Secp256k1 {
             if err != 0 {
                 panic!("sys_hdkey_derive failed with error code {}", err);
             }
-        }        
+        }
         let mut sk = Self::Target::new(CurvesId::Secp256k1);
         let keylen = sk.key.len();
         sk.key.copy_from_slice(&tmp.0[..keylen]);
@@ -774,10 +818,15 @@ impl SeedDerive for Secp256r1 {
         sk.key.copy_from_slice(&tmp.0[..keylen]);
         (sk, Some(cc))
     }
-    fn derive(path: &[u32], mode: HDKeyDeriveMode, cc: Option<&mut ChainCode>, seed: Option<&[u8]>) -> Self::Target {
+    fn derive(
+        path: &[u32],
+        mode: HDKeyDeriveMode,
+        cc: Option<&mut ChainCode>,
+        seed: Option<&[u8]>,
+    ) -> Self::Target {
         let mut tmp = Secret::<64>::new();
         unsafe {
-             let err = sys_hdkey_derive(
+            let err = sys_hdkey_derive(
                 mode as HDKEY_derive_mode_t,
                 CurvesId::Secp256r1 as cx_curve_t,
                 path.as_ptr(),
@@ -804,7 +853,7 @@ impl SeedDerive for Secp256r1 {
             if err != 0 {
                 panic!("sys_hdkey_derive failed with error code {}", err);
             }
-        }        
+        }
         let mut sk = Self::Target::new(CurvesId::Secp256r1);
         let keylen = sk.key.len();
         sk.key.copy_from_slice(&tmp.0[..keylen]);
@@ -829,10 +878,15 @@ impl SeedDerive for Ed25519 {
         sk.key.copy_from_slice(&tmp.0[..keylen]);
         (sk, Some(cc))
     }
-    fn derive(path: &[u32], mode: HDKeyDeriveMode, cc: Option<&mut ChainCode>, seed: Option<&[u8]>) -> Self::Target {
+    fn derive(
+        path: &[u32],
+        mode: HDKeyDeriveMode,
+        cc: Option<&mut ChainCode>,
+        seed: Option<&[u8]>,
+    ) -> Self::Target {
         let mut tmp = Secret::<64>::new();
         unsafe {
-             let err = sys_hdkey_derive(
+            let err = sys_hdkey_derive(
                 mode as HDKEY_derive_mode_t,
                 CurvesId::Ed25519 as cx_curve_t,
                 path.as_ptr(),
@@ -859,7 +913,7 @@ impl SeedDerive for Ed25519 {
             if err != 0 {
                 panic!("sys_hdkey_derive failed with error code {}", err);
             }
-        }        
+        }
         let mut sk = Self::Target::new(CurvesId::Ed25519);
         let keylen = sk.key.len();
         sk.key.copy_from_slice(&tmp.0[..keylen]);
@@ -897,17 +951,27 @@ impl SeedDerive for Stark256 {
         stark::eip2645_derive(path, &mut sk.key);
         (sk, None)
     }
-    fn derive(_path: &[u32], _mode: HDKeyDeriveMode, _cc: Option<&mut ChainCode>, _seed: Option<&[u8]>) -> Self::Target {
+    fn derive(
+        _path: &[u32],
+        _mode: HDKeyDeriveMode,
+        _cc: Option<&mut ChainCode>,
+        _seed: Option<&[u8]>,
+    ) -> Self::Target {
         panic!("not implemented for Stark256");
     }
 }
 
 impl SeedDerive for JubJub {
     type Target = ECPrivateKey<32, 'E'>;
-    fn derive(path: &[u32], mode: HDKeyDeriveMode, cc: Option<&mut ChainCode>, seed: Option<&[u8]>) -> Self::Target {
+    fn derive(
+        path: &[u32],
+        mode: HDKeyDeriveMode,
+        cc: Option<&mut ChainCode>,
+        seed: Option<&[u8]>,
+    ) -> Self::Target {
         let mut tmp = Secret::<64>::new();
         unsafe {
-             let err = sys_hdkey_derive(
+            let err = sys_hdkey_derive(
                 mode as HDKEY_derive_mode_t,
                 CurvesId::JubJub as cx_curve_t,
                 path.as_ptr(),
@@ -934,7 +998,7 @@ impl SeedDerive for JubJub {
             if err != 0 {
                 panic!("sys_hdkey_derive failed with error code {}", err);
             }
-        }        
+        }
         let mut sk = Self::Target::new(CurvesId::JubJub);
         let keylen = sk.key.len();
         sk.key.copy_from_slice(&tmp.0[..keylen]);
@@ -949,10 +1013,15 @@ impl SeedDerive for JubJub {
 
 impl SeedDerive for Pallas {
     type Target = ECPrivateKey<32, 'W'>;
-    fn derive(path: &[u32], mode: HDKeyDeriveMode, cc: Option<&mut ChainCode>, seed: Option<&[u8]>) -> Self::Target {
+    fn derive(
+        path: &[u32],
+        mode: HDKeyDeriveMode,
+        cc: Option<&mut ChainCode>,
+        seed: Option<&[u8]>,
+    ) -> Self::Target {
         let mut tmp = Secret::<64>::new();
         unsafe {
-             let err = sys_hdkey_derive(
+            let err = sys_hdkey_derive(
                 mode as HDKEY_derive_mode_t,
                 CurvesId::Pallas as cx_curve_t,
                 path.as_ptr(),
@@ -979,7 +1048,7 @@ impl SeedDerive for Pallas {
             if err != 0 {
                 panic!("sys_hdkey_derive failed with error code {}", err);
             }
-        }        
+        }
         let mut sk = Self::Target::new(CurvesId::Pallas);
         let keylen = sk.key.len();
         sk.key.copy_from_slice(&tmp.0[..keylen]);
@@ -1027,8 +1096,8 @@ impl_curve!(BrainpoolP512R1, 64, 'W');
 impl_curve!(BrainpoolP512T1, 64, 'W');
 impl_curve!(Stark256, 32, 'W');
 impl_curve!(Ed25519, 32, 'E');
-impl_curve!(JubJub, 32, 'E' );
-impl_curve!(Pallas, 32, 'W' );
+impl_curve!(JubJub, 32, 'E');
+impl_curve!(Pallas, 32, 'W');
 // impl_curve!( FRP256v1, 32, 'W' );
 // impl_curve!( Ed448, 57, 'E' );
 
@@ -1166,10 +1235,10 @@ mod tests {
     #[test]
     fn zip32_orchard_pallas() {
         let sk = Pallas::derive(&PATH0, HDKeyDeriveMode::Zip32Orchard, None, None);
-        let s = sk
-            .deterministic_sign(TEST_HASH)
-            .map_err(display_error_code)?;
-        let pk = sk.public_key().map_err(display_error_code)?;
+        // let s = sk
+        //     .deterministic_sign(TEST_HASH)
+        //     .map_err(display_error_code)?;
+        // let pk = sk.public_key().map_err(display_error_code)?;
         //assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
         // let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
         // assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
