@@ -366,10 +366,370 @@ mod tests {
     use crate::testing::TestType;
     use testmacro::test_item as test;
 
+    fn err(e: CxError) {
+        let ec = crate::testing::to_hex(e.into());
+        crate::log::info!(
+            "EC math error: \x1b[1;33m{}\x1b[0m",
+            core::str::from_utf8(&ec).unwrap()
+        );
+    }
+
+    // ------------------------------------------------------------------
+    // Curve domain queries
+    // ------------------------------------------------------------------
+
     #[test]
     fn secp256k1_math() {
         assert_eq!(Secp256k1::id() as u8, CurvesId::Secp256k1 as u8);
         assert_eq!(Secp256k1::size_bits(), 256);
         assert_eq!(Secp256k1::size_bytes(), 32);
+    }
+
+    #[test]
+    fn secp256r1_size() {
+        assert_eq!(Secp256r1::id() as u8, CurvesId::Secp256r1 as u8);
+        assert_eq!(Secp256r1::size_bits(), 256);
+        assert_eq!(Secp256r1::size_bytes(), 32);
+    }
+
+    #[test]
+    fn secp384r1_size() {
+        assert_eq!(Secp384r1::size_bits(), 384);
+        assert_eq!(Secp384r1::size_bytes(), 48);
+    }
+
+    #[test]
+    fn ed25519_size() {
+        assert_eq!(Ed25519::size_bits(), 256);
+        assert_eq!(Ed25519::size_bytes(), 32);
+    }
+
+    #[test]
+    fn pallas_size() {
+        assert_eq!(Pallas::size_bits(), 255);
+        assert_eq!(Pallas::size_bytes(), 32);
+    }
+
+    // ------------------------------------------------------------------
+    // Domain parameter retrieval (raw bytes)
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn secp256k1_domain_order() {
+        let n = Secp256k1::size_bytes();
+        let mut buf = [0u8; 32];
+        Secp256k1::domain_parameter(CurveDomainParam::Order, &mut buf[..n]).map_err(err)?;
+        // secp256k1 order starts with 0xFF..
+        assert_eq!(buf[0], 0xFF);
+    }
+
+    #[test]
+    fn secp256k1_generator_raw() {
+        let n = Secp256k1::size_bytes();
+        let mut gx = [0u8; 32];
+        let mut gy = [0u8; 32];
+        Secp256k1::generator(&mut gx[..n], &mut gy[..n]).map_err(err)?;
+        // Generator x starts with 0x79 for secp256k1
+        assert_eq!(gx[0], 0x79);
+    }
+
+    // ------------------------------------------------------------------
+    // EcPoint alloc + generator_bn
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn ecpoint_alloc_generator_on_curve() {
+        let _lock = BnLock::acquire(32).map_err(err)?;
+        let mut g = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        Secp256k1::generator_bn(&mut g).map_err(err)?;
+
+        // Generator must be on the curve
+        let on_curve = g.is_on_curve().map_err(err)?;
+        assert_eq!(on_curve, true);
+
+        // Generator must not be infinity
+        let at_inf = g.is_at_infinity().map_err(err)?;
+        assert_eq!(at_inf, false);
+    }
+
+    // ------------------------------------------------------------------
+    // Init from raw bytes + export round-trip
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn ecpoint_init_export_roundtrip() {
+        let n = Secp256k1::size_bytes();
+        let mut gx_orig = [0u8; 32];
+        let mut gy_orig = [0u8; 32];
+        Secp256k1::generator(&mut gx_orig[..n], &mut gy_orig[..n]).map_err(err)?;
+
+        let _lock = BnLock::acquire(32).map_err(err)?;
+        let mut p = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        p.init(&gx_orig[..n], &gy_orig[..n]).map_err(err)?;
+
+        let mut gx_out = [0u8; 32];
+        let mut gy_out = [0u8; 32];
+        p.export(&mut gx_out[..n], &mut gy_out[..n]).map_err(err)?;
+
+        assert_eq!(gx_out, gx_orig);
+        assert_eq!(gy_out, gy_orig);
+    }
+
+    // ------------------------------------------------------------------
+    // Compress / decompress round-trip
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn ecpoint_compress_decompress() {
+        let n = Secp256k1::size_bytes();
+        let _lock = BnLock::acquire(32).map_err(err)?;
+
+        // Start with the generator
+        let mut g = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        Secp256k1::generator_bn(&mut g).map_err(err)?;
+
+        // Compress
+        let mut compressed = [0u8; 32];
+        let sign = g.compress(&mut compressed[..n]).map_err(err)?;
+
+        // Decompress into a new point
+        let mut p = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        p.decompress(&compressed[..n], sign).map_err(err)?;
+
+        // The decompressed point must equal the original
+        let equal = g.cmp(&p).map_err(err)?;
+        assert_eq!(equal, true);
+    }
+
+    // ------------------------------------------------------------------
+    // Point comparison
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn ecpoint_cmp_equal() {
+        let _lock = BnLock::acquire(32).map_err(err)?;
+
+        let mut g1 = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        Secp256k1::generator_bn(&mut g1).map_err(err)?;
+
+        let mut g2 = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        Secp256k1::generator_bn(&mut g2).map_err(err)?;
+
+        assert_eq!(g1.cmp(&g2).map_err(err)?, true);
+    }
+
+    // ------------------------------------------------------------------
+    // Scalar multiplication: 1·G == G
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn ecpoint_scalarmul_identity() {
+        let _lock = BnLock::acquire(32).map_err(err)?;
+        let n = Secp256k1::size_bytes();
+
+        let mut g = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        Secp256k1::generator_bn(&mut g).map_err(err)?;
+
+        // Keep a copy of G for comparison
+        let mut g_copy = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        Secp256k1::generator_bn(&mut g_copy).map_err(err)?;
+
+        // scalar = 1 (big-endian, 32 bytes)
+        let mut one = [0u8; 32];
+        one[n - 1] = 1;
+        g.scalarmul(&one[..n]).map_err(err)?;
+
+        assert_eq!(g.cmp(&g_copy).map_err(err)?, true);
+    }
+
+    // ------------------------------------------------------------------
+    // Scalar multiplication with BN: 2·G
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn ecpoint_scalarmul_bn_double() {
+        let _lock = BnLock::acquire(32).map_err(err)?;
+
+        let mut g = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        Secp256k1::generator_bn(&mut g).map_err(err)?;
+
+        // scalar = 2 as BN
+        let k = Bn::alloc(32).map_err(err)?;
+        k.set_u32(2).map_err(err)?;
+        g.scalarmul_bn(k).map_err(err)?;
+
+        // Verify result is on curve and not at infinity
+        assert_eq!(g.is_on_curve().map_err(err)?, true);
+        assert_eq!(g.is_at_infinity().map_err(err)?, false);
+    }
+
+    // ------------------------------------------------------------------
+    // Point addition: G + G == 2·G
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn ecpoint_add_equals_double() {
+        let _lock = BnLock::acquire(32).map_err(err)?;
+        let n = Secp256k1::size_bytes();
+
+        // Compute 2·G via scalarmul
+        let mut two_g_scalar = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        Secp256k1::generator_bn(&mut two_g_scalar).map_err(err)?;
+        let mut two = [0u8; 32];
+        two[n - 1] = 2;
+        two_g_scalar.scalarmul(&two[..n]).map_err(err)?;
+
+        // Compute G + G via add
+        let mut g1 = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        Secp256k1::generator_bn(&mut g1).map_err(err)?;
+        let mut g2 = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        Secp256k1::generator_bn(&mut g2).map_err(err)?;
+
+        let mut sum = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        sum.add(&g1, &g2).map_err(err)?;
+
+        assert_eq!(sum.cmp(&two_g_scalar).map_err(err)?, true);
+    }
+
+    // ------------------------------------------------------------------
+    // Point negation: neg produces a valid on-curve point
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn ecpoint_neg_on_curve() {
+        let _lock = BnLock::acquire(32).map_err(err)?;
+
+        let mut neg_g = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        Secp256k1::generator_bn(&mut neg_g).map_err(err)?;
+        neg_g.neg().map_err(err)?;
+
+        // Negated generator must still be on the curve
+        assert_eq!(neg_g.is_on_curve().map_err(err)?, true);
+        // … but different from the original generator
+        let mut g = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        Secp256k1::generator_bn(&mut g).map_err(err)?;
+        assert_eq!(neg_g.cmp(&g).map_err(err)?, false);
+    }
+
+    // ------------------------------------------------------------------
+    // Ed25519 generator export
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn ed25519_generator_export() {
+        let n = Ed25519::size_bytes();
+        let _lock = BnLock::acquire(32).map_err(err)?;
+        let mut g = EcPoint::new(CurvesId::Ed25519).map_err(err)?;
+        Ed25519::generator_bn(&mut g).map_err(err)?;
+
+        // Export and verify coordinates are non-zero
+        let mut gx = [0u8; 32];
+        let mut gy = [0u8; 32];
+        g.export(&mut gx[..n], &mut gy[..n]).map_err(err)?;
+        // Ed25519 generator Gy starts with 0x66 (big-endian)
+        assert_eq!(gy[0], 0x66);
+    }
+
+    // ------------------------------------------------------------------
+    // Secp256r1 generator on curve
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn secp256r1_generator_on_curve() {
+        let _lock = BnLock::acquire(32).map_err(err)?;
+        let mut g = EcPoint::new(CurvesId::Secp256r1).map_err(err)?;
+        Secp256r1::generator_bn(&mut g).map_err(err)?;
+
+        assert_eq!(g.is_on_curve().map_err(err)?, true);
+    }
+
+    // ------------------------------------------------------------------
+    // Domain parameter BN retrieval
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn secp256k1_domain_parameter_bn_order() {
+        let _lock = BnLock::acquire(32).map_err(err)?;
+
+        // Get the order as raw bytes
+        let n = Secp256k1::size_bytes();
+        let mut order_bytes = [0u8; 32];
+        Secp256k1::domain_parameter(CurveDomainParam::Order, &mut order_bytes[..n]).map_err(err)?;
+
+        // Get the order as a BN and export it
+        let order_bn = Bn::alloc(32).map_err(err)?;
+        Secp256k1::domain_parameter_bn(CurveDomainParam::Order, order_bn.raw()).map_err(err)?;
+        let mut order_bn_bytes = [0u8; 32];
+        order_bn.export(&mut order_bn_bytes[..n]).map_err(err)?;
+
+        // Both should match
+        assert_eq!(order_bytes, order_bn_bytes);
+    }
+
+    // ------------------------------------------------------------------
+    // Randomised scalar multiplication produces valid point
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn ecpoint_rnd_scalarmul_on_curve() {
+        let _lock = BnLock::acquire(32).map_err(err)?;
+        let n = Secp256k1::size_bytes();
+
+        let mut g = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        Secp256k1::generator_bn(&mut g).map_err(err)?;
+
+        // scalar = 42
+        let mut k = [0u8; 32];
+        k[n - 1] = 42;
+        g.rnd_scalarmul(&k[..n]).map_err(err)?;
+
+        assert_eq!(g.is_on_curve().map_err(err)?, true);
+        assert_eq!(g.is_at_infinity().map_err(err)?, false);
+    }
+
+    // ------------------------------------------------------------------
+    // Double scalar mul: k·G + r·G == (k+r)·G
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn ecpoint_double_scalarmul() {
+        let _lock = BnLock::acquire(32).map_err(err)?;
+        let n = Secp256k1::size_bytes();
+
+        // k = 3, r = 5, so result should equal 8·G
+        let mut k = [0u8; 32];
+        k[n - 1] = 3;
+        let mut r = [0u8; 32];
+        r[n - 1] = 5;
+
+        let mut p = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        Secp256k1::generator_bn(&mut p).map_err(err)?;
+        let mut q = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        Secp256k1::generator_bn(&mut q).map_err(err)?;
+
+        let mut result = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        result
+            .double_scalarmul(&mut p, &mut q, &k[..n], &r[..n])
+            .map_err(err)?;
+
+        // Compute 8·G directly
+        let mut eight = [0u8; 32];
+        eight[n - 1] = 8;
+        let mut expected = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        Secp256k1::generator_bn(&mut expected).map_err(err)?;
+        expected.scalarmul(&eight[..n]).map_err(err)?;
+
+        assert_eq!(result.cmp(&expected).map_err(err)?, true);
+    }
+
+    // ------------------------------------------------------------------
+    // EcPoint curve() accessor
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn ecpoint_curve_accessor() {
+        let _lock = BnLock::acquire(32).map_err(err)?;
+        let p = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        assert_eq!(p.curve() as u8, CurvesId::Secp256k1 as u8);
     }
 }

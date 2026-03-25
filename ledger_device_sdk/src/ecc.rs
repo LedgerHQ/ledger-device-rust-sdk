@@ -722,12 +722,6 @@ pub trait SeedDerive {
     fn derive_from_path(path: &[u32]) -> Self::Target {
         Self::derive_from(path).0
     }
-    fn derive(
-        path: &[u32],
-        mode: HDKeyDeriveMode,
-        cc: Option<&mut ChainCode>,
-        seed: Option<&[u8]>,
-    ) -> Self::Target;
 }
 
 #[repr(u8)]
@@ -758,47 +752,6 @@ impl SeedDerive for Secp256k1 {
         sk.key.copy_from_slice(&tmp.0[..keylen]);
         (sk, Some(cc))
     }
-    fn derive(
-        path: &[u32],
-        mode: HDKeyDeriveMode,
-        cc: Option<&mut ChainCode>,
-        seed: Option<&[u8]>,
-    ) -> Self::Target {
-        let mut tmp = Secret::<64>::new();
-        unsafe {
-            let err = sys_hdkey_derive(
-                mode as HDKEY_derive_mode_t,
-                CurvesId::Secp256k1 as cx_curve_t,
-                path.as_ptr(),
-                path.len(),
-                tmp.as_mut().as_mut_ptr(),
-                64,
-                match cc {
-                    Some(ref cc) => cc.value.as_ptr() as *mut u8,
-                    None => core::ptr::null_mut(),
-                },
-                match cc {
-                    Some(_) => 32 as usize,
-                    None => 0 as usize,
-                },
-                match seed {
-                    Some(s) => s.as_ptr() as *mut u8,
-                    None => core::ptr::null_mut(),
-                },
-                match seed {
-                    Some(s) => s.len() as usize,
-                    None => 0,
-                },
-            );
-            if err != 0 {
-                panic!("sys_hdkey_derive failed with error code {}", err);
-            }
-        }
-        let mut sk = Self::Target::new(CurvesId::Secp256k1);
-        let keylen = sk.key.len();
-        sk.key.copy_from_slice(&tmp.0[..keylen]);
-        sk
-    }
 }
 
 impl SeedDerive for Secp256r1 {
@@ -818,47 +771,6 @@ impl SeedDerive for Secp256r1 {
         sk.key.copy_from_slice(&tmp.0[..keylen]);
         (sk, Some(cc))
     }
-    fn derive(
-        path: &[u32],
-        mode: HDKeyDeriveMode,
-        cc: Option<&mut ChainCode>,
-        seed: Option<&[u8]>,
-    ) -> Self::Target {
-        let mut tmp = Secret::<64>::new();
-        unsafe {
-            let err = sys_hdkey_derive(
-                mode as HDKEY_derive_mode_t,
-                CurvesId::Secp256r1 as cx_curve_t,
-                path.as_ptr(),
-                path.len(),
-                tmp.as_mut().as_mut_ptr(),
-                64,
-                match cc {
-                    Some(ref cc) => cc.value.as_ptr() as *mut u8,
-                    None => core::ptr::null_mut(),
-                },
-                match cc {
-                    Some(_) => 32 as usize,
-                    None => 0 as usize,
-                },
-                match seed {
-                    Some(s) => s.as_ptr() as *mut u8,
-                    None => core::ptr::null_mut(),
-                },
-                match seed {
-                    Some(s) => s.len() as usize,
-                    None => 0,
-                },
-            );
-            if err != 0 {
-                panic!("sys_hdkey_derive failed with error code {}", err);
-            }
-        }
-        let mut sk = Self::Target::new(CurvesId::Secp256r1);
-        let keylen = sk.key.len();
-        sk.key.copy_from_slice(&tmp.0[..keylen]);
-        sk
-    }
 }
 
 impl SeedDerive for Ed25519 {
@@ -877,47 +789,6 @@ impl SeedDerive for Ed25519 {
         let keylen = sk.key.len();
         sk.key.copy_from_slice(&tmp.0[..keylen]);
         (sk, Some(cc))
-    }
-    fn derive(
-        path: &[u32],
-        mode: HDKeyDeriveMode,
-        cc: Option<&mut ChainCode>,
-        seed: Option<&[u8]>,
-    ) -> Self::Target {
-        let mut tmp = Secret::<64>::new();
-        unsafe {
-            let err = sys_hdkey_derive(
-                mode as HDKEY_derive_mode_t,
-                CurvesId::Ed25519 as cx_curve_t,
-                path.as_ptr(),
-                path.len(),
-                tmp.as_mut().as_mut_ptr(),
-                64,
-                match cc {
-                    Some(ref cc) => cc.value.as_ptr() as *mut u8,
-                    None => core::ptr::null_mut(),
-                },
-                match cc {
-                    Some(_) => 32 as usize,
-                    None => 0 as usize,
-                },
-                match seed {
-                    Some(s) => s.as_ptr() as *mut u8,
-                    None => core::ptr::null_mut(),
-                },
-                match seed {
-                    Some(s) => s.len() as usize,
-                    None => 0,
-                },
-            );
-            if err != 0 {
-                panic!("sys_hdkey_derive failed with error code {}", err);
-            }
-        }
-        let mut sk = Self::Target::new(CurvesId::Ed25519);
-        let keylen = sk.key.len();
-        sk.key.copy_from_slice(&tmp.0[..keylen]);
-        sk
     }
 }
 
@@ -951,33 +822,23 @@ impl SeedDerive for Stark256 {
         stark::eip2645_derive(path, &mut sk.key);
         (sk, None)
     }
-    fn derive(
-        _path: &[u32],
-        _mode: HDKeyDeriveMode,
-        _cc: Option<&mut ChainCode>,
-        _seed: Option<&[u8]>,
-    ) -> Self::Target {
-        panic!("not implemented for Stark256");
-    }
 }
 
-impl SeedDerive for JubJub {
-    type Target = ECPrivateKey<32, 'E'>;
-    fn derive(
+impl JubJub {
+    pub fn zip32_sapling_derive(
         path: &[u32],
-        mode: HDKeyDeriveMode,
         cc: Option<&mut ChainCode>,
         seed: Option<&[u8]>,
-    ) -> Self::Target {
-        let mut tmp = Secret::<64>::new();
+    ) -> (Secret<32>, Secret<32>, Secret<32>, Secret<32>) {
+        let mut tmp = Secret::<128>::new();
         unsafe {
             let err = sys_hdkey_derive(
-                mode as HDKEY_derive_mode_t,
+                HDKeyDeriveMode::Zip32Sapling as u8,
                 CurvesId::JubJub as cx_curve_t,
                 path.as_ptr(),
                 path.len(),
                 tmp.as_mut().as_mut_ptr(),
-                64,
+                128,
                 match cc {
                     Some(ref cc) => cc.value.as_ptr() as *mut u8,
                     None => core::ptr::null_mut(),
@@ -999,35 +860,33 @@ impl SeedDerive for JubJub {
                 panic!("sys_hdkey_derive failed with error code {}", err);
             }
         }
-        let mut sk = Self::Target::new(CurvesId::JubJub);
-        let keylen = sk.key.len();
-        sk.key.copy_from_slice(&tmp.0[..keylen]);
-        sk
-    }
-    fn derive_from(path: &[u32]) -> (Self::Target, Option<ChainCode>) {
-        let mut cc: ChainCode = Default::default();
-        let pkey = Self::derive(path, HDKeyDeriveMode::Bip32, Some(&mut cc), None);
-        (pkey, Some(cc))
+        let mut ask = Secret::<32>::new();
+        let mut nsk = Secret::<32>::new();
+        let mut ovk = Secret::<32>::new();
+        let mut dk = Secret::<32>::new();
+        ask.0.copy_from_slice(&tmp.0[..32]);
+        nsk.0.copy_from_slice(&tmp.0[32..64]);
+        ovk.0.copy_from_slice(&tmp.0[64..96]);
+        dk.0.copy_from_slice(&tmp.0[96..128]);
+        (ask, nsk, ovk, dk)
     }
 }
 
-impl SeedDerive for Pallas {
-    type Target = ECPrivateKey<32, 'W'>;
-    fn derive(
+impl Pallas {
+    pub fn zip32_orchard_derive(
         path: &[u32],
-        mode: HDKeyDeriveMode,
         cc: Option<&mut ChainCode>,
         seed: Option<&[u8]>,
-    ) -> Self::Target {
-        let mut tmp = Secret::<64>::new();
+    ) -> Secret<32> {
+        let mut tmp = Secret::<32>::new();
         unsafe {
             let err = sys_hdkey_derive(
-                mode as HDKEY_derive_mode_t,
-                CurvesId::Pallas as cx_curve_t,
+                HDKeyDeriveMode::Zip32Orchard as u8,
+                ledger_secure_sdk_sys::CX_CURVE_NONE,
                 path.as_ptr(),
                 path.len(),
                 tmp.as_mut().as_mut_ptr(),
-                64,
+                32,
                 match cc {
                     Some(ref cc) => cc.value.as_ptr() as *mut u8,
                     None => core::ptr::null_mut(),
@@ -1049,15 +908,10 @@ impl SeedDerive for Pallas {
                 panic!("sys_hdkey_derive failed with error code {}", err);
             }
         }
-        let mut sk = Self::Target::new(CurvesId::Pallas);
-        let keylen = sk.key.len();
-        sk.key.copy_from_slice(&tmp.0[..keylen]);
+        let mut sk = Secret::<32>::new();
+        let keylen = sk.0.len();
+        sk.0.copy_from_slice(&tmp.0[..keylen]);
         sk
-    }
-    fn derive_from(path: &[u32]) -> (Self::Target, Option<ChainCode>) {
-        let mut cc: ChainCode = Default::default();
-        let pkey = Self::derive(path, HDKeyDeriveMode::Bip32, Some(&mut cc), None);
-        (pkey, Some(cc))
     }
 }
 
@@ -1234,7 +1088,7 @@ mod tests {
 
     #[test]
     fn zip32_orchard_pallas() {
-        let sk = Pallas::derive(&PATH0, HDKeyDeriveMode::Zip32Orchard, None, None);
+        //let sk = Pallas::derive(&PATH0, HDKeyDeriveMode::Zip32Orchard, None, None);
         // let s = sk
         //     .deterministic_sign(TEST_HASH)
         //     .map_err(display_error_code)?;
