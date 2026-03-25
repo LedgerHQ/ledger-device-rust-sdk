@@ -1047,10 +1047,13 @@ fn generate_glyphs(device: &Device) {
         }
 
         for folder in device.glyphs_folders.iter() {
-            for file in std::fs::read_dir(folder).unwrap() {
-                let path = file.unwrap().path();
-                let path_str = path.to_str().unwrap().to_string();
-                cmd.arg(path_str);
+            let mut paths: Vec<_> = std::fs::read_dir(folder)
+                .unwrap()
+                .map(|f| f.unwrap().path())
+                .collect();
+            paths.sort();
+            for path in paths {
+                cmd.arg(path.to_str().unwrap());
             }
         }
         let _ = cmd.output();
@@ -1068,8 +1071,12 @@ fn generate_glyphs(device: &Device) {
         cmd2.arg("--glyphcfile").arg("--factorize");
 
         for folder in device.glyphs_folders.iter() {
-            for file in std::fs::read_dir(folder).unwrap() {
-                let path = file.unwrap().path();
+            let mut paths: Vec<_> = std::fs::read_dir(folder)
+                .unwrap()
+                .map(|f| f.unwrap().path())
+                .collect();
+            paths.sort();
+            for path in paths {
                 let path_str = path.to_str().unwrap().to_string();
                 cmd1.arg(&path_str);
                 cmd2.arg(&path_str);
