@@ -27,8 +27,8 @@ pub enum CurveDomainParam {
 /// Safe RAII wrapper around `cx_ecpoint_t`.
 ///
 /// Allocates the point inside the BN context on creation and destroys it
-/// on drop.  A [`BnLock`] **must** be held for the entire lifetime of
-/// any `EcPoint`.
+/// on drop.  The BN lock is acquired transparently on the first
+/// allocation and released when the last handle is dropped.
 pub struct EcPoint {
     inner: cx_ecpoint_t,
 }
@@ -40,8 +40,13 @@ impl EcPoint {
     /// # Returns
     /// Returns a new `EcPoint` instance on success, or a `CxError` if allocation fails (e.g. invalid curve or BN context not locked).
     pub fn new(curve: CurvesId) -> Result<Self, CxError> {
+        bn_retain(BN_DEFAULT_WORD_NBYTES)?;
         let mut point = cx_ecpoint_t::default();
-        check_cx_ok!(cx_ecpoint_alloc(&mut point, curve as u8));
+        let err = unsafe { cx_ecpoint_alloc(&mut point, curve as u8) };
+        if err != CX_OK {
+            bn_release();
+            return Err(err.into());
+        }
         Ok(Self { inner: point })
     }
 
@@ -338,6 +343,7 @@ impl Drop for EcPoint {
         unsafe {
             cx_ecpoint_destroy(&mut self.inner);
         }
+        bn_release();
     }
 }
 
@@ -539,7 +545,6 @@ mod tests {
 
     #[test]
     fn ecpoint_alloc_generator_on_curve() {
-        let _lock = BnLock::acquire(32).map_err(err)?;
         let mut g = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
         Secp256k1::generator_bn(&mut g).map_err(err)?;
 
@@ -563,7 +568,6 @@ mod tests {
         let mut gy_orig = [0u8; 32];
         Secp256k1::generator(&mut gx_orig[..n], &mut gy_orig[..n]).map_err(err)?;
 
-        let _lock = BnLock::acquire(32).map_err(err)?;
         let mut p = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
         p.init(&gx_orig[..n], &gy_orig[..n]).map_err(err)?;
 
@@ -582,7 +586,6 @@ mod tests {
     #[test]
     fn ecpoint_compress_decompress() {
         let n = Secp256k1::size_bytes();
-        let _lock = BnLock::acquire(32).map_err(err)?;
 
         // Start with the generator
         let mut g = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
@@ -607,8 +610,6 @@ mod tests {
 
     #[test]
     fn ecpoint_cmp_equal() {
-        let _lock = BnLock::acquire(32).map_err(err)?;
-
         let mut g1 = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
         Secp256k1::generator_bn(&mut g1).map_err(err)?;
 
@@ -624,7 +625,6 @@ mod tests {
 
     #[test]
     fn ecpoint_scalarmul_identity() {
-        let _lock = BnLock::acquire(32).map_err(err)?;
         let n = Secp256k1::size_bytes();
 
         let mut g = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
@@ -648,8 +648,6 @@ mod tests {
 
     #[test]
     fn ecpoint_scalarmul_bn_double() {
-        let _lock = BnLock::acquire(32).map_err(err)?;
-
         let mut g = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
         Secp256k1::generator_bn(&mut g).map_err(err)?;
 
@@ -669,7 +667,6 @@ mod tests {
 
     #[test]
     fn ecpoint_add_equals_double() {
-        let _lock = BnLock::acquire(32).map_err(err)?;
         let n = Secp256k1::size_bytes();
 
         // Compute 2·G via scalarmul
@@ -697,8 +694,6 @@ mod tests {
 
     #[test]
     fn ecpoint_neg_on_curve() {
-        let _lock = BnLock::acquire(32).map_err(err)?;
-
         let mut neg_g = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
         Secp256k1::generator_bn(&mut neg_g).map_err(err)?;
         neg_g.neg().map_err(err)?;
@@ -718,7 +713,6 @@ mod tests {
     #[test]
     fn ed25519_generator_export() {
         let n = Ed25519::size_bytes();
-        let _lock = BnLock::acquire(32).map_err(err)?;
         let mut g = EcPoint::new(CurvesId::Ed25519).map_err(err)?;
         Ed25519::generator_bn(&mut g).map_err(err)?;
 
@@ -736,7 +730,6 @@ mod tests {
 
     #[test]
     fn secp256r1_generator_on_curve() {
-        let _lock = BnLock::acquire(32).map_err(err)?;
         let mut g = EcPoint::new(CurvesId::Secp256r1).map_err(err)?;
         Secp256r1::generator_bn(&mut g).map_err(err)?;
 
@@ -749,8 +742,6 @@ mod tests {
 
     #[test]
     fn secp256k1_domain_parameter_bn_order() {
-        let _lock = BnLock::acquire(32).map_err(err)?;
-
         // Get the order as raw bytes
         let n = Secp256k1::size_bytes();
         let mut order_bytes = [0u8; 32];
@@ -772,7 +763,6 @@ mod tests {
 
     #[test]
     fn ecpoint_rnd_scalarmul_on_curve() {
-        let _lock = BnLock::acquire(32).map_err(err)?;
         let n = Secp256k1::size_bytes();
 
         let mut g = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
@@ -793,7 +783,6 @@ mod tests {
 
     #[test]
     fn ecpoint_double_scalarmul() {
-        let _lock = BnLock::acquire(32).map_err(err)?;
         let n = Secp256k1::size_bytes();
 
         // k = 3, r = 5, so result should equal 8·G
@@ -828,7 +817,6 @@ mod tests {
 
     #[test]
     fn ecpoint_curve_accessor() {
-        let _lock = BnLock::acquire(32).map_err(err)?;
         let p = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
         assert_eq!(p.curve() as u8, CurvesId::Secp256k1 as u8);
     }

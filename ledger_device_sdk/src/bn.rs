@@ -1,29 +1,75 @@
 //! Safe Rust wrappers for the Ledger C SDK big-number (BN) and Montgomery
 //! arithmetic functions declared in `ox_bn.h`.
 //!
-//! The BN subsystem operates inside a **locked context**: call
-//! [`BnLock::acquire`] before any BN operation and let the guard drop (or call
-//! [`BnLock::release`]) when done.  All [`Bn`] values allocated inside a lock
-//! are automatically destroyed when they are dropped.
+//! The underlying BN engine requires a global lock to be held while any
+//! [`Bn`], [`EcPoint`](crate::ecc::math::EcPoint) or [`MontCtx`] is alive.
+//! This lock is managed **automatically** via internal reference counting:
+//! the first allocation acquires the lock and the last drop releases it.
+//! Callers do **not** need to interact with [`BnLock`] at all.
 //!
 //! # Example
 //!
 //! ```ignore
-//! use ledger_device_sdk::bn::{BnLock, Bn};
+//! use ledger_device_sdk::bn::Bn;
 //!
-//! let _lock = BnLock::acquire(32)?;
-//! let mut a = Bn::alloc(32)?;
+//! let a = Bn::alloc(32)?;
 //! a.set_u32(42)?;
-//! let mut b = Bn::alloc_init(&[0, 0, 0, 7])?;
-//! let mut r = Bn::alloc(32)?;
+//! let b = Bn::alloc_init(&[0, 0, 0, 7])?;
+//! let r = Bn::alloc(32)?;
 //! r.add(&a, &b)?;
+//! // lock released automatically when a, b, r are dropped
 //! ```
 
 use crate::check_cx_ok;
 use crate::ecc::CxError;
+use core::cell::Cell;
 use core::cmp::Ordering;
 use core::ffi::c_int;
 use ledger_secure_sdk_sys::*;
+
+// =========================================================================
+// Internal reference-counted BN lock management
+// =========================================================================
+
+/// Default word-size (in bytes) passed to `cx_bn_lock`.  32 bytes = 256 bits
+/// covers all standard elliptic-curve sizes.  BN values larger than this
+/// (e.g. 64 bytes for intermediate products) can still be allocated.
+pub(crate) const BN_DEFAULT_WORD_NBYTES: usize = 32;
+
+struct BnRefCount {
+    count: Cell<u32>,
+}
+
+// Safety: the Ledger device is single-threaded.
+unsafe impl Sync for BnRefCount {}
+
+static BN_RC: BnRefCount = BnRefCount {
+    count: Cell::new(0),
+};
+
+/// Increment the BN reference count, acquiring the lock on the first call.
+/// `word_nbytes` is only used when the lock is actually acquired (count was 0).
+pub(crate) fn bn_retain(word_nbytes: usize) -> Result<(), CxError> {
+    let c = BN_RC.count.get();
+    if c == 0 {
+        check_cx_ok!(cx_bn_lock(word_nbytes, 0));
+    }
+    BN_RC.count.set(c + 1);
+    Ok(())
+}
+
+/// Decrement the BN reference count, releasing the lock when it reaches zero.
+pub(crate) fn bn_release() {
+    let c = BN_RC.count.get();
+    debug_assert!(c > 0, "bn_release called with zero ref count");
+    let new = c - 1;
+    BN_RC.count.set(new);
+    if new == 0 {
+        unsafe {
+            cx_bn_unlock();
+        }
+    }
+}
 
 // =========================================================================
 // BnLock – RAII guard for the big-number context
@@ -31,8 +77,11 @@ use ledger_secure_sdk_sys::*;
 
 /// RAII guard for the BN lock context.
 ///
-/// All BN / Montgomery operations require the context to be locked first.
-/// The lock is automatically released when this guard is dropped.
+/// With the automatic reference-counted locking introduced in [`Bn`],
+/// [`EcPoint`](crate::ecc::math::EcPoint) and [`MontCtx`], most callers
+/// no longer need to use `BnLock` directly.  It is still available for
+/// backward compatibility and for advanced use-cases that need explicit
+/// control over lock lifetime.
 ///
 /// # Example
 ///
@@ -46,38 +95,30 @@ pub struct BnLock;
 impl BnLock {
     /// Lock the BN context.
     ///
-    /// `word_nbytes` is the maximal byte-size of BN values that will be
-    /// allocated inside this lock (e.g. 32 for 256-bit numbers).
+    /// `word_nbytes` is the word alignment byte-size for the BN engine
+    /// (e.g. 32 for 256-bit operations).  If the lock is already held
+    /// (by a previous `acquire` or by an existing [`Bn`]/[`EcPoint`]
+    /// allocation), this simply increments the internal reference count.
     /// # Arguments
-    /// * `word_nbytes` - The maximal byte-size of BN values to be allocated
+    /// * `word_nbytes` - The word alignment byte-size for the BN engine
     /// # Returns
     /// Returns a `BnLock` guard on success, or a `CxError` if the lock could not be acquired.
     pub fn acquire(word_nbytes: usize) -> Result<Self, CxError> {
-        check_cx_ok!(cx_bn_lock(word_nbytes, 0));
+        bn_retain(word_nbytes)?;
         Ok(BnLock)
     }
 
     /// Explicitly release the lock (equivalent to dropping the guard).
-    /// # Arguments
-    /// * `self` - The `BnLock` instance to release
-    /// # Returns
-    /// Returns nothing; the lock is released on drop.
     pub fn release(self) {
         drop(self);
     }
 
     /// Returns `true` if the BN context is currently locked.
-    /// # Arguments
-    /// * `self` - The `BnLock` instance to check
-    /// # Returns
-    /// Returns `true` if the BN context is currently locked, or `false` if it is not.
     pub fn is_locked() -> bool {
         unsafe { cx_bn_locked() == CX_OK }
     }
 
     /// Returns `true` if the BN context is currently locked (alternate API).
-    /// # Returns
-    /// Returns `true` if the BN context is currently locked, or `false` if it is not.
     pub fn is_locked_bool() -> bool {
         unsafe { cx_bn_is_locked() }
     }
@@ -85,9 +126,7 @@ impl BnLock {
 
 impl Drop for BnLock {
     fn drop(&mut self) {
-        unsafe {
-            cx_bn_unlock();
-        }
+        bn_release();
     }
 }
 
@@ -98,9 +137,10 @@ impl Drop for BnLock {
 /// Safe RAII wrapper around a single big-number handle (`cx_bn_t`).
 ///
 /// The BN is allocated inside the locked BN context and automatically
-/// destroyed when dropped.  A [`BnLock`] **must** be held for the entire
-/// lifetime of every `Bn`.
-#[derive(Debug, Clone)]
+/// destroyed when dropped.  The BN lock is acquired transparently on
+/// the first allocation and released when the last `Bn` (or
+/// [`EcPoint`](crate::ecc::math::EcPoint) / [`MontCtx`]) is dropped.
+#[derive(Debug)]
 pub struct Bn {
     handle: cx_bn_t,
 }
@@ -114,8 +154,13 @@ impl Bn {
     /// # Returns
     /// Returns a new `Bn` instance on success, or a `CxError` if the allocation fails.
     pub fn alloc(nbytes: usize) -> Result<Self, CxError> {
+        bn_retain(BN_DEFAULT_WORD_NBYTES)?;
         let mut handle: cx_bn_t = CX_BN_FLAG_UNSET;
-        check_cx_ok!(cx_bn_alloc(&mut handle, nbytes));
+        let err = unsafe { cx_bn_alloc(&mut handle, nbytes) };
+        if err != CX_OK {
+            bn_release();
+            return Err(err.into());
+        }
         Ok(Self { handle })
     }
 
@@ -127,14 +172,16 @@ impl Bn {
     /// # Returns
     /// Returns a new `Bn` instance on success, or a `CxError` if the allocation or initialisation fails.
     pub fn alloc_init(value: &[u8]) -> Result<Self, CxError> {
+        bn_retain(BN_DEFAULT_WORD_NBYTES)?;
         let nbytes = align_bn_size(value.len());
         let mut handle: cx_bn_t = CX_BN_FLAG_UNSET;
-        check_cx_ok!(cx_bn_alloc_init(
-            &mut handle,
-            nbytes,
-            value.as_ptr(),
-            value.len(),
-        ));
+        let err = unsafe {
+            cx_bn_alloc_init(&mut handle, nbytes, value.as_ptr(), value.len())
+        };
+        if err != CX_OK {
+            bn_release();
+            return Err(err.into());
+        }
         Ok(Self { handle })
     }
 
@@ -145,13 +192,15 @@ impl Bn {
     /// # Returns
     /// Returns a new `Bn` instance on success, or a `CxError` if the allocation or initialisation fails.
     pub fn alloc_init_size(nbytes: usize, value: &[u8]) -> Result<Self, CxError> {
+        bn_retain(BN_DEFAULT_WORD_NBYTES)?;
         let mut handle: cx_bn_t = CX_BN_FLAG_UNSET;
-        check_cx_ok!(cx_bn_alloc_init(
-            &mut handle,
-            nbytes,
-            value.as_ptr(),
-            value.len(),
-        ));
+        let err = unsafe {
+            cx_bn_alloc_init(&mut handle, nbytes, value.as_ptr(), value.len())
+        };
+        if err != CX_OK {
+            bn_release();
+            return Err(err.into());
+        }
         Ok(Self { handle })
     }
 
@@ -651,11 +700,10 @@ impl Bn {
 
 impl Drop for Bn {
     fn drop(&mut self) {
-        // Destroy is best-effort; the BN may already be invalid if the
-        // BN context was unlocked prematurely.
         unsafe {
             cx_bn_destroy(&mut self.handle);
         }
+        bn_release();
     }
 }
 
@@ -666,12 +714,11 @@ impl Drop for Bn {
 /// Safe RAII wrapper for a Montgomery multiplication context.
 ///
 /// Allocated inside the locked BN context and destroyed on drop.
-/// A [`BnLock`] **must** be held for the entire lifetime of a `MontCtx`.
+/// The BN lock is managed automatically via reference counting.
 ///
 /// # Example
 ///
 /// ```ignore
-/// let _lock = BnLock::acquire(32)?;
 /// let n = Bn::alloc_init(&modulus_bytes)?;
 /// let mut ctx = MontCtx::alloc(32)?;
 /// ctx.init(&n)?;
@@ -687,8 +734,13 @@ impl MontCtx {
     /// # Returns
     /// Returns `Ok(MontCtx)` on success, or a `CxError` if the operation fails.
     pub fn alloc(length: usize) -> Result<Self, CxError> {
+        bn_retain(BN_DEFAULT_WORD_NBYTES)?;
         let mut inner = cx_bn_mont_ctx_t::default();
-        check_cx_ok!(cx_mont_alloc(&mut inner, length));
+        let err = unsafe { cx_mont_alloc(&mut inner, length) };
+        if err != CX_OK {
+            bn_release();
+            return Err(err.into());
+        }
         Ok(Self { inner })
     }
 
@@ -812,6 +864,12 @@ impl MontCtx {
     }
 }
 
+impl Drop for MontCtx {
+    fn drop(&mut self) {
+        bn_release();
+    }
+}
+
 // =========================================================================
 // Helpers
 // =========================================================================
@@ -852,7 +910,6 @@ mod tests {
 
     #[test]
     fn bn_alloc_set_get_u32() {
-        let _lock = BnLock::acquire(32).map_err(err_to_unit)?;
         let a = Bn::alloc(32).map_err(err_to_unit)?;
         a.set_u32(12345).map_err(err_to_unit)?;
         assert_eq!(a.get_u32().map_err(err_to_unit)?, 12345u32);
@@ -860,7 +917,6 @@ mod tests {
 
     #[test]
     fn bn_add_sub() {
-        let _lock = BnLock::acquire(32).map_err(err_to_unit)?;
         let a = Bn::alloc(32).map_err(err_to_unit)?;
         a.set_u32(100).map_err(err_to_unit)?;
         let b = Bn::alloc(32).map_err(err_to_unit)?;
@@ -874,7 +930,6 @@ mod tests {
 
     #[test]
     fn bn_cmp() {
-        let _lock = BnLock::acquire(32).map_err(err_to_unit)?;
         let a = Bn::alloc(32).map_err(err_to_unit)?;
         a.set_u32(10).map_err(err_to_unit)?;
         let b = Bn::alloc(32).map_err(err_to_unit)?;
@@ -886,7 +941,6 @@ mod tests {
 
     #[test]
     fn bn_shift_bits() {
-        let _lock = BnLock::acquire(32).map_err(err_to_unit)?;
         let a = Bn::alloc(32).map_err(err_to_unit)?;
         a.set_u32(0b1010).map_err(err_to_unit)?;
         a.shl(1).map_err(err_to_unit)?;
