@@ -175,9 +175,7 @@ impl Bn {
         bn_retain(BN_DEFAULT_WORD_NBYTES)?;
         let nbytes = align_bn_size(value.len());
         let mut handle: cx_bn_t = CX_BN_FLAG_UNSET;
-        let err = unsafe {
-            cx_bn_alloc_init(&mut handle, nbytes, value.as_ptr(), value.len())
-        };
+        let err = unsafe { cx_bn_alloc_init(&mut handle, nbytes, value.as_ptr(), value.len()) };
         if err != CX_OK {
             bn_release();
             return Err(err.into());
@@ -194,9 +192,7 @@ impl Bn {
     pub fn alloc_init_size(nbytes: usize, value: &[u8]) -> Result<Self, CxError> {
         bn_retain(BN_DEFAULT_WORD_NBYTES)?;
         let mut handle: cx_bn_t = CX_BN_FLAG_UNSET;
-        let err = unsafe {
-            cx_bn_alloc_init(&mut handle, nbytes, value.as_ptr(), value.len())
-        };
+        let err = unsafe { cx_bn_alloc_init(&mut handle, nbytes, value.as_ptr(), value.len()) };
         if err != CX_OK {
             bn_release();
             return Err(err.into());
