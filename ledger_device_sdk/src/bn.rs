@@ -48,26 +48,36 @@ impl BnLock {
     ///
     /// `word_nbytes` is the maximal byte-size of BN values that will be
     /// allocated inside this lock (e.g. 32 for 256-bit numbers).
-    /// Wraps `cx_bn_lock`.
+    /// # Arguments
+    /// * `word_nbytes` - The maximal byte-size of BN values to be allocated
+    /// # Returns
+    /// Returns a `BnLock` guard on success, or a `CxError` if the lock could not be acquired.
     pub fn acquire(word_nbytes: usize) -> Result<Self, CxError> {
         check_cx_ok!(cx_bn_lock(word_nbytes, 0));
         Ok(BnLock)
     }
 
     /// Explicitly release the lock (equivalent to dropping the guard).
-    /// Wraps `cx_bn_unlock`.
+    /// # Arguments
+    /// * `self` - The `BnLock` instance to release
+    /// # Returns
+    /// Returns nothing; the lock is released on drop.
     pub fn release(self) {
         drop(self);
     }
 
     /// Returns `true` if the BN context is currently locked.
-    /// Wraps `cx_bn_locked`.
+    /// # Arguments
+    /// * `self` - The `BnLock` instance to check
+    /// # Returns
+    /// Returns `true` if the BN context is currently locked, or `false` if it is not.
     pub fn is_locked() -> bool {
         unsafe { cx_bn_locked() == CX_OK }
     }
 
     /// Returns `true` if the BN context is currently locked (alternate API).
-    /// Wraps `cx_bn_is_locked`.
+    /// # Returns
+    /// Returns `true` if the BN context is currently locked, or `false` if it is not.
     pub fn is_locked_bool() -> bool {
         unsafe { cx_bn_is_locked() }
     }
@@ -90,7 +100,7 @@ impl Drop for BnLock {
 /// The BN is allocated inside the locked BN context and automatically
 /// destroyed when dropped.  A [`BnLock`] **must** be held for the entire
 /// lifetime of every `Bn`.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Bn {
     handle: cx_bn_t,
 }
@@ -99,7 +109,10 @@ impl Bn {
     // ----- allocation / init ------------------------------------------------
 
     /// Allocate an uninitialised BN with room for `nbytes` bytes.
-    /// Wraps `cx_bn_alloc`.
+    /// # Arguments
+    /// * `nbytes` - The byte capacity of the BN to allocate
+    /// # Returns
+    /// Returns a new `Bn` instance on success, or a `CxError` if the allocation fails.
     pub fn alloc(nbytes: usize) -> Result<Self, CxError> {
         let mut handle: cx_bn_t = CX_BN_FLAG_UNSET;
         check_cx_ok!(cx_bn_alloc(&mut handle, nbytes));
@@ -109,7 +122,10 @@ impl Bn {
     /// Allocate a BN and initialise it from a big-endian byte slice.
     /// The BN will have room for `nbytes` bytes where `nbytes` is at least
     /// `value.len()` rounded up to the BN word alignment.
-    /// Wraps `cx_bn_alloc_init`.
+    /// # Arguments
+    /// * `value` - The big-endian byte slice to initialise the BN with
+    /// # Returns
+    /// Returns a new `Bn` instance on success, or a `CxError` if the allocation or initialisation fails.
     pub fn alloc_init(value: &[u8]) -> Result<Self, CxError> {
         let nbytes = align_bn_size(value.len());
         let mut handle: cx_bn_t = CX_BN_FLAG_UNSET;
@@ -123,7 +139,11 @@ impl Bn {
     }
 
     /// Allocate a BN with `nbytes` capacity and initialise from a byte slice.
-    /// Wraps `cx_bn_alloc_init`.
+    /// # Arguments
+    /// * `nbytes` - The byte capacity of the BN to allocate (must be at least `value.len()` rounded up to the BN word alignment)
+    /// * `value` - The big-endian byte slice to initialise the BN with
+    /// # Returns
+    /// Returns a new `Bn` instance on success, or a `CxError` if the allocation or initialisation fails.
     pub fn alloc_init_size(nbytes: usize, value: &[u8]) -> Result<Self, CxError> {
         let mut handle: cx_bn_t = CX_BN_FLAG_UNSET;
         check_cx_ok!(cx_bn_alloc_init(
@@ -136,11 +156,19 @@ impl Bn {
     }
 
     /// Return the raw `cx_bn_t` handle for use with low-level FFI.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to access
+    /// # Returns
+    /// Returns the raw `cx_bn_t` handle for use with low-level FFI.
     pub fn raw(&self) -> cx_bn_t {
         self.handle
     }
 
     /// Return the raw `cx_bn_t` handle mutably for use with low-level FFI.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to access
+    /// # Returns
+    /// Returns the raw `cx_bn_t` handle mutably for use with low-level FFI.
     pub fn raw_mut(&mut self) -> &mut cx_bn_t {
         &mut self.handle
     }
@@ -148,28 +176,42 @@ impl Bn {
     // ----- init / copy / size -----------------------------------------------
 
     /// (Re-)initialise this BN from a big-endian byte slice.
-    /// Wraps `cx_bn_init`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to initialise
+    /// * `value` - The big-endian byte slice to initialise the BN with
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the initialisation fails.
     pub fn init(&self, value: &[u8]) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_init(self.handle, value.as_ptr(), value.len()));
         Ok(())
     }
 
     /// Fill this BN with random data.
-    /// Wraps `cx_bn_rand`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to fill with random data
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn rand(&self) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_rand(self.handle));
         Ok(())
     }
 
     /// Copy the value of `other` into `self`.
-    /// Wraps `cx_bn_copy`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to copy into
+    /// * `other` - The `Bn` instance to copy from
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn copy_from(&self, other: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_copy(self.handle, other.handle));
         Ok(())
     }
 
     /// Return the size in bytes of this BN.
-    /// Wraps `cx_bn_nbytes`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to query
+    /// # Returns
+    /// Returns the size in bytes of this BN on success, or a `CxError` if the operation fails.
     pub fn nbytes(&self) -> Result<usize, CxError> {
         let mut n = 0usize;
         check_cx_ok!(cx_bn_nbytes(self.handle, &mut n));
@@ -179,7 +221,11 @@ impl Bn {
     // ----- u32 get/set & export ---------------------------------------------
 
     /// Set this BN to the given `u32` value.
-    /// Wraps `cx_bn_set_u32`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to set
+    /// * `n` - The `u32` value to set
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn set_u32(&self, n: u32) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_set_u32(self.handle, n));
         Ok(())
@@ -187,7 +233,10 @@ impl Bn {
 
     /// Return the value of this BN as a `u32`.
     /// The BN must fit in 32 bits.
-    /// Wraps `cx_bn_get_u32`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to query
+    /// # Returns
+    /// Returns the `u32` value on success, or a `CxError` if the operation fails.
     pub fn get_u32(&self) -> Result<u32, CxError> {
         let mut n = 0u32;
         check_cx_ok!(cx_bn_get_u32(self.handle, &mut n));
@@ -195,7 +244,11 @@ impl Bn {
     }
 
     /// Export this BN into a big-endian byte buffer.
-    /// Wraps `cx_bn_export`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to export
+    /// * `bytes` - The buffer to export the BN into
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn export(&self, bytes: &mut [u8]) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_export(self.handle, bytes.as_mut_ptr(), bytes.len()));
         Ok(())
@@ -205,7 +258,11 @@ impl Bn {
 
     /// Compare two BNs.
     /// Returns `Ordering::Less`, `Equal`, or `Greater`.
-    /// Wraps `cx_bn_cmp`.
+    /// # Arguments
+    /// * `self` - The first `Bn` instance to compare
+    /// * `other` - The second `Bn` instance to compare
+    /// # Returns
+    /// Returns `Ordering::Less`, `Equal`, or `Greater` on success, or a `CxError` if the comparison fails.
     pub fn cmp_bn(&self, other: &Bn) -> Result<Ordering, CxError> {
         let mut diff: c_int = 0;
         check_cx_ok!(cx_bn_cmp(self.handle, other.handle, &mut diff));
@@ -214,7 +271,11 @@ impl Bn {
 
     /// Compare this BN with a `u32`.
     /// Returns `Ordering::Less`, `Equal`, or `Greater`.
-    /// Wraps `cx_bn_cmp_u32`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to compare
+    /// * `other` - The `u32` value to compare with
+    /// # Returns
+    /// Returns `Ordering::Less`, `Equal`, or `Greater` on success, or a `CxError` if the comparison fails.
     pub fn cmp_u32(&self, other: u32) -> Result<Ordering, CxError> {
         let mut diff: c_int = 0;
         check_cx_ok!(cx_bn_cmp_u32(self.handle, other, &mut diff));
@@ -222,7 +283,10 @@ impl Bn {
     }
 
     /// Returns `true` if this BN is odd.
-    /// Wraps `cx_bn_is_odd`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to query
+    /// # Returns
+    /// Returns `true` if the BN is odd, or a `CxError` if the operation fails.
     pub fn is_odd(&self) -> Result<bool, CxError> {
         let mut odd = false;
         check_cx_ok!(cx_bn_is_odd(self.handle, &mut odd));
@@ -232,21 +296,36 @@ impl Bn {
     // ----- bitwise logic ----------------------------------------------------
 
     /// `self = a XOR b`.
-    /// Wraps `cx_bn_xor`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to store the result
+    /// * `a` - The first `Bn` operand
+    /// * `b` - The second `Bn` operand
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn xor(&self, a: &Bn, b: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_xor(self.handle, a.handle, b.handle));
         Ok(())
     }
 
     /// `self = a OR b`.
-    /// Wraps `cx_bn_or`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to store the result
+    /// * `a` - The first `Bn` operand
+    /// * `b` - The second `Bn` operand
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn or(&self, a: &Bn, b: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_or(self.handle, a.handle, b.handle));
         Ok(())
     }
 
     /// `self = a AND b`.
-    /// Wraps `cx_bn_and`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to store the result
+    /// * `a` - The first `Bn` operand
+    /// * `b` - The second `Bn` operand
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn and(&self, a: &Bn, b: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_and(self.handle, a.handle, b.handle));
         Ok(())
@@ -255,7 +334,11 @@ impl Bn {
     // ----- bit manipulation -------------------------------------------------
 
     /// Test whether bit at position `pos` is set.
-    /// Wraps `cx_bn_tst_bit`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to query
+    /// * `pos` - The bit position to test
+    /// # Returns
+    /// Returns `true` if the bit is set, or a `CxError` if the operation fails.
     pub fn tst_bit(&self, pos: u32) -> Result<bool, CxError> {
         let mut set = false;
         check_cx_ok!(cx_bn_tst_bit(self.handle, pos, &mut set));
@@ -263,21 +346,32 @@ impl Bn {
     }
 
     /// Set bit at position `pos`.
-    /// Wraps `cx_bn_set_bit`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to modify
+    /// * `pos` - The bit position to set
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn set_bit(&self, pos: u32) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_set_bit(self.handle, pos));
         Ok(())
     }
 
     /// Clear bit at position `pos`.
-    /// Wraps `cx_bn_clr_bit`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to modify
+    /// * `pos` - The bit position to clear
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn clr_bit(&self, pos: u32) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_clr_bit(self.handle, pos));
         Ok(())
     }
 
     /// Count the number of significant bits.
-    /// Wraps `cx_bn_cnt_bits`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to query
+    /// # Returns
+    /// Returns the number of significant bits, or a `CxError` if the operation fails.
     pub fn cnt_bits(&self) -> Result<u32, CxError> {
         let mut nbits = 0u32;
         check_cx_ok!(cx_bn_cnt_bits(self.handle, &mut nbits));
@@ -287,14 +381,22 @@ impl Bn {
     // ----- shifts -----------------------------------------------------------
 
     /// Shift right by `n` bits.
-    /// Wraps `cx_bn_shr`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to modify
+    /// * `n` - The number of bits to shift
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn shr(&self, n: u32) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_shr(self.handle, n));
         Ok(())
     }
 
     /// Shift left by `n` bits.
-    /// Wraps `cx_bn_shl`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to modify
+    /// * `n` - The number of bits to shift
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn shl(&self, n: u32) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_shl(self.handle, n));
         Ok(())
@@ -303,23 +405,38 @@ impl Bn {
     // ----- basic arithmetic -------------------------------------------------
 
     /// `self = a + b`.
-    /// Wraps `cx_bn_add`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to store the result
+    /// * `a` - The first `Bn` operand
+    /// * `b` - The second `Bn` operand
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn add(&self, a: &Bn, b: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_add(self.handle, a.handle, b.handle));
         Ok(())
     }
 
     /// `self = a - b`.
-    /// Wraps `cx_bn_sub`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to store the result
+    /// * `a` - The first `Bn` operand
+    /// * `b` - The second `Bn` operand
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn sub(&self, a: &Bn, b: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_sub(self.handle, a.handle, b.handle));
         Ok(())
     }
 
     /// `self = a * b`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to store the result
+    /// * `a` - The first `Bn` operand
+    /// * `b` - The second `Bn` operand
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     /// The result BN must have been allocated with at least twice the byte
     /// capacity of the operands.
-    /// Wraps `cx_bn_mul`.
     pub fn mul(&self, a: &Bn, b: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_mul(self.handle, a.handle, b.handle));
         Ok(())
@@ -328,35 +445,64 @@ impl Bn {
     // ----- modular arithmetic -----------------------------------------------
 
     /// `self = (a + b) mod n`.
-    /// Wraps `cx_bn_mod_add`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to store the result
+    /// * `a` - The first `Bn` operand
+    /// * `b` - The second `Bn` operand
+    /// * `n` - The modulus
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn mod_add(&self, a: &Bn, b: &Bn, n: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_mod_add(self.handle, a.handle, b.handle, n.handle));
         Ok(())
     }
 
     /// `self = (a - b) mod n`.
-    /// Wraps `cx_bn_mod_sub`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to store the result
+    /// * `a` - The first `Bn` operand
+    /// * `b` - The second `Bn` operand
+    /// * `n` - The modulus
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn mod_sub(&self, a: &Bn, b: &Bn, n: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_mod_sub(self.handle, a.handle, b.handle, n.handle));
         Ok(())
     }
 
     /// `self = (a * b) mod n`.
-    /// Wraps `cx_bn_mod_mul`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to store the result
+    /// * `a` - The first `Bn` operand
+    /// * `b` - The second `Bn` operand
+    /// * `n` - The modulus
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn mod_mul(&self, a: &Bn, b: &Bn, n: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_mod_mul(self.handle, a.handle, b.handle, n.handle));
         Ok(())
     }
 
     /// `self = d mod n`.
-    /// Wraps `cx_bn_reduce`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to store the result
+    /// * `d` - The `Bn` instance representing the value to reduce
+    /// * `n` - The modulus
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn reduce(&self, d: &Bn, n: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_reduce(self.handle, d.handle, n.handle));
         Ok(())
     }
 
     /// `self = sqrt(a) mod n`, selecting the root with the given sign (0 or 1).
-    /// Wraps `cx_bn_mod_sqrt`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to store the result
+    /// * `a` - The `Bn` instance representing the value to take the square root of
+    /// * `n` - The modulus
+    /// * `sign` - The sign of the root (0 or 1)
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn mod_sqrt(&self, a: &Bn, n: &Bn, sign: u32) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_mod_sqrt(self.handle, a.handle, n.handle, sign));
         Ok(())
@@ -365,14 +511,26 @@ impl Bn {
     // ----- modular exponentiation -------------------------------------------
 
     /// `self = a^e mod n` where `e` is a BN.
-    /// Wraps `cx_bn_mod_pow_bn`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to store the result
+    /// * `a` - The base `Bn` instance
+    /// * `e` - The exponent `Bn` instance
+    /// * `n` - The modulus `Bn` instance
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn mod_pow_bn(&self, a: &Bn, e: &Bn, n: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_mod_pow_bn(self.handle, a.handle, e.handle, n.handle));
         Ok(())
     }
 
     /// `self = a^e mod n` where `e` is a big-endian byte slice.
-    /// Wraps `cx_bn_mod_pow`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to store the result
+    /// * `a` - The base `Bn` instance
+    /// * `e` - The exponent as a big-endian byte slice
+    /// * `n` - The modulus `Bn` instance
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn mod_pow(&self, a: &Bn, e: &[u8], n: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_mod_pow(
             self.handle,
@@ -386,7 +544,13 @@ impl Bn {
 
     /// `self = a^e mod n` (alternate implementation).
     /// `e` is a big-endian byte slice.
-    /// Wraps `cx_bn_mod_pow2`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to store the result
+    /// * `a` - The base `Bn` instance
+    /// * `e` - The exponent as a big-endian byte slice
+    /// * `n` - The modulus `Bn` instance
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn mod_pow2(&self, a: &Bn, e: &[u8], n: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_mod_pow2(
             self.handle,
@@ -401,14 +565,24 @@ impl Bn {
     // ----- modular inversion ------------------------------------------------
 
     /// `self = a^(-1) mod n` where `n` is **not** prime.
-    /// Wraps `cx_bn_mod_invert_nprime`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to store the result
+    /// * `a` - The `Bn` instance representing the value to invert
+    /// * `n` - The modulus `Bn` instance
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn mod_invert_nprime(&self, a: &Bn, n: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_mod_invert_nprime(self.handle, a.handle, n.handle));
         Ok(())
     }
 
     /// `self = a^(-1) mod n` where `a` is a `u32`.
-    /// Wraps `cx_bn_mod_u32_invert`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to store the result
+    /// * `a` - The `u32` value to invert
+    /// * `n` - The modulus `Bn` instance
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn mod_u32_invert(&self, a: u32, n: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_mod_u32_invert(self.handle, a, n.handle));
         Ok(())
@@ -417,7 +591,11 @@ impl Bn {
     // ----- primality --------------------------------------------------------
 
     /// Returns `true` if this BN is (probably) prime.
-    /// Wraps `cx_bn_is_prime`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to check for primality
+    /// # Returns
+    /// Returns `Ok(true)` if the BN is probably prime, `Ok(false)` otherwise,
+    /// or a `CxError` if the operation fails.
     pub fn is_prime(&self) -> Result<bool, CxError> {
         let mut prime = false;
         check_cx_ok!(cx_bn_is_prime(self.handle, &mut prime));
@@ -425,7 +603,10 @@ impl Bn {
     }
 
     /// Replace this BN with the next prime ≥ its current value.
-    /// Wraps `cx_bn_next_prime`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to modify
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn next_prime(&self) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_next_prime(self.handle));
         Ok(())
@@ -434,7 +615,11 @@ impl Bn {
     // ----- random -----------------------------------------------------------
 
     /// Set this BN to a random value in `[0, n)`.
-    /// Wraps `cx_bn_rng`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to modify
+    /// * `n` - The upper bound `Bn` instance
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn rng(&self, n: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_rng(self.handle, n.handle));
         Ok(())
@@ -444,7 +629,14 @@ impl Bn {
 
     /// `self = a * b` in `GF(2^n)` defined by the irreducible polynomial
     /// `n` with pre-computed helper `h`.
-    /// Wraps `cx_bn_gf2_n_mul`.
+    /// # Arguments
+    /// * `self` - The `Bn` instance to store the result
+    /// * `a` - The first operand `Bn` instance
+    /// * `b` - The second operand `Bn` instance
+    /// * `n` - The irreducible polynomial `Bn` instance
+    /// * `h` - The pre-computed helper `Bn` instance
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn gf2_n_mul(&self, a: &Bn, b: &Bn, n: &Bn, h: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_bn_gf2_n_mul(
             self.handle,
@@ -490,7 +682,10 @@ pub struct MontCtx {
 
 impl MontCtx {
     /// Allocate a Montgomery context for BNs of `length` bytes.
-    /// Wraps `cx_mont_alloc`.
+    /// # Arguments
+    /// * `length` - The length in bytes for the BNs
+    /// # Returns
+    /// Returns `Ok(MontCtx)` on success, or a `CxError` if the operation fails.
     pub fn alloc(length: usize) -> Result<Self, CxError> {
         let mut inner = cx_bn_mont_ctx_t::default();
         check_cx_ok!(cx_mont_alloc(&mut inner, length));
@@ -499,7 +694,11 @@ impl MontCtx {
 
     /// Initialise the context from a modulus `n`.
     /// The Montgomery constant `h` is computed automatically.
-    /// Wraps `cx_mont_init`.
+    /// # Arguments
+    /// * `self` - The `MontCtx` instance to initialise
+    /// * `n` - The modulus `Bn` instance
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn init(&mut self, n: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_mont_init(&mut self.inner, n.handle));
         Ok(())
@@ -507,7 +706,12 @@ impl MontCtx {
 
     /// Initialise the context from a modulus `n` and a pre-computed
     /// Montgomery constant `h`.
-    /// Wraps `cx_mont_init2`.
+    /// # Arguments
+    /// * `self` - The `MontCtx` instance to initialise
+    /// * `n` - The modulus `Bn` instance
+    /// * `h` - The pre-computed Montgomery constant `Bn` instance
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn init2(&mut self, n: &Bn, h: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_mont_init2(&mut self.inner, n.handle, h.handle));
         Ok(())
@@ -515,7 +719,12 @@ impl MontCtx {
 
     /// Convert `z` into Montgomery representation and store in `x`.
     /// `x = z * R mod n`.
-    /// Wraps `cx_mont_to_montgomery`.
+    /// # Arguments
+    /// * `self` - The `MontCtx` instance
+    /// * `x` - The `Bn` instance to store the result
+    /// * `z` - The `Bn` instance to convert
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn to_montgomery(&self, x: &Bn, z: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_mont_to_montgomery(x.handle, z.handle, &self.inner));
         Ok(())
@@ -523,21 +732,38 @@ impl MontCtx {
 
     /// Convert `x` from Montgomery representation and store in `z`.
     /// `z = x * R^(-1) mod n`.
-    /// Wraps `cx_mont_from_montgomery`.
+    /// # Arguments
+    /// * `self` - The `MontCtx` instance
+    /// * `z` - The `Bn` instance to store the result
+    /// * `x` - The `Bn` instance to convert
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn from_montgomery(&self, z: &Bn, x: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_mont_from_montgomery(z.handle, x.handle, &self.inner));
         Ok(())
     }
 
     /// Montgomery multiplication: `r = a * b * R^(-1) mod n`.
-    /// Wraps `cx_mont_mul`.
+    /// # Arguments
+    /// * `self` - The `MontCtx` instance
+    /// * `r` - The `Bn` instance to store the result
+    /// * `a` - The `Bn` instance
+    /// * `b` - The `Bn` instance
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn mul(&self, r: &Bn, a: &Bn, b: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_mont_mul(r.handle, a.handle, b.handle, &self.inner));
         Ok(())
     }
 
     /// Montgomery exponentiation: `r = a^e mod n` (byte-slice exponent).
-    /// Wraps `cx_mont_pow`.
+    /// # Arguments
+    /// * `self` - The `MontCtx` instance
+    /// * `r` - The `Bn` instance to store the result
+    /// * `a` - The `Bn` instance
+    /// * `e` - The byte-slice exponent
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn pow(&self, r: &Bn, a: &Bn, e: &[u8]) -> Result<(), CxError> {
         check_cx_ok!(cx_mont_pow(
             r.handle,
@@ -550,7 +776,13 @@ impl MontCtx {
     }
 
     /// Montgomery exponentiation: `r = a^e mod n` (BN exponent).
-    /// Wraps `cx_mont_pow_bn`.
+    /// # Arguments
+    /// * `self` - The `MontCtx` instance
+    /// * `r` - The `Bn` instance to store the result
+    /// * `a` - The `Bn` instance
+    /// * `e` - The `Bn` instance exponent
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn pow_bn(&self, r: &Bn, a: &Bn, e: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_mont_pow_bn(r.handle, a.handle, e.handle, &self.inner));
         Ok(())
@@ -558,7 +790,12 @@ impl MontCtx {
 
     /// Montgomery modular inversion: `r = a^(-1) mod n` where `n` is not
     /// prime.
-    /// Wraps `cx_mont_invert_nprime`.
+    /// # Arguments
+    /// * `self` - The `MontCtx` instance
+    /// * `r` - The `Bn` instance to store the result
+    /// * `a` - The `Bn` instance
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the operation fails.
     pub fn invert_nprime(&self, r: &Bn, a: &Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_mont_invert_nprime(r.handle, a.handle, &self.inner));
         Ok(())

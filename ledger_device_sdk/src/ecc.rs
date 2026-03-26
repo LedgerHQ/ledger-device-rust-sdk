@@ -825,6 +825,14 @@ impl SeedDerive for Stark256 {
 }
 
 impl JubJub {
+    /// Support ZIP32 Sapling derivation for JubJub
+    /// Returns the derived ask, nsk, ovk and dk keys, and optionally fills the provided chain code if not None
+    /// # Parameters
+    /// - `path`: the derivation path as a slice of u32 integers
+    /// - `cc`: an optional mutable reference to a ChainCode structure to be filled with the derived chain code
+    /// - `seed`: an optional byte slice representing the seed for derivation, if the derivation mode requires it
+    /// # Returns
+    /// A tuple containing the derived ask, nsk, ovk and dk keys as Secret<32> structures
     pub fn zip32_sapling_derive(
         path: &[u32],
         cc: Option<&mut ChainCode>,
@@ -873,6 +881,14 @@ impl JubJub {
 }
 
 impl Pallas {
+    /// Support ZIP32 Orchard derivation for Pallas
+    /// Returns the derived secret key, and optionally fills the provided chain code if not None
+    /// # Parameters
+    /// - `path`: the derivation path as a slice of u32 integers
+    /// - `cc`: an optional mutable reference to a ChainCode structure to be filled with the derived chain code
+    /// - `seed`: an optional byte slice representing the seed for derivation, if the derivation mode requires it
+    /// # Returns
+    /// The derived secret key as a Secret<32> structure
     pub fn zip32_orchard_derive(
         path: &[u32],
         cc: Option<&mut ChainCode>,

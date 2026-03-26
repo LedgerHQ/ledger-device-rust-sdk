@@ -35,7 +35,10 @@ pub struct EcPoint {
 
 impl EcPoint {
     /// Allocate a new EC point on the given curve.
-    /// Wraps `cx_ecpoint_alloc`.
+    /// # Arguments
+    /// * `curve` - The identifier of the elliptic curve to use for this point
+    /// # Returns
+    /// Returns a new `EcPoint` instance on success, or a `CxError` if allocation fails (e.g. invalid curve or BN context not locked).
     pub fn new(curve: CurvesId) -> Result<Self, CxError> {
         let mut point = cx_ecpoint_t::default();
         check_cx_ok!(cx_ecpoint_alloc(&mut point, curve as u8));
@@ -43,12 +46,21 @@ impl EcPoint {
     }
 
     /// Curve identifier of this point.
+    /// # Arguments
+    /// * `self` - The `EcPoint` instance to query
+    /// # Returns
+    /// Returns the `CurvesId` corresponding to the curve of this point.
     pub fn curve(&self) -> CurvesId {
         self.inner.curve.into()
     }
 
     /// Initialize the point from raw byte coordinates.
-    /// Wraps `cx_ecpoint_init`.
+    /// # Arguments
+    /// * `self` - The `EcPoint` instance to initialize
+    /// * `x` - The x-coordinate as a byte slice
+    /// * `y` - The y-coordinate as a byte slice
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if initialization fails.
     pub fn init(&mut self, x: &[u8], y: &[u8]) -> Result<(), CxError> {
         check_cx_ok!(cx_ecpoint_init(
             &mut self.inner,
@@ -61,14 +73,24 @@ impl EcPoint {
     }
 
     /// Initialize the point from BN handles.
-    /// Wraps `cx_ecpoint_init_bn`.
+    /// # Arguments
+    /// * `self` - The `EcPoint` instance to initialize
+    /// * `x` - The x-coordinate as a BN handle
+    /// * `y` - The y-coordinate as a BN handle
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if initialization fails.
     pub fn init_bn(&mut self, x: Bn, y: Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_ecpoint_init_bn(&mut self.inner, x.raw(), y.raw()));
         Ok(())
     }
 
     /// Export the point coordinates to raw byte buffers.
-    /// Wraps `cx_ecpoint_export`.
+    /// # Arguments
+    /// * `self` - The `EcPoint` instance to export
+    /// * `x` - The buffer to receive the x-coordinate
+    /// * `y` - The buffer to receive the y-coordinate
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if export fails.
     pub fn export(&self, x: &mut [u8], y: &mut [u8]) -> Result<(), CxError> {
         check_cx_ok!(cx_ecpoint_export(
             &self.inner,
@@ -81,15 +103,23 @@ impl EcPoint {
     }
 
     /// Export the point coordinates to BN handles.
-    /// Wraps `cx_ecpoint_export_bn`.
+    /// # Arguments
+    /// * `self` - The `EcPoint` instance to export
+    /// * `x` - The BN handle to receive the x-coordinate
+    /// * `y` - The BN handle to receive the y-coordinate
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if export fails.
     pub fn export_bn(&self, x: &mut Bn, y: &mut Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_ecpoint_export_bn(&self.inner, x.raw_mut(), y.raw_mut()));
         Ok(())
     }
 
     /// Compress the point into a byte buffer.
-    /// Returns the sign of the y-coordinate.
-    /// Wraps `cx_ecpoint_compress`.
+    /// # Arguments
+    /// * `self` - The `EcPoint` instance to compress
+    /// * `xy_compressed` - The buffer to receive the compressed point
+    /// # Returns
+    /// Returns the sign of the y-coordinate on success, or a `CxError` if compression fails.
     pub fn compress(&self, xy_compressed: &mut [u8]) -> Result<u32, CxError> {
         let mut sign = 0u32;
         check_cx_ok!(cx_ecpoint_compress(
@@ -102,7 +132,12 @@ impl EcPoint {
     }
 
     /// Decompress a point from a compressed representation.
-    /// Wraps `cx_ecpoint_decompress`.
+    /// # Arguments
+    /// * `self` - The `EcPoint` instance to initialize with the decompressed point
+    /// * `xy_compressed` - The compressed point data as a byte slice
+    /// * `sign` - The sign of the y-coordinate (as returned by `compress`)
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if decompression fails (e.g. invalid compressed data or sign).
     pub fn decompress(&mut self, xy_compressed: &[u8], sign: u32) -> Result<(), CxError> {
         check_cx_ok!(cx_ecpoint_decompress(
             &mut self.inner,
@@ -114,35 +149,55 @@ impl EcPoint {
     }
 
     /// Point addition: `self = P + Q`.
-    /// Wraps `cx_ecpoint_add`.
+    /// # Arguments
+    /// * `self` - The `EcPoint` instance to store the result
+    /// * `p` - The first point
+    /// * `q` - The second point
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if addition fails.
     pub fn add(&mut self, p: &EcPoint, q: &EcPoint) -> Result<(), CxError> {
         check_cx_ok!(cx_ecpoint_add(&mut self.inner, &p.inner, &q.inner));
         Ok(())
     }
 
     /// Negate this point in place.
-    /// Wraps `cx_ecpoint_neg`.
+    /// # Arguments
+    /// * `self` - The `EcPoint` instance to negate
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if negation fails.
     pub fn neg(&mut self) -> Result<(), CxError> {
         check_cx_ok!(cx_ecpoint_neg(&mut self.inner));
         Ok(())
     }
 
     /// Scalar multiplication: `self = k · self` (scalar as raw bytes).
-    /// Wraps `cx_ecpoint_scalarmul`.
+    /// # Arguments
+    /// * `self` - The `EcPoint` instance to multiply
+    /// * `k` - The scalar as a byte slice
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if multiplication fails.
     pub fn scalarmul(&mut self, k: &[u8]) -> Result<(), CxError> {
         check_cx_ok!(cx_ecpoint_scalarmul(&mut self.inner, k.as_ptr(), k.len()));
         Ok(())
     }
 
     /// Scalar multiplication: `self = k · self` (scalar as BN handle).
-    /// Wraps `cx_ecpoint_scalarmul_bn`.
+    /// # Arguments
+    /// * `self` - The `EcPoint` instance to multiply
+    /// * `bn_k` - The scalar as a BN handle
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if multiplication fails.
     pub fn scalarmul_bn(&mut self, bn_k: Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_ecpoint_scalarmul_bn(&mut self.inner, bn_k.raw()));
         Ok(())
     }
 
     /// Randomised scalar multiplication (side-channel resistant).
-    /// Wraps `cx_ecpoint_rnd_scalarmul`.
+    /// # Arguments
+    /// * `self` - The `EcPoint` instance to multiply
+    /// * `k` - The scalar as a byte slice
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if multiplication fails.
     pub fn rnd_scalarmul(&mut self, k: &[u8]) -> Result<(), CxError> {
         check_cx_ok!(cx_ecpoint_rnd_scalarmul(
             &mut self.inner,
@@ -153,14 +208,22 @@ impl EcPoint {
     }
 
     /// Randomised scalar multiplication with BN scalar.
-    /// Wraps `cx_ecpoint_rnd_scalarmul_bn`.
+    /// # Arguments
+    /// * `self` - The `EcPoint` instance to multiply
+    /// * `bn_k` - The scalar as a BN handle
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if multiplication fails.
     pub fn rnd_scalarmul_bn(&mut self, bn_k: Bn) -> Result<(), CxError> {
         check_cx_ok!(cx_ecpoint_rnd_scalarmul_bn(&mut self.inner, bn_k.raw()));
         Ok(())
     }
 
     /// Randomised fixed-point scalar multiplication (side-channel resistant).
-    /// Wraps `cx_ecpoint_rnd_fixed_scalarmul`.
+    /// # Arguments
+    /// * `self` - The `EcPoint` instance to multiply
+    /// * `k` - The scalar as a byte slice
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if multiplication fails.
     pub fn rnd_fixed_scalarmul(&mut self, k: &[u8]) -> Result<(), CxError> {
         check_cx_ok!(cx_ecpoint_rnd_fixed_scalarmul(
             &mut self.inner,
@@ -171,7 +234,14 @@ impl EcPoint {
     }
 
     /// Double scalar multiplication: `self = k·P + r·Q` (raw-byte scalars).
-    /// Wraps `cx_ecpoint_double_scalarmul`.
+    /// # Arguments
+    /// * `self` - The `EcPoint` instance to store the result
+    /// * `p` - The first point P
+    /// * `q` - The second point Q
+    /// * `k` - The scalar k as a byte slice
+    /// * `r` - The scalar r as a byte slice
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if multiplication fails.
     pub fn double_scalarmul(
         &mut self,
         p: &mut EcPoint,
@@ -192,7 +262,14 @@ impl EcPoint {
     }
 
     /// Double scalar multiplication: `self = k·P + r·Q` (BN scalars).
-    /// Wraps `cx_ecpoint_double_scalarmul_bn`.
+    /// # Arguments
+    /// * `self` - The `EcPoint` instance to store the result
+    /// * `p` - The first point P
+    /// * `q` - The second point Q
+    /// * `bn_k` - The scalar k as a BN handle
+    /// * `bn_r` - The scalar r as a BN handle
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if multiplication fails.
     pub fn double_scalarmul_bn(
         &mut self,
         p: &mut EcPoint,
@@ -211,7 +288,11 @@ impl EcPoint {
     }
 
     /// Compare two EC points for equality.
-    /// Wraps `cx_ecpoint_cmp`.
+    /// # Arguments
+    /// * `self` - The first `EcPoint` instance
+    /// * `other` - The second `EcPoint` instance
+    /// # Returns
+    /// Returns `Ok(true)` if the points are equal, `Ok(false)` if they are not, or a `CxError` if the comparison fails.
     pub fn cmp(&self, other: &EcPoint) -> Result<bool, CxError> {
         let mut is_equal = false;
         check_cx_ok!(cx_ecpoint_cmp(&self.inner, &other.inner, &mut is_equal));
@@ -219,7 +300,10 @@ impl EcPoint {
     }
 
     /// Check whether this point lies on its curve.
-    /// Wraps `cx_ecpoint_is_on_curve`.
+    /// # Arguments
+    /// * `self` - The `EcPoint` instance to check
+    /// # Returns
+    /// Returns `Ok(true)` if the point is on the curve, `Ok(false)` if it is not, or a `CxError` if the check fails.
     pub fn is_on_curve(&self) -> Result<bool, CxError> {
         let mut on_curve = false;
         check_cx_ok!(cx_ecpoint_is_on_curve(&self.inner, &mut on_curve));
@@ -227,7 +311,10 @@ impl EcPoint {
     }
 
     /// Check whether this point is the point at infinity.
-    /// Wraps `cx_ecpoint_is_at_infinity`.
+    /// # Arguments
+    /// * `self` - The `EcPoint` instance to check
+    /// # Returns
+    /// Returns `Ok(true)` if the point is at infinity, `Ok(false)` if it is not, or a `CxError` if the check fails.
     pub fn is_at_infinity(&self) -> Result<bool, CxError> {
         let mut at_infinity = false;
         check_cx_ok!(cx_ecpoint_is_at_infinity(&self.inner, &mut at_infinity));
@@ -235,12 +322,13 @@ impl EcPoint {
     }
 
     /// Access the inner `cx_ecpoint_t`.
-    pub fn as_raw(&self) -> &cx_ecpoint_t {
+    #[allow(dead_code)]
+    fn as_raw(&self) -> &cx_ecpoint_t {
         &self.inner
     }
 
     /// Access the inner `cx_ecpoint_t` mutably.
-    pub fn as_raw_mut(&mut self) -> &mut cx_ecpoint_t {
+    fn as_raw_mut(&mut self) -> &mut cx_ecpoint_t {
         &mut self.inner
     }
 }
@@ -266,7 +354,6 @@ macro_rules! impl_math_curve {
             }
 
             /// Curve size in **bits**.
-            /// Wraps `cx_ecdomain_size`.
             pub fn size_bits() -> usize {
                 let mut length = 0usize;
                 unsafe {
@@ -276,7 +363,6 @@ macro_rules! impl_math_curve {
             }
 
             /// Curve field-element size in **bytes**.
-            /// Wraps `cx_ecdomain_parameters_length`.
             pub fn size_bytes() -> usize {
                 let mut length = 0usize;
                 unsafe {
@@ -286,7 +372,6 @@ macro_rules! impl_math_curve {
             }
 
             /// Retrieve a specific domain parameter as raw bytes.
-            /// Wraps `cx_ecdomain_parameter`.
             pub fn domain_parameter(id: CurveDomainParam, buf: &mut [u8]) -> Result<(), CxError> {
                 check_cx_ok!(cx_ecdomain_parameter(
                     Self::id() as u8,
@@ -299,15 +384,27 @@ macro_rules! impl_math_curve {
 
             /// Retrieve a specific domain parameter as a BN handle.
             /// Requires the BN context to be locked.
-            /// Wraps `cx_ecdomain_parameter_bn`.
-            pub fn domain_parameter_bn(id: CurveDomainParam, bn: cx_bn_t) -> Result<(), CxError> {
-                check_cx_ok!(cx_ecdomain_parameter_bn(Self::id() as u8, id as u8, bn));
+            /// # Arguments
+            /// * `id` - The domain parameter identifier
+            /// * `bn` - The BN handle to store the parameter
+            /// # Returns
+            /// Returns `Ok(())` on success, or a `CxError` if the retrieval fails.
+            pub fn domain_parameter_bn(id: CurveDomainParam, bn: &mut Bn) -> Result<(), CxError> {
+                check_cx_ok!(cx_ecdomain_parameter_bn(
+                    Self::id() as u8,
+                    id as u8,
+                    *bn.raw_mut()
+                ));
                 Ok(())
             }
 
             /// Retrieve the generator point as raw bytes (`Gx`, `Gy`).
             /// Both buffers must have the same length (the field-element size).
-            /// Wraps `cx_ecdomain_generator`.
+            /// # Arguments
+            /// * `gx` - The buffer to receive the x-coordinate of the generator
+            /// * `gy` - The buffer to receive the y-coordinate of the generator
+            /// # Returns
+            /// Returns `Ok(())` on success, or a `CxError` if the retrieval fails.
             pub fn generator(gx: &mut [u8], gy: &mut [u8]) -> Result<(), CxError> {
                 check_cx_ok!(cx_ecdomain_generator(
                     Self::id() as u8,
@@ -320,7 +417,10 @@ macro_rules! impl_math_curve {
 
             /// Retrieve the generator point as an `EcPoint` (BN-based).
             /// Requires the BN context to be locked.
-            /// Wraps `cx_ecdomain_generator_bn`.
+            /// # Arguments
+            /// * `p` - The `EcPoint` instance to initialize with the generator point
+            /// # Returns
+            /// Returns `Ok(())` on success, or a `CxError` if the retrieval fails.
             pub fn generator_bn(p: &mut EcPoint) -> Result<(), CxError> {
                 check_cx_ok!(cx_ecdomain_generator_bn(Self::id() as u8, p.as_raw_mut(),));
                 Ok(())
@@ -657,8 +757,8 @@ mod tests {
         Secp256k1::domain_parameter(CurveDomainParam::Order, &mut order_bytes[..n]).map_err(err)?;
 
         // Get the order as a BN and export it
-        let order_bn = Bn::alloc(32).map_err(err)?;
-        Secp256k1::domain_parameter_bn(CurveDomainParam::Order, order_bn.raw()).map_err(err)?;
+        let mut order_bn = Bn::alloc(32).map_err(err)?;
+        Secp256k1::domain_parameter_bn(CurveDomainParam::Order, &mut order_bn).map_err(err)?;
         let mut order_bn_bytes = [0u8; 32];
         order_bn.export(&mut order_bn_bytes[..n]).map_err(err)?;
 
