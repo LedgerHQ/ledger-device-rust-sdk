@@ -266,7 +266,7 @@ impl Comm {
     }
 
     /// Send the currently held APDU
-    // This is private. Users should call reply to set the satus word and
+    // This is private. Users should call reply to set the status word and
     // transmit the response.
     fn apdu_send(&mut self) {
         #[cfg(any(

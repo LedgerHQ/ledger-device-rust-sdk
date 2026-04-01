@@ -73,7 +73,7 @@ pub trait SingleStorage<T> {
 /// unfinished write detection in SafeStorage and atomic operations in
 /// AtomicStorage).
 ///
-/// Warning: this wrapper does not provide any garantee about update atomicity.
+/// Warning: this wrapper does not provide any guarantee about update atomicity.
 #[repr(align(64))]
 #[derive(Copy, Clone)]
 pub struct AlignedStorage<T> {
@@ -99,7 +99,7 @@ impl<T> SingleStorage<T> for AlignedStorage<T> {
         &self.value
     }
 
-    /// Update the value by writting to the NVM memory.
+    /// Update the value by writing to the NVM memory.
     /// Warning: this can be vulnerable to tearing - leading to partial write.
     fn update(&mut self, value: &T) {
         unsafe {
@@ -114,7 +114,7 @@ impl<T> SingleStorage<T> for AlignedStorage<T> {
 }
 
 /// Just a non-zero magic to mark a storage as valid, when the update procedure
-/// has not been interupted. Any value excepted 0 and 0xff may work.
+/// has not been interrupted. Any value excepted 0 and 0xff may work.
 const STORAGE_VALID: u8 = 0xa5;
 
 /// Non-Volatile data storage, with a flag to detect corruption if the update
@@ -175,7 +175,7 @@ macro_rules! atomic_storage {
         pub struct AtomicStorage<T> {
             // We must keep the storage B in another page, so when we update the
             // storage A, erasing the page of A won't modify the storage for B.
-            // This is currently garanteed by the alignment of AlignedStorage.
+            // This is currently guaranteed by the alignment of AlignedStorage.
             storage_a: SafeStorage<T>,
             storage_b: SafeStorage<T>, // We also accept situations where both storages are marked as valid, which
                                        // can happen with tearing. This is not a problem, and we consider the first
@@ -240,7 +240,7 @@ where
         }
     }
 
-    /// Update the value by writting to the NVM memory.
+    /// Update the value by writing to the NVM memory.
     /// Warning: this can be vulnerable to tearing - leading to partial write.
     fn update(&mut self, value: &T) {
         match self.which() {
