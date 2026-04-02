@@ -68,6 +68,12 @@ impl From<u8> for CurvesId {
     }
 }
 
+impl From<CurvesId> for u8 {
+    fn from(curve: CurvesId) -> u8 {
+        curve as u8
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum CxError {
     Carry,
@@ -968,6 +974,8 @@ impl_curve!(Stark256, 32, 'W');
 impl_curve!(Ed25519, 32, 'E');
 impl_curve!(JubJub, 32, 'E');
 impl_curve!(Pallas, 32, 'W');
+impl_curve!(Curve25519, 32, 'M');
+impl_curve!(Curve448, 56, 'M');
 // impl_curve!( FRP256v1, 32, 'W' );
 // impl_curve!( Ed448, 57, 'E' );
 

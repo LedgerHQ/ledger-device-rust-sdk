@@ -40,7 +40,7 @@ impl EcPoint {
     /// # Returns
     /// Returns a new `EcPoint` instance on success, or a `CxError` if allocation fails (e.g. invalid curve or BN context not locked).
     pub fn new(curve: CurvesId) -> Result<Self, CxError> {
-        bn_retain(BN_DEFAULT_WORD_NBYTES)?;
+        bn_retain(curve.size_bytes())?;
         let mut point = cx_ecpoint_t::default();
         let err = unsafe { cx_ecpoint_alloc(&mut point, curve as u8) };
         if err != CX_OK {
@@ -347,119 +347,107 @@ impl Drop for EcPoint {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Curve-type macro – creates zero-sized types with domain query helpers
-// ---------------------------------------------------------------------------
-
-macro_rules! impl_math_curve {
-    ($typename:ident) => {
-        pub struct $typename {}
-        impl $typename {
-            pub fn id() -> CurvesId {
-                CurvesId::$typename
-            }
-
-            /// Curve size in **bits**.
-            pub fn size_bits() -> usize {
-                let mut length = 0usize;
-                unsafe {
-                    cx_ecdomain_size(Self::id() as u8, &mut length);
-                }
-                length
-            }
-
-            /// Curve field-element size in **bytes**.
-            pub fn size_bytes() -> usize {
-                let mut length = 0usize;
-                unsafe {
-                    cx_ecdomain_parameters_length(Self::id() as u8, &mut length);
-                }
-                length
-            }
-
-            /// Retrieve a specific domain parameter as raw bytes.
-            pub fn domain_parameter(id: CurveDomainParam, buf: &mut [u8]) -> Result<(), CxError> {
-                check_cx_ok!(cx_ecdomain_parameter(
-                    Self::id() as u8,
-                    id as u8,
-                    buf.as_mut_ptr(),
-                    buf.len() as u32,
-                ));
-                Ok(())
-            }
-
-            /// Retrieve a specific domain parameter as a BN handle.
-            /// Requires the BN context to be locked.
-            /// # Arguments
-            /// * `id` - The domain parameter identifier
-            /// * `bn` - The BN handle to store the parameter
-            /// # Returns
-            /// Returns `Ok(())` on success, or a `CxError` if the retrieval fails.
-            pub fn domain_parameter_bn(id: CurveDomainParam, bn: &mut Bn) -> Result<(), CxError> {
-                check_cx_ok!(cx_ecdomain_parameter_bn(
-                    Self::id() as u8,
-                    id as u8,
-                    *bn.raw_mut()
-                ));
-                Ok(())
-            }
-
-            /// Retrieve the generator point as raw bytes (`Gx`, `Gy`).
-            /// Both buffers must have the same length (the field-element size).
-            /// # Arguments
-            /// * `gx` - The buffer to receive the x-coordinate of the generator
-            /// * `gy` - The buffer to receive the y-coordinate of the generator
-            /// # Returns
-            /// Returns `Ok(())` on success, or a `CxError` if the retrieval fails.
-            pub fn generator(gx: &mut [u8], gy: &mut [u8]) -> Result<(), CxError> {
-                check_cx_ok!(cx_ecdomain_generator(
-                    Self::id() as u8,
-                    gx.as_mut_ptr(),
-                    gy.as_mut_ptr(),
-                    gx.len(),
-                ));
-                Ok(())
-            }
-
-            /// Retrieve the generator point as an `EcPoint` (BN-based).
-            /// Requires the BN context to be locked.
-            /// # Arguments
-            /// * `p` - The `EcPoint` instance to initialize with the generator point
-            /// # Returns
-            /// Returns `Ok(())` on success, or a `CxError` if the retrieval fails.
-            pub fn generator_bn(p: &mut EcPoint) -> Result<(), CxError> {
-                check_cx_ok!(cx_ecdomain_generator_bn(Self::id() as u8, p.as_raw_mut(),));
-                Ok(())
-            }
-        }
-    };
+impl Curve25519 {
+    /// Perform scalar multiplication on Curve25519: `self = k · self`.
+    /// # Arguments
+    /// * `u` - The BN handle representing the point to multiply (input and output)
+    /// * `k` - The scalar as a byte slice
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if multiplication fails (e.g. invalid scalar length).
+    pub fn scalar_mul(u: &mut Bn, k: &[u8]) -> Result<(), CxError> {
+        check_cx_ok!(cx_ecpoint_x25519(u.raw(), k.as_ptr(), k.len()));
+        Ok(())
+    }
 }
 
-// Instantiate all supported curves
-impl_math_curve!(Secp256k1);
-impl_math_curve!(Secp256r1);
-impl_math_curve!(Secp384r1);
-impl_math_curve!(BrainpoolP256T1);
-impl_math_curve!(BrainpoolP256R1);
-impl_math_curve!(BrainpoolP320R1);
-impl_math_curve!(BrainpoolP320T1);
-impl_math_curve!(BrainpoolP384T1);
-impl_math_curve!(BrainpoolP384R1);
-impl_math_curve!(BrainpoolP512T1);
-impl_math_curve!(BrainpoolP512R1);
-impl_math_curve!(Bls12381G1);
-impl_math_curve!(FRP256v1);
-impl_math_curve!(Stark256);
-impl_math_curve!(Bls12377G1);
-impl_math_curve!(Pallas);
-impl_math_curve!(Vesta);
-impl_math_curve!(Ed25519);
-impl_math_curve!(Ed448);
-impl_math_curve!(EdBLS12);
-impl_math_curve!(JubJub);
-impl_math_curve!(Curve25519);
-impl_math_curve!(Curve448);
-impl_math_curve!(Secp521r1);
+impl Curve448 {
+    /// Perform scalar multiplication on Curve448: `self = k · self`.
+    /// # Arguments
+    /// * `u` - The BN handle representing the point to multiply (input and output)
+    /// * `k` - The scalar as a byte slice
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if multiplication fails (e.g. invalid scalar length).
+    pub fn scalar_mul(u: &mut Bn, k: &[u8]) -> Result<(), CxError> {
+        check_cx_ok!(cx_ecpoint_x448(u.raw(), k.as_ptr(), k.len()));
+        Ok(())
+    }
+}
+
+/// Implementations specific to the `CurvesId` enum itself (not tied to a specific curve type).
+impl CurvesId {
+    /// Curve size in **bits**.
+    pub fn size_bits(&self) -> usize {
+        let mut length = 0usize;
+        unsafe {
+            cx_ecdomain_size(u8::from(*self), &mut length);
+        }
+        length
+    }
+
+    /// Curve field-element size in **bytes**.
+    pub fn size_bytes(&self) -> usize {
+        let mut length = 0usize;
+        unsafe {
+            cx_ecdomain_parameters_length(u8::from(*self), &mut length);
+        }
+        length
+    }
+
+    /// Retrieve a specific domain parameter as raw bytes.
+    pub fn domain_parameter(&self, id: CurveDomainParam, buf: &mut [u8]) -> Result<(), CxError> {
+        check_cx_ok!(cx_ecdomain_parameter(
+            u8::from(*self),
+            id as u8,
+            buf.as_mut_ptr(),
+            buf.len() as u32,
+        ));
+        Ok(())
+    }
+
+    /// Retrieve a specific domain parameter as a BN handle.
+    /// Requires the BN context to be locked.
+    /// # Arguments
+    /// * `id` - The domain parameter identifier
+    /// * `bn` - The BN handle to store the parameter
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the retrieval fails.
+    pub fn domain_parameter_bn(&self, id: CurveDomainParam, bn: &mut Bn) -> Result<(), CxError> {
+        check_cx_ok!(cx_ecdomain_parameter_bn(
+            u8::from(*self),
+            id as u8,
+            *bn.raw_mut()
+        ));
+        Ok(())
+    }
+
+    /// Retrieve the generator point as raw bytes (`Gx`, `Gy`).
+    /// Both buffers must have the same length (the field-element size).
+    /// # Arguments
+    /// * `gx` - The buffer to receive the x-coordinate of the generator
+    /// * `gy` - The buffer to receive the y-coordinate of the generator
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the retrieval fails.
+    pub fn generator(&self, gx: &mut [u8], gy: &mut [u8]) -> Result<(), CxError> {
+        check_cx_ok!(cx_ecdomain_generator(
+            u8::from(*self),
+            gx.as_mut_ptr(),
+            gy.as_mut_ptr(),
+            gx.len(),
+        ));
+        Ok(())
+    }
+
+    /// Retrieve the generator point as an `EcPoint` (BN-based).
+    /// Requires the BN context to be locked.
+    /// # Arguments
+    /// * `p` - The `EcPoint` instance to initialize with the generator point
+    /// # Returns
+    /// Returns `Ok(())` on success, or a `CxError` if the retrieval fails.
+    pub fn generator_bn(&self, p: &mut EcPoint) -> Result<(), CxError> {
+        check_cx_ok!(cx_ecdomain_generator_bn(u8::from(*self), p.as_raw_mut(),));
+        Ok(())
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -486,34 +474,37 @@ mod tests {
 
     #[test]
     fn secp256k1_math() {
-        assert_eq!(Secp256k1::id() as u8, CurvesId::Secp256k1 as u8);
-        assert_eq!(Secp256k1::size_bits(), 256);
-        assert_eq!(Secp256k1::size_bytes(), 32);
+        let curve = CurvesId::Secp256k1;
+        assert_eq!(curve.size_bits(), 256);
+        assert_eq!(curve.size_bytes(), 32);
     }
 
     #[test]
     fn secp256r1_size() {
-        assert_eq!(Secp256r1::id() as u8, CurvesId::Secp256r1 as u8);
-        assert_eq!(Secp256r1::size_bits(), 256);
-        assert_eq!(Secp256r1::size_bytes(), 32);
+        let curve = CurvesId::Secp256r1;
+        assert_eq!(curve.size_bits(), 256);
+        assert_eq!(curve.size_bytes(), 32);
     }
 
     #[test]
     fn secp384r1_size() {
-        assert_eq!(Secp384r1::size_bits(), 384);
-        assert_eq!(Secp384r1::size_bytes(), 48);
+        let curve = CurvesId::Secp384r1;
+        assert_eq!(curve.size_bits(), 384);
+        assert_eq!(curve.size_bytes(), 48);
     }
 
     #[test]
     fn ed25519_size() {
-        assert_eq!(Ed25519::size_bits(), 256);
-        assert_eq!(Ed25519::size_bytes(), 32);
+        let curve = CurvesId::Ed25519;
+        assert_eq!(curve.size_bits(), 256);
+        assert_eq!(curve.size_bytes(), 32);
     }
 
     #[test]
     fn pallas_size() {
-        assert_eq!(Pallas::size_bits(), 255);
-        assert_eq!(Pallas::size_bytes(), 32);
+        let curve = CurvesId::Pallas;
+        assert_eq!(curve.size_bits(), 255);
+        assert_eq!(curve.size_bytes(), 32);
     }
 
     // ------------------------------------------------------------------
@@ -522,19 +513,23 @@ mod tests {
 
     #[test]
     fn secp256k1_domain_order() {
-        let n = Secp256k1::size_bytes();
+        let curve = CurvesId::Secp256k1;
+        let n = curve.size_bytes();
         let mut buf = [0u8; 32];
-        Secp256k1::domain_parameter(CurveDomainParam::Order, &mut buf[..n]).map_err(err)?;
+        curve
+            .domain_parameter(CurveDomainParam::Order, &mut buf[..n])
+            .map_err(err)?;
         // secp256k1 order starts with 0xFF..
         assert_eq!(buf[0], 0xFF);
     }
 
     #[test]
     fn secp256k1_generator_raw() {
-        let n = Secp256k1::size_bytes();
+        let curve = CurvesId::Secp256k1;
+        let n = curve.size_bytes();
         let mut gx = [0u8; 32];
         let mut gy = [0u8; 32];
-        Secp256k1::generator(&mut gx[..n], &mut gy[..n]).map_err(err)?;
+        curve.generator(&mut gx[..n], &mut gy[..n]).map_err(err)?;
         // Generator x starts with 0x79 for secp256k1
         assert_eq!(gx[0], 0x79);
     }
@@ -545,8 +540,9 @@ mod tests {
 
     #[test]
     fn ecpoint_alloc_generator_on_curve() {
-        let mut g = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
-        Secp256k1::generator_bn(&mut g).map_err(err)?;
+        let curve = CurvesId::Secp256k1;
+        let mut g = EcPoint::new(curve).map_err(err)?;
+        curve.generator_bn(&mut g).map_err(err)?;
 
         // Generator must be on the curve
         let on_curve = g.is_on_curve().map_err(err)?;
@@ -563,12 +559,15 @@ mod tests {
 
     #[test]
     fn ecpoint_init_export_roundtrip() {
-        let n = Secp256k1::size_bytes();
+        let curve = CurvesId::Secp256k1;
+        let n = curve.size_bytes();
         let mut gx_orig = [0u8; 32];
         let mut gy_orig = [0u8; 32];
-        Secp256k1::generator(&mut gx_orig[..n], &mut gy_orig[..n]).map_err(err)?;
+        curve
+            .generator(&mut gx_orig[..n], &mut gy_orig[..n])
+            .map_err(err)?;
 
-        let mut p = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        let mut p = EcPoint::new(curve).map_err(err)?;
         p.init(&gx_orig[..n], &gy_orig[..n]).map_err(err)?;
 
         let mut gx_out = [0u8; 32];
@@ -585,18 +584,19 @@ mod tests {
 
     #[test]
     fn ecpoint_compress_decompress() {
-        let n = Secp256k1::size_bytes();
+        let curve = CurvesId::Secp256k1;
+        let n = curve.size_bytes();
 
         // Start with the generator
-        let mut g = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
-        Secp256k1::generator_bn(&mut g).map_err(err)?;
+        let mut g = EcPoint::new(curve).map_err(err)?;
+        curve.generator_bn(&mut g).map_err(err)?;
 
         // Compress
         let mut compressed = [0u8; 32];
         let sign = g.compress(&mut compressed[..n]).map_err(err)?;
 
         // Decompress into a new point
-        let mut p = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        let mut p = EcPoint::new(curve).map_err(err)?;
         p.decompress(&compressed[..n], sign).map_err(err)?;
 
         // The decompressed point must equal the original
@@ -610,11 +610,12 @@ mod tests {
 
     #[test]
     fn ecpoint_cmp_equal() {
-        let mut g1 = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
-        Secp256k1::generator_bn(&mut g1).map_err(err)?;
+        let curve = CurvesId::Secp256k1;
+        let mut g1 = EcPoint::new(curve).map_err(err)?;
+        curve.generator_bn(&mut g1).map_err(err)?;
 
-        let mut g2 = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
-        Secp256k1::generator_bn(&mut g2).map_err(err)?;
+        let mut g2 = EcPoint::new(curve).map_err(err)?;
+        curve.generator_bn(&mut g2).map_err(err)?;
 
         assert_eq!(g1.cmp(&g2).map_err(err)?, true);
     }
@@ -625,14 +626,15 @@ mod tests {
 
     #[test]
     fn ecpoint_scalarmul_identity() {
-        let n = Secp256k1::size_bytes();
+        let curve = CurvesId::Secp256k1;
+        let n = curve.size_bytes();
 
-        let mut g = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
-        Secp256k1::generator_bn(&mut g).map_err(err)?;
+        let mut g = EcPoint::new(curve).map_err(err)?;
+        curve.generator_bn(&mut g).map_err(err)?;
 
         // Keep a copy of G for comparison
-        let mut g_copy = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
-        Secp256k1::generator_bn(&mut g_copy).map_err(err)?;
+        let mut g_copy = EcPoint::new(curve).map_err(err)?;
+        curve.generator_bn(&mut g_copy).map_err(err)?;
 
         // scalar = 1 (big-endian, 32 bytes)
         let mut one = [0u8; 32];
@@ -648,8 +650,9 @@ mod tests {
 
     #[test]
     fn ecpoint_scalarmul_bn_double() {
-        let mut g = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
-        Secp256k1::generator_bn(&mut g).map_err(err)?;
+        let curve = CurvesId::Secp256k1;
+        let mut g = EcPoint::new(curve).map_err(err)?;
+        curve.generator_bn(&mut g).map_err(err)?;
 
         // scalar = 2 as BN
         let k = Bn::alloc(32).map_err(err)?;
@@ -667,22 +670,23 @@ mod tests {
 
     #[test]
     fn ecpoint_add_equals_double() {
-        let n = Secp256k1::size_bytes();
+        let curve = CurvesId::Secp256k1;
+        let n = curve.size_bytes();
 
         // Compute 2·G via scalarmul
-        let mut two_g_scalar = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
-        Secp256k1::generator_bn(&mut two_g_scalar).map_err(err)?;
+        let mut two_g_scalar = EcPoint::new(curve).map_err(err)?;
+        curve.generator_bn(&mut two_g_scalar).map_err(err)?;
         let mut two = [0u8; 32];
         two[n - 1] = 2;
         two_g_scalar.scalarmul(&two[..n]).map_err(err)?;
 
         // Compute G + G via add
-        let mut g1 = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
-        Secp256k1::generator_bn(&mut g1).map_err(err)?;
-        let mut g2 = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
-        Secp256k1::generator_bn(&mut g2).map_err(err)?;
+        let mut g1 = EcPoint::new(curve).map_err(err)?;
+        curve.generator_bn(&mut g1).map_err(err)?;
+        let mut g2 = EcPoint::new(curve).map_err(err)?;
+        curve.generator_bn(&mut g2).map_err(err)?;
 
-        let mut sum = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        let mut sum = EcPoint::new(curve).map_err(err)?;
         sum.add(&g1, &g2).map_err(err)?;
 
         assert_eq!(sum.cmp(&two_g_scalar).map_err(err)?, true);
@@ -694,15 +698,16 @@ mod tests {
 
     #[test]
     fn ecpoint_neg_on_curve() {
-        let mut neg_g = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
-        Secp256k1::generator_bn(&mut neg_g).map_err(err)?;
+        let curve = CurvesId::Secp256k1;
+        let mut neg_g = EcPoint::new(curve).map_err(err)?;
+        curve.generator_bn(&mut neg_g).map_err(err)?;
         neg_g.neg().map_err(err)?;
 
         // Negated generator must still be on the curve
         assert_eq!(neg_g.is_on_curve().map_err(err)?, true);
         // … but different from the original generator
-        let mut g = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
-        Secp256k1::generator_bn(&mut g).map_err(err)?;
+        let mut g = EcPoint::new(curve).map_err(err)?;
+        curve.generator_bn(&mut g).map_err(err)?;
         assert_eq!(neg_g.cmp(&g).map_err(err)?, false);
     }
 
@@ -712,9 +717,10 @@ mod tests {
 
     #[test]
     fn ed25519_generator_export() {
-        let n = Ed25519::size_bytes();
-        let mut g = EcPoint::new(CurvesId::Ed25519).map_err(err)?;
-        Ed25519::generator_bn(&mut g).map_err(err)?;
+        let curve = CurvesId::Ed25519;
+        let n = curve.size_bytes();
+        let mut g = EcPoint::new(curve).map_err(err)?;
+        curve.generator_bn(&mut g).map_err(err)?;
 
         // Export and verify coordinates are non-zero
         let mut gx = [0u8; 32];
@@ -730,8 +736,9 @@ mod tests {
 
     #[test]
     fn secp256r1_generator_on_curve() {
-        let mut g = EcPoint::new(CurvesId::Secp256r1).map_err(err)?;
-        Secp256r1::generator_bn(&mut g).map_err(err)?;
+        let curve = CurvesId::Secp256r1;
+        let mut g = EcPoint::new(curve).map_err(err)?;
+        curve.generator_bn(&mut g).map_err(err)?;
 
         assert_eq!(g.is_on_curve().map_err(err)?, true);
     }
@@ -742,14 +749,19 @@ mod tests {
 
     #[test]
     fn secp256k1_domain_parameter_bn_order() {
+        let curve = CurvesId::Secp256k1;
         // Get the order as raw bytes
-        let n = Secp256k1::size_bytes();
+        let n = curve.size_bytes();
         let mut order_bytes = [0u8; 32];
-        Secp256k1::domain_parameter(CurveDomainParam::Order, &mut order_bytes[..n]).map_err(err)?;
+        curve
+            .domain_parameter(CurveDomainParam::Order, &mut order_bytes[..n])
+            .map_err(err)?;
 
         // Get the order as a BN and export it
         let mut order_bn = Bn::alloc(32).map_err(err)?;
-        Secp256k1::domain_parameter_bn(CurveDomainParam::Order, &mut order_bn).map_err(err)?;
+        curve
+            .domain_parameter_bn(CurveDomainParam::Order, &mut order_bn)
+            .map_err(err)?;
         let mut order_bn_bytes = [0u8; 32];
         order_bn.export(&mut order_bn_bytes[..n]).map_err(err)?;
 
@@ -763,10 +775,11 @@ mod tests {
 
     #[test]
     fn ecpoint_rnd_scalarmul_on_curve() {
-        let n = Secp256k1::size_bytes();
+        let curve = CurvesId::Secp256k1;
+        let n = curve.size_bytes();
 
-        let mut g = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
-        Secp256k1::generator_bn(&mut g).map_err(err)?;
+        let mut g = EcPoint::new(curve).map_err(err)?;
+        curve.generator_bn(&mut g).map_err(err)?;
 
         // scalar = 42
         let mut k = [0u8; 32];
@@ -783,7 +796,8 @@ mod tests {
 
     #[test]
     fn ecpoint_double_scalarmul() {
-        let n = Secp256k1::size_bytes();
+        let curve = CurvesId::Secp256k1;
+        let n = curve.size_bytes();
 
         // k = 3, r = 5, so result should equal 8·G
         let mut k = [0u8; 32];
@@ -791,12 +805,12 @@ mod tests {
         let mut r = [0u8; 32];
         r[n - 1] = 5;
 
-        let mut p = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
-        Secp256k1::generator_bn(&mut p).map_err(err)?;
-        let mut q = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
-        Secp256k1::generator_bn(&mut q).map_err(err)?;
+        let mut p = EcPoint::new(curve).map_err(err)?;
+        curve.generator_bn(&mut p).map_err(err)?;
+        let mut q = EcPoint::new(curve).map_err(err)?;
+        curve.generator_bn(&mut q).map_err(err)?;
 
-        let mut result = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
+        let mut result = EcPoint::new(curve).map_err(err)?;
         result
             .double_scalarmul(&mut p, &mut q, &k[..n], &r[..n])
             .map_err(err)?;
@@ -804,8 +818,8 @@ mod tests {
         // Compute 8·G directly
         let mut eight = [0u8; 32];
         eight[n - 1] = 8;
-        let mut expected = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
-        Secp256k1::generator_bn(&mut expected).map_err(err)?;
+        let mut expected = EcPoint::new(curve).map_err(err)?;
+        curve.generator_bn(&mut expected).map_err(err)?;
         expected.scalarmul(&eight[..n]).map_err(err)?;
 
         assert_eq!(result.cmp(&expected).map_err(err)?, true);
@@ -817,7 +831,8 @@ mod tests {
 
     #[test]
     fn ecpoint_curve_accessor() {
-        let p = EcPoint::new(CurvesId::Secp256k1).map_err(err)?;
-        assert_eq!(p.curve() as u8, CurvesId::Secp256k1 as u8);
+        let curve = CurvesId::Secp256k1;
+        let p = EcPoint::new(curve).map_err(err)?;
+        assert_eq!(p.curve() as u8, curve as u8);
     }
 }
