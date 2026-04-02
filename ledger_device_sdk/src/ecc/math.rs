@@ -347,32 +347,6 @@ impl Drop for EcPoint {
     }
 }
 
-impl Curve25519 {
-    /// Perform scalar multiplication on Curve25519: `self = k · self`.
-    /// # Arguments
-    /// * `u` - The BN handle representing the point to multiply (input and output)
-    /// * `k` - The scalar as a byte slice
-    /// # Returns
-    /// Returns `Ok(())` on success, or a `CxError` if multiplication fails (e.g. invalid scalar length).
-    pub fn scalar_mul(u: &mut Bn, k: &[u8]) -> Result<(), CxError> {
-        check_cx_ok!(cx_ecpoint_x25519(u.raw(), k.as_ptr(), k.len()));
-        Ok(())
-    }
-}
-
-impl Curve448 {
-    /// Perform scalar multiplication on Curve448: `self = k · self`.
-    /// # Arguments
-    /// * `u` - The BN handle representing the point to multiply (input and output)
-    /// * `k` - The scalar as a byte slice
-    /// # Returns
-    /// Returns `Ok(())` on success, or a `CxError` if multiplication fails (e.g. invalid scalar length).
-    pub fn scalar_mul(u: &mut Bn, k: &[u8]) -> Result<(), CxError> {
-        check_cx_ok!(cx_ecpoint_x448(u.raw(), k.as_ptr(), k.len()));
-        Ok(())
-    }
-}
-
 /// Implementations specific to the `CurvesId` enum itself (not tied to a specific curve type).
 impl CurvesId {
     /// Curve size in **bits**.
