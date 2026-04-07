@@ -1,9 +1,13 @@
 use crate::bn::*;
 use crate::check_cx_ok;
-use crate::ecc::{Curve448, Curve25519, CxError, ECPrivateKey};
+use crate::ecc::{CurvesId, CxError, ECPrivateKey};
+use crate::impl_curve;
 use ledger_secure_sdk_sys::*;
 
 // Montgomery curves (Curve25519, Curve448)
+
+impl_curve!(Curve25519, 32, 'M');
+impl_curve!(Curve448, 56, 'M');
 
 impl Curve25519 {
     /// Perform scalar multiplication on Curve25519: `self = k · self`.

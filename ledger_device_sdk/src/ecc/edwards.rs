@@ -1,10 +1,14 @@
 use crate::check_cx_ok;
 use crate::ecc::{
-    ChainCode, CurvesId, CxError, ECPrivateKey, ECPublicKey, Ed25519, HDKeyDeriveMode, JubJub,
-    Secret, SeedDerive, bip32_derive,
+    ChainCode, CurvesId, CxError, ECPrivateKey, ECPublicKey, HDKeyDeriveMode, Secret, SeedDerive,
+    bip32_derive,
 };
 use crate::hash::{HashInit, sha2::Sha2_512};
+use crate::impl_curve;
 use ledger_secure_sdk_sys::*;
+
+impl_curve!(Ed25519, 32, 'E');
+impl_curve!(JubJub, 32, 'E');
 
 pub struct Ed25519Stream {
     hash: Sha2_512,
@@ -364,5 +368,79 @@ impl SeedDerive for JubJub {
         let mut cc: ChainCode = Default::default();
         let keys = Self::zip32_sapling_derive(path, Some(&mut cc), None);
         (keys, Some(cc))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::assert_eq_err as assert_eq;
+    use crate::ecc::make_bip32_path;
+    use crate::testing::TestType;
+    use testmacro::test_item as test;
+
+    const PATH0: [u32; 5] = make_bip32_path(b"m/44'/535348'/0'/0/0");
+
+    fn display_error_code(e: CxError) {
+        let ec = crate::testing::to_hex(e.into());
+        crate::log::info!(
+            "Error code: \x1b[1;33m{}\x1b[0m",
+            core::str::from_utf8(&ec).unwrap()
+        );
+    }
+
+    const TEST_HASH: &[u8; 13] = b"test_message1";
+
+    #[test]
+    fn eddsa_ed25519() {
+        let sk = Ed25519::derive_from_path(&PATH0);
+        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
+        let pk = sk.public_key().map_err(display_error_code)?;
+        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH, CX_SHA512), true);
+    }
+
+    #[test]
+    fn eddsa_ed25519_slip10() {
+        let path: [u32; 5] = make_bip32_path(b"m/44'/535348'/0'/0'/1'");
+        let sk = Ed25519::derive_from_path_slip10(&path);
+        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
+        let pk = sk.public_key().map_err(display_error_code)?;
+        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH, CX_SHA512), true);
+    }
+
+    #[test]
+    fn eddsa_ed25519_stream_sign() {
+        let sk = Ed25519::derive_from_path(&PATH0);
+        let pk = sk.public_key().map_err(display_error_code)?;
+        const MSG1: &[u8] = b"test_message1";
+        const MSG2: &[u8] = b"test_message2";
+        const MSG3: &[u8] = b"test_message3";
+
+        let mut streamer = Ed25519Stream::default();
+        streamer.init(&sk).map_err(display_error_code)?;
+
+        streamer.sign_update(MSG1).unwrap();
+        streamer.sign_update(MSG2).unwrap();
+        streamer.sign_update(MSG3).unwrap();
+        streamer.sign_finalize(&sk).unwrap();
+
+        streamer.sign_update(MSG1).unwrap();
+        streamer.sign_update(MSG2).unwrap();
+        streamer.sign_update(MSG3).unwrap();
+        streamer.sign_finalize(&sk).unwrap();
+
+        let mut concatenated: [u8; 39] = [0; 39];
+        // Copy the contents of each array into the concatenated array
+        concatenated[0..13].copy_from_slice(MSG1);
+        concatenated[13..26].copy_from_slice(MSG2);
+        concatenated[26..39].copy_from_slice(MSG3);
+        assert_eq!(
+            pk.verify(
+                (&streamer.signature, streamer.signature.len() as u32),
+                &concatenated,
+                CX_SHA512
+            ),
+            true
+        );
     }
 }

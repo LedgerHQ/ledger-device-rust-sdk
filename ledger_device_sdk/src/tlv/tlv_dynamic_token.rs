@@ -18,12 +18,9 @@
 //! in the `examples` folder along with sample PKI certificate and TLV payload APDUs.
 
 use super::tlv_generic::*;
-use crate::ecc::CurvesId;
 use crate::hash::HashInit;
 use crate::hash::sha2::Sha2_256;
-use crate::pki::pki_check_signature;
 use crate::tag_to_flag_u64;
-use ledger_secure_sdk_sys::CERTIFICATE_PUBLIC_KEY_USAGE_COIN_META;
 extern crate alloc;
 use alloc::string::String;
 use alloc::{vec, vec::Vec};
@@ -211,6 +208,10 @@ pub fn parse_dynamic_token_tlv(payload: &[u8], out: &mut DynamicTokenOut) -> Res
     // In test mode, skip signature verification
     #[cfg(not(test))]
     {
+        use crate::ecc::CurvesId;
+        use crate::pki::pki_check_signature;
+        use ledger_secure_sdk_sys::CERTIFICATE_PUBLIC_KEY_USAGE_COIN_META;
+
         let res = pki_check_signature(
             &mut hash,
             CERTIFICATE_PUBLIC_KEY_USAGE_COIN_META,
