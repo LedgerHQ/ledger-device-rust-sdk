@@ -190,6 +190,9 @@ pub struct Comm {
     pub io_buffer: [u8; 273],
     pub rx_length: usize,
     pub tx_length: usize,
+    /// When true, apdu_send skips the io_rx(false) call.
+    /// Used when replying to BOLOS APDUs where io_rx(false) would deadlock.
+    skip_rx_on_send: bool,
 }
 
 impl Default for Comm {
@@ -226,6 +229,7 @@ impl Comm {
             io_buffer: [0u8; 273],
             rx_length: 0,
             tx_length: 0,
+            skip_rx_on_send: false,
         }
     }
 
@@ -270,7 +274,7 @@ impl Comm {
             target_os = "apex_p",
             feature = "nano_nbgl"
         ))]
-        {
+        if !self.skip_rx_on_send {
             let mut buffer: [u8; 273] = [0; 273];
             let status = sys_seph::io_rx(&mut buffer, false);
             if status > 0 {
@@ -284,6 +288,7 @@ impl Comm {
                 }
             }
         }
+        self.skip_rx_on_send = false;
         if self.tx != 0 {
             sys_seph::io_tx(self.apdu_type, &self.apdu_buffer, self.tx);
             self.tx = 0;
@@ -355,6 +360,30 @@ impl Comm {
         let status = sys_seph::io_rx(&mut self.io_buffer, true);
 
         if status > 0 {
+            // Detect BOLOS APDUs (CLA = 0xB0) and handle them inline.
+            // We must NOT go through the normal detect_apdu -> decode_event ->
+            // check_event -> reply -> apdu_send path, because apdu_send calls
+            // io_rx(false) before io_tx, which deadlocks.
+            let packet_type = seph::PacketTypes::from(self.io_buffer[0]);
+            if matches!(
+                packet_type,
+                seph::PacketTypes::PacketTypeRawApdu
+                    | seph::PacketTypes::PacketTypeUsbHidApdu
+                    | seph::PacketTypes::PacketTypeUsbWebusbApdu
+                    | seph::PacketTypes::PacketTypeBleApdu
+            ) && status >= 6
+                && self.io_buffer[1] == 0xB0
+            {
+                self.apdu_type = self.io_buffer[0];
+                self.skip_rx_on_send = true;
+                handle_bolos_apdu(
+                    self,
+                    self.io_buffer[2],
+                    self.io_buffer[3],
+                    self.io_buffer[4],
+                );
+                return false;
+            }
             return self.detect_apdu::<T>(status);
         }
         return false;
@@ -384,6 +413,7 @@ impl Comm {
 
             // Manage BOLOS specific APDUs B0xxyyzz
             if self.io_buffer[1] == 0xB0 {
+                self.skip_rx_on_send = true;
                 handle_bolos_apdu(
                     self,
                     self.io_buffer[2],
