@@ -5,6 +5,7 @@
 
 use crate::io_legacy::{ApduHeader, Reply};
 
+#[cfg(feature = "stack_usage")]
 use super::bolos::handle_bolos_apdu;
 use super::{Comm, DecodedEventType};
 
@@ -85,6 +86,7 @@ pub(super) fn next_event_ahead_impl<const N: usize>() -> bool {
             // during an NBGL screen (e.g. stack consumption measurement) would
             // set pending_apdu=true and never be consumed when exit_on_apdu=false,
             // causing an infinite loop.
+            #[cfg(feature = "stack_usage")]
             if header.cla == 0xB0 {
                 handle_bolos_apdu::<N>(comm, header.ins, header.p1, header.p2);
                 return false;

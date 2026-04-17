@@ -364,25 +364,28 @@ impl Comm {
             // We must NOT go through the normal detect_apdu -> decode_event ->
             // check_event -> reply -> apdu_send path, because apdu_send calls
             // io_rx(false) before io_tx, which deadlocks.
-            let packet_type = seph::PacketTypes::from(self.io_buffer[0]);
-            if matches!(
-                packet_type,
-                seph::PacketTypes::PacketTypeRawApdu
-                    | seph::PacketTypes::PacketTypeUsbHidApdu
-                    | seph::PacketTypes::PacketTypeUsbWebusbApdu
-                    | seph::PacketTypes::PacketTypeBleApdu
-            ) && status >= 6
-                && self.io_buffer[1] == 0xB0
+            #[cfg(feature = "stack_usage")]
             {
-                self.apdu_type = self.io_buffer[0];
-                self.skip_rx_on_send = true;
-                handle_bolos_apdu(
-                    self,
-                    self.io_buffer[2],
-                    self.io_buffer[3],
-                    self.io_buffer[4],
-                );
-                return false;
+                let packet_type = seph::PacketTypes::from(self.io_buffer[0]);
+                if matches!(
+                    packet_type,
+                    seph::PacketTypes::PacketTypeRawApdu
+                        | seph::PacketTypes::PacketTypeUsbHidApdu
+                        | seph::PacketTypes::PacketTypeUsbWebusbApdu
+                        | seph::PacketTypes::PacketTypeBleApdu
+                ) && status >= 6
+                    && self.io_buffer[1] == 0xB0
+                {
+                    self.apdu_type = self.io_buffer[0];
+                    self.skip_rx_on_send = true;
+                    handle_bolos_apdu(
+                        self,
+                        self.io_buffer[2],
+                        self.io_buffer[3],
+                        self.io_buffer[4],
+                    );
+                    return false;
+                }
             }
             return self.detect_apdu::<T>(status);
         }
