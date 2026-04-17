@@ -33,7 +33,7 @@ impl<'a> NbglReviewStatus {
         unsafe {
             self.ux_sync_init();
             nbgl_useCaseReviewStatus(self.status_type.to_message(success), Some(quit_callback));
-            self.ux_sync_wait(false);
+            self.ux_sync_wait(true);
         }
     }
 

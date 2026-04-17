@@ -40,7 +40,7 @@ impl NbglStatus {
                 success,
                 Some(quit_callback),
             );
-            self.ux_sync_wait(false);
+            self.ux_sync_wait(true);
         }
     }
 
