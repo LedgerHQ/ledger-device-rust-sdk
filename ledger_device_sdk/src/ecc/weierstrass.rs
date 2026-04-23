@@ -158,46 +158,42 @@ impl Pallas {
     /// - `cc`: an optional mutable reference to a ChainCode structure to be filled with the derived chain code
     /// - `seed`: an optional byte slice representing the seed for derivation, if the derivation mode requires it
     /// # Returns
-    /// The derived secret key as a Secret<32> structure
+    /// The derived secret key as a `Secret<32>`, or a `CxError` if the syscall fails
     pub fn zip32_orchard_derive(
         path: &[u32],
         cc: Option<&mut ChainCode>,
         seed: Option<&[u8]>,
-    ) -> Secret<32> {
+    ) -> Result<Secret<32>, CxError> {
         let mut tmp = Secret::<32>::new();
-        unsafe {
-            let err = sys_hdkey_derive(
+        let (cc_ptr, cc_len) = match cc {
+            Some(cc) => (cc.value.as_mut_ptr(), 32usize),
+            None => (core::ptr::null_mut(), 0usize),
+        };
+        let (seed_ptr, seed_len) = match seed {
+            Some(s) => (s.as_ptr() as *mut u8, s.len()),
+            None => (core::ptr::null_mut(), 0usize),
+        };
+        let err = unsafe {
+            sys_hdkey_derive(
                 HDKeyDeriveMode::Zip32Orchard as u8,
                 ledger_secure_sdk_sys::CX_CURVE_NONE,
                 path.as_ptr(),
                 path.len(),
                 tmp.as_mut().as_mut_ptr(),
                 32,
-                match cc {
-                    Some(ref cc) => cc.value.as_ptr() as *mut u8,
-                    None => core::ptr::null_mut(),
-                },
-                match cc {
-                    Some(_) => 32 as usize,
-                    None => 0 as usize,
-                },
-                match seed {
-                    Some(s) => s.as_ptr() as *mut u8,
-                    None => core::ptr::null_mut(),
-                },
-                match seed {
-                    Some(s) => s.len() as usize,
-                    None => 0,
-                },
-            );
-            if err != 0 {
-                panic!("sys_hdkey_derive failed with error code {}", err);
-            }
+                cc_ptr,
+                cc_len,
+                seed_ptr,
+                seed_len,
+            )
+        };
+        if err != CX_OK {
+            return Err(err.into());
         }
         let mut sk = Secret::<32>::new();
         let keylen = sk.0.len();
         sk.0.copy_from_slice(&tmp.0[..keylen]);
-        sk
+        Ok(sk)
     }
 }
 
@@ -205,7 +201,8 @@ impl SeedDerive for Pallas {
     type Target = Secret<32>;
     fn derive_from(path: &[u32]) -> (Self::Target, Option<ChainCode>) {
         let mut cc: ChainCode = Default::default();
-        let sk = Self::zip32_orchard_derive(path, Some(&mut cc), None);
+        let sk = Self::zip32_orchard_derive(path, Some(&mut cc), None)
+            .expect("zip32_orchard_derive failed");
         (sk, Some(cc))
     }
 }
@@ -244,7 +241,7 @@ mod tests {
 
     #[test]
     fn zip32_orchard_pallas() {
-        let sk1 = Pallas::zip32_orchard_derive(&PATH0, None, None);
+        let sk1 = Pallas::zip32_orchard_derive(&PATH0, None, None).unwrap();
         let (sk2, cc) = Pallas::derive_from(&PATH0);
         assert_eq!(sk1, sk2);
         assert_eq!(cc.is_some(), true);

@@ -336,7 +336,7 @@ pub fn bip32_derive(
 }
 
 /// Helper buffer that stores secrets that need to be cleared after use
-#[derive(PartialEq)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct Secret<const N: usize>([u8; N]);
 
 impl<const N: usize> Default for Secret<N> {

@@ -1,6 +1,6 @@
-use super::HashInit;
+use super::{HashError, HashInit};
 use ledger_secure_sdk_sys::{
-    cx_blake2b_init_no_throw, cx_blake2b_init2_no_throw, cx_blake2b_t, cx_hash_t,
+    CX_OK, cx_blake2b_init_no_throw, cx_blake2b_init2_no_throw, cx_blake2b_t, cx_hash_t,
 };
 
 use super::impl_hash;
@@ -9,13 +9,19 @@ impl_hash!(Blake2b_384, cx_blake2b_t, cx_blake2b_init_no_throw, 384);
 impl_hash!(Blake2b_512, cx_blake2b_t, cx_blake2b_init_no_throw, 512);
 
 pub trait Blake2bWithPerso: HashInit {
-    fn new_with_salt_and_perso(salt: Option<&mut [u8]>, perso: Option<&mut [u8]>) -> Self;
+    fn new_with_salt_and_perso(
+        salt: Option<&mut [u8]>,
+        perso: Option<&mut [u8]>,
+    ) -> Result<Self, HashError>;
 }
 
 macro_rules! impl_blake2b_with_perso {
     ($type:ident, $bits:expr) => {
         impl Blake2bWithPerso for $type {
-            fn new_with_salt_and_perso(salt: Option<&mut [u8]>, perso: Option<&mut [u8]>) -> Self {
+            fn new_with_salt_and_perso(
+                salt: Option<&mut [u8]>,
+                perso: Option<&mut [u8]>,
+            ) -> Result<Self, HashError> {
                 let (salt_ptr, salt_len) = match salt {
                     Some(s) => (s.as_mut_ptr(), s.len()),
                     None => (::core::ptr::null_mut(), 0),
@@ -25,7 +31,7 @@ macro_rules! impl_blake2b_with_perso {
                     None => (::core::ptr::null_mut(), 0),
                 };
                 let mut ctx: $type = Default::default();
-                let _err = unsafe {
+                let err = unsafe {
                     cx_blake2b_init2_no_throw(
                         &mut ctx.ctx,
                         $bits,
@@ -35,7 +41,10 @@ macro_rules! impl_blake2b_with_perso {
                         perso_len,
                     )
                 };
-                ctx
+                if err != CX_OK {
+                    return Err(HashError::from(err));
+                }
+                Ok(ctx)
             }
         }
     };
@@ -121,7 +130,7 @@ mod tests {
     #[test]
     fn test_blake2b256_with_no_salt_no_perso() {
         // None/None must produce the same digest as new()
-        let mut blake2 = Blake2b_256::new_with_salt_and_perso(None, None);
+        let mut blake2 = Blake2b_256::new_with_salt_and_perso(None, None).unwrap();
         let mut output = [0u8; 32];
         let _ = blake2.hash(TEST_HASH, &mut output);
 
@@ -135,7 +144,7 @@ mod tests {
 
     #[test]
     fn test_blake2b384_with_no_salt_no_perso() {
-        let mut blake2 = Blake2b_384::new_with_salt_and_perso(None, None);
+        let mut blake2 = Blake2b_384::new_with_salt_and_perso(None, None).unwrap();
         let mut output = [0u8; 48];
         let _ = blake2.hash(TEST_HASH, &mut output);
 
@@ -150,7 +159,7 @@ mod tests {
 
     #[test]
     fn test_blake2b512_with_no_salt_no_perso() {
-        let mut blake2 = Blake2b_512::new_with_salt_and_perso(None, None);
+        let mut blake2 = Blake2b_512::new_with_salt_and_perso(None, None).unwrap();
         let mut output = [0u8; 64];
         let _ = blake2.hash(TEST_HASH, &mut output);
 
@@ -170,7 +179,8 @@ mod tests {
         let mut salt = [0x01u8; 16];
         let mut perso = [0x02u8; 16];
 
-        let mut blake2 = Blake2b_256::new_with_salt_and_perso(Some(&mut salt), Some(&mut perso));
+        let mut blake2 =
+            Blake2b_256::new_with_salt_and_perso(Some(&mut salt), Some(&mut perso)).unwrap();
         let mut output = [0u8; 32];
         let _ = blake2.hash(TEST_HASH, &mut output);
 
@@ -187,7 +197,8 @@ mod tests {
     fn test_blake2b256_with_salt_and_perso_deterministic() {
         let mut salt = [0x01u8; 16];
         let mut perso = [0x02u8; 16];
-        let mut blake2 = Blake2b_256::new_with_salt_and_perso(Some(&mut salt), Some(&mut perso));
+        let mut blake2 =
+            Blake2b_256::new_with_salt_and_perso(Some(&mut salt), Some(&mut perso)).unwrap();
         let mut output1 = [0u8; 32];
         let _ = blake2.hash(TEST_HASH, &mut output1);
 
@@ -195,7 +206,7 @@ mod tests {
         let mut salt2 = [0x01u8; 16];
         let mut perso2 = [0x02u8; 16];
         let mut blake2_2 =
-            Blake2b_256::new_with_salt_and_perso(Some(&mut salt2), Some(&mut perso2));
+            Blake2b_256::new_with_salt_and_perso(Some(&mut salt2), Some(&mut perso2)).unwrap();
         let mut output2 = [0u8; 32];
         let _ = blake2_2.hash(TEST_HASH, &mut output2);
 
