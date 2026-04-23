@@ -25,7 +25,7 @@ pub enum CurvesId {
     BrainpoolP512T1 = ledger_secure_sdk_sys::CX_CURVE_BrainPoolP512T1,
     BrainpoolP512R1 = ledger_secure_sdk_sys::CX_CURVE_BrainPoolP512R1,
     Bls12381G1 = ledger_secure_sdk_sys::CX_CURVE_BLS12_381_G1,
-    FRP256v1 = ledger_secure_sdk_sys::CX_CURVE_FRP256V1,       // unsupported in speculos
+    FRP256v1 = ledger_secure_sdk_sys::CX_CURVE_FRP256V1, // unsupported in speculos
     Stark256 = ledger_secure_sdk_sys::CX_CURVE_Stark256,
     Bls12377G1 = ledger_secure_sdk_sys::CX_CURVE_BLS12_377_G1,
     Pallas = ledger_secure_sdk_sys::CX_CURVE_PALLAS,
