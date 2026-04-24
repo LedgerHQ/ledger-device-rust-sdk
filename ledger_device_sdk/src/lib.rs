@@ -11,6 +11,7 @@
 #![feature(const_trait_impl)]
 
 mod app_info;
+pub mod bn;
 pub mod ecc;
 pub mod hash;
 pub mod hmac;

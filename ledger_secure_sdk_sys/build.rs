@@ -584,7 +584,8 @@ impl SDKBuilder<'_> {
                 "include/syscalls.h",
                 "include/os_ux.h",
                 "lib_standard_app/swap_lib_calls.h",
-                "include/os_pki.h", /* pki */
+                "include/os_pki.h",   /* pki */
+                "include/os_hdkey.h", /* zip32 */
             ],
         );
 
@@ -593,6 +594,7 @@ impl SDKBuilder<'_> {
             .prepend_enum_name(false)
             .generate_comments(false)
             .derive_default(true)
+            .wrap_unsafe_ops(true)
             .use_core();
 
         // Target specific files
