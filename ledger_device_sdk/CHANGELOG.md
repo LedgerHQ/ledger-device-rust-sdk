@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.35.0] - 2026-04-24
+
+### Changed
+    - Migrate from 2021 to 2024 edition
+    - Manage BOLOS stack consumption APDUs
+    - Adds ZIP32 (Zcash) derivation support by extending the C-SDK bindings 
+      and restructuring ECC layer to include new curve families and supporting
+      math/BN helpers
+    - Fixes Speculos test hangs by ensuring BOLOS APDUs are properly handled
+
 ## [1.34.0] - 2026-03-11
 
 ### Changed
