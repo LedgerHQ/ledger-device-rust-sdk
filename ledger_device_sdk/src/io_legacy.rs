@@ -192,6 +192,7 @@ pub struct Comm {
     pub tx_length: usize,
     /// When true, apdu_send skips the io_rx(false) call.
     /// Used when replying to BOLOS APDUs where io_rx(false) would deadlock.
+    #[allow(dead_code)]
     skip_rx_on_send: bool,
 }
 
