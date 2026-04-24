@@ -5,6 +5,8 @@
 
 use crate::io_legacy::{ApduHeader, Reply};
 
+#[cfg(feature = "stack_usage")]
+use super::bolos::handle_bolos_apdu;
 use super::{Comm, DecodedEventType};
 
 // Erased pointer to the Comm instance (generic parameter erased).
@@ -32,7 +34,7 @@ pub(super) fn is_comm_null() -> bool {
 
 // Converts the pointer back to the concrete Comm<N> type.
 unsafe fn get_comm<const N: usize>() -> &'static mut Comm<N> {
-    &mut *(CURRENT_COMM as *mut Comm<N>)
+    unsafe { &mut *(CURRENT_COMM as *mut Comm<N>) }
 }
 
 /// Register a type-erased panic handler for the current Comm instance.
@@ -79,6 +81,16 @@ pub(super) fn next_event_ahead_impl<const N: usize>() -> bool {
             offset,
             length,
         } => {
+            // Handle BOLOS internal APDUs (CLA = 0xB0) inline so they don't
+            // block the ux_sync_wait loop. Without this, a BOLOS APDU arriving
+            // during an NBGL screen (e.g. stack consumption measurement) would
+            // set pending_apdu=true and never be consumed when exit_on_apdu=false,
+            // causing an infinite loop.
+            #[cfg(feature = "stack_usage")]
+            if header.cla == 0xB0 {
+                handle_bolos_apdu::<N>(comm, header.ins, header.p1, header.p2);
+                return false;
+            }
             comm.pending_apdu = true;
             comm.pending_header = header;
             comm.pending_offset = offset;

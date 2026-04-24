@@ -5,7 +5,7 @@ use include_gif::include_gif;
 use ledger_device_sdk::ecc::CurvesId;
 use ledger_device_sdk::hash::HashInit;
 use ledger_device_sdk::io::{ApduHeader, StatusWords};
-use ledger_device_sdk::nbgl::{init_comm, NbglGlyph, NbglHomeAndSettings};
+use ledger_device_sdk::nbgl::{NbglGlyph, NbglHomeAndSettings, init_comm};
 use ledger_device_sdk::pki::pki_check_signature;
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
@@ -29,7 +29,7 @@ impl TryFrom<ApduHeader> for Instruction {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "C" fn sample_main() {
     let comm = init_comm(&COMM);
 

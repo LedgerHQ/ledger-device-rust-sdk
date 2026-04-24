@@ -584,7 +584,8 @@ impl SDKBuilder<'_> {
                 "include/syscalls.h",
                 "include/os_ux.h",
                 "lib_standard_app/swap_lib_calls.h",
-                "include/os_pki.h", /* pki */
+                "include/os_pki.h",   /* pki */
+                "include/os_hdkey.h", /* zip32 */
             ],
         );
 
@@ -593,6 +594,7 @@ impl SDKBuilder<'_> {
             .prepend_enum_name(false)
             .generate_comments(false)
             .derive_default(true)
+            .wrap_unsafe_ops(true)
             .use_core();
 
         // Target specific files
@@ -715,7 +717,9 @@ impl SDKBuilder<'_> {
 
         assert!(
             (2048..=max_heap_size).contains(&heap_size_value),
-            "Invalid heap size specification '{raw}'; resolved value {heap_size_value} must be in [2048, {}] for target {}", max_heap_size, target_os
+            "Invalid heap size specification '{raw}'; resolved value {heap_size_value} must be in [2048, {}] for target {}",
+            max_heap_size,
+            target_os
         );
 
         let out_dir = env::var("OUT_DIR").unwrap();
@@ -1045,10 +1049,13 @@ fn generate_glyphs(device: &Device) {
         }
 
         for folder in device.glyphs_folders.iter() {
-            for file in std::fs::read_dir(folder).unwrap() {
-                let path = file.unwrap().path();
-                let path_str = path.to_str().unwrap().to_string();
-                cmd.arg(path_str);
+            let mut paths: Vec<_> = std::fs::read_dir(folder)
+                .unwrap()
+                .map(|f| f.unwrap().path())
+                .collect();
+            paths.sort();
+            for path in paths {
+                cmd.arg(&path);
             }
         }
         let _ = cmd.output();
@@ -1066,11 +1073,14 @@ fn generate_glyphs(device: &Device) {
         cmd2.arg("--glyphcfile").arg("--factorize");
 
         for folder in device.glyphs_folders.iter() {
-            for file in std::fs::read_dir(folder).unwrap() {
-                let path = file.unwrap().path();
-                let path_str = path.to_str().unwrap().to_string();
-                cmd1.arg(&path_str);
-                cmd2.arg(&path_str);
+            let mut paths: Vec<_> = std::fs::read_dir(folder)
+                .unwrap()
+                .map(|f| f.unwrap().path())
+                .collect();
+            paths.sort();
+            for path in paths {
+                cmd1.arg(&path);
+                cmd2.arg(&path);
             }
         }
         let output1 = cmd1.output().unwrap();

@@ -17,8 +17,8 @@ const_cstr!(
 );
 
 #[used]
-#[no_mangle]
-#[link_section = ".install_parameters"]
+#[unsafe(no_mangle)]
+#[unsafe(link_section = ".install_parameters")]
 #[allow(non_upper_case_globals)]
 static install_parameters: [u8; include!(concat!(env!("OUT_DIR"), "/install_params_len.txt"))] =
     include!(concat!(env!("OUT_DIR"), "/install_params.txt"));

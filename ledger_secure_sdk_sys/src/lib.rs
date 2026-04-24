@@ -36,24 +36,26 @@ pub fn pic_rs_mut<T>(x: &mut T) -> &mut T {
     unsafe { &mut *ptr }
 }
 
-#[cfg(all(feature = "heap"))]
+#[cfg(feature = "heap")]
 use critical_section::RawRestoreState;
-#[cfg(all(feature = "heap"))]
+#[cfg(feature = "heap")]
 use embedded_alloc::Heap;
 
-#[cfg(all(feature = "heap"))]
+#[cfg(feature = "heap")]
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
 
-#[cfg(all(feature = "heap"))]
+#[cfg(feature = "heap")]
 struct CriticalSection;
-#[cfg(all(feature = "heap"))]
+#[cfg(feature = "heap")]
 critical_section::set_impl!(CriticalSection);
 
-/// Default empty implementation as we don't have concurrency.
-#[cfg(all(feature = "heap"))]
+/// Default no-op implementation as we don't have concurrency.
+#[cfg(feature = "heap")]
 unsafe impl critical_section::Impl for CriticalSection {
-    unsafe fn acquire() -> RawRestoreState {}
+    unsafe fn acquire() -> RawRestoreState {
+        ()
+    }
     unsafe fn release(_restore_state: RawRestoreState) {}
 }
 
@@ -61,16 +63,16 @@ unsafe impl critical_section::Impl for CriticalSection {
 ///
 /// The heap is stored in the stack, and has a fixed size.
 /// This method is called just before [sample_main].
-#[no_mangle]
-#[cfg(all(feature = "heap"))]
+#[unsafe(no_mangle)]
+#[cfg(feature = "heap")]
 extern "C" fn heap_init() {
     // HEAP_SIZE comes from heap_size.rs, which is defined via env var and build.rs
     static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
     unsafe { HEAP.init(&raw mut HEAP_MEM as usize, HEAP_SIZE) }
 }
 
-#[no_mangle]
-#[cfg(any(not(feature = "heap")))]
+#[unsafe(no_mangle)]
+#[cfg(not(feature = "heap"))]
 extern "C" fn heap_init() {}
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));

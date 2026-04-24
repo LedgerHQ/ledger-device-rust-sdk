@@ -128,7 +128,7 @@ macro_rules! define_comm {
 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
 use crate::buttons::ButtonEvent;
 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-use ledger_secure_sdk_sys::buttons::{get_button_event, ButtonsState};
+use ledger_secure_sdk_sys::buttons::{ButtonsState, get_button_event};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CommError {
@@ -244,7 +244,7 @@ impl<const N: usize> Comm<N> {
                     // Handle BOLOS internal APDUs (CLA = 0xB0) internally
                     // and continue looping until an application APDU arrives.
                     if header.cla == 0xB0 {
-                        handle_bolos_apdu::<N>(self, header.ins);
+                        handle_bolos_apdu::<N>(self, header.ins, header.p1, header.p2);
                         continue;
                     }
                     // If CLA filtering is enabled, automatically reject APDUs with wrong CLA.

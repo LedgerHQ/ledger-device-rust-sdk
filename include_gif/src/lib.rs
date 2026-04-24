@@ -3,7 +3,7 @@ extern crate proc_macro;
 use image::*;
 use proc_macro::TokenStream;
 use std::io::Write;
-use syn::{parse_macro_input, Ident, LitStr};
+use syn::{Ident, LitStr, parse_macro_input};
 
 enum BppFormat {
     Bpp1 = 0,

@@ -1,13 +1,15 @@
 use super::{Comm, StatusWords};
 use ledger_secure_sdk_sys::*;
 
+#[cfg(feature = "stack_usage")]
+use crate::io_legacy::BOLOS_INS_STACK_CONSUMPTION;
 use crate::io_legacy::{
-    PkiLoadCertificateError, SyscallError, BOLOS_INS_GET_VERSION, BOLOS_INS_QUIT,
-    BOLOS_INS_SET_PKI_CERT,
+    BOLOS_INS_GET_VERSION, BOLOS_INS_QUIT, BOLOS_INS_SET_PKI_CERT, PkiLoadCertificateError,
+    SyscallError,
 };
 
-/// Handle internal BOLOS APDUs (CLA = 0xB0, P1 = 0x00, P2 = 0x00).
-pub(crate) fn handle_bolos_apdu<const N: usize>(comm: &mut Comm<N>, ins: u8) {
+/// Handle internal BOLOS APDUs (CLA = 0xB0).
+pub(crate) fn handle_bolos_apdu<const N: usize>(comm: &mut Comm<N>, ins: u8, p1: u8, p2: u8) {
     match ins {
         // Get Information INS: retrieve App name and version
         BOLOS_INS_GET_VERSION => {
@@ -80,6 +82,10 @@ pub(crate) fn handle_bolos_apdu<const N: usize>(comm: &mut Comm<N>, ins: u8) {
                 let _ = comm.begin_response().send(StatusWords::Ok);
             }
         },
+        #[cfg(feature = "stack_usage")]
+        BOLOS_INS_STACK_CONSUMPTION => {
+            crate::testing::handle_stack_consumption_apdu_new(p1, p2, comm);
+        }
         // Unknown INS within BOLOS namespace
         _ => {
             let _ = comm.begin_response().send(StatusWords::BadIns);

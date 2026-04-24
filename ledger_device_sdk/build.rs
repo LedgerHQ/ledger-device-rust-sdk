@@ -180,7 +180,9 @@ fn generate_install_parameters() {
     }
 
     // If we get here, we didn't find any ledger metadata - this is OK for non-app builds
-    println!("cargo:warning=No [package.metadata.ledger] section found - empty install parameters generation");
+    println!(
+        "cargo:warning=No [package.metadata.ledger] section found - empty install parameters generation"
+    );
     // Write empty install parameters
     let out_dir = std::env::var("OUT_DIR").unwrap();
     std::fs::write(

@@ -1,10 +1,10 @@
 use crate::{
     buttons::ButtonEvent::*,
     io::{self, ApduHeader, Comm, Event, Reply},
-    uxapp::{UxEvent, BOLOS_UX_OK},
+    uxapp::{BOLOS_UX_OK, UxEvent},
 };
 use ledger_secure_sdk_sys::{
-    buttons::{get_button_event, ButtonEvent, ButtonsState},
+    buttons::{ButtonEvent, ButtonsState, get_button_event},
     seph,
 };
 

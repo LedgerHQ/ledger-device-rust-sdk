@@ -3,7 +3,7 @@
 #![cfg_attr(feature = "io_new", allow(dead_code))]
 
 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-use ledger_secure_sdk_sys::buttons::{get_button_event, ButtonEvent, ButtonsState};
+use ledger_secure_sdk_sys::buttons::{ButtonEvent, ButtonsState, get_button_event};
 use ledger_secure_sdk_sys::seph as sys_seph;
 use ledger_secure_sdk_sys::*;
 
@@ -190,6 +190,10 @@ pub struct Comm {
     pub io_buffer: [u8; 273],
     pub rx_length: usize,
     pub tx_length: usize,
+    /// When true, apdu_send skips the io_rx(false) call.
+    /// Used when replying to BOLOS APDUs where io_rx(false) would deadlock.
+    #[allow(dead_code)]
+    skip_rx_on_send: bool,
 }
 
 impl Default for Comm {
@@ -226,6 +230,7 @@ impl Comm {
             io_buffer: [0u8; 273],
             rx_length: 0,
             tx_length: 0,
+            skip_rx_on_send: false,
         }
     }
 
@@ -270,7 +275,7 @@ impl Comm {
             target_os = "apex_p",
             feature = "nano_nbgl"
         ))]
-        {
+        if !self.skip_rx_on_send {
             let mut buffer: [u8; 273] = [0; 273];
             let status = sys_seph::io_rx(&mut buffer, false);
             if status > 0 {
@@ -284,6 +289,7 @@ impl Comm {
                 }
             }
         }
+        self.skip_rx_on_send = false;
         if self.tx != 0 {
             sys_seph::io_tx(self.apdu_type, &self.apdu_buffer, self.tx);
             self.tx = 0;
@@ -384,7 +390,13 @@ impl Comm {
 
             // Manage BOLOS specific APDUs B0xxyyzz
             if self.io_buffer[1] == 0xB0 {
-                handle_bolos_apdu(self, self.io_buffer[2]);
+                self.skip_rx_on_send = true;
+                handle_bolos_apdu(
+                    self,
+                    self.io_buffer[2],
+                    self.io_buffer[3],
+                    self.io_buffer[4],
+                );
                 return None;
             }
 
@@ -741,9 +753,12 @@ fn default_nbgl_reply_status(reply: Reply) {
 pub(crate) const BOLOS_INS_GET_VERSION: u8 = 0x01;
 pub(crate) const BOLOS_INS_QUIT: u8 = 0xa7;
 pub(crate) const BOLOS_INS_SET_PKI_CERT: u8 = 0x06;
+#[cfg(feature = "stack_usage")]
+pub(crate) const BOLOS_INS_STACK_CONSUMPTION: u8 = 0x57;
 
 // BOLOS APDU Handling (see https://developers.ledger.com/docs/connectivity/ledgerJS/open-close-info-on-apps)
-fn handle_bolos_apdu(com: &mut Comm, ins: u8) {
+fn handle_bolos_apdu(com: &mut Comm, ins: u8, p1: u8, p2: u8) {
+    let _ = (p1, p2); // Some instructions may not use these parameters, avoid warnings
     match ins {
         // Get Information INS: retrieve App name and version
         BOLOS_INS_GET_VERSION => {
@@ -797,6 +812,10 @@ fn handle_bolos_apdu(com: &mut Comm, ins: u8) {
                 com.reply_ok();
             }
         },
+        #[cfg(feature = "stack_usage")]
+        BOLOS_INS_STACK_CONSUMPTION => {
+            crate::testing::handle_stack_consumption_apdu(p1, p2, com);
+        }
         _ => {
             com.reply(StatusWords::BadIns);
         }

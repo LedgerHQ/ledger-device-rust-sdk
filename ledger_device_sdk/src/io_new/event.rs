@@ -4,7 +4,7 @@ use crate::seph;
 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
 use crate::buttons::ButtonEvent;
 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-use ledger_secure_sdk_sys::buttons::{get_button_event, ButtonsState};
+use ledger_secure_sdk_sys::buttons::{ButtonsState, get_button_event};
 
 #[cfg(any(
     target_os = "nanox",

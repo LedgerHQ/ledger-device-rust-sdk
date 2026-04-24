@@ -3,7 +3,7 @@
 
 use ledger_device_sdk::tag_to_flag_u64;
 use ledger_device_sdk::tlv::tlv_generic::{
-    parse, Handler, ParseCfg, Received, Result, Tag, TlvData,
+    Handler, ParseCfg, Received, Result, Tag, TlvData, parse,
 };
 
 extern crate alloc;
@@ -59,7 +59,7 @@ static HANDLERS: &[Handler<Out>] = &[
     }, // accept & ignore
 ];
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "C" fn sample_main() {
     let payload: &[u8] = &[0x01, 0x03, b'a', b'b', b'c', 0x02, 0x01, b'x'];
 

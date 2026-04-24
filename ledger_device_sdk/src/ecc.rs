@@ -1,33 +1,81 @@
 use ledger_secure_sdk_sys::*;
 use zeroize::Zeroize;
 
-use crate::hash::{sha2::Sha2_512, HashInit};
-
-mod stark;
+pub mod edwards;
+pub use edwards::*;
+pub mod math;
+pub use math::*;
+pub mod montgomery;
+pub use montgomery::*;
+pub mod weierstrass;
+pub use weierstrass::*;
 
 #[repr(u8)]
 #[derive(Copy, Clone)]
 pub enum CurvesId {
-    Secp256k1 = CX_CURVE_SECP256K1,
-    Secp256r1 = CX_CURVE_SECP256R1,
-    Secp384r1 = CX_CURVE_SECP384R1,
-    BrainpoolP256T1 = CX_CURVE_BrainPoolP256T1,
-    BrainpoolP256R1 = CX_CURVE_BrainPoolP256R1,
-    BrainpoolP320R1 = CX_CURVE_BrainPoolP320R1,
-    BrainpoolP320T1 = CX_CURVE_BrainPoolP320T1,
-    BrainpoolP384T1 = CX_CURVE_BrainPoolP384T1,
-    BrainpoolP384R1 = CX_CURVE_BrainPoolP384R1,
-    BrainpoolP512T1 = CX_CURVE_BrainPoolP512T1,
-    BrainpoolP512R1 = CX_CURVE_BrainPoolP512R1,
-    Bls12381G1 = CX_CURVE_BLS12_381_G1, // unsupported in speculos
-    FRP256v1 = CX_CURVE_FRP256V1,       // unsupported in speculos
-    Stark256 = CX_CURVE_Stark256,
-    Ed25519 = CX_CURVE_Ed25519,
-    Ed448 = CX_CURVE_Ed448,           // unsupported in speculos
-    Curve25519 = CX_CURVE_Curve25519, // unsupported in speculos
-    Curve448 = CX_CURVE_Curve448,     // unsupported in speculos
-    Secp521r1 = CX_CURVE_SECP521R1,   // unsupported in speculos
+    Secp256k1 = ledger_secure_sdk_sys::CX_CURVE_SECP256K1,
+    Secp256r1 = ledger_secure_sdk_sys::CX_CURVE_SECP256R1,
+    Secp384r1 = ledger_secure_sdk_sys::CX_CURVE_SECP384R1,
+    BrainpoolP256T1 = ledger_secure_sdk_sys::CX_CURVE_BrainPoolP256T1,
+    BrainpoolP256R1 = ledger_secure_sdk_sys::CX_CURVE_BrainPoolP256R1,
+    BrainpoolP320R1 = ledger_secure_sdk_sys::CX_CURVE_BrainPoolP320R1,
+    BrainpoolP320T1 = ledger_secure_sdk_sys::CX_CURVE_BrainPoolP320T1,
+    BrainpoolP384T1 = ledger_secure_sdk_sys::CX_CURVE_BrainPoolP384T1,
+    BrainpoolP384R1 = ledger_secure_sdk_sys::CX_CURVE_BrainPoolP384R1,
+    BrainpoolP512T1 = ledger_secure_sdk_sys::CX_CURVE_BrainPoolP512T1,
+    BrainpoolP512R1 = ledger_secure_sdk_sys::CX_CURVE_BrainPoolP512R1,
+    Bls12381G1 = ledger_secure_sdk_sys::CX_CURVE_BLS12_381_G1,
+    FRP256v1 = ledger_secure_sdk_sys::CX_CURVE_FRP256V1, // unsupported in speculos
+    Stark256 = ledger_secure_sdk_sys::CX_CURVE_Stark256,
+    Bls12377G1 = ledger_secure_sdk_sys::CX_CURVE_BLS12_377_G1,
+    Pallas = ledger_secure_sdk_sys::CX_CURVE_PALLAS,
+    Vesta = ledger_secure_sdk_sys::CX_CURVE_VESTA,
+    Ed25519 = ledger_secure_sdk_sys::CX_CURVE_Ed25519,
+    Ed448 = ledger_secure_sdk_sys::CX_CURVE_Ed448,
+    EdBLS12 = ledger_secure_sdk_sys::CX_CURVE_EdBLS12,
+    JubJub = ledger_secure_sdk_sys::CX_CURVE_JUBJUB,
+    Curve25519 = ledger_secure_sdk_sys::CX_CURVE_Curve25519,
+    Curve448 = ledger_secure_sdk_sys::CX_CURVE_Curve448,
+    Secp521r1 = ledger_secure_sdk_sys::CX_CURVE_SECP521R1,
     Invalid,
+}
+
+impl From<u8> for CurvesId {
+    fn from(x: u8) -> CurvesId {
+        match x {
+            ledger_secure_sdk_sys::CX_CURVE_SECP256K1 => CurvesId::Secp256k1,
+            ledger_secure_sdk_sys::CX_CURVE_SECP256R1 => CurvesId::Secp256r1,
+            ledger_secure_sdk_sys::CX_CURVE_SECP384R1 => CurvesId::Secp384r1,
+            ledger_secure_sdk_sys::CX_CURVE_BrainPoolP256T1 => CurvesId::BrainpoolP256T1,
+            ledger_secure_sdk_sys::CX_CURVE_BrainPoolP256R1 => CurvesId::BrainpoolP256R1,
+            ledger_secure_sdk_sys::CX_CURVE_BrainPoolP320R1 => CurvesId::BrainpoolP320R1,
+            ledger_secure_sdk_sys::CX_CURVE_BrainPoolP320T1 => CurvesId::BrainpoolP320T1,
+            ledger_secure_sdk_sys::CX_CURVE_BrainPoolP384T1 => CurvesId::BrainpoolP384T1,
+            ledger_secure_sdk_sys::CX_CURVE_BrainPoolP384R1 => CurvesId::BrainpoolP384R1,
+            ledger_secure_sdk_sys::CX_CURVE_BrainPoolP512T1 => CurvesId::BrainpoolP512T1,
+            ledger_secure_sdk_sys::CX_CURVE_BrainPoolP512R1 => CurvesId::BrainpoolP512R1,
+            ledger_secure_sdk_sys::CX_CURVE_BLS12_381_G1 => CurvesId::Bls12381G1,
+            ledger_secure_sdk_sys::CX_CURVE_FRP256V1 => CurvesId::FRP256v1,
+            ledger_secure_sdk_sys::CX_CURVE_Stark256 => CurvesId::Stark256,
+            ledger_secure_sdk_sys::CX_CURVE_BLS12_377_G1 => CurvesId::Bls12377G1,
+            ledger_secure_sdk_sys::CX_CURVE_PALLAS => CurvesId::Pallas,
+            ledger_secure_sdk_sys::CX_CURVE_VESTA => CurvesId::Vesta,
+            ledger_secure_sdk_sys::CX_CURVE_Ed25519 => CurvesId::Ed25519,
+            ledger_secure_sdk_sys::CX_CURVE_Ed448 => CurvesId::Ed448,
+            ledger_secure_sdk_sys::CX_CURVE_EdBLS12 => CurvesId::EdBLS12,
+            ledger_secure_sdk_sys::CX_CURVE_JUBJUB => CurvesId::JubJub,
+            ledger_secure_sdk_sys::CX_CURVE_Curve25519 => CurvesId::Curve25519,
+            ledger_secure_sdk_sys::CX_CURVE_Curve448 => CurvesId::Curve448,
+            ledger_secure_sdk_sys::CX_CURVE_SECP521R1 => CurvesId::Secp521r1,
+            _ => CurvesId::Invalid,
+        }
+    }
+}
+
+impl From<CurvesId> for u8 {
+    fn from(curve: CurvesId) -> u8 {
+        curve as u8
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -209,98 +257,7 @@ impl<const N: usize, const TY: char> ECPrivateKey<N, TY> {
     }
 }
 
-/// Weierstrass Curves-specific implementation
-impl<const N: usize> ECPrivateKey<N, 'W'> {
-    /// Sign the incoming message/hash using ECDSA in the given `mode` and with the given hash identifier.
-    /// This is a helper function. The two main interfaces are
-    /// - [`deterministic_sign`]
-    /// - [`sign`]
-    fn ecdsa_sign(
-        &self,
-        hash: &[u8],
-        hash_id: u8,
-        mode: u32,
-    ) -> Result<([u8; Self::S], u32, u32), CxError> {
-        let mut sig = [0u8; Self::S];
-        let mut sig_len = Self::S;
-        let mut info = 0;
-        let len = unsafe {
-            cx_ecdsa_sign_no_throw(
-                // Safety: cast awfully dodgy but that's how it's done in the C SDK
-                self as *const ECPrivateKey<N, 'W'> as *const cx_ecfp_256_private_key_s,
-                mode,
-                hash_id,
-                hash.as_ptr(),
-                hash.len(),
-                sig.as_mut_ptr(),
-                &mut sig_len,
-                &mut info,
-            )
-        };
-        if len != CX_OK {
-            Err(len.into())
-        } else {
-            Ok((sig, sig_len as u32, info & CX_ECCINFO_PARITY_ODD))
-        }
-    }
-
-    /// Sign a message/hash using ECDSA with RFC6979, which provides a deterministic nonce rather than
-    /// a random one. This nonce is computed using a hash function, hence this function uses an
-    /// additional parameter `hash_id` that specifies which one it should use.
-    pub fn deterministic_sign(&self, hash: &[u8]) -> Result<([u8; Self::S], u32, u32), CxError> {
-        let hash_id = match self.keylength {
-            x if x <= 32 => CX_SHA256,
-            x if x <= 48 => CX_SHA384,
-            x if x <= 64 => CX_SHA512,
-            _ => CX_BLAKE2B,
-        };
-        self.ecdsa_sign(hash, hash_id, CX_RND_RFC6979 | CX_LAST)
-    }
-
-    /// Sign a message/hash using ECDSA in its original form
-    pub fn sign(&self, hash: &[u8]) -> Result<([u8; Self::S], u32, u32), CxError> {
-        self.ecdsa_sign(hash, 0, CX_RND_TRNG | CX_LAST)
-    }
-
-    /// Perform a Diffie-Hellman key exchange using the given uncompressed point `p`.
-    /// Return the generated shared secret.
-    /// We suppose the group size `N` is the same as the shared secret size.
-    pub fn ecdh(&self, p: &[u8]) -> Result<[u8; N], CxError> {
-        let mut secret = [0u8; N];
-        let len = unsafe {
-            cx_ecdh_no_throw(
-                self as *const ECPrivateKey<N, 'W'> as *const cx_ecfp_256_private_key_s,
-                CX_ECDH_X,
-                p.as_ptr(),
-                p.len(),
-                secret.as_mut_ptr(),
-                N,
-            )
-        };
-        if len != CX_OK {
-            Err(len.into())
-        } else {
-            Ok(secret)
-        }
-    }
-}
-
-pub struct Ed25519Stream {
-    hash: Sha2_512,
-    pub big_r: [u8; 32],
-    pub signature: [u8; 64],
-}
-
-impl Default for Ed25519Stream {
-    fn default() -> Self {
-        Ed25519Stream {
-            hash: Sha2_512::default(),
-            big_r: [0u8; 32],
-            signature: [0u8; 64],
-        }
-    }
-}
-
+#[macro_export]
 macro_rules! check_cx_ok {
     ($fn_call:expr) => {{
         let err = unsafe { $fn_call };
@@ -308,228 +265,6 @@ macro_rules! check_cx_ok {
             return Err(err.into());
         }
     }};
-}
-
-impl Ed25519Stream {
-    pub fn init(&mut self, key: &ECPrivateKey<32, 'E'>) -> Result<(), CxError> {
-        // Compute prefix (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 1)
-        let mut temp = Secret::<64>::new();
-        self.hash.reset();
-        self.hash
-            .hash(&key.key[..], temp.as_mut())
-            .map_err(|_| CxError::GenericError)?;
-        self.hash.reset();
-        self.hash
-            .update(&temp.0[32..64])
-            .map_err(|_| CxError::GenericError)?;
-        Ok(())
-    }
-
-    fn compute_r(&mut self, key: &ECPrivateKey<32, 'E'>) -> Result<(), CxError> {
-        // Compute R (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 3)
-        self.hash
-            .finalize(&mut self.signature)
-            .map_err(|_| CxError::GenericError)?;
-        self.signature.reverse();
-
-        check_cx_ok!(cx_bn_lock(32, 0));
-
-        let mut r = CX_BN_FLAG_UNSET;
-
-        check_cx_ok!(cx_bn_alloc_init(
-            &mut r as *mut cx_bn_t,
-            64,
-            self.signature.as_ptr(),
-            self.signature.len(),
-        ));
-
-        let mut ed_p = cx_ecpoint_t::default();
-        // Get the generator for Ed25519's curve
-        check_cx_ok!(cx_ecpoint_alloc(
-            &mut ed_p as *mut cx_ecpoint_t,
-            CX_CURVE_Ed25519
-        ));
-        check_cx_ok!(cx_ecdomain_generator_bn(CX_CURVE_Ed25519, &mut ed_p));
-
-        // Multiply r by generator, store in ed_p
-        check_cx_ok!(cx_ecpoint_scalarmul_bn(&mut ed_p, r));
-
-        // and copy/compress it to ctx.big_r
-        let mut sign = 0;
-
-        check_cx_ok!(cx_ecpoint_compress(
-            &ed_p,
-            self.big_r.as_mut_ptr(),
-            self.big_r.len(),
-            &mut sign
-        ));
-
-        check_cx_ok!(cx_bn_unlock());
-
-        self.big_r.reverse();
-        self.big_r[31] |= if sign != 0 { 0x80 } else { 0x00 };
-
-        // Compute S (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 4)
-        self.hash.reset();
-        self.hash
-            .update(&self.big_r)
-            .map_err(|_| CxError::GenericError)?;
-
-        let mut pk = key.public_key()?;
-
-        check_cx_ok!(cx_edwards_compress_point_no_throw(
-            CX_CURVE_Ed25519,
-            pk.pubkey.as_mut_ptr(),
-            pk.keylength,
-        ));
-        // Note: public key has a byte in front of it in W, from how the ledger's system call
-        // works; it's not for ed25519.
-        self.hash
-            .update(&pk.pubkey[1..33])
-            .map_err(|_| CxError::GenericError)?;
-        Ok(())
-    }
-
-    fn compute_s(&mut self, key: &ECPrivateKey<32, 'E'>) -> Result<(), CxError> {
-        // Compute S (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 5)
-        check_cx_ok!(cx_bn_lock(32, 0));
-        let (h_a, ed25519_order) = {
-            let mut h_scalar = Secret::<64>::new();
-            self.hash
-                .finalize(h_scalar.as_mut())
-                .map_err(|_| CxError::GenericError)?;
-
-            h_scalar.0.reverse();
-
-            // Make k into a BN
-            let mut h_scalar_bn = CX_BN_FLAG_UNSET;
-            check_cx_ok!(cx_bn_alloc_init(
-                &mut h_scalar_bn as *mut cx_bn_t,
-                64,
-                h_scalar.0.as_ptr(),
-                h_scalar.0.len(),
-            ));
-
-            // Get the group order
-            let mut ed25519_order = CX_BN_FLAG_UNSET;
-
-            check_cx_ok!(cx_bn_alloc(&mut ed25519_order, 64));
-
-            check_cx_ok!(cx_ecdomain_parameter_bn(
-                CX_CURVE_Ed25519,
-                CX_CURVE_PARAM_Order,
-                ed25519_order,
-            ));
-
-            // Generate the hashed private key
-            let mut rv = CX_BN_FLAG_UNSET;
-            let mut temp = Secret::<64>::new();
-
-            self.hash.reset();
-            self.hash
-                .hash(&key.key[0..key.keylength], temp.as_mut())
-                .map_err(|_| CxError::GenericError)?;
-
-            // Bit twiddling for ed25519
-            temp.0[0] &= 248;
-            temp.0[31] &= 63;
-            temp.0[31] |= 64;
-
-            let key_slice = &mut temp.0[0..32];
-
-            key_slice.reverse();
-            let mut key_bn = CX_BN_FLAG_UNSET;
-
-            // Load key into bn
-            check_cx_ok!(cx_bn_alloc_init(
-                &mut key_bn as *mut cx_bn_t,
-                64,
-                key_slice.as_ptr(),
-                key_slice.len(),
-            ));
-
-            check_cx_ok!(cx_bn_alloc(&mut rv, 64));
-
-            // multiply h_scalar_bn by key_bn
-            check_cx_ok!(cx_bn_mod_mul(rv, key_bn, h_scalar_bn, ed25519_order));
-
-            // Destroy the private key, so it doesn't leak from with_private_key even in the bn
-            // area. temp will zeroize on drop already.
-            check_cx_ok!(cx_bn_destroy(&mut key_bn));
-            (rv, ed25519_order)
-        };
-
-        let mut r = CX_BN_FLAG_UNSET;
-        check_cx_ok!(cx_bn_alloc_init(
-            &mut r as *mut cx_bn_t,
-            64,
-            self.signature.as_ptr(),
-            self.signature.len(),
-        ));
-
-        // finally, compute s:
-        let mut s = CX_BN_FLAG_UNSET;
-        check_cx_ok!(cx_bn_alloc(&mut s, 64));
-        check_cx_ok!(cx_bn_mod_add(s, h_a, r, ed25519_order));
-
-        // Spooky sub 0 to avoid Nano S+ bug
-        check_cx_ok!(cx_bn_set_u32(r, 0));
-
-        check_cx_ok!(cx_bn_mod_sub(s, s, r, ed25519_order));
-        // and copy s back to normal memory to return.
-        check_cx_ok!(cx_bn_export(s, self.signature.as_mut_ptr(), 32));
-        check_cx_ok!(cx_bn_unlock());
-
-        self.signature[..32].reverse();
-
-        // Copy R[32] and S[32] into signature[64]
-        self.signature.copy_within(0..32, 32);
-        self.signature[0..32].copy_from_slice(&self.big_r);
-
-        Ok(())
-    }
-
-    pub fn sign_finalize(&mut self, key: &ECPrivateKey<32, 'E'>) -> Result<(), CxError> {
-        match self.big_r.iter().all(|b| b == &0) {
-            true => self.compute_r(key),
-            false => self.compute_s(key),
-        }
-    }
-
-    pub fn sign_update(&mut self, msg: &[u8]) -> Result<(), CxError> {
-        self.hash.update(msg).map_err(|_| CxError::GenericError)?;
-        Ok(())
-    }
-}
-
-/// Edwards Curves-specific implementation
-impl<const N: usize> ECPrivateKey<N, 'E'> {
-    /// Size of an Edwards curve signature relative to the private key size
-    pub const EP: usize = 2 * N;
-
-    pub fn sign(&self, hash: &[u8]) -> Result<([u8; Self::EP], u32), CxError> {
-        let mut sig = [0u8; Self::EP];
-        let sig_len = Self::EP;
-        let hash_id = match self.keylength {
-            x if x <= 32 => CX_SHA512,
-            _ => CX_BLAKE2B,
-        };
-        let len = unsafe {
-            cx_eddsa_sign_no_throw(
-                self as *const ECPrivateKey<N, 'E'> as *const cx_ecfp_256_private_key_s,
-                hash_id,
-                hash.as_ptr(),
-                hash.len(),
-                sig.as_mut_ptr(),
-                sig_len,
-            )
-        };
-        if len != CX_OK {
-            Err(len.into())
-        } else {
-            Ok((sig, sig_len as u32))
-        }
-    }
 }
 
 /// General implementation for a public key.
@@ -558,38 +293,6 @@ impl<const P: usize, const TY: char> AsRef<[u8]> for ECPublicKey<P, TY> {
 impl<const P: usize, const TY: char> From<ECPublicKey<P, TY>> for [u8; P] {
     fn from(p: ECPublicKey<P, TY>) -> Self {
         p.pubkey
-    }
-}
-
-/// Specific signature verification for Weierstrass curves, which
-/// all use ECDSA.
-impl<const P: usize> ECPublicKey<P, 'W'> {
-    pub fn verify(&self, signature: (&[u8], u32), hash: &[u8]) -> bool {
-        unsafe {
-            cx_ecdsa_verify_no_throw(
-                self as *const ECPublicKey<P, 'W'> as *const cx_ecfp_256_public_key_s,
-                hash.as_ptr(),
-                hash.len(),
-                signature.0.as_ptr(),
-                signature.1 as usize,
-            )
-        }
-    }
-}
-
-/// Specific signature verification for Edwards curves, which all use EdDSA
-impl<const P: usize> ECPublicKey<P, 'E'> {
-    pub fn verify(&self, signature: (&[u8], u32), hash: &[u8], hash_id: u8) -> bool {
-        unsafe {
-            cx_eddsa_verify_no_throw(
-                self as *const ECPublicKey<P, 'E'> as *const cx_ecfp_256_public_key_s,
-                hash_id,
-                hash.as_ptr(),
-                hash.len(),
-                signature.0.as_ptr(),
-                signature.1 as usize,
-            )
-        }
     }
 }
 
@@ -633,6 +336,7 @@ pub fn bip32_derive(
 }
 
 /// Helper buffer that stores secrets that need to be cleared after use
+#[cfg_attr(test, derive(PartialEq))]
 pub struct Secret<const N: usize>([u8; N]);
 
 impl<const N: usize> Default for Secret<N> {
@@ -685,98 +389,21 @@ pub trait SeedDerive {
     }
 }
 
-impl SeedDerive for Secp256k1 {
-    type Target = ECPrivateKey<32, 'W'>;
-    fn derive_from(path: &[u32]) -> (Self::Target, Option<ChainCode>) {
-        let mut tmp = Secret::<64>::new();
-        let mut cc: ChainCode = Default::default();
-        // Ignoring 'Result' here because known to be valid
-        let _ = bip32_derive(
-            CurvesId::Secp256k1,
-            path,
-            tmp.as_mut(),
-            Some(cc.value.as_mut()),
-        );
-        let mut sk = Self::Target::new(CurvesId::Secp256k1);
-        let keylen = sk.key.len();
-        sk.key.copy_from_slice(&tmp.0[..keylen]);
-        (sk, Some(cc))
-    }
-}
-
-impl SeedDerive for Secp256r1 {
-    type Target = ECPrivateKey<32, 'W'>;
-    fn derive_from(path: &[u32]) -> (Self::Target, Option<ChainCode>) {
-        let mut tmp = Secret::<64>::new();
-        let mut cc: ChainCode = Default::default();
-        // Ignoring 'Result' here because known to be valid
-        let _ = bip32_derive(
-            CurvesId::Secp256r1,
-            path,
-            tmp.as_mut(),
-            Some(cc.value.as_mut()),
-        );
-        let mut sk = Self::Target::new(CurvesId::Secp256r1);
-        let keylen = sk.key.len();
-        sk.key.copy_from_slice(&tmp.0[..keylen]);
-        (sk, Some(cc))
-    }
-}
-
-impl SeedDerive for Ed25519 {
-    type Target = ECPrivateKey<32, 'E'>;
-    fn derive_from(path: &[u32]) -> (Self::Target, Option<ChainCode>) {
-        let mut tmp = Secret::<64>::new();
-        let mut cc: ChainCode = Default::default();
-        // Ignoring 'Result' here because known to be valid
-        let _ = bip32_derive(
-            CurvesId::Ed25519,
-            path,
-            tmp.as_mut(),
-            Some(cc.value.as_mut()),
-        );
-        let mut sk = Self::Target::new(CurvesId::Ed25519);
-        let keylen = sk.key.len();
-        sk.key.copy_from_slice(&tmp.0[..keylen]);
-        (sk, Some(cc))
-    }
-}
-
-/// Support SLIP10 derivation for Ed25519
-impl Ed25519 {
-    pub fn derive_from_path_slip10(path: &[u32]) -> ECPrivateKey<32, 'E'> {
-        let mut tmp = Secret::<64>::new();
-        unsafe {
-            os_perso_derive_node_with_seed_key(
-                HDW_ED25519_SLIP10,
-                CurvesId::Ed25519 as u8,
-                path.as_ptr(),
-                path.len() as u32,
-                tmp.as_mut().as_mut_ptr(),
-                core::ptr::null_mut(),
-                core::ptr::null_mut(),
-                0,
-            );
-        }
-        let mut sk = ECPrivateKey::new(CurvesId::Ed25519);
-        let keylen = sk.key.len();
-        sk.key.copy_from_slice(&tmp.0[..keylen]);
-        sk
-    }
-}
-
-impl SeedDerive for Stark256 {
-    type Target = ECPrivateKey<32, 'W'>;
-    fn derive_from(path: &[u32]) -> (Self::Target, Option<ChainCode>) {
-        let mut sk = Self::Target::new(CurvesId::Stark256);
-        stark::eip2645_derive(path, &mut sk.key);
-        (sk, None)
-    }
+#[repr(u8)]
+#[derive(Copy, Clone)]
+pub enum HDKeyDeriveMode {
+    Bip32 = HDKEY_DERIVE_MODE_NORMAL,
+    Slip10Ed25519 = HDKEY_DERIVE_MODE_ED25519_SLIP10,
+    Slip21 = HDKEY_DERIVE_MODE_SLIP21,
+    Zip32Sapling = HDKEY_DERIVE_MODE_ZIP32_SAPLING,
+    Zip32Orchard = HDKEY_DERIVE_MODE_ZIP32_ORCHARD,
+    Zip32Registered = HDKEY_DERIVE_MODE_ZIP32_REGISTERED,
 }
 
 /// This macro is used to easily generate zero-sized structures named after a Curve.
 /// Each curve has a method `new()` that takes no arguments and returns the correctly
 /// const-typed `ECPrivateKey`.
+#[macro_export]
 macro_rules! impl_curve {
     ($typename:ident, $size:expr, $curvetype:expr) => {
         pub struct $typename {}
@@ -795,20 +422,25 @@ macro_rules! impl_curve {
     };
 }
 
-impl_curve!(Secp256k1, 32, 'W');
-impl_curve!(Secp256r1, 32, 'W');
-impl_curve!(Secp384r1, 48, 'W');
-// impl_curve!( Secp521r1, 66, 'W' );
-impl_curve!(BrainpoolP256R1, 32, 'W');
-impl_curve!(BrainpoolP256T1, 32, 'W');
-impl_curve!(BrainpoolP320R1, 40, 'W');
-impl_curve!(BrainpoolP320T1, 40, 'W');
-impl_curve!(BrainpoolP384R1, 48, 'W');
-impl_curve!(BrainpoolP384T1, 48, 'W');
-impl_curve!(BrainpoolP512R1, 64, 'W');
-impl_curve!(BrainpoolP512T1, 64, 'W');
-impl_curve!(Stark256, 32, 'W');
-impl_curve!(Ed25519, 32, 'E');
+// impl_curve!(Secp256k1, 32, 'W');
+// impl_curve!(Secp256r1, 32, 'W');
+// impl_curve!(Secp384r1, 48, 'W');
+// // impl_curve!( Secp521r1, 66, 'W' );
+// impl_curve!(BrainpoolP256R1, 32, 'W');
+// impl_curve!(BrainpoolP256T1, 32, 'W');
+// impl_curve!(BrainpoolP320R1, 40, 'W');
+// impl_curve!(BrainpoolP320T1, 40, 'W');
+// impl_curve!(BrainpoolP384R1, 48, 'W');
+// impl_curve!(BrainpoolP384T1, 48, 'W');
+// impl_curve!(BrainpoolP512R1, 64, 'W');
+// impl_curve!(BrainpoolP512T1, 64, 'W');
+// impl_curve!(Stark256, 32, 'W');
+// impl_curve!(Ed25519, 32, 'E');
+// impl_curve!(JubJub, 32, 'E');
+// impl_curve!(Pallas, 32, 'W');
+// impl_curve!(Curve25519, 32, 'M');
+// impl_curve!(Curve448, 56, 'M');
+
 // impl_curve!( FRP256v1, 32, 'W' );
 // impl_curve!( Ed448, 57, 'E' );
 
@@ -919,200 +551,6 @@ mod tests {
     use crate::testing::TestType;
     use testmacro::test_item as test;
 
-    trait ConstantFill {
-        fn set_constant_key(&mut self);
-    }
-
-    impl<const N: usize, const TY: char> ConstantFill for ECPrivateKey<N, TY> {
-        fn set_constant_key(&mut self) {
-            let length = self.key.len();
-            self.key[..length - 1].fill_with(|| 0xab);
-        }
-    }
-
-    const PATH0: [u32; 5] = make_bip32_path(b"m/44'/535348'/0'/0/0");
-    const PATH1: [u32; 5] = make_bip32_path(b"m/44'/535348'/0'/0/1");
-
-    fn display_error_code(e: CxError) {
-        let ec = crate::testing::to_hex(e.into());
-        crate::log::info!(
-            "Error code: \x1b[1;33m{}\x1b[0m",
-            core::str::from_utf8(&ec).unwrap()
-        );
-    }
-
-    const TEST_HASH: &[u8; 13] = b"test_message1";
-
-    #[test]
-    fn pubkey_secp256k1() {
-        let sk_bytes = [0x77u8; 32];
-        let pk = Secp256k1::from(&sk_bytes)
-            .public_key()
-            .map_err(display_error_code)?;
-        let expected = [
-            0x04, 0x79, 0x62, 0xd4, 0x5b, 0x38, 0xe8, 0xbc, 0xf8, 0x2f, 0xa8, 0xef, 0xa8, 0x43,
-            0x2a, 0x1, 0xf2, 0xc, 0x9a, 0x53, 0xe2, 0x4c, 0x7d, 0x3f, 0x11, 0xdf, 0x19, 0x7c, 0xb8,
-            0xe7, 0x9, 0x26, 0xda, 0x7a, 0x3e, 0xf3, 0xeb, 0xaf, 0xc7, 0x56, 0xdc, 0x3b, 0x24,
-            0xb7, 0x52, 0x92, 0xd4, 0xcc, 0x5d, 0x71, 0xb1, 0x70, 0xe9, 0x70, 0x44, 0xa9, 0x85,
-            0x83, 0x53, 0x44, 0x3a, 0x96, 0xba, 0xed, 0x23,
-        ];
-        assert_eq!(pk.as_ref(), &expected);
-    }
-
-    #[test]
-    fn ecdsa_secp256k1() {
-        let sk = Secp256k1::derive_from_path(&PATH0);
-        let s = sk
-            .deterministic_sign(TEST_HASH)
-            .map_err(display_error_code)?;
-        let pk = sk.public_key().map_err(display_error_code)?;
-        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
-        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
-        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
-    }
-
-    #[test]
-    fn ecdsa_secp256r1() {
-        let sk = Secp256r1::derive_from_path(&PATH0);
-        let s = sk
-            .deterministic_sign(TEST_HASH)
-            .map_err(display_error_code)?;
-        let pk = sk.public_key().map_err(display_error_code)?;
-        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
-        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
-        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
-    }
-
-    #[test]
-    fn ecdsa_secp384r1() {
-        let mut sk = Secp384r1::new();
-        sk.set_constant_key();
-        let s = sk
-            .deterministic_sign(TEST_HASH)
-            .map_err(display_error_code)?;
-        let pk = sk.public_key().map_err(display_error_code)?;
-        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
-        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
-        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
-    }
-
-    #[test]
-    fn ecdsa_brainpool256r1() {
-        let mut sk = BrainpoolP256R1::new();
-        sk.set_constant_key();
-        let pk = sk.public_key().map_err(display_error_code)?;
-        let s = sk
-            .deterministic_sign(TEST_HASH)
-            .map_err(display_error_code)?;
-        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
-        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
-        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
-    }
-
-    #[test]
-    fn ecdsa_brainpool320r1() {
-        let mut sk = BrainpoolP320R1::new();
-        sk.set_constant_key();
-        let s = sk
-            .deterministic_sign(TEST_HASH)
-            .map_err(display_error_code)?;
-        let pk = sk.public_key().map_err(display_error_code)?;
-        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
-        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
-        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
-    }
-
-    #[test]
-    fn ecdsa_brainpool384r1() {
-        let mut sk = BrainpoolP384R1::new();
-        sk.set_constant_key();
-        let s = sk
-            .deterministic_sign(TEST_HASH)
-            .map_err(display_error_code)?;
-        let pk = sk.public_key().map_err(display_error_code)?;
-        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
-        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
-        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
-    }
-
-    #[test]
-    fn ecdsa_brainpool512r1() {
-        let mut sk = BrainpoolP512R1::new();
-        sk.set_constant_key();
-        let s = sk
-            .deterministic_sign(TEST_HASH)
-            .map_err(display_error_code)?;
-        let pk = sk.public_key().map_err(display_error_code)?;
-        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
-        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
-        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
-    }
-
-    #[test]
-    fn ecdsa_stark256() {
-        let sk = Stark256::derive_from_path(&PATH0);
-        let s = sk
-            .deterministic_sign(TEST_HASH)
-            .map_err(display_error_code)?;
-        let pk = sk.public_key().map_err(display_error_code)?;
-        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
-        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
-        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH), true);
-    }
-
-    #[test]
-    fn eddsa_ed25519() {
-        let sk = Ed25519::derive_from_path(&PATH0);
-        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
-        let pk = sk.public_key().map_err(display_error_code)?;
-        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH, CX_SHA512), true);
-    }
-
-    #[test]
-    fn eddsa_ed25519_slip10() {
-        let path: [u32; 5] = make_bip32_path(b"m/44'/535348'/0'/0'/1'");
-        let sk = Ed25519::derive_from_path_slip10(&path);
-        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
-        let pk = sk.public_key().map_err(display_error_code)?;
-        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH, CX_SHA512), true);
-    }
-
-    #[test]
-    fn eddsa_ed25519_stream_sign() {
-        let sk = Ed25519::derive_from_path(&PATH0);
-        let pk = sk.public_key().map_err(display_error_code)?;
-        const MSG1: &[u8] = b"test_message1";
-        const MSG2: &[u8] = b"test_message2";
-        const MSG3: &[u8] = b"test_message3";
-
-        let mut streamer = Ed25519Stream::default();
-        streamer.init(&sk).map_err(display_error_code)?;
-
-        streamer.sign_update(MSG1).unwrap();
-        streamer.sign_update(MSG2).unwrap();
-        streamer.sign_update(MSG3).unwrap();
-        streamer.sign_finalize(&sk).unwrap();
-
-        streamer.sign_update(MSG1).unwrap();
-        streamer.sign_update(MSG2).unwrap();
-        streamer.sign_update(MSG3).unwrap();
-        streamer.sign_finalize(&sk).unwrap();
-
-        let mut concatenated: [u8; 39] = [0; 39];
-        // Copy the contents of each array into the concatenated array
-        concatenated[0..13].copy_from_slice(MSG1);
-        concatenated[13..26].copy_from_slice(MSG2);
-        concatenated[26..39].copy_from_slice(MSG3);
-        assert_eq!(
-            pk.verify(
-                (&streamer.signature, streamer.signature.len() as u32),
-                &concatenated,
-                CX_SHA512
-            ),
-            true
-        );
-    }
-
     #[test]
     fn test_make_bip32_path() {
         {
@@ -1135,19 +573,5 @@ mod tests {
             const P: [u32; 2] = make_bip32_path(b"m/1234/5678'");
             assert_eq!(P, [1234u32, 5678u32 + 0x80000000u32]);
         }
-    }
-
-    #[test]
-    fn test_ecdh() {
-        let sk0 = Secp256k1::derive_from_path(&PATH0);
-        let pk0 = sk0.public_key().map_err(display_error_code)?;
-
-        let sk1 = Secp256k1::derive_from_path(&PATH1);
-        let pk1 = sk1.public_key().map_err(display_error_code)?;
-
-        let shared_secret0 = sk1.ecdh(&pk0.pubkey).map_err(display_error_code)?;
-        let shared_secret1 = sk0.ecdh(&pk1.pubkey).map_err(display_error_code)?;
-
-        assert_eq!(shared_secret0, shared_secret1);
     }
 }
