@@ -22,15 +22,11 @@ SECTIONS
     *(.text*)
     /* .rodata is moved out so we can update it */
 
-    _install_parameters = .;
-    *(.install_parameters)
-    KEEP(*(.install_parameters))
-    _einstall_parameters = .;
     . = ALIGN(PAGE_SIZE);
     _etext = .;
   } > FLASH :flash0
 
-  /* Relocations, read only, no relocations aginst the relocations themselves
+  /* Relocations, read only, no relocations against the relocations themselves
      needed! */
   _reloc_size = SIZEOF(.rel.rodata) + SIZEOF(.rel.data) + SIZEOF(.rel.nvm_data);
   .rel_flash : ALIGN(PAGE_SIZE)
@@ -52,7 +48,7 @@ SECTIONS
      relocations are needed. (So not read-only completely.) */
   .rodata : ALIGN(PAGE_SIZE)
   {
-    /* Moved here from .text so we can permantly apply relocations to it with
+    /* Moved here from .text so we can permanently apply relocations to it with
        nvm_write() */
     . = ALIGN(PAGE_SIZE);
     _rodata = .;
@@ -96,6 +92,10 @@ SECTIONS
 
     /* This symbol is used by the mutable portion of flash calculations. */
     _envram_data = .;
+    _install_parameters = .;
+    *(.install_parameters)
+    KEEP(*(.install_parameters))
+    _einstall_parameters = .;
     /* This symbol is used by the ideompotent `pic` function as the upper
        bound of addressed to relocate. */
     _nvram_end = .;

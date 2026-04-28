@@ -118,6 +118,9 @@ jobs:
                 echo "Cargo.toml:"
                 cat $cargo_toml_path
 
+            - name: Install test cargo-ledger
+              run: cargo install --git https://github.com/LedgerHQ/cargo-ledger --branch y333/ledgerblue_support --force cargo-ledger
+
             - name: Build
               shell: bash
               run: |

@@ -1,3 +1,7 @@
+use std::env;
+use std::path::PathBuf;
+use std::process::Command;
+
 fn generate_install_parameters() {
     // Find the root package directory by looking at OUT_DIR
     // OUT_DIR is something like: /path/to/app/target/nanosplus/debug/build/ledger_device_sdk-xxx/out
@@ -89,16 +93,35 @@ fn generate_install_parameters() {
                     println!("cargo:warning=paths_slip21 are {:x?}", paths_slip21);
                 }
 
-                let install_params_exe = match std::env::var("LEDGER_SDK_PATH") {
-                    Ok(path) => format!("{}/install_params.py", path),
-                    Err(_) => {
-                        let device_os = std::env::var_os("CARGO_CFG_TARGET_OS").unwrap();
-                        let device_os = device_os.to_str().unwrap().split('_').next().unwrap();
-                        format!("/opt/{}-secure-sdk/install_params.py", device_os)
-                    }
-                };
+                // Handle icon
+                let device = env::var_os("CARGO_CFG_TARGET_OS").unwrap();
+                let device_name = device.to_str().unwrap();
+                println!("cargo:warning=Device is {}", device_name);
+
+                let icon = metadata_ledger
+                    .get(device_name)
+                    .and_then(|device_metadata| device_metadata.get("icon"))
+                    .and_then(|icon| icon.as_str())
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "missing Ledger app icon metadata for device `{}`; expected \
+                             `package.metadata.ledger.{device}.icon` to be a string, for \
+                              example: [package.metadata.ledger.{device}] icon = \"path/to/icon.gif\"",
+                            device_name,
+                            device = device_name
+                        )
+                });
+                println!("cargo:warning=APP_ICON is {}", icon);
+
+                let c_sdk_path = resolve_c_sdk_path(device_name);
+                println!("cargo:warning=C SDK path is {}", c_sdk_path.display());
+
+                let icon_hex_string = convert_icon_to_hex(&c_sdk_path, device_name, root_dir, icon);
+
+                // Now we have all the parameters, we can call the install_params.py script to generate the TLV blob
+                let install_params_exe = c_sdk_path.join("install_params.py");
                 let mut generate_tlv_install_params = std::process::Command::new("python3");
-                generate_tlv_install_params.arg(install_params_exe.as_str());
+                generate_tlv_install_params.arg(&install_params_exe);
                 generate_tlv_install_params.arg("--appName").arg(app_name);
                 generate_tlv_install_params
                     .arg("--appVersion")
@@ -116,6 +139,10 @@ fn generate_install_parameters() {
                         .arg("--path_slip21")
                         .arg(p.as_str());
                 });
+                generate_tlv_install_params
+                    .arg("--icon")
+                    .arg(icon_hex_string);
+
                 let output = generate_tlv_install_params
                     .output()
                     .expect("Failed to execute install_params_generator");
@@ -195,6 +222,60 @@ fn generate_install_parameters() {
         "0",
     )
     .unwrap();
+}
+
+/// Resolve the C SDK root path for the given device.
+///
+/// Uses `LEDGER_SDK_PATH` if set, otherwise falls back to the
+/// device-specific environment variable (e.g. `NANOSPLUS_SDK`).
+fn resolve_c_sdk_path(device_name: &str) -> PathBuf {
+    PathBuf::from(env::var("LEDGER_SDK_PATH").unwrap_or_else(|_| {
+        let var = match device_name {
+            "nanosplus" => "NANOSP_SDK",
+            "nanox" => "NANOX_SDK",
+            "stax" => "STAX_SDK",
+            "flex" => "FLEX_SDK",
+            "apex_p" => "APEX_P_SDK",
+            _ => panic!("Unsupported device: {}", device_name),
+        };
+        env::var(var).unwrap_or_else(|_| panic!("{} not set", var))
+    }))
+}
+
+/// Run `icon2glyph.py` to convert the app icon into a hex string
+/// suitable for the install-parameters TLV blob.
+fn convert_icon_to_hex(
+    c_sdk_path: &std::path::Path,
+    device_name: &str,
+    root_dir: &std::path::Path,
+    icon: &str,
+) -> String {
+    let icon_hex_file = PathBuf::from(env::var("OUT_DIR").unwrap()).join("icon.hex");
+    println!(
+        "cargo:warning=Output file for icon2glyph is {}",
+        icon_hex_file.display()
+    );
+
+    let icon2glyph = c_sdk_path.join("lib_nbgl/tools/icon2glyph.py");
+    let mut cmd = Command::new("python3");
+    cmd.arg(&icon2glyph);
+    cmd.arg("--hexbitmap").arg(&icon_hex_file);
+    if device_name == "nanosplus" || device_name == "nanox" {
+        cmd.arg("--reverse");
+    }
+    cmd.arg(root_dir.join(icon));
+
+    let output = cmd.output().expect("Failed to execute icon2glyph.py");
+    if !output.status.success() {
+        panic!(
+            "call to icon2glyph.py failed: {}",
+            std::str::from_utf8(&output.stderr).unwrap()
+        );
+    }
+    std::fs::read_to_string(&icon_hex_file)
+        .expect("Failed to read icon hex file")
+        .trim()
+        .to_string()
 }
 
 fn main() {
