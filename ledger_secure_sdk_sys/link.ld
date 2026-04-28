@@ -22,10 +22,6 @@ SECTIONS
     *(.text*)
     /* .rodata is moved out so we can update it */
 
-    _install_parameters = .;
-    *(.install_parameters)
-    KEEP(*(.install_parameters))
-    _einstall_parameters = .;
     . = ALIGN(PAGE_SIZE);
     _etext = .;
   } > FLASH :flash0
@@ -96,6 +92,10 @@ SECTIONS
 
     /* This symbol is used by the mutable portion of flash calculations. */
     _envram_data = .;
+    _install_parameters = .;
+    *(.install_parameters)
+    KEEP(*(.install_parameters))
+    _einstall_parameters = .;
     /* This symbol is used by the ideompotent `pic` function as the upper
        bound of addressed to relocate. */
     _nvram_end = .;

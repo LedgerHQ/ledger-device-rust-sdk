@@ -261,12 +261,10 @@ fn convert_icon_to_hex(
             std::str::from_utf8(&output.stderr).unwrap()
         );
     }
-
-    let icon_bytes = std::fs::read(&icon_hex_file).expect("Failed to read icon hex file");
-    icon_bytes
-        .iter()
-        .map(|b| format!("{:02x}", b))
-        .collect::<String>()
+    std::fs::read_to_string(&icon_hex_file)
+        .expect("Failed to read icon hex file")
+        .trim()
+        .to_string()
 }
 
 fn main() {
