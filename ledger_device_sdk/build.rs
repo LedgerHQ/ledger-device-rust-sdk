@@ -221,7 +221,7 @@ fn generate_install_parameters() {
 fn resolve_c_sdk_path(device_name: &str) -> PathBuf {
     PathBuf::from(env::var("LEDGER_SDK_PATH").unwrap_or_else(|_| {
         let var = match device_name {
-            "nanosplus" => "NANOSPLUS_SDK",
+            "nanosplus" => "NANOSP_SDK",
             "nanox" => "NANOX_SDK",
             "stax" => "STAX_SDK",
             "flex" => "FLEX_SDK",
