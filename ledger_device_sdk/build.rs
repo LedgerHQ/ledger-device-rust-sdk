@@ -98,9 +98,19 @@ fn generate_install_parameters() {
                 let device_name = device.to_str().unwrap();
                 println!("cargo:warning=Device is {}", device_name);
 
-                let icon = metadata_ledger[device_name]["icon"]
-                    .as_str()
-                    .expect("icon not found");
+                let icon = metadata_ledger
+                    .get(device_name)
+                    .and_then(|device_metadata| device_metadata.get("icon"))
+                    .and_then(|icon| icon.as_str())
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "missing Ledger app icon metadata for device `{}`; expected \
+                             `package.metadata.ledger.{device}.icon` to be a string, for \
+                              example: [package.metadata.ledger.{device}] icon = \"path/to/icon.gif\"",
+                            device_name,
+                            device = device_name
+                        )
+                });
                 println!("cargo:warning=APP_ICON is {}", icon);
 
                 let c_sdk_path = resolve_c_sdk_path(device_name);
@@ -247,7 +257,8 @@ fn convert_icon_to_hex(
     );
 
     let icon2glyph = c_sdk_path.join("lib_nbgl/tools/icon2glyph.py");
-    let mut cmd = Command::new(icon2glyph.as_os_str());
+    let mut cmd = Command::new("python3");
+    cmd.arg(&icon2glyph);
     cmd.arg("--hexbitmap").arg(&icon_hex_file);
     if device_name == "nanosplus" || device_name == "nanox" {
         cmd.arg("--reverse");
