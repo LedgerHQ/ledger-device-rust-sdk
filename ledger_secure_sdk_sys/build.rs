@@ -169,7 +169,7 @@ impl SDKBuilder<'_> {
                     let reader = BufReader::new(f);
                     reader
                         .lines()
-                        .map_while(Result::ok)
+                        .map(|l| l.expect("Failed to read line"))
                         .collect::<Vec<String>>()
                 },
                 glyphs_folders: Vec::new(),
@@ -217,7 +217,7 @@ impl SDKBuilder<'_> {
                     let reader = BufReader::new(f);
                     reader
                         .lines()
-                        .map_while(Result::ok)
+                        .map(|l| l.expect("Failed to read line"))
                         .collect::<Vec<String>>()
                 },
                 glyphs_folders: Vec::new(),
@@ -251,7 +251,7 @@ impl SDKBuilder<'_> {
                     let reader = BufReader::new(f);
                     reader
                         .lines()
-                        .map_while(Result::ok)
+                        .map(|l| l.expect("Failed to read line"))
                         .collect::<Vec<String>>()
                 },
                 glyphs_folders: Vec::new(),
@@ -285,7 +285,7 @@ impl SDKBuilder<'_> {
                     let reader = BufReader::new(f);
                     reader
                         .lines()
-                        .map_while(Result::ok)
+                        .map(|l| l.expect("Failed to read line"))
                         .collect::<Vec<String>>()
                 },
                 glyphs_folders: Vec::new(),
@@ -319,7 +319,7 @@ impl SDKBuilder<'_> {
                     let reader = BufReader::new(f);
                     reader
                         .lines()
-                        .map_while(Result::ok)
+                        .map(|l| l.expect("Failed to read line"))
                         .collect::<Vec<String>>()
                 },
                 glyphs_folders: Vec::new(),
@@ -905,7 +905,10 @@ fn retrieve_makefile_infos(c_sdk: &Path) -> Result<(Option<u32>, String), SDKBui
     let makefile =
         File::open(c_sdk.join("Makefile.defines")).expect("Could not find Makefile.defines");
     let mut api_level: Option<u32> = None;
-    for line in BufReader::new(makefile).lines().map_while(Result::ok) {
+    for line in BufReader::new(makefile)
+        .lines()
+        .map(|l| l.expect("Failed to read line"))
+    {
         if let Some(value) = line.split(":=").nth(1).map(str::trim)
             && line.contains("API_LEVEL")
             && api_level.is_none()
@@ -920,7 +923,10 @@ fn retrieve_makefile_infos(c_sdk: &Path) -> Result<(Option<u32>, String), SDKBui
     let makefile =
         File::open(c_sdk.join("Makefile.target")).expect("Could not find Makefile.defines");
     let mut sdk_name: Option<String> = None;
-    for line in BufReader::new(makefile).lines().map_while(Result::ok) {
+    for line in BufReader::new(makefile)
+        .lines()
+        .map(|l| l.expect("Failed to read line"))
+    {
         if let Some(value) = line.split(":=").nth(1).map(str::trim)
             && line.contains("SDK_NAME")
             && sdk_name.is_none()
@@ -948,7 +954,10 @@ fn retrieve_target_file_infos(
     let mut target_id: Option<String> = None;
     let mut target_name: Option<String> = None;
 
-    for line in BufReader::new(target_file).lines().map_while(Result::ok) {
+    for line in BufReader::new(target_file)
+        .lines()
+        .map(|l| l.expect("Failed to read line"))
+    {
         if target_id.is_none() && line.contains("#define TARGET_ID") {
             target_id = Some(
                 line.split_whitespace()

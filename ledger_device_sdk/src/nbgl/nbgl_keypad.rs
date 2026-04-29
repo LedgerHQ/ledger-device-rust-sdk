@@ -24,10 +24,19 @@ impl Default for NbglKeypad {
 const PIN_BUFFER_SIZE: usize = 16;
 static PIN_BUFFER_PTR: AtomicPtr<u8> = AtomicPtr::new(core::ptr::null_mut());
 
+// RAII guard: clears PIN_BUFFER_PTR when dropped, even on early return or panic.
+struct PinBufferGuard;
+
+impl Drop for PinBufferGuard {
+    fn drop(&mut self) {
+        PIN_BUFFER_PTR.store(core::ptr::null_mut(), Ordering::Release);
+    }
+}
+
 unsafe extern "C" fn pin_callback(pin: *const u8, pin_len: u8) {
     unsafe {
         let len = (pin_len as usize).min(PIN_BUFFER_SIZE);
-        let buf = PIN_BUFFER_PTR.load(Ordering::Relaxed);
+        let buf = PIN_BUFFER_PTR.load(Ordering::Acquire);
         if !buf.is_null() {
             core::ptr::copy_nonoverlapping(pin, buf, len);
         }
@@ -117,7 +126,8 @@ impl NbglKeypad {
     fn ask_internal(self, pin: &[u8]) -> SyncNbgl {
         unsafe {
             let mut buffer = [0u8; PIN_BUFFER_SIZE];
-            PIN_BUFFER_PTR.store(buffer.as_mut_ptr(), Ordering::Relaxed);
+            PIN_BUFFER_PTR.store(buffer.as_mut_ptr(), Ordering::Release);
+            let _guard = PinBufferGuard;
 
             self.ux_sync_init();
             nbgl_useCaseKeypad(
@@ -130,9 +140,8 @@ impl NbglKeypad {
                 Some(action_callback),
             );
             self.ux_sync_wait(false);
-            PIN_BUFFER_PTR.store(core::ptr::null_mut(), Ordering::Relaxed);
 
-            // Compare with set pin code
+            // Compare with set pin code (_guard clears PIN_BUFFER_PTR on drop below)
             if pin == &buffer[..pin.len()] {
                 SyncNbgl::UxSyncRetPinValidated
             } else {

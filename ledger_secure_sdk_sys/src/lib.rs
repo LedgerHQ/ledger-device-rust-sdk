@@ -1,12 +1,4 @@
 #![no_std]
-#![allow(non_upper_case_globals)]
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
-#![allow(unnecessary_transmutes)]
-#![allow(clippy::useless_transmute)]
-#![allow(clippy::missing_safety_doc)]
-#![allow(clippy::ptr_offset_with_cast)]
-#![allow(clippy::too_many_arguments)]
 
 use core::ffi::c_void;
 #[cfg(feature = "heap")]
@@ -77,5 +69,19 @@ extern "C" fn heap_init() {
 #[cfg(not(feature = "heap"))]
 extern "C" fn heap_init() {}
 
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+// Scope all bindgen-generated lint suppressions to the generated code only,
+// so clippy remains effective on the hand-written code above.
+#[allow(non_upper_case_globals)]
+#[allow(non_camel_case_types)]
+#[allow(non_snake_case)]
+#[allow(unnecessary_transmutes)]
+#[allow(clippy::useless_transmute)]
+#[allow(clippy::missing_safety_doc)]
+#[allow(clippy::ptr_offset_with_cast)]
+#[allow(clippy::too_many_arguments)]
+mod bindings {
+    include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+}
+pub use bindings::*;
+
 include!(concat!(env!("OUT_DIR"), "/heap_size.rs"));
