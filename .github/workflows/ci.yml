@@ -35,7 +35,7 @@ jobs:
       - name: Cargo clippy
         working-directory: ${{ matrix.package }}
         run: |
-          cargo clippy --target ${{ matrix.target }}
+          cargo clippy --target ${{ matrix.target }} -- -D warnings
 
   format:
     name: Check code formatting
