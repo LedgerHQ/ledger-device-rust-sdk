@@ -69,9 +69,9 @@ pub fn pki_check_signature(
 
     let err = unsafe {
         os_pki_verify(
-            hash.as_mut_ptr() as *mut u8,
+            hash.as_mut_ptr(),
             hash.len(),
-            signature.as_mut_ptr() as *mut u8,
+            signature.as_mut_ptr(),
             signature.len(),
         )
     };

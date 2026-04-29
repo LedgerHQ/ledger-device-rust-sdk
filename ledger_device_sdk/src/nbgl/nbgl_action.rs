@@ -14,6 +14,12 @@ pub struct NbglAction<'a> {
 
 impl SyncNBGL for NbglAction<'_> {}
 
+impl<'a> Default for NbglAction<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'a> NbglAction<'a> {
     /// Creates a new action page builder.
     pub fn new() -> NbglAction<'a> {

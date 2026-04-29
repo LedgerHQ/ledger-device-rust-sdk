@@ -9,6 +9,12 @@ pub struct RectFull {
     height: u32,
 }
 
+impl Default for RectFull {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RectFull {
     pub const fn new() -> RectFull {
         RectFull {

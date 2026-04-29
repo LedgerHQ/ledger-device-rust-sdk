@@ -18,6 +18,12 @@ pub struct NbglReviewExtended<'a> {
 
 impl SyncNBGL for NbglReviewExtended<'_> {}
 
+impl<'a> Default for NbglReviewExtended<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'a> NbglReviewExtended<'a> {
     /// Creates a new extended review flow builder.
     /// # Returns
@@ -138,7 +144,7 @@ impl<'a> NbglReviewExtended<'a> {
                 tag_value_array.push(val);
             }
             let tag_value_list = nbgl_contentTagValueList_t {
-                pairs: tag_value_array.as_ptr() as *const nbgl_contentTagValue_t,
+                pairs: tag_value_array.as_ptr(),
                 nbPairs: fields.len() as u8,
                 ..Default::default()
             };

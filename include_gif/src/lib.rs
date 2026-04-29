@@ -166,8 +166,8 @@ fn image_to_packed_buffer(frame: &mut GrayImage, invert: bool) -> (Vec<u8>, u8) 
     let height = frame.height();
     let base_threshold = (256 / colors as u32) as u8;
     let half_threshold = base_threshold / 2;
-    let mut current_byte = 0 as u16;
-    let mut current_bit = 0 as u16;
+    let mut current_byte = 0u16;
+    let mut current_bit = 0u16;
     let mut packed: Vec<u8> = Vec::new();
 
     for x in (0..width).rev() {
@@ -180,14 +180,14 @@ fn image_to_packed_buffer(frame: &mut GrayImage, invert: bool) -> (Vec<u8>, u8) 
             current_byte += color << ((8 - bits_per_pixel as u16) - current_bit);
             current_bit += bits_per_pixel as u16;
             if current_bit >= 8 {
-                packed.push(current_byte as u8 & 0xFF);
+                packed.push(current_byte as u8);
                 current_byte = 0;
                 current_bit = 0;
             }
         }
     }
     if current_bit > 0 {
-        packed.push(current_byte as u8 & 0xFF);
+        packed.push(current_byte as u8);
     }
     (packed, bits_per_pixel)
 }

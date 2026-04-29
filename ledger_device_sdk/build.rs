@@ -24,7 +24,7 @@ fn generate_install_parameters() {
     // Now run cargo metadata from the root directory
     let output = std::process::Command::new("cargo")
         .current_dir(root_dir)
-        .args(&["metadata", "--format-version", "1", "--no-deps"])
+        .args(["metadata", "--format-version", "1", "--no-deps"])
         .output()
         .expect("Failed to execute cargo metadata");
 
@@ -65,7 +65,7 @@ fn generate_install_parameters() {
                     .as_array()
                     .expect("curves not found")
                     .iter()
-                    .map(|v| format!("{}", v.as_str().unwrap()))
+                    .map(|v| v.as_str().unwrap().to_string())
                     .collect::<Vec<_>>();
                 println!("cargo:warning=curves are {:x?}", curves);
 
@@ -73,7 +73,7 @@ fn generate_install_parameters() {
                     .as_array()
                     .expect("paths not found")
                     .iter()
-                    .map(|v| format!("{}", v.as_str().unwrap()))
+                    .map(|v| v.as_str().unwrap().to_string())
                     .collect::<Vec<_>>();
                 println!("cargo:warning=paths are {:x?}", paths);
 

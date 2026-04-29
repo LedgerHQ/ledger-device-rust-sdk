@@ -333,7 +333,7 @@ where
 
     /// Returns true if collection is empty
     pub fn is_empty(&self) -> bool {
-        !self.flags.get_ref().iter().any(|v| *v == STORAGE_VALID)
+        !self.flags.get_ref().contains(&STORAGE_VALID)
     }
 
     /// Returns the maximum number of items the collection can store.
