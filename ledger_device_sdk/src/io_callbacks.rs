@@ -3,6 +3,9 @@
 // communication interface without holding a reference to it.
 // This decouples the NBGL layer from the concrete communication backend.
 
+// Items here are used under NBGL target configurations; suppress dead_code for BAGL targets.
+#![allow(dead_code)]
+
 use crate::io::{ApduHeader, Reply};
 
 pub type NbglNextEventAheadCb = fn() -> bool; // returns true if APDU detected
@@ -38,8 +41,7 @@ pub fn nbgl_register_callbacks(
 
 fn get_callbacks() -> &'static NbglCallbacks {
     unsafe {
-        #[allow(static_mut_refs)]
-        NBGL_CALLBACKS
+        (*core::ptr::addr_of!(NBGL_CALLBACKS))
             .as_ref()
             .expect("NBGL callbacks not registered")
     }

@@ -6,9 +6,11 @@
 use super::*;
 use crate::io::{Reply, StatusWords};
 use crate::io_callbacks::{nbgl_fetch_apdu_header, nbgl_reply_status};
+use core::sync::atomic::{AtomicPtr, Ordering};
 
 pub const SETTINGS_SIZE: usize = 10;
-static mut NVM_REF: Option<&mut AtomicStorage<[u8; SETTINGS_SIZE]>> = None;
+static NVM_REF: AtomicPtr<AtomicStorage<[u8; SETTINGS_SIZE]>> =
+    AtomicPtr::new(core::ptr::null_mut());
 static mut SWITCH_ARRAY: [nbgl_contentSwitch_t; SETTINGS_SIZE] =
     [unsafe { const_zero!(nbgl_contentSwitch_t) }; SETTINGS_SIZE];
 
@@ -27,8 +29,9 @@ unsafe extern "C" fn settings_callback(token: c_int, _index: u8, _page: c_int) {
             ON_STATE => SWITCH_ARRAY[setting_idx].initState = OFF_STATE,
             _ => panic!("Invalid state."),
         }
-
-        if let Some(data) = (*(&raw mut NVM_REF)).as_mut() {
+        let ptr = NVM_REF.load(Ordering::Relaxed);
+        if !ptr.is_null() {
+            let data = &mut *ptr;
             let mut switch_values: [u8; SETTINGS_SIZE] = *data.get_ref();
             if switch_values[setting_idx] == OFF_STATE {
                 switch_values[setting_idx] = ON_STATE;
@@ -42,10 +45,7 @@ unsafe extern "C" fn settings_callback(token: c_int, _index: u8, _page: c_int) {
 
 /// Informations fields name to display in the dedicated
 /// page of the home screen.
-const INFO_FIELDS: [*const c_char; 2] = [
-    "Version\0".as_ptr() as *const c_char,
-    "Developer\0".as_ptr() as *const c_char,
-];
+const INFO_FIELDS: [*const c_char; 2] = [c"Version".as_ptr(), c"Developer".as_ptr()];
 
 /// Initial page to display when showing the home and settings screen.
 pub enum PageIndex {
@@ -74,13 +74,13 @@ unsafe extern "C" fn quit_cb() {
     exit_app(0);
 }
 
-impl<'a> Default for NbglHomeAndSettings {
+impl Default for NbglHomeAndSettings {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<'a> NbglHomeAndSettings {
+impl NbglHomeAndSettings {
     /// Creates a new home and settings page builder.
     /// # Returns
     /// Returns a new instance of `NbglHomeAndSettings`.
@@ -105,7 +105,7 @@ impl<'a> NbglHomeAndSettings {
     /// * `glyph` - The icon to display in the center of the page.
     /// # Returns
     /// Returns the builder itself to allow method chaining.
-    pub fn glyph(self, glyph: &'a NbglGlyph) -> NbglHomeAndSettings {
+    pub fn glyph(self, glyph: &NbglGlyph) -> NbglHomeAndSettings {
         let icon = glyph.into();
         NbglHomeAndSettings { icon, ..self }
     }
@@ -118,12 +118,7 @@ impl<'a> NbglHomeAndSettings {
     /// * `author` - The author of the application.
     /// # Returns
     /// Returns the builder itself to allow method chaining.
-    pub fn infos(
-        self,
-        app_name: &'a str,
-        version: &'a str,
-        author: &'a str,
-    ) -> NbglHomeAndSettings {
+    pub fn infos(self, app_name: &str, version: &str, author: &str) -> NbglHomeAndSettings {
         let v: Vec<CString> = vec![
             CString::new(version).unwrap(),
             CString::new(author).unwrap(),
@@ -141,7 +136,7 @@ impl<'a> NbglHomeAndSettings {
     /// * `tagline` - The tagline to display below the application name on the home screen.
     /// # Returns
     /// Returns the builder itself to allow method chaining.
-    pub fn tagline(self, tagline: &'a str) -> NbglHomeAndSettings {
+    pub fn tagline(self, tagline: &str) -> NbglHomeAndSettings {
         NbglHomeAndSettings {
             tag_line: Some(CString::new(tagline).unwrap()),
             ..self
@@ -158,12 +153,13 @@ impl<'a> NbglHomeAndSettings {
     /// Returns the builder itself to allow method chaining.
     pub fn settings(
         self,
-        nvm_data: &'a mut AtomicStorage<[u8; SETTINGS_SIZE]>,
-        settings_strings: &[[&'a str; 2]],
+        nvm_data: &mut AtomicStorage<[u8; SETTINGS_SIZE]>,
+        settings_strings: &[[&str; 2]],
     ) -> NbglHomeAndSettings {
-        unsafe {
-            NVM_REF = Some(transmute(nvm_data));
-        }
+        NVM_REF.store(
+            nvm_data as *mut AtomicStorage<[u8; SETTINGS_SIZE]>,
+            Ordering::Relaxed,
+        );
 
         if settings_strings.len() > SETTINGS_SIZE {
             panic!("Too many settings.");
@@ -215,8 +211,9 @@ impl<'a> NbglHomeAndSettings {
                 for (i, setting) in self.setting_contents.iter().enumerate() {
                     SWITCH_ARRAY[i].text = setting[0].as_ptr();
                     SWITCH_ARRAY[i].subText = setting[1].as_ptr();
-                    let state = if let Some(data) = (*(&raw mut NVM_REF)).as_mut() {
-                        data.get_ref()[i]
+                    let ptr = NVM_REF.load(Ordering::Relaxed);
+                    let state = if !ptr.is_null() {
+                        (&*ptr).get_ref()[i]
                     } else {
                         OFF_STATE
                     };
@@ -345,8 +342,9 @@ impl<'a> NbglHomeAndSettings {
             for (i, setting) in self.setting_contents.iter().enumerate() {
                 SWITCH_ARRAY[i].text = setting[0].as_ptr();
                 SWITCH_ARRAY[i].subText = setting[1].as_ptr();
-                let state = if let Some(data) = (*(&raw mut NVM_REF)).as_mut() {
-                    data.get_ref()[i]
+                let ptr = NVM_REF.load(Ordering::Relaxed);
+                let state = if !ptr.is_null() {
+                    (&*ptr).get_ref()[i]
                 } else {
                     OFF_STATE
                 };

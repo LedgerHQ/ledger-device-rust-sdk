@@ -38,7 +38,7 @@ impl<'a> NbglAdvanceReview<'a> {
     /// Returns a new instance of `NbglAdvanceReview`.
     pub fn new(operation_type: TransactionType) -> NbglAdvanceReview<'a> {
         NbglAdvanceReview {
-            operation_type: operation_type,
+            operation_type,
             review_title: CString::default(),
             review_subtitle: CString::default(),
             finish_title: CString::default(),
@@ -143,7 +143,7 @@ impl<'a> NbglAdvanceReview<'a> {
                 tag_value_array.push(val);
             }
             let tag_value_list = nbgl_contentTagValueList_t {
-                pairs: tag_value_array.as_ptr() as *const nbgl_contentTagValue_t,
+                pairs: tag_value_array.as_ptr(),
                 nbPairs: fields.len() as u8,
                 ..Default::default()
             };

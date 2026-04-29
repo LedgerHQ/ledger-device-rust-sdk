@@ -1,6 +1,8 @@
 use super::*;
+use core::sync::atomic::{AtomicPtr, Ordering};
 
-static mut NVM_REF: Option<&mut AtomicStorage<[u8; SETTINGS_SIZE]>> = None;
+static NVM_REF: AtomicPtr<AtomicStorage<[u8; SETTINGS_SIZE]>> =
+    AtomicPtr::new(core::ptr::null_mut());
 static mut SWITCH_ARRAY: [nbgl_contentSwitch_t; SETTINGS_SIZE] =
     [unsafe { const_zero!(nbgl_contentSwitch_t) }; SETTINGS_SIZE];
 
@@ -20,7 +22,9 @@ unsafe extern "C" fn settings_callback(token: c_int, _index: u8, _page: c_int) {
             _ => panic!("Invalid state."),
         }
 
-        if let Some(data) = (*(&raw mut NVM_REF)).as_mut() {
+        let ptr = NVM_REF.load(Ordering::Relaxed);
+        if !ptr.is_null() {
+            let data = &mut *ptr;
             let mut switch_values: [u8; SETTINGS_SIZE] = *data.get_ref();
             if switch_values[setting_idx] == OFF_STATE {
                 switch_values[setting_idx] = ON_STATE;
@@ -51,6 +55,12 @@ pub struct NbglGenericSettings {
 }
 
 impl SyncNBGL for NbglGenericSettings {}
+
+impl Default for NbglGenericSettings {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl NbglGenericSettings {
     pub fn new() -> NbglGenericSettings {
@@ -113,13 +123,17 @@ impl NbglGenericSettings {
             .map(|s| [CString::new(s[0]).unwrap(), CString::new(s[1]).unwrap()])
             .collect();
 
+        NVM_REF.store(
+            nvm_data as *mut AtomicStorage<[u8; SETTINGS_SIZE]>,
+            Ordering::Relaxed,
+        );
         unsafe {
-            NVM_REF = Some(transmute(nvm_data));
             for (i, setting) in self.settings_title_subtitle.iter().enumerate() {
                 SWITCH_ARRAY[i].text = setting[0].as_ptr();
                 SWITCH_ARRAY[i].subText = setting[1].as_ptr();
-                let state = if let Some(data) = (*(&raw mut NVM_REF)).as_mut() {
-                    data.get_ref()[i]
+                let ptr = NVM_REF.load(Ordering::Relaxed);
+                let state = if !ptr.is_null() {
+                    (&*ptr).get_ref()[i]
                 } else {
                     OFF_STATE
                 };

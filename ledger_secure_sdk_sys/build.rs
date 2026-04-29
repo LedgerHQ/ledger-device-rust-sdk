@@ -117,7 +117,7 @@ impl SDKBuilder<'_> {
             // path for Debian-based systems
             String::from("/usr/lib/arm-none-eabi")
         } else {
-            format!("{sysroot}")
+            sysroot.to_string()
         };
         self.gcc_toolchain = PathBuf::from(gcc_toolchain);
         Ok(())
@@ -153,7 +153,7 @@ impl SDKBuilder<'_> {
                         v.push((String::from("NBGL_USE_CASE"), None));
                     } else {
                         println!("cargo:warning=BAGL is built");
-                        println!("cargo:rustc-env=C_SDK_GRAPHICS={}", "bagl");
+                        println!("cargo:rustc-env=C_SDK_GRAPHICS=bagl");
                         v.push((String::from("HAVE_BAGL"), None));
                         v.push((String::from("HAVE_UX_FLOW"), None));
                     }
@@ -169,7 +169,7 @@ impl SDKBuilder<'_> {
                     let reader = BufReader::new(f);
                     reader
                         .lines()
-                        .filter_map(|line| line.ok())
+                        .map_while(Result::ok)
                         .collect::<Vec<String>>()
                 },
                 glyphs_folders: Vec::new(),
@@ -201,7 +201,7 @@ impl SDKBuilder<'_> {
                         v.push((String::from("NBGL_USE_CASE"), None));
                     } else {
                         println!("cargo:warning=BAGL is built");
-                        println!("cargo:rustc-env=C_SDK_GRAPHICS={}", "bagl");
+                        println!("cargo:rustc-env=C_SDK_GRAPHICS=bagl");
                         v.push((String::from("HAVE_BAGL"), None));
                         v.push((String::from("HAVE_UX_FLOW"), None));
                     }
@@ -217,7 +217,7 @@ impl SDKBuilder<'_> {
                     let reader = BufReader::new(f);
                     reader
                         .lines()
-                        .filter_map(|line| line.ok())
+                        .map_while(Result::ok)
                         .collect::<Vec<String>>()
                 },
                 glyphs_folders: Vec::new(),
@@ -251,7 +251,7 @@ impl SDKBuilder<'_> {
                     let reader = BufReader::new(f);
                     reader
                         .lines()
-                        .filter_map(|line| line.ok())
+                        .map_while(Result::ok)
                         .collect::<Vec<String>>()
                 },
                 glyphs_folders: Vec::new(),
@@ -285,7 +285,7 @@ impl SDKBuilder<'_> {
                     let reader = BufReader::new(f);
                     reader
                         .lines()
-                        .filter_map(|line| line.ok())
+                        .map_while(Result::ok)
                         .collect::<Vec<String>>()
                 },
                 glyphs_folders: Vec::new(),
@@ -319,7 +319,7 @@ impl SDKBuilder<'_> {
                     let reader = BufReader::new(f);
                     reader
                         .lines()
-                        .filter_map(|line| line.ok())
+                        .map_while(Result::ok)
                         .collect::<Vec<String>>()
                 },
                 glyphs_folders: Vec::new(),
@@ -691,13 +691,12 @@ impl SDKBuilder<'_> {
                     if entry.is_empty() {
                         continue;
                     }
-                    if let Some((k, v_str)) = entry.split_once(':') {
-                        if k.trim() == target_os {
-                            if let Ok(v) = v_str.trim().parse::<u32>() {
-                                selected = Some(v);
-                                break;
-                            }
-                        }
+                    if let Some((k, v_str)) = entry.split_once(':')
+                        && k.trim() == target_os
+                        && let Ok(v) = v_str.trim().parse::<u32>()
+                    {
+                        selected = Some(v);
+                        break;
                     }
                 }
                 selected.unwrap_or(DEFAULT_HEAP_SIZE)
@@ -803,7 +802,7 @@ fn configure_lib_ble(command: &mut cc::Build, c_sdk: &Path) {
 }
 
 fn configure_lib_nbgl(command: &mut cc::Build, c_sdk: &Path) {
-    println!("cargo:rustc-env=C_SDK_GRAPHICS={}", "nbgl");
+    println!("cargo:rustc-env=C_SDK_GRAPHICS=nbgl");
 
     let glyphs_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("glyphs");
     command
@@ -848,7 +847,7 @@ fn configure_lib_nbgl(command: &mut cc::Build, c_sdk: &Path) {
         .file(glyphs_path.join("glyphs.c"));
 }
 
-fn retrieve_csdk_info(device: &Device, path: &PathBuf) -> Result<CSDKInfo, SDKBuildError> {
+fn retrieve_csdk_info(device: &Device, path: &Path) -> Result<CSDKInfo, SDKBuildError> {
     let mut csdk_info = CSDKInfo::new();
     (csdk_info.api_level, csdk_info.c_sdk_name) = retrieve_makefile_infos(path)?;
     (csdk_info.target_id, csdk_info.target_name) = retrieve_target_file_infos(device, path)?;
@@ -906,11 +905,12 @@ fn retrieve_makefile_infos(c_sdk: &Path) -> Result<(Option<u32>, String), SDKBui
     let makefile =
         File::open(c_sdk.join("Makefile.defines")).expect("Could not find Makefile.defines");
     let mut api_level: Option<u32> = None;
-    for line in BufReader::new(makefile).lines().flatten() {
-        if let Some(value) = line.split(":=").nth(1).map(str::trim) {
-            if line.contains("API_LEVEL") && api_level.is_none() {
-                api_level = Some(value.parse().map_err(|_| SDKBuildError::InvalidAPILevel)?);
-            }
+    for line in BufReader::new(makefile).lines().map_while(Result::ok) {
+        if let Some(value) = line.split(":=").nth(1).map(str::trim)
+            && line.contains("API_LEVEL")
+            && api_level.is_none()
+        {
+            api_level = Some(value.parse().map_err(|_| SDKBuildError::InvalidAPILevel)?);
         }
         if api_level.is_some() {
             // Key found, break out of the loop
@@ -920,11 +920,12 @@ fn retrieve_makefile_infos(c_sdk: &Path) -> Result<(Option<u32>, String), SDKBui
     let makefile =
         File::open(c_sdk.join("Makefile.target")).expect("Could not find Makefile.defines");
     let mut sdk_name: Option<String> = None;
-    for line in BufReader::new(makefile).lines().flatten() {
-        if let Some(value) = line.split(":=").nth(1).map(str::trim) {
-            if line.contains("SDK_NAME") && sdk_name.is_none() {
-                sdk_name = Some(value.to_string().replace('\"', ""));
-            }
+    for line in BufReader::new(makefile).lines().map_while(Result::ok) {
+        if let Some(value) = line.split(":=").nth(1).map(str::trim)
+            && line.contains("SDK_NAME")
+            && sdk_name.is_none()
+        {
+            sdk_name = Some(value.to_string().replace('\"', ""));
         }
         if sdk_name.is_some() {
             // Key found, break out of the loop
@@ -947,7 +948,7 @@ fn retrieve_target_file_infos(
     let mut target_id: Option<String> = None;
     let mut target_name: Option<String> = None;
 
-    for line in BufReader::new(target_file).lines().flatten() {
+    for line in BufReader::new(target_file).lines().map_while(Result::ok) {
         if target_id.is_none() && line.contains("#define TARGET_ID") {
             target_id = Some(
                 line.split_whitespace()

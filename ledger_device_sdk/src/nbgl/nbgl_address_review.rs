@@ -16,6 +16,12 @@ pub struct NbglAddressReview<'a> {
 
 impl SyncNBGL for NbglAddressReview<'_> {}
 
+impl<'a> Default for NbglAddressReview<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'a> NbglAddressReview<'a> {
     /// Creates a new address review flow builder.
     pub fn new() -> NbglAddressReview<'a> {
@@ -98,7 +104,7 @@ impl<'a> NbglAddressReview<'a> {
             }
 
             let tag_value_list = nbgl_contentTagValueList_t {
-                pairs: tag_value_array.as_ptr() as *const nbgl_contentTagValue_t,
+                pairs: tag_value_array.as_ptr(),
                 nbPairs: tag_value_array.len() as u8,
                 ..Default::default()
             };
@@ -122,12 +128,8 @@ impl<'a> NbglAddressReview<'a> {
 
             // Return true if the user approved the address, false otherwise.
             match sync_ret {
-                SyncNbgl::UxSyncRetApproved => {
-                    return true;
-                }
-                SyncNbgl::UxSyncRetRejected => {
-                    return false;
-                }
+                SyncNbgl::UxSyncRetApproved => true,
+                SyncNbgl::UxSyncRetRejected => false,
                 _ => {
                     panic!("Unexpected return value from ux_sync_addressReview");
                 }

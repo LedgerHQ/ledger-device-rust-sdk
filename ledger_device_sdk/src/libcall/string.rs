@@ -142,9 +142,9 @@ pub fn uint256_to_integer(value: &[u8; 32]) -> CustomString<79> {
         pos -= 1;
         let mut carry = 0u32;
         let mut rem: u32;
-        for i in 0..16 {
-            rem = ((carry << 16) | u32::from(n[i])) % 10;
-            n[i] = (((carry << 16) | u32::from(n[i])) / 10) as u16;
+        for item in n.iter_mut() {
+            rem = ((carry << 16) | u32::from(*item)) % 10;
+            *item = (((carry << 16) | u32::from(*item)) / 10) as u16;
             carry = rem;
         }
         s.arr[pos] = u8::try_from(char::from_digit(carry, 10).unwrap()).unwrap();

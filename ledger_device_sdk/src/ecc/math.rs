@@ -298,6 +298,7 @@ impl EcPoint {
     /// * `other` - The second `EcPoint` instance
     /// # Returns
     /// Returns `Ok(true)` if the points are equal, `Ok(false)` if they are not, or a `CxError` if the comparison fails.
+    #[allow(clippy::should_implement_trait)]
     pub fn cmp(&self, other: &EcPoint) -> Result<bool, CxError> {
         let mut is_equal = false;
         check_cx_ok!(cx_ecpoint_cmp(&self.inner, &other.inner, &mut is_equal));

@@ -10,7 +10,13 @@ pub struct NbglReviewStatus {
 
 impl SyncNBGL for NbglReviewStatus {}
 
-impl<'a> NbglReviewStatus {
+impl Default for NbglReviewStatus {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl NbglReviewStatus {
     /// Creates a new status review page builder.
     /// # Returns
     /// Returns a new instance of `NbglReviewStatus`.
