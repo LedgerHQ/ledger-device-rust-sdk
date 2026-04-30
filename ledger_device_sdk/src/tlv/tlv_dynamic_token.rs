@@ -171,8 +171,10 @@ static HANDLERS: &[Handler<DynamicTokenExtracted>] = &[
 /// # Returns
 /// Returns `Ok(())` if parsing was successful, or a `TlvError` otherwise.
 pub fn parse_dynamic_token_tlv(payload: &[u8], out: &mut DynamicTokenOut) -> Result<()> {
-    let mut extracted = DynamicTokenExtracted::default();
-    extracted.hash_ctx = Sha2_256::new();
+    let mut extracted = DynamicTokenExtracted {
+        hash_ctx: Sha2_256::new(),
+        ..DynamicTokenExtracted::default()
+    };
 
     let mut received = Received::new(tag_to_flag_u64);
 

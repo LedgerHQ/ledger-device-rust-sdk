@@ -27,6 +27,7 @@ extern crate alloc;
 use alloc::string::String;
 use alloc::vec::Vec;
 
+#[allow(clippy::enum_variant_names)]
 enum TlvTrustedNameSignerAlgorithm {
     TlvTrustedNameSignerAlgorithmEcdsaSha256 = 0x01,
     TlvTrustedNameSignerAlgorithmEcdsaSha3_256 = 0x02,
@@ -304,14 +305,15 @@ static HANDLERS: &[Handler<TrustedNameExtracted>] = &[
 /// # Returns
 /// * `Result<()>` - Ok(()) if parsing and verification succeed, Err(TlvError) otherwise
 pub fn parse_trusted_name_tlv(payload: &[u8], out: &mut TrustedNameOut) -> Result<()> {
-    let mut extracted = TrustedNameExtracted::default();
-
-    extracted.hash_ctx = MultipleHashContext {
-        hash_sha2_256: Sha2_256::new(),
-        hash_sha2_512: Sha2_512::new(),
-        hash_sha3_256: Sha3_256::new(),
-        hash_keccak_256: Keccak256::new(),
-        hash_ripemd_160: Ripemd160::new(),
+    let mut extracted = TrustedNameExtracted {
+        hash_ctx: MultipleHashContext {
+            hash_sha2_256: Sha2_256::new(),
+            hash_sha2_512: Sha2_512::new(),
+            hash_sha3_256: Sha3_256::new(),
+            hash_keccak_256: Keccak256::new(),
+            hash_ripemd_160: Ripemd160::new(),
+        },
+        ..TrustedNameExtracted::default()
     };
 
     let mut received = Received::new(tag_to_flag_u64);

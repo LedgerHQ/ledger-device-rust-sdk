@@ -16,6 +16,12 @@ pub struct NbglReview<'a> {
 
 impl SyncNBGL for NbglReview<'_> {}
 
+impl<'a> Default for NbglReview<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'a> NbglReview<'a> {
     /// Creates a new review flow builder.
     /// # Returns
@@ -117,7 +123,7 @@ impl<'a> NbglReview<'a> {
 
             // Create the tag_value_list with the tag_value_array.
             let tag_value_list = nbgl_contentTagValueList_t {
-                pairs: tag_value_array.as_ptr() as *const nbgl_contentTagValue_t,
+                pairs: tag_value_array.as_ptr(),
                 nbPairs: fields.len() as u8,
                 ..Default::default()
             };
@@ -196,14 +202,7 @@ impl<'a> NbglReview<'a> {
             let sync_ret = self.ux_sync_wait(false);
 
             // Return true if the user approved the transaction, false otherwise.
-            match sync_ret {
-                SyncNbgl::UxSyncRetApproved => {
-                    return true;
-                }
-                _ => {
-                    return false;
-                }
-            }
+            matches!(sync_ret, SyncNbgl::UxSyncRetApproved)
         }
     }
 
