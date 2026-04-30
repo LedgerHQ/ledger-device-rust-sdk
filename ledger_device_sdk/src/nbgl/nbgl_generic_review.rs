@@ -106,15 +106,16 @@ impl CenteredInfo {
             text2: CString::new(text2).unwrap(),
             #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
             text3: CString::new(text3).unwrap(),
-            icon: icon.map_or(None, |g| Some(g.into())),
-            on_top: on_top,
-            style: style,
+            icon: icon.map(|g| g.into()),
+            on_top,
+            style,
             #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
-            offset_y: offset_y,
+            offset_y,
         }
     }
 }
 
+#[allow(clippy::needless_update)]
 impl From<&CenteredInfo> for nbgl_contentCenteredInfo_t {
     fn from(info: &CenteredInfo) -> nbgl_contentCenteredInfo_t {
         nbgl_contentCenteredInfo_t {
@@ -165,13 +166,14 @@ impl InfoLongPress {
     ) -> InfoLongPress {
         InfoLongPress {
             text: CString::new(text).unwrap(),
-            icon: icon.map_or(None, |g| Some(g.into())),
+            icon: icon.map(|g| g.into()),
             long_press_text: CString::new(long_press_text).unwrap(),
-            tune_id: tune_id,
+            tune_id,
         }
     }
 }
 
+#[allow(clippy::needless_update)]
 impl From<&InfoLongPress> for nbgl_contentInfoLongPress_t {
     fn from(info: &InfoLongPress) -> nbgl_contentInfoLongPress_t {
         nbgl_contentInfoLongPress_t {
@@ -218,13 +220,14 @@ impl InfoButton {
     ) -> InfoButton {
         InfoButton {
             text: CString::new(text).unwrap(),
-            icon: icon.map_or(None, |g| Some(g.into())),
+            icon: icon.map(|g| g.into()),
             button_text: CString::new(button_text).unwrap(),
-            tune_id: tune_id,
+            tune_id,
         }
     }
 }
 
+#[allow(clippy::needless_update)]
 impl From<&InfoButton> for nbgl_contentInfoButton_t {
     fn from(info: &InfoButton) -> nbgl_contentInfoButton_t {
         nbgl_contentInfoButton_t {
@@ -281,7 +284,7 @@ impl TagValueList {
         let pairs: Vec<nbgl_contentTagValue_t> = cfields.iter().map(|pair| pair.into()).collect();
         TagValueList {
             _cfields: cfields,
-            pairs: pairs,
+            pairs,
             nb_max_lines_for_value,
             small_case_for_value,
             wrapping,
@@ -289,18 +292,18 @@ impl TagValueList {
     }
 }
 
+#[allow(clippy::needless_update)]
 impl From<&TagValueList> for nbgl_contentTagValueList_t {
     fn from(tvl: &TagValueList) -> nbgl_contentTagValueList_t {
-        let nbgl_content_tvl = nbgl_contentTagValueList_t {
-            pairs: tvl.pairs.as_ptr() as *const nbgl_contentTagValue_t,
+        nbgl_contentTagValueList_t {
+            pairs: tvl.pairs.as_ptr(),
             nbPairs: tvl.pairs.len() as u8,
             nbMaxLinesForValue: tvl.nb_max_lines_for_value,
             token: FIRST_USER_TOKEN as u8,
             smallCaseForValue: tvl.small_case_for_value,
             wrapping: tvl.wrapping,
             ..Default::default()
-        };
-        nbgl_content_tvl
+        }
     }
 }
 
@@ -338,13 +341,14 @@ impl TagValueConfirm {
         let cancel_text_cstring = CString::new(cancel_text).unwrap();
         TagValueConfirm {
             tag_value_list: tag_value_list.into(),
-            tune_id: tune_id,
+            tune_id,
             confirmation_text: confirmation_text_cstring,
             cancel_text: cancel_text_cstring,
         }
     }
 }
 
+#[allow(clippy::needless_update)]
 impl From<&TagValueConfirm> for nbgl_contentTagValueConfirm_t {
     fn from(tvc: &TagValueConfirm) -> nbgl_contentTagValueConfirm_t {
         nbgl_contentTagValueConfirm_t {
@@ -394,19 +398,20 @@ impl InfosList {
         let info_contents_ptr: Vec<*const c_char> =
             info_contents_cstrings.iter().map(|s| s.as_ptr()).collect();
         InfosList {
-            info_types_cstrings: info_types_cstrings,
+            info_types_cstrings,
             _info_contents_cstrings: info_contents_cstrings,
-            info_types_ptr: info_types_ptr,
-            info_contents_ptr: info_contents_ptr,
+            info_types_ptr,
+            info_contents_ptr,
         }
     }
 }
 
+#[allow(clippy::needless_update)]
 impl From<&InfosList> for nbgl_contentInfoList_t {
     fn from(infos_list: &InfosList) -> nbgl_contentInfoList_t {
         nbgl_contentInfoList_t {
-            infoTypes: infos_list.info_types_ptr.as_ptr() as *const *const c_char,
-            infoContents: infos_list.info_contents_ptr.as_ptr() as *const *const c_char,
+            infoTypes: infos_list.info_types_ptr.as_ptr(),
+            infoContents: infos_list.info_contents_ptr.as_ptr(),
             nbInfos: infos_list.info_types_cstrings.len() as u8,
             ..Default::default()
         }
@@ -525,6 +530,12 @@ pub struct NbglGenericReview {
 
 impl SyncNBGL for NbglGenericReview {}
 
+impl Default for NbglGenericReview {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl NbglGenericReview {
     /// Creates an empty [`NbglGenericReview`] with no content pages.
     pub fn new() -> NbglGenericReview {
@@ -563,7 +574,7 @@ impl NbglGenericReview {
             let content_struct = nbgl_genericContents_t {
                 callbackCallNeeded: false,
                 __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
-                    contentsList: c_content_list.as_ptr() as *const nbgl_content_t,
+                    contentsList: c_content_list.as_ptr(),
                 },
                 nbContents: self.content_list.len() as u8,
             };
@@ -579,14 +590,7 @@ impl NbglGenericReview {
             let sync_ret = self.ux_sync_wait(false);
 
             // Return true if the user approved the transaction, false otherwise.
-            match sync_ret {
-                SyncNbgl::UxSyncRetApproved => {
-                    return true;
-                }
-                _ => {
-                    return false;
-                }
-            }
+            matches!(sync_ret, SyncNbgl::UxSyncRetApproved)
         }
     }
 

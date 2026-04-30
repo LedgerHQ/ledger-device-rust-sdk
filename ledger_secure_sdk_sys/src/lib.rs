@@ -1,11 +1,7 @@
 #![no_std]
-#![allow(non_upper_case_globals)]
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
-#![allow(unnecessary_transmutes)]
 
 use core::ffi::c_void;
-#[cfg(all(feature = "heap"))]
+#[cfg(feature = "heap")]
 use core::mem::MaybeUninit;
 
 pub mod buttons;
@@ -53,9 +49,7 @@ critical_section::set_impl!(CriticalSection);
 /// Default no-op implementation as we don't have concurrency.
 #[cfg(feature = "heap")]
 unsafe impl critical_section::Impl for CriticalSection {
-    unsafe fn acquire() -> RawRestoreState {
-        ()
-    }
+    unsafe fn acquire() -> RawRestoreState {}
     unsafe fn release(_restore_state: RawRestoreState) {}
 }
 
@@ -75,5 +69,19 @@ extern "C" fn heap_init() {
 #[cfg(not(feature = "heap"))]
 extern "C" fn heap_init() {}
 
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+// Scope all bindgen-generated lint suppressions to the generated code only,
+// so clippy remains effective on the hand-written code above.
+#[allow(non_upper_case_globals)]
+#[allow(non_camel_case_types)]
+#[allow(non_snake_case)]
+#[allow(unnecessary_transmutes)]
+#[allow(clippy::useless_transmute)]
+#[allow(clippy::missing_safety_doc)]
+#[allow(clippy::ptr_offset_with_cast)]
+#[allow(clippy::too_many_arguments)]
+mod bindings {
+    include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+}
+pub use bindings::*;
+
 include!(concat!(env!("OUT_DIR"), "/heap_size.rs"));

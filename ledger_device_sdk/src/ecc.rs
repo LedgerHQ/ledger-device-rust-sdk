@@ -260,6 +260,7 @@ impl<const N: usize, const TY: char> ECPrivateKey<N, TY> {
 #[macro_export]
 macro_rules! check_cx_ok {
     ($fn_call:expr) => {{
+        #[allow(clippy::macro_metavars_in_unsafe)]
         let err = unsafe { $fn_call };
         if err != CX_OK {
             return Err(err.into());

@@ -2,6 +2,7 @@
 //!
 //! Draws a keypad for user input, allowing for PIN entry and other numeric input.
 use super::*;
+use core::sync::atomic::{AtomicPtr, Ordering};
 
 /// A builder to create and show a keypad for user input.
 pub struct NbglKeypad {
@@ -14,14 +15,30 @@ pub struct NbglKeypad {
 
 impl SyncNBGL for NbglKeypad {}
 
+impl Default for NbglKeypad {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 const PIN_BUFFER_SIZE: usize = 16;
-static mut PIN_BUFFER: [u8; PIN_BUFFER_SIZE] = [0x00; PIN_BUFFER_SIZE];
+static PIN_BUFFER_PTR: AtomicPtr<u8> = AtomicPtr::new(core::ptr::null_mut());
+
+// RAII guard: clears PIN_BUFFER_PTR when dropped, even on early return or panic.
+struct PinBufferGuard;
+
+impl Drop for PinBufferGuard {
+    fn drop(&mut self) {
+        PIN_BUFFER_PTR.store(core::ptr::null_mut(), Ordering::Release);
+    }
+}
 
 unsafe extern "C" fn pin_callback(pin: *const u8, pin_len: u8) {
     unsafe {
         let len = (pin_len as usize).min(PIN_BUFFER_SIZE);
-        for i in 0..len {
-            PIN_BUFFER[i] = *pin.add(i);
+        let buf = PIN_BUFFER_PTR.load(Ordering::Acquire);
+        if !buf.is_null() {
+            core::ptr::copy_nonoverlapping(pin, buf, len);
         }
         G_ENDED = true;
     }
@@ -108,6 +125,10 @@ impl NbglKeypad {
 
     fn ask_internal(self, pin: &[u8]) -> SyncNbgl {
         unsafe {
+            let mut buffer = [0u8; PIN_BUFFER_SIZE];
+            PIN_BUFFER_PTR.store(buffer.as_mut_ptr(), Ordering::Release);
+            let _guard = PinBufferGuard;
+
             self.ux_sync_init();
             nbgl_useCaseKeypad(
                 self.title.as_ptr() as *const c_char,
@@ -119,11 +140,12 @@ impl NbglKeypad {
                 Some(action_callback),
             );
             self.ux_sync_wait(false);
-            // Compare with set pin code
-            if pin == &PIN_BUFFER[..pin.len()] {
-                return SyncNbgl::UxSyncRetPinValidated;
+
+            // Compare with set pin code (_guard clears PIN_BUFFER_PTR on drop below)
+            if pin == &buffer[..pin.len()] {
+                SyncNbgl::UxSyncRetPinValidated
             } else {
-                return SyncNbgl::UxSyncRetPinRejected;
+                SyncNbgl::UxSyncRetPinRejected
             }
         }
     }

@@ -207,7 +207,7 @@ fn to_dec(v: u32) -> [u8; 10] {
     let mut i = 0;
     while fact != 0 {
         let d = val / fact;
-        let c = char::from_digit(d.into(), 10).unwrap();
+        let c = char::from_digit(d, 10).unwrap();
         dec[i] = c as u8;
         i += 1;
         val -= d * fact;

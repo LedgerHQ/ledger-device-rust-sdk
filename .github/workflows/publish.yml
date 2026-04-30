@@ -45,10 +45,7 @@ jobs:
       package_directory: "include_gif"
       publish: true
       release: false
-      jfrog_deployment: true
       dry_run: ${{ github.event_name == 'workflow_dispatch' }}
-    secrets:
-      cargo_token: ${{ secrets.CARGO_CRATES_TOKEN }}
 
   deploy_ledger_secure_sdk_sys:
     name: Deploy ledger_secure_sdk_sys
@@ -62,10 +59,7 @@ jobs:
       package_directory: "ledger_secure_sdk_sys"
       publish: true
       release: false
-      jfrog_deployment: true
       dry_run: ${{ github.event_name == 'workflow_dispatch' }}
-    secrets:
-      cargo_token: ${{ secrets.CARGO_CRATES_TOKEN }}
 
   deploy_ledger_device_sdk:
     name: Deploy ledger_device_sdk
@@ -79,7 +73,4 @@ jobs:
       package_directory: "ledger_device_sdk"
       publish: true
       release: false
-      jfrog_deployment: true
       dry_run: ${{ github.event_name == 'workflow_dispatch' }}
-    secrets:
-      cargo_token: ${{ secrets.CARGO_CRATES_TOKEN }}
