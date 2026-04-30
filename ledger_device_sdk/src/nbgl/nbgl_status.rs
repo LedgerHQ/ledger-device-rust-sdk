@@ -10,6 +10,12 @@ pub struct NbglStatus {
 
 impl SyncNBGL for NbglStatus {}
 
+impl Default for NbglStatus {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl NbglStatus {
     /// Creates a new status page builder.
     pub fn new() -> NbglStatus {

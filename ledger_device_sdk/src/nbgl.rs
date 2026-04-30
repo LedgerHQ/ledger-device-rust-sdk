@@ -12,7 +12,6 @@ extern crate alloc;
 use alloc::ffi::CString;
 use alloc::{vec, vec::Vec};
 use core::ffi::{c_char, c_int};
-use core::mem::transmute;
 use ledger_secure_sdk_sys::*;
 
 pub mod nbgl_action;
@@ -243,8 +242,8 @@ struct CField {
 impl From<&Field<'_>> for CField {
     fn from(field: &Field) -> CField {
         CField {
-            name: CString::new((*field).name).unwrap(),
-            value: CString::new((*field).value).unwrap(),
+            name: CString::new(field.name).unwrap(),
+            value: CString::new(field.value).unwrap(),
         }
     }
 }
@@ -252,8 +251,8 @@ impl From<&Field<'_>> for CField {
 impl From<&CField> for nbgl_contentTagValue_t {
     fn from(field: &CField) -> nbgl_contentTagValue_t {
         nbgl_contentTagValue_t {
-            item: (*field).name.as_ptr() as *const ::core::ffi::c_char,
-            value: (*field).value.as_ptr() as *const ::core::ffi::c_char,
+            item: field.name.as_ptr() as *const ::core::ffi::c_char,
+            value: field.value.as_ptr() as *const ::core::ffi::c_char,
             ..Default::default()
         }
     }
@@ -316,20 +315,20 @@ impl<'a> NbglGlyph<'a> {
     }
 }
 
-impl<'a> Into<nbgl_icon_details_t> for &NbglGlyph<'a> {
-    fn into(self) -> nbgl_icon_details_t {
-        let bpp = match self.bpp {
+impl<'a> From<&NbglGlyph<'a>> for nbgl_icon_details_t {
+    fn from(val: &NbglGlyph<'a>) -> Self {
+        let bpp = match val.bpp {
             1 => NBGL_BPP_1,
             2 => NBGL_BPP_2,
             4 => NBGL_BPP_4,
             _ => panic!("Invalid bpp"),
         };
         nbgl_icon_details_t {
-            width: self.width,
-            height: self.height,
+            width: val.width,
+            height: val.height,
             bpp,
-            isFile: self.is_file,
-            bitmap: self.bitmap.as_ptr() as *const u8,
+            isFile: val.is_file,
+            bitmap: val.bitmap.as_ptr(),
         }
     }
 }

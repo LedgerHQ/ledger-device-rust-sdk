@@ -552,7 +552,7 @@ pub fn get_printable_amount_params<
     }
 
     crate::log::info!("==> GET_IS_FEE");
-    printable_amount_params.is_fee = params.is_fee == true;
+    printable_amount_params.is_fee = params.is_fee;
 
     crate::log::info!("==> GET_AMOUNT_LENGTH");
     printable_amount_params.amount_len = AMOUNT_BUF_SIZE.min(params.amount_length as usize);

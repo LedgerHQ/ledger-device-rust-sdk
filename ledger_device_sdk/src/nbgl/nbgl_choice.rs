@@ -11,6 +11,12 @@ pub struct NbglChoice<'a> {
 
 impl SyncNBGL for NbglChoice<'_> {}
 
+impl<'a> Default for NbglChoice<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'a> NbglChoice<'a> {
     /// Creates a new choice flow builder.
     pub fn new() -> NbglChoice<'a> {
@@ -23,10 +29,7 @@ impl<'a> NbglChoice<'a> {
     /// # Returns
     /// Returns the builder itself to allow method chaining.
     pub fn glyph(self, glyph: &'a NbglGlyph) -> NbglChoice<'a> {
-        NbglChoice {
-            glyph: Some(glyph),
-            ..self
-        }
+        NbglChoice { glyph: Some(glyph) }
     }
 
     /// Configures the confirmation dialog to be shown when the user accepts or rejects the choice.
@@ -36,7 +39,7 @@ impl<'a> NbglChoice<'a> {
     /// * `ok_text` - The text to display on the confirmation button. If `None`, a default text is used.
     /// * `ko_text` - The text to display on the cancellation button. If `None`, a default text is used.
     /// * `if_accept` - The `if_accept` parameter determines whether the dialog is shown when the user accepts (`true`)
-    /// or rejects (`false`) the choice.
+    ///   or rejects (`false`) the choice.
     /// # Returns
     /// Returns the builder itself to allow method chaining.
     pub fn ask_confirmation(
@@ -70,14 +73,14 @@ impl<'a> NbglChoice<'a> {
                 G_CONFIRM_ASK_WHEN_TRUE = true;
                 G_CONFIRM_SCREEN[G_CONFIRM_SCREEN_WHEN_TRUE_IDX] = Some(screen);
             }
-            return self;
+            self
         } else {
             #[allow(static_mut_refs)]
             unsafe {
                 G_CONFIRM_ASK_WHEN_FALSE = true;
                 G_CONFIRM_SCREEN[G_CONFIRM_SCREEN_WHEN_FALSE_IDX] = Some(screen);
             }
-            return self;
+            self
         }
     }
 
@@ -122,14 +125,7 @@ impl<'a> NbglChoice<'a> {
             let sync_ret = self.ux_sync_wait(false);
 
             // Return true if the user approved the transaction, false otherwise.
-            match sync_ret {
-                SyncNbgl::UxSyncRetApproved => {
-                    return true;
-                }
-                _ => {
-                    return false;
-                }
-            }
+            matches!(sync_ret, SyncNbgl::UxSyncRetApproved)
         }
     }
 

@@ -2,13 +2,7 @@ name: Run cargo clippy, cargo fmt, build and Unit+Integration tests
 
 on:
   push:
-    branches:
-      - develop
-      - master
   pull_request:
-    branches:
-      - master
-      - develop
   workflow_dispatch:
     inputs:
       name:
@@ -41,7 +35,7 @@ jobs:
       - name: Cargo clippy
         working-directory: ${{ matrix.package }}
         run: |
-          cargo clippy --target ${{ matrix.target }}
+          cargo clippy --target ${{ matrix.target }} -- -D warnings
 
   format:
     name: Check code formatting

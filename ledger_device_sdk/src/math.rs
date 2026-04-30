@@ -62,6 +62,10 @@ impl<const N: usize> BigUint<N> {
         N
     }
 
+    pub fn is_empty(&self) -> bool {
+        N == 0
+    }
+
     pub fn addm(&self, other: &Self, modulus: &Self) -> Self {
         if self >= modulus || other >= modulus {
             panic!("Operands must be less than modulus");
@@ -167,9 +171,7 @@ impl<const N: usize> BigUint<N> {
         unsafe {
             let err = cx_math_is_prime_no_throw(self.data.as_ptr(), N, &mut is_prime as *mut bool);
             match err {
-                CX_OK => {
-                    return is_prime;
-                }
+                CX_OK => is_prime,
                 _ => panic!(
                     "Error checking primality of BigUint with error code: {}",
                     err
@@ -179,7 +181,7 @@ impl<const N: usize> BigUint<N> {
     }
 
     pub fn next_prime(&self) -> Self {
-        let mut res = self.clone();
+        let mut res = *self;
         unsafe {
             let err = cx_math_next_prime_no_throw(res.data.as_mut_ptr(), res.len() as u32);
             match err {
@@ -315,7 +317,7 @@ impl<const N: usize> Rem for BigUint<N> {
         unsafe {
             let err = cx_math_modm_no_throw(res.data.as_mut_ptr(), N, modulus.data.as_ptr(), N);
             match err {
-                CX_OK => return res,
+                CX_OK => res,
                 _ => panic!(
                     "Error computing modulus of BigUint with error code: {}",
                     err
@@ -351,13 +353,7 @@ impl<const N: usize> PartialEq<BigUint<N>> for BigUint<N> {
                 &mut diff as *mut i32,
             );
             match err {
-                CX_OK => {
-                    if diff != 0 {
-                        return false;
-                    } else {
-                        return true;
-                    }
-                }
+                CX_OK => diff == 0,
                 _ => panic!("Error comparing BigUint with error code: {}", err),
             }
         }

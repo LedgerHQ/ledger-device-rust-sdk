@@ -234,6 +234,7 @@ impl Comm {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn nbgl_register_comm(&mut self) {
         // Register NBGL callbacks if not already set and record current Comm singleton.
         unsafe {
@@ -281,11 +282,12 @@ impl Comm {
             if status > 0 {
                 let packet_type = seph::PacketTypes::from(buffer[0]);
                 let event = seph::Events::from(buffer[1]);
-                match (packet_type, event) {
-                    (seph::PacketTypes::PacketTypeSeph, seph::Events::TickerEvent) => unsafe {
+                if let (seph::PacketTypes::PacketTypeSeph, seph::Events::TickerEvent) =
+                    (packet_type, event)
+                {
+                    unsafe {
                         ux_process_ticker_event();
-                    },
-                    (_, _) => {}
+                    }
                 }
             }
         }
@@ -345,10 +347,10 @@ impl Comm {
         loop {
             let status = sys_seph::io_rx(&mut self.io_buffer, true);
 
-            if status > 0 {
-                if let Some(value) = self.decode_event(status) {
-                    return value;
-                }
+            if status > 0
+                && let Some(value) = self.decode_event(status)
+            {
+                return value;
             }
         }
     }
@@ -363,7 +365,7 @@ impl Comm {
         if status > 0 {
             return self.detect_apdu::<T>(status);
         }
-        return false;
+        false
     }
 
     pub fn check_event<T>(&mut self) -> Option<Event<T>>
@@ -401,11 +403,11 @@ impl Comm {
             }
 
             // If CLA filtering is enabled, automatically reject APDUs with wrong CLA
-            if let Some(cla) = self.expected_cla {
-                if self.io_buffer[1] != cla {
-                    self.reply(StatusWords::BadCla);
-                    return None;
-                }
+            if let Some(cla) = self.expected_cla
+                && self.io_buffer[1] != cla
+            {
+                self.reply(StatusWords::BadCla);
+                return None;
             }
 
             let res = T::try_from(*self.get_apdu_metadata());
@@ -424,6 +426,7 @@ impl Comm {
         None
     }
 
+    #[allow(unused_mut)]
     pub fn process_event<T>(&mut self, mut seph_buffer: [u8; 272], length: i32) -> Option<Event<T>>
     where
         T: TryFrom<ApduHeader>,
@@ -487,7 +490,7 @@ impl Comm {
                         G_ux_params.u.pairing_request.type_ = seph_buffer[4];
                         G_ux_params.u.pairing_request.pairing_info_len = (_len - 2) as u32;
                         for i in 0..G_ux_params.u.pairing_request.pairing_info_len as usize {
-                            G_ux_params.u.pairing_request.pairing_info[i as usize] =
+                            G_ux_params.u.pairing_request.pairing_info[i] =
                                 seph_buffer[5 + i] as core::ffi::c_char;
                         }
                         G_ux_params.u.pairing_request.pairing_info
@@ -593,9 +596,9 @@ impl Comm {
                 self.rx_length = length as usize;
                 self.rx = self.rx_length - 1;
                 self.event_pending = true;
-                return true;
+                true
             }
-            _ => return false,
+            _ => false,
         }
     }
 
@@ -717,8 +720,10 @@ impl Comm {
     }
 }
 
+#[allow(dead_code)]
 static mut CURRENT_COMM: *mut Comm = core::ptr::null_mut();
 
+#[allow(dead_code)]
 fn default_nbgl_next_event_ahead() -> bool {
     unsafe {
         if CURRENT_COMM.is_null() {
@@ -728,6 +733,7 @@ fn default_nbgl_next_event_ahead() -> bool {
     }
 }
 
+#[allow(dead_code)]
 fn default_nbgl_fetch_apdu_header() -> Option<ApduHeader> {
     unsafe {
         if CURRENT_COMM.is_null() {
@@ -741,6 +747,7 @@ fn default_nbgl_fetch_apdu_header() -> Option<ApduHeader> {
     }
 }
 
+#[allow(dead_code)]
 fn default_nbgl_reply_status(reply: Reply) {
     unsafe {
         if CURRENT_COMM.is_null() {

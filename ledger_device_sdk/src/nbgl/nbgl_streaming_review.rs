@@ -28,6 +28,12 @@ pub struct NbglStreamingReview {
 
 impl SyncNBGL for NbglStreamingReview {}
 
+impl Default for NbglStreamingReview {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Status returned by the `next` method.
 pub enum NbglStreamingReviewStatus {
     Next,
@@ -195,14 +201,7 @@ impl NbglStreamingReview {
             let sync_ret = self.ux_sync_wait(false);
 
             // Return true if the user approved the transaction, false otherwise.
-            match sync_ret {
-                SyncNbgl::UxSyncRetApproved => {
-                    return true;
-                }
-                _ => {
-                    return false;
-                }
-            }
+            matches!(sync_ret, SyncNbgl::UxSyncRetApproved)
         }
     }
 
@@ -230,7 +229,7 @@ impl NbglStreamingReview {
 
             // Create the tag_value_list with the tag_value_array.
             let tag_value_list = nbgl_contentTagValueList_t {
-                pairs: tag_value_array.as_ptr() as *const nbgl_contentTagValue_t,
+                pairs: tag_value_array.as_ptr(),
                 nbPairs: fields.len() as u8,
                 ..Default::default()
             };
@@ -243,14 +242,7 @@ impl NbglStreamingReview {
             let sync_ret = self.ux_sync_wait(false);
 
             // Return true if the user approved the transaction, false otherwise.
-            match sync_ret {
-                SyncNbgl::UxSyncRetApproved => {
-                    return true;
-                }
-                _ => {
-                    return false;
-                }
-            }
+            matches!(sync_ret, SyncNbgl::UxSyncRetApproved)
         }
     }
 
@@ -283,7 +275,7 @@ impl NbglStreamingReview {
 
             // Create the tag_value_list with the tag_value_array.
             let tag_value_list = nbgl_contentTagValueList_t {
-                pairs: tag_value_array.as_ptr() as *const nbgl_contentTagValue_t,
+                pairs: tag_value_array.as_ptr(),
                 nbPairs: fields.len() as u8,
                 ..Default::default()
             };
@@ -298,15 +290,9 @@ impl NbglStreamingReview {
 
             // Return true if the user approved the transaction, false otherwise.
             match sync_ret {
-                SyncNbgl::UxSyncRetApproved => {
-                    return NbglStreamingReviewStatus::Next;
-                }
-                SyncNbgl::UxSyncRetSkipped => {
-                    return NbglStreamingReviewStatus::Skipped;
-                }
-                _ => {
-                    return NbglStreamingReviewStatus::Rejected;
-                }
+                SyncNbgl::UxSyncRetApproved => NbglStreamingReviewStatus::Next,
+                SyncNbgl::UxSyncRetSkipped => NbglStreamingReviewStatus::Skipped,
+                _ => NbglStreamingReviewStatus::Rejected,
             }
         }
     }
@@ -328,14 +314,7 @@ impl NbglStreamingReview {
             let sync_ret = self.ux_sync_wait(false);
 
             // Return true if the user approved the transaction, false otherwise.
-            match sync_ret {
-                SyncNbgl::UxSyncRetApproved => {
-                    return true;
-                }
-                _ => {
-                    return false;
-                }
-            }
+            matches!(sync_ret, SyncNbgl::UxSyncRetApproved)
         }
     }
 }

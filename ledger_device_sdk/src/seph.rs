@@ -7,20 +7,20 @@ use ledger_secure_sdk_sys::*;
 
 #[repr(u8)]
 pub enum PacketTypes {
-    PacketTypeNone = OS_IO_PACKET_TYPE_NONE as u8,
-    PacketTypeSeph = OS_IO_PACKET_TYPE_SEPH as u8,
-    PacketTypeSeEvent = OS_IO_PACKET_TYPE_SE_EVT as u8,
+    PacketTypeNone = OS_IO_PACKET_TYPE_NONE,
+    PacketTypeSeph = OS_IO_PACKET_TYPE_SEPH,
+    PacketTypeSeEvent = OS_IO_PACKET_TYPE_SE_EVT,
 
-    PacketTypeRawApdu = OS_IO_PACKET_TYPE_RAW_APDU as u8,
-    PacketTypeUsbHidApdu = OS_IO_PACKET_TYPE_USB_HID_APDU as u8,
-    PacketTypeUsbWebusbApdu = OS_IO_PACKET_TYPE_USB_WEBUSB_APDU as u8,
+    PacketTypeRawApdu = OS_IO_PACKET_TYPE_RAW_APDU,
+    PacketTypeUsbHidApdu = OS_IO_PACKET_TYPE_USB_HID_APDU,
+    PacketTypeUsbWebusbApdu = OS_IO_PACKET_TYPE_USB_WEBUSB_APDU,
 
-    PacketTypeBleApdu = OS_IO_PACKET_TYPE_BLE_APDU as u8,
+    PacketTypeBleApdu = OS_IO_PACKET_TYPE_BLE_APDU,
 }
 
 impl From<u8> for PacketTypes {
     fn from(v: u8) -> PacketTypes {
-        match v as u8 {
+        match v {
             OS_IO_PACKET_TYPE_NONE => PacketTypes::PacketTypeNone,
             OS_IO_PACKET_TYPE_SEPH => PacketTypes::PacketTypeSeph,
             OS_IO_PACKET_TYPE_SE_EVT => PacketTypes::PacketTypeSeEvent,
@@ -56,15 +56,15 @@ impl From<u8> for Events {
 
 #[repr(u8)]
 pub enum ItcUxEvent {
-    AskBlePairing = ITC_UX_ASK_BLE_PAIRING as u8,
-    BlePairingStatus = ITC_UX_BLE_PAIRING_STATUS as u8,
-    Redisplay = ITC_UX_REDISPLAY as u8,
+    AskBlePairing = ITC_UX_ASK_BLE_PAIRING,
+    BlePairingStatus = ITC_UX_BLE_PAIRING_STATUS,
+    Redisplay = ITC_UX_REDISPLAY,
     Unknown = 0xff,
 }
 
 impl From<u8> for ItcUxEvent {
     fn from(v: u8) -> ItcUxEvent {
-        match v as u8 {
+        match v {
             ITC_UX_ASK_BLE_PAIRING => ItcUxEvent::AskBlePairing,
             ITC_UX_BLE_PAIRING_STATUS => ItcUxEvent::BlePairingStatus,
             ITC_UX_REDISPLAY => ItcUxEvent::Redisplay,
@@ -91,18 +91,15 @@ pub type ApduBufferT = apdu_buffer_s;
 
 pub fn handle_event(_apdu_buffer: &mut [u8], spi_buffer: &[u8]) {
     let _len = u16::from_be_bytes([spi_buffer[1], spi_buffer[2]]);
-    match Events::from(spi_buffer[0]) {
-        Events::TickerEvent => {
-            #[cfg(any(
-                target_os = "apex_p",
-                target_os = "stax",
-                target_os = "flex",
-                feature = "nano_nbgl"
-            ))]
-            unsafe {
-                ux_process_ticker_event();
-            }
+    if let Events::TickerEvent = Events::from(spi_buffer[0]) {
+        #[cfg(any(
+            target_os = "apex_p",
+            target_os = "stax",
+            target_os = "flex",
+            feature = "nano_nbgl"
+        ))]
+        unsafe {
+            ux_process_ticker_event();
         }
-        _ => (),
     }
 }

@@ -730,7 +730,7 @@ impl<'a> Field<'a> {
                 let count_str = page_count.numtoa_str(10, &mut buf_count);
 
                 concatenate(
-                    &[&self.name, " (", &page_str, "/", &count_str, ")"],
+                    &[self.name, " (", page_str, "/", count_str, ")"],
                     &mut header_buf,
                 );
             }
@@ -953,20 +953,17 @@ impl<'a> MultiFieldReview<'a> {
 }
 
 fn display_first_page(page_opt: &Option<Page>) {
-    match page_opt {
-        Some(page) => {
-            clear_screen();
-            RIGHT_ARROW.display();
-            page.place();
-            crate::ui::screen_util::screen_update();
+    if let Some(page) = page_opt {
+        clear_screen();
+        RIGHT_ARROW.display();
+        page.place();
+        crate::ui::screen_util::screen_update();
 
-            let mut buttons = ButtonsState::new();
-            loop {
-                if let Some(ButtonEvent::RightButtonRelease) = get_event(&mut buttons) {
-                    return;
-                }
+        let mut buttons = ButtonsState::new();
+        loop {
+            if let Some(ButtonEvent::RightButtonRelease) = get_event(&mut buttons) {
+                return;
             }
         }
-        None => (),
     }
 }
