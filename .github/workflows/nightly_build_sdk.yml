@@ -21,7 +21,7 @@ jobs:
         target: ["nanox", "nanosplus", "stax", "flex", "apex_p"]
     steps:
       - name: Clone
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install latest Rust nightly
         run: |

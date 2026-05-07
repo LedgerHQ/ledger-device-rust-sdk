@@ -60,7 +60,7 @@ jobs:
         target: ["nanox", "nanosplus", "stax", "flex", "apex_p"]
     steps:
       - name: Clone Rust SDK
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ inputs.rust_sdk_repo }}
           ref: ${{ inputs.rust_sdk_branch }}
