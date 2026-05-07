@@ -31,7 +31,7 @@ jobs:
         package: [include_gif, testmacro, ledger_secure_sdk_sys, ledger_device_sdk]
     steps:
       - name: Clone
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Cargo clippy
         working-directory: ${{ matrix.package }}
         run: |
@@ -44,7 +44,7 @@ jobs:
       image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
     steps:
       - name: Clone
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Run cargo fmt
         run: |
           cargo fmt --all --check
@@ -74,7 +74,7 @@ jobs:
         target: ["nanox", "nanosplus", "stax", "flex", "apex_p"]
     steps:
       - name: Clone
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Unit tests
         working-directory: ledger_device_sdk
         run: |

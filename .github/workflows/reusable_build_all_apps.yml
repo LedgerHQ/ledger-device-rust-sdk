@@ -41,12 +41,12 @@ jobs:
         rust_apps: ${{ steps.get_rust_apps.outputs.rust_apps }}
       steps:
         - name: Checkout repository
-          uses: actions/checkout@v4
+          uses: actions/checkout@v6
           with:
             repository: LedgerHQ/ledger-device-rust-sdk
             ref: 'master'
         - name: Set up Python
-          uses: actions/setup-python@v4
+          uses: actions/setup-python@v6
           with:
               python-version: '3.x'
         - name: Install ledgered
@@ -83,13 +83,13 @@ jobs:
               run: pip install ledgered --break-system-packages
             - name: Clone SDK
               if: ${{ inputs.rust_sdk_branch != '' }}
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
               with:
                 path: sdk
                 repository: LedgerHQ/ledger-device-rust-sdk
                 ref: ${{ inputs.rust_sdk_branch }}
             - name: Clone App
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
               with:
                 repository: LedgerHQ/${{ matrix.app-name }}
                 submodules: true
