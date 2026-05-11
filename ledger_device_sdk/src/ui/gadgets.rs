@@ -1,11 +1,8 @@
+use crate::seph;
 use crate::{
-    buttons::ButtonEvent::*,
+    buttons::{ButtonEvent, ButtonEvent::*, ButtonsState, get_button_event},
     io::{self, ApduHeader, Comm, Event, Reply},
     uxapp::{BOLOS_UX_OK, UxEvent},
-};
-use ledger_secure_sdk_sys::{
-    buttons::{ButtonEvent, ButtonsState, get_button_event},
-    seph,
 };
 
 use crate::ui::bitmaps::{Glyph, WARNING};

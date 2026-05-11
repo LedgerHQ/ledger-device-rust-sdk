@@ -14,7 +14,7 @@ pub use crate::io_legacy::{ApduHeader, Event, Reply, StatusWords};
 
 use crate::io_callbacks::nbgl_register_callbacks;
 
-use ledger_secure_sdk_sys::seph as sys_seph;
+use crate::seph;
 
 /// Default buffer size for `Comm` when no custom size is specified.
 pub const DEFAULT_BUF_SIZE: usize = 273;
@@ -126,9 +126,7 @@ macro_rules! define_comm {
 }
 
 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-use crate::buttons::ButtonEvent;
-#[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-use ledger_secure_sdk_sys::buttons::{ButtonsState, get_button_event};
+use crate::buttons::ButtonsState;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CommError {
@@ -183,7 +181,7 @@ impl<const N: usize> Comm<N> {
 
     /// Receive into the internal buffer. Returns a read-only guard.
     fn recv(&mut self, check_se_event: bool) -> Result<Rx<'_, N>, CommError> {
-        let result = sys_seph::io_rx(&mut self.buf, check_se_event);
+        let result = seph::io_rx(&mut self.buf, check_se_event);
         if result < 0 {
             return Err(CommError::IoError);
         }
@@ -407,7 +405,7 @@ impl<'a, const N: usize> CommandResponse<'a, N> {
         let sw: u16 = reply.into().0;
         self.append(sw.to_be_bytes().as_ref())?;
         let n = self.len;
-        if 0 > sys_seph::io_tx(self.comm.apdu_type, self.comm.buf[..n].as_ref(), n) {
+        if 0 > seph::io_tx(self.comm.apdu_type, self.comm.buf[..n].as_ref(), n) {
             return Err(CommError::IoError);
         }
         // Clear the pending APDU state after sending a reply, so the next

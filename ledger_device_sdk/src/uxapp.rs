@@ -1,4 +1,4 @@
-use ledger_secure_sdk_sys::seph as sys_seph;
+use crate::seph;
 use ledger_secure_sdk_sys::*;
 
 #[cfg(not(feature = "io_new"))]
@@ -73,7 +73,7 @@ impl UxEvent {
         let mut ret = unsafe { os_sched_last_status(TASK_BOLOS_UX as u32) } as u32;
         while ret == BOLOS_UX_IGNORE || ret == BOLOS_UX_CONTINUE {
             let mut spi_buffer = [0u8; 256];
-            sys_seph::io_rx(&mut spi_buffer, true);
+            seph::io_rx(&mut spi_buffer, true);
             UxEvent::Event.request();
             ret = unsafe { os_sched_last_status(TASK_BOLOS_UX as u32) } as u32;
         }
@@ -89,7 +89,7 @@ impl UxEvent {
         let mut ret = unsafe { os_sched_last_status(TASK_BOLOS_UX as u32) } as u32;
         let mut event = None;
         while ret == BOLOS_UX_IGNORE || ret == BOLOS_UX_CONTINUE {
-            let status = sys_seph::io_rx(&mut comm.io_buffer, true);
+            let status = seph::io_rx(&mut comm.io_buffer, true);
             if status > 0 {
                 event = comm.decode_event(status)
             }

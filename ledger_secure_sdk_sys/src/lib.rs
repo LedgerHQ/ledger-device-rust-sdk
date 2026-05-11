@@ -4,9 +4,7 @@ use core::ffi::c_void;
 #[cfg(feature = "heap")]
 use core::mem::MaybeUninit;
 
-pub mod buttons;
 pub mod infos;
-pub mod seph;
 
 /// Wrapper for 'os_sched_exit'
 /// Exit application with status
