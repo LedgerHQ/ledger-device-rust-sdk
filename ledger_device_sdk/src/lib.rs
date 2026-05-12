@@ -12,7 +12,6 @@
 
 mod app_info;
 pub mod bn;
-pub mod buttons;
 pub mod ecc;
 pub mod hash;
 pub mod hmac;
@@ -75,6 +74,7 @@ pub fn exiting_panic(_info: &PanicInfo) -> ! {
 }
 
 // Re-export exit_app
+pub use ledger_secure_sdk_sys::buttons;
 pub use ledger_secure_sdk_sys::exit_app;
 
 // Re-export include_gif macro
@@ -113,7 +113,7 @@ pub extern "C" fn _start() -> ! {
     ledger_secure_sdk_sys::exit_app(1);
 }
 
-/// Data wrapper to fsorce access through address translation with [`pic_rs`] or
+/// Data wrapper to force access through address translation with [`pic_rs`] or
 /// [`pic_rs_mut`]. This can help preventing mistakes when accessing data which
 /// has been relocated.
 ///

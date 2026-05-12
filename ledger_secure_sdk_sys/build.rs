@@ -337,7 +337,10 @@ impl SDKBuilder<'_> {
         let mut cxdefines: Vec<String> = content
             .lines()
             .filter(|line| !line.starts_with('#'))
-            .flat_map(|line| line.split_whitespace().filter(|word| word.starts_with("HAVE")))
+            .flat_map(|line| {
+                line.split_whitespace()
+                    .filter(|word| word.starts_with("HAVE"))
+            })
             .map(str::to_owned)
             .collect();
         cxdefines.push("NATIVE_LITTLE_ENDIAN".to_string());

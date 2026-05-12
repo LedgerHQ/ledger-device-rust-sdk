@@ -3,7 +3,8 @@
 #![cfg_attr(feature = "io_new", allow(dead_code))]
 
 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-use crate::buttons::{ButtonEvent, ButtonsState, get_button_event};
+use ledger_secure_sdk_sys::buttons::{ButtonEvent, ButtonsState, get_button_event};
+use ledger_secure_sdk_sys::seph as sys_seph;
 use ledger_secure_sdk_sys::*;
 
 use crate::io_callbacks::nbgl_register_callbacks;
@@ -277,7 +278,7 @@ impl Comm {
         ))]
         if !self.skip_rx_on_send {
             let mut buffer: [u8; 273] = [0; 273];
-            let status = seph::io_rx(&mut buffer, false);
+            let status = sys_seph::io_rx(&mut buffer, false);
             if status > 0 {
                 let packet_type = seph::PacketTypes::from(buffer[0]);
                 let event = seph::Events::from(buffer[1]);
@@ -292,10 +293,10 @@ impl Comm {
         }
         self.skip_rx_on_send = false;
         if self.tx != 0 {
-            seph::io_tx(self.apdu_type, &self.apdu_buffer, self.tx);
+            sys_seph::io_tx(self.apdu_type, &self.apdu_buffer, self.tx);
             self.tx = 0;
         } else {
-            seph::io_tx(self.apdu_type, &self.io_buffer, self.tx_length);
+            sys_seph::io_tx(self.apdu_type, &self.io_buffer, self.tx_length);
         }
         self.tx_length = 0;
         self.rx_length = 0;
@@ -344,7 +345,7 @@ impl Comm {
     {
         self.rx_length = 0;
         loop {
-            let status = seph::io_rx(&mut self.io_buffer, true);
+            let status = sys_seph::io_rx(&mut self.io_buffer, true);
 
             if status > 0
                 && let Some(value) = self.decode_event(status)
@@ -359,7 +360,7 @@ impl Comm {
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
-        let status = seph::io_rx(&mut self.io_buffer, true);
+        let status = sys_seph::io_rx(&mut self.io_buffer, true);
 
         if status > 0 {
             return self.detect_apdu::<T>(status);
