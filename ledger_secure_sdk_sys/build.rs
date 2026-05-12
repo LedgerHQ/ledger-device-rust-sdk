@@ -990,47 +990,6 @@ fn retrieve_target_file_infos(
     Ok((target_id, target_name))
 }
 
-/// Fetch the appropriate C SDK to build
-#[allow(dead_code)]
-fn clone_sdk(devicename: &DeviceName) -> PathBuf {
-    let (repo_url, sdk_branch) = match devicename {
-        DeviceName::NanoX => (
-            Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_24",
-        ),
-        DeviceName::NanoSPlus => (
-            Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_24",
-        ),
-        DeviceName::Stax => (
-            Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_24",
-        ),
-        DeviceName::Flex => (
-            Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_24",
-        ),
-        DeviceName::ApexP => (
-            Path::new("https://github.com/LedgerHQ/ledger-secure-sdk"),
-            "API_LEVEL_25",
-        ),
-    };
-
-    let out_dir = env::var("OUT_DIR").unwrap();
-    let c_sdk = Path::new(out_dir.as_str()).join("ledger-secure-sdk");
-    if !c_sdk.exists() {
-        Command::new("git")
-            .arg("clone")
-            .arg(repo_url.to_str().unwrap())
-            .arg("-b")
-            .arg(sdk_branch)
-            .arg(c_sdk.as_path())
-            .output()
-            .ok();
-    }
-    c_sdk
-}
-
 fn generate_glyphs(device: &Device) {
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
     let dest_path = out_path.join("glyphs");
