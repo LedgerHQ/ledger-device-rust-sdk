@@ -9,18 +9,21 @@ use std::{env, fs::File, io::BufRead, io::BufReader, io::Read, io::Write};
 const AUX_C_FILES: [&str; 2] = ["./src/c/src.c", "./src/c/sjlj.s"];
 
 const SDK_C_FILES: [&str; 12] = [
-    "src/pic.c",
+    // Syscalls
     "src/cx_stubs.S",
-    "src/os.c",
     "src/svc_call.s",
     "src/svc_cx_call.s",
+    "src/syscalls.c",
+    //
+    "src/pic.c",
+    "src/os.c",
     "src/os_printf.c",
     "protocol/src/ledger_protocol.c",
+    // IO
     "io/src/os_io.c",
     "io/src/os_io_default_apdu.c",
     "io/src/os_io_seph_cmd.c",
     "io/src/os_io_seph_ux.c",
-    "src/syscalls.c",
 ];
 
 #[derive(Debug, Default, PartialEq)]
@@ -449,8 +452,6 @@ impl SDKBuilder<'_> {
     }
 
     pub fn build_c_sdk(&self) -> Result<(), SDKBuildError> {
-        // Generate glyphs
-        generate_glyphs(&self.device);
 
         let mut command = cc::Build::new();
         if env::var_os("CC").is_none() {
@@ -463,7 +464,8 @@ impl SDKBuilder<'_> {
             .files(&AUX_C_FILES)
             .files(str2path(&self.device.c_sdk, &SDK_C_FILES));
 
-        let glyphs_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("glyphs");
+        // Generate glyphs
+        let glyphs_path = generate_glyphs(&self.device);
 
         command = command
             .include(self.gcc_toolchain.join("include"))
@@ -990,7 +992,7 @@ fn retrieve_target_file_infos(
     Ok((target_id, target_name))
 }
 
-fn generate_glyphs(device: &Device) {
+fn generate_glyphs(device: &Device) -> PathBuf {
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
     let dest_path = out_path.join("glyphs");
     if !dest_path.exists() {
@@ -1065,6 +1067,7 @@ fn generate_glyphs(device: &Device) {
             .write_all(&output2.stdout)
             .expect("Failed to write glyphs.c");
     }
+    dest_path
 }
 
 /// Helper function to concatenate all paths in pathlist to c_sdk's path
