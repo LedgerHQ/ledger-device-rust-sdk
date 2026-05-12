@@ -56,6 +56,13 @@ impl Device<'_> {
             .find(|s| s.name == self.name)
             .expect("DeviceName not present in SPECS")
     }
+
+    /// `true` when the build is using the NBGL graphics stack:
+    /// always on for touchscreen devices (Stax/Flex/ApexP), and on for Nano
+    /// devices only when the `nano_nbgl` feature is enabled.
+    fn is_nbgl(&self) -> bool {
+        !self.spec().is_nano() || env::var_os("CARGO_FEATURE_NANO_NBGL").is_some()
+    }
 }
 
 impl std::fmt::Display for DeviceName {
@@ -195,17 +202,6 @@ impl CSDKInfo {
     }
 }
 
-#[derive(Debug)]
-enum SDKBuildError {
-    UnsupportedDevice,
-    InvalidAPILevel,
-    MissingSDKName,
-    MissingSDKPath,
-    TargetFileNotFound,
-    MissingTargetId,
-    MissingTargetName,
-}
-
 struct SDKBuilder<'a> {
     api_level: u32,
     gcc_toolchain: PathBuf,
@@ -223,7 +219,7 @@ impl SDKBuilder<'_> {
         }
     }
 
-    pub fn gcc_toolchain(&mut self) -> Result<(), SDKBuildError> {
+    pub fn gcc_toolchain(&mut self) {
         // Find out where the arm toolchain is located
         let output = Command::new("arm-none-eabi-gcc")
             .arg("-print-sysroot")
@@ -242,34 +238,36 @@ impl SDKBuilder<'_> {
             sysroot.to_string()
         };
         self.gcc_toolchain = PathBuf::from(gcc_toolchain);
-        Ok(())
     }
 
-    pub fn device(&mut self) -> Result<(), SDKBuildError> {
+    pub fn device(&mut self) {
         let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
         let spec = SPECS
             .iter()
             .find(|s| s.target_os == target_os)
-            .ok_or(SDKBuildError::UnsupportedDevice)?;
+            .unwrap_or_else(|| panic!("Unsupported target_os: {target_os}"));
 
         let c_sdk = env::var("LEDGER_SDK_PATH")
             .or_else(|_| env::var(spec.env_fallback))
             .map(PathBuf::from)
-            .map_err(|_| SDKBuildError::MissingSDKPath)?;
+            .unwrap_or_else(|_| {
+                panic!(
+                    "LEDGER_SDK_PATH or {} must be set to a Ledger C SDK checkout",
+                    spec.env_fallback
+                )
+            });
 
         // Defines from the per-device .defines header. Nano devices toggle
         // between BAGL and NBGL based on the `nano_nbgl` feature; touchscreen
         // devices encode the choice directly in their .defines file.
         let mut defines = header2define(spec.defines_file().to_str().unwrap());
+        let nano_nbgl = env::var_os("CARGO_FEATURE_NANO_NBGL").is_some();
         if spec.is_nano() {
-            if env::var_os("CARGO_FEATURE_NANO_NBGL").is_some() {
-                println!("cargo:warning=NBGL is built");
+            if nano_nbgl {
                 defines.push(("HAVE_NBGL".into(), None));
                 defines.push(("NBGL_STEP".into(), None));
                 defines.push(("NBGL_USE_CASE".into(), None));
             } else {
-                println!("cargo:warning=BAGL is built");
-                println!("cargo:rustc-env=C_SDK_GRAPHICS=bagl");
                 defines.push(("HAVE_BAGL".into(), None));
                 defines.push(("HAVE_UX_FLOW".into(), None));
             }
@@ -277,12 +275,11 @@ impl SDKBuilder<'_> {
 
         let cflags = read_lines(&spec.cflags_file());
 
-        let glyphs_folders: Vec<PathBuf> = if spec.is_nano()
-            && env::var_os("CARGO_FEATURE_NANO_NBGL").is_none()
-        {
-            vec![c_sdk.join("lib_ux/glyphs")]
-        } else {
+        let is_nbgl = !spec.is_nano() || nano_nbgl;
+        let glyphs_folders: Vec<PathBuf> = if is_nbgl {
             spec.nbgl_glyph_dirs.iter().map(|d| c_sdk.join(d)).collect()
+        } else {
+            vec![c_sdk.join("lib_ux/glyphs")]
         };
 
         let arm_libs = c_sdk
@@ -303,60 +300,51 @@ impl SDKBuilder<'_> {
             linker_script: spec.linker_script().display().to_string(),
         };
 
-        // export TARGET into env for 'infos.rs'
+        // Export metadata for 'infos.rs'. C_SDK_GRAPHICS is set once here so
+        // both bindings + cc paths agree, instead of being scattered across
+        // device()/configure_lib_nbgl().
         println!("cargo:rustc-env=TARGET={}", self.device.name);
-        println!("cargo:warning=Device is {:?}", self.device.name);
-        Ok(())
+        println!(
+            "cargo:rustc-env=C_SDK_GRAPHICS={}",
+            if is_nbgl { "nbgl" } else { "bagl" }
+        );
+        println!(
+            "cargo:warning={} is built",
+            if is_nbgl { "NBGL" } else { "BAGL" }
+        );
     }
 
-    pub fn get_info(&mut self) -> Result<(), SDKBuildError> {
-        // Retrieve the C SDK information
-        let sdk_info = retrieve_csdk_info(&self.device, &self.device.c_sdk)?;
-        match sdk_info.api_level {
-            Some(api_level) => {
-                self.api_level = api_level;
-                // Export api level into env for 'infos.rs'
-                println!("cargo:rustc-env=API_LEVEL={}", self.api_level);
-                println!("cargo:warning=API_LEVEL is {}", self.api_level);
-            }
-            None => return Err(SDKBuildError::InvalidAPILevel),
-        }
+    pub fn get_info(&mut self) {
+        let sdk_info = retrieve_csdk_info(&self.device, &self.device.c_sdk);
+        self.api_level = sdk_info
+            .api_level
+            .expect("API_LEVEL not found in Makefile.defines");
+        println!("cargo:rustc-env=API_LEVEL={}", self.api_level);
 
-        // Export other SDK infos into env for 'infos.rs'
+        // Export the rest of the C SDK metadata for 'infos.rs'. No
+        // cargo:warning= duplicates — these values land in ELF sections.
         println!("cargo:rustc-env=TARGET_ID={}", sdk_info.target_id);
-        println!("cargo:warning=TARGET_ID is {}", sdk_info.target_id);
         println!("cargo:rustc-env=TARGET_NAME={}", sdk_info.target_name);
-        println!("cargo:warning=TARGET_NAME is {}", sdk_info.target_name);
         println!("cargo:rustc-env=C_SDK_NAME={}", sdk_info.c_sdk_name);
-        println!("cargo:warning=C_SDK_NAME is {}", sdk_info.c_sdk_name);
         println!("cargo:rustc-env=C_SDK_HASH={}", sdk_info.c_sdk_hash);
-        println!("cargo:warning=C_SDK_HASH is {}", sdk_info.c_sdk_hash);
         println!("cargo:rustc-env=C_SDK_VERSION={}", sdk_info.c_sdk_version);
-        println!("cargo:warning=C_SDK_VERSION is {}", sdk_info.c_sdk_version);
-        Ok(())
     }
 
-    fn cxdefines(&mut self) -> Result<(), SDKBuildError> {
-        let mut makefile = File::open(self.device.c_sdk.join("Makefile.conf.cx"))
-            .expect("Could not find Makefile.conf.cx");
-        let mut content = String::new();
-        makefile.read_to_string(&mut content).unwrap();
-        // Extract the defines from the Makefile.conf.cx.
-        // They all begin with `HAVE` and are ' ' and '\n' separated.
-        let mut cxdefines = content
-            .split('\n')
-            .filter(|line| !line.starts_with('#')) // Remove lines that are commented
-            .flat_map(|line| line.split(' ').filter(|word| word.starts_with("HAVE")))
-            .map(|line| line.to_string())
-            .collect::<Vec<String>>();
-
+    fn cxdefines(&mut self) {
+        let content = fs::read_to_string(self.device.c_sdk.join("Makefile.conf.cx"))
+            .expect("Could not read Makefile.conf.cx");
+        // Extract the HAVE_* defines (whitespace-separated, '#'-comments stripped).
+        let mut cxdefines: Vec<String> = content
+            .lines()
+            .filter(|line| !line.starts_with('#'))
+            .flat_map(|line| line.split_whitespace().filter(|word| word.starts_with("HAVE")))
+            .map(str::to_owned)
+            .collect();
         cxdefines.push("NATIVE_LITTLE_ENDIAN".to_string());
         self.cxdefines = cxdefines;
-        Ok(())
     }
 
-    pub fn build_c_sdk(&self) -> Result<(), SDKBuildError> {
-
+    pub fn build_c_sdk(&self) {
         let mut command = cc::Build::new();
         if env::var_os("CC").is_none() {
             command.compiler("clang");
@@ -463,10 +451,9 @@ impl SDKBuilder<'_> {
         let path = self.device.arm_libs.clone();
         println!("cargo:rustc-link-lib=c");
         println!("cargo:rustc-link-search={path}");
-        Ok(())
     }
 
-    fn generate_bindings(&self) -> Result<(), SDKBuildError> {
+    fn generate_bindings(&self) {
         let bsdk = self.device.c_sdk.display().to_string();
         let gcc_tc = self.gcc_toolchain.display().to_string();
         let args = [
@@ -518,12 +505,7 @@ impl SDKBuilder<'_> {
         let glyphs = out_path.join("glyphs");
         include_path += glyphs.to_str().unwrap();
         bindings = bindings.clang_args([include_path.as_str()]);
-        if ((self.device.name == DeviceName::NanoX || self.device.name == DeviceName::NanoSPlus)
-            && env::var_os("CARGO_FEATURE_NANO_NBGL").is_some())
-            || self.device.name == DeviceName::Stax
-            || self.device.name == DeviceName::Flex
-            || self.device.name == DeviceName::ApexP
-        {
+        if self.device.is_nbgl() {
             bindings = bindings.clang_args([
                 format!("-I{bsdk}/lib_nbgl/include/").as_str(),
                 format!("-I{bsdk}/lib_ux_nbgl/").as_str(),
@@ -535,7 +517,7 @@ impl SDKBuilder<'_> {
                     .to_str()
                     .unwrap(),
             );
-            if self.device.name == DeviceName::NanoSPlus || self.device.name == DeviceName::NanoX {
+            if self.device.spec().is_nano() {
                 bindings = bindings.clang_args(["-DHAVE_NBGL", "-DNBGL_STEP", "-DNBGL_USE_CASE"]);
             }
         } else {
@@ -560,11 +542,9 @@ impl SDKBuilder<'_> {
         bindings
             .write_to_file(out_path.join("bindings.rs"))
             .expect("Couldn't write bindings");
-
-        Ok(())
     }
 
-    fn generate_heap_size(&self) -> Result<(), SDKBuildError> {
+    fn generate_heap_size(&self) {
         let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
 
         // HEAP_SIZE can be either:
@@ -623,10 +603,9 @@ impl SDKBuilder<'_> {
             format!("pub const HEAP_SIZE: usize = {heap_size_value};"),
         )
         .expect("Unable to write file");
-        Ok(())
     }
 
-    fn copy_linker_script(&self) -> Result<(), SDKBuildError> {
+    fn copy_linker_script(&self) {
         let out_dir = PathBuf::from(env::var_os("OUT_DIR").unwrap());
         // extend the library search path
         println!("cargo:rustc-link-search={}", out_dir.display());
@@ -637,7 +616,6 @@ impl SDKBuilder<'_> {
         )
         .unwrap();
         std::fs::copy("link.ld", out_dir.join("link.ld")).unwrap();
-        Ok(())
     }
 }
 
@@ -666,19 +644,20 @@ fn main() {
 
     let start = Instant::now();
     let mut sdk_builder = SDKBuilder::new();
-    sdk_builder.gcc_toolchain().unwrap();
-    sdk_builder.device().unwrap();
-    sdk_builder.get_info().unwrap();
-    sdk_builder.cxdefines().unwrap();
-    sdk_builder.build_c_sdk().unwrap();
-    sdk_builder.generate_bindings().unwrap();
-    sdk_builder.generate_heap_size().unwrap();
-    sdk_builder.copy_linker_script().unwrap();
-    let end = start.elapsed();
-    println!(
-        "cargo:warning=Total build.rs time: {} seconds",
-        end.as_secs()
-    );
+    sdk_builder.gcc_toolchain();
+    sdk_builder.device();
+    sdk_builder.get_info();
+    sdk_builder.cxdefines();
+    sdk_builder.build_c_sdk();
+    sdk_builder.generate_bindings();
+    sdk_builder.generate_heap_size();
+    sdk_builder.copy_linker_script();
+    if env::var_os("LEDGER_SDK_BUILD_TIMING").is_some() {
+        println!(
+            "cargo:warning=Total build.rs time: {} seconds",
+            start.elapsed().as_secs()
+        );
+    }
 }
 
 // --------------------------------------------------
@@ -719,8 +698,6 @@ fn configure_lib_ble(command: &mut cc::Build, c_sdk: &Path) {
 }
 
 fn configure_lib_nbgl(command: &mut cc::Build, c_sdk: &Path) {
-    println!("cargo:rustc-env=C_SDK_GRAPHICS=nbgl");
-
     let glyphs_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("glyphs");
     command
         .include(c_sdk.join("lib_nbgl/include/"))
@@ -764,12 +741,12 @@ fn configure_lib_nbgl(command: &mut cc::Build, c_sdk: &Path) {
         .file(glyphs_path.join("glyphs.c"));
 }
 
-fn retrieve_csdk_info(device: &Device, path: &Path) -> Result<CSDKInfo, SDKBuildError> {
+fn retrieve_csdk_info(device: &Device, path: &Path) -> CSDKInfo {
     let mut csdk_info = CSDKInfo::new();
-    (csdk_info.api_level, csdk_info.c_sdk_name) = retrieve_makefile_infos(path)?;
-    (csdk_info.target_id, csdk_info.target_name) = retrieve_target_file_infos(device, path)?;
+    (csdk_info.api_level, csdk_info.c_sdk_name) = retrieve_makefile_infos(path);
+    (csdk_info.target_id, csdk_info.target_name) = retrieve_target_file_infos(device, path);
     (csdk_info.c_sdk_hash, csdk_info.c_sdk_version) = retrieve_csdk_git_info(path);
-    Ok(csdk_info)
+    csdk_info
 }
 
 fn retrieve_csdk_git_info(c_sdk: &Path) -> (String, String) {
@@ -818,7 +795,7 @@ fn retrieve_csdk_git_info(c_sdk: &Path) -> (String, String) {
     (c_sdk_hash, c_sdk_version)
 }
 
-fn retrieve_makefile_infos(c_sdk: &Path) -> Result<(Option<u32>, String), SDKBuildError> {
+fn retrieve_makefile_infos(c_sdk: &Path) -> (Option<u32>, String) {
     let makefile =
         File::open(c_sdk.join("Makefile.defines")).expect("Could not find Makefile.defines");
     let mut api_level: Option<u32> = None;
@@ -830,15 +807,14 @@ fn retrieve_makefile_infos(c_sdk: &Path) -> Result<(Option<u32>, String), SDKBui
             && line.contains("API_LEVEL")
             && api_level.is_none()
         {
-            api_level = Some(value.parse().map_err(|_| SDKBuildError::InvalidAPILevel)?);
+            api_level = Some(value.parse().expect("API_LEVEL is not a valid u32"));
         }
         if api_level.is_some() {
-            // Key found, break out of the loop
             break;
         }
     }
     let makefile =
-        File::open(c_sdk.join("Makefile.target")).expect("Could not find Makefile.defines");
+        File::open(c_sdk.join("Makefile.target")).expect("Could not find Makefile.target");
     let mut sdk_name: Option<String> = None;
     for line in BufReader::new(makefile)
         .lines()
@@ -851,23 +827,22 @@ fn retrieve_makefile_infos(c_sdk: &Path) -> Result<(Option<u32>, String), SDKBui
             sdk_name = Some(value.to_string().replace('\"', ""));
         }
         if sdk_name.is_some() {
-            // Key found, break out of the loop
             break;
         }
     }
 
-    let sdk_name = sdk_name.ok_or(SDKBuildError::MissingSDKName)?;
-    Ok((api_level, sdk_name))
+    let sdk_name = sdk_name.expect("SDK_NAME not found in Makefile.target");
+    (api_level, sdk_name)
 }
 
-fn retrieve_target_file_infos(
-    device: &Device,
-    c_sdk: &Path,
-) -> Result<(String, String), SDKBuildError> {
-    let prefix = format!("target/{}/", device.name);
-    let target_file_path = c_sdk.join(format!("{}include/bolos_target.h", prefix));
-    let target_file =
-        File::open(target_file_path).map_err(|_| SDKBuildError::TargetFileNotFound)?;
+fn retrieve_target_file_infos(device: &Device, c_sdk: &Path) -> (String, String) {
+    let target_file_path = c_sdk.join(format!("target/{}/include/bolos_target.h", device.name));
+    let target_file = File::open(&target_file_path).unwrap_or_else(|e| {
+        panic!(
+            "Could not open target file {}: {e}",
+            target_file_path.display()
+        )
+    });
     let mut target_id: Option<String> = None;
     let mut target_name: Option<String> = None;
 
@@ -879,8 +854,7 @@ fn retrieve_target_file_infos(
             target_id = Some(
                 line.split_whitespace()
                     .nth(2)
-                    .ok_or("err")
-                    .map_err(|_| SDKBuildError::MissingTargetId)?
+                    .expect("Malformed `#define TARGET_ID` line in bolos_target.h")
                     .to_string(),
             );
         } else if target_name.is_none()
@@ -890,21 +864,19 @@ fn retrieve_target_file_infos(
             target_name = Some(
                 line.split_whitespace()
                     .nth(1)
-                    .ok_or("err")
-                    .map_err(|_| SDKBuildError::MissingTargetName)?
+                    .expect("Malformed `#define TARGET_*` line in bolos_target.h")
                     .to_string(),
             );
         }
 
         if target_id.is_some() && target_name.is_some() {
-            // Both tokens found, break out of the loop
             break;
         }
     }
 
-    let target_id = target_id.ok_or(SDKBuildError::MissingTargetId)?;
-    let target_name = target_name.ok_or(SDKBuildError::MissingTargetName)?;
-    Ok((target_id, target_name))
+    let target_id = target_id.expect("TARGET_ID not found in bolos_target.h");
+    let target_name = target_name.expect("TARGET_NAME not found in bolos_target.h");
+    (target_id, target_name)
 }
 
 fn generate_glyphs(device: &Device) -> PathBuf {
@@ -915,13 +887,7 @@ fn generate_glyphs(device: &Device) -> PathBuf {
     }
 
     // NBGL Glyphs
-    if ((device.name == DeviceName::NanoSPlus || device.name == DeviceName::NanoX)
-        && env::var_os("CARGO_FEATURE_NANO_NBGL").is_some())
-        || device.name == DeviceName::Stax
-        || device.name == DeviceName::Flex
-        || device.name == DeviceName::ApexP
-    {
-        println!("cargo:warning=NBGL glyphs are generated");
+    if device.is_nbgl() {
         let icon2glyph = device.c_sdk.join("lib_nbgl/tools/icon2glyph.py");
 
         let mut cmd = Command::new(icon2glyph.as_os_str());
@@ -930,7 +896,7 @@ fn generate_glyphs(device: &Device) -> PathBuf {
             .arg("--glyphcfile")
             .arg(dest_path.join("glyphs.c").as_os_str());
 
-        if device.name == DeviceName::NanoSPlus || device.name == DeviceName::NanoX {
+        if device.spec().is_nano() {
             cmd.arg("--reverse");
         }
 
@@ -948,7 +914,6 @@ fn generate_glyphs(device: &Device) -> PathBuf {
     }
     // BAGL Glyphs
     else {
-        println!("cargo:warning=BAGL glyphs are generated");
         let icon2glyph = device.c_sdk.join("icon3.py");
 
         let mut cmd1 = Command::new("python3");
