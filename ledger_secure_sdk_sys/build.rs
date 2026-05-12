@@ -26,7 +26,7 @@ const SDK_C_FILES: [&str; 12] = [
     "io/src/os_io_seph_ux.c",
 ];
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Clone, Copy)]
 enum DeviceName {
     #[default]
     NanoSPlus,
@@ -48,6 +48,16 @@ struct Device<'a> {
     pub linker_script: String,
 }
 
+impl Device<'_> {
+    /// Look up this device's static spec.
+    fn spec(&self) -> &'static DeviceSpec {
+        SPECS
+            .iter()
+            .find(|s| s.name == self.name)
+            .expect("DeviceName not present in SPECS")
+    }
+}
+
 impl std::fmt::Display for DeviceName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -58,6 +68,115 @@ impl std::fmt::Display for DeviceName {
             DeviceName::ApexP => write!(f, "apex_p"),
         }
     }
+}
+
+/// Per-device configuration table. Everything that differs between the five
+/// supported devices is captured here so the rest of the build script can
+/// stay device-agnostic.
+struct DeviceSpec {
+    name: DeviceName,
+    /// Value of `CARGO_CFG_TARGET_OS` for this device.
+    target_os: &'static str,
+    target_triple: &'static str,
+    /// Legacy per-device env var consulted when `LEDGER_SDK_PATH` is unset.
+    env_fallback: &'static str,
+    /// Subdir under `<c_sdk>/arch/` for prebuilt libs ("st33" or "st33k1").
+    arch_lib_dir: &'static str,
+    /// Glyph folders to feed to `icon2glyph.py` when building NBGL. For Nano
+    /// devices these are only used when the `nano_nbgl` feature is enabled.
+    nbgl_glyph_dirs: &'static [&'static str],
+}
+
+const SPECS: &[DeviceSpec] = &[
+    DeviceSpec {
+        name: DeviceName::NanoX,
+        target_os: "nanox",
+        target_triple: "thumbv6m-none-eabi",
+        env_fallback: "NANOX_SDK",
+        arch_lib_dir: "st33",
+        nbgl_glyph_dirs: &["lib_nbgl/glyphs/nano"],
+    },
+    DeviceSpec {
+        name: DeviceName::NanoSPlus,
+        target_os: "nanosplus",
+        target_triple: "thumbv8m.main-none-eabi",
+        env_fallback: "NANOSP_SDK",
+        arch_lib_dir: "st33k1",
+        nbgl_glyph_dirs: &["lib_nbgl/glyphs/nano"],
+    },
+    DeviceSpec {
+        name: DeviceName::Stax,
+        target_os: "stax",
+        target_triple: "thumbv8m.main-none-eabi",
+        env_fallback: "STAX_SDK",
+        arch_lib_dir: "st33k1",
+        nbgl_glyph_dirs: &[
+            "lib_nbgl/glyphs/wallet",
+            "lib_nbgl/glyphs/64px",
+            "lib_nbgl/glyphs/32px",
+        ],
+    },
+    DeviceSpec {
+        name: DeviceName::Flex,
+        target_os: "flex",
+        target_triple: "thumbv8m.main-none-eabi",
+        env_fallback: "FLEX_SDK",
+        arch_lib_dir: "st33k1",
+        nbgl_glyph_dirs: &[
+            "lib_nbgl/glyphs/wallet",
+            "lib_nbgl/glyphs/64px",
+            "lib_nbgl/glyphs/40px",
+        ],
+    },
+    DeviceSpec {
+        name: DeviceName::ApexP,
+        target_os: "apex_p",
+        target_triple: "thumbv8m.main-none-eabi",
+        env_fallback: "APEX_P_SDK",
+        arch_lib_dir: "st33k1",
+        nbgl_glyph_dirs: &[
+            "lib_nbgl/glyphs/wallet",
+            "lib_nbgl/glyphs/48px",
+            "lib_nbgl/glyphs/24px",
+        ],
+    },
+];
+
+impl DeviceSpec {
+    /// Path to `devices/<target_os>/` inside this crate.
+    fn config_dir(&self) -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("devices")
+            .join(self.target_os)
+    }
+
+    fn defines_file(&self) -> PathBuf {
+        self.config_dir()
+            .join(format!("c_sdk_build_{}.defines", self.target_os))
+    }
+
+    fn cflags_file(&self) -> PathBuf {
+        self.config_dir()
+            .join(format!("c_sdk_build_{}.cflags", self.target_os))
+    }
+
+    fn linker_script(&self) -> PathBuf {
+        self.config_dir()
+            .join(format!("{}_layout.ld", self.target_os))
+    }
+
+    fn is_nano(&self) -> bool {
+        matches!(self.name, DeviceName::NanoX | DeviceName::NanoSPlus)
+    }
+}
+
+/// Read a file as a list of lines (used for the per-device `.cflags` files).
+fn read_lines(path: &Path) -> Vec<String> {
+    fs::read_to_string(path)
+        .unwrap_or_else(|e| panic!("Failed to read {}: {e}", path.display()))
+        .lines()
+        .map(str::to_owned)
+        .collect()
 }
 
 #[derive(Default)]
@@ -127,275 +246,61 @@ impl SDKBuilder<'_> {
     }
 
     pub fn device(&mut self) -> Result<(), SDKBuildError> {
-        // determine device
-        self.device = match env::var_os("CARGO_CFG_TARGET_OS")
-            .unwrap()
-            .to_str()
-            .unwrap()
-        {
-            "nanosplus" => Device {
-                name: DeviceName::NanoSPlus,
-                c_sdk: match env::var("LEDGER_SDK_PATH").or_else(|_| env::var("NANOSP_SDK")) {
-                    Ok(path) => PathBuf::from(path),
-                    Err(_) => return Err(SDKBuildError::MissingSDKPath),
-                },
-                target: "thumbv8m.main-none-eabi",
-                defines: {
-                    let mut v = header2define(
-                        format!(
-                            "{}/devices/nanosplus/c_sdk_build_nanosplus.defines",
-                            env!("CARGO_MANIFEST_DIR")
-                        )
-                        .as_str(),
-                    );
-                    if env::var_os("CARGO_FEATURE_NANO_NBGL").is_some() {
-                        println!("cargo:warning=NBGL is built");
-                        v.push((String::from("HAVE_NBGL"), None));
-                        v.push((String::from("NBGL_STEP"), None));
-                        v.push((String::from("NBGL_USE_CASE"), None));
-                    } else {
-                        println!("cargo:warning=BAGL is built");
-                        println!("cargo:rustc-env=C_SDK_GRAPHICS=bagl");
-                        v.push((String::from("HAVE_BAGL"), None));
-                        v.push((String::from("HAVE_UX_FLOW"), None));
-                    }
-                    v
-                },
-                cflags: {
-                    let m_path = format!(
-                        "{}/devices/nanosplus/c_sdk_build_nanosplus.cflags",
-                        env!("CARGO_MANIFEST_DIR")
-                    );
-                    let f = File::open(m_path)
-                        .expect("Failed to open c_sdk_build_nanosplus.cflags file");
-                    let reader = BufReader::new(f);
-                    reader
-                        .lines()
-                        .map(|l| l.expect("Failed to read line"))
-                        .collect::<Vec<String>>()
-                },
-                glyphs_folders: Vec::new(),
-                arm_libs: Default::default(),
-                linker_script: format!(
-                    "{}/devices/nanosplus/nanosplus_layout.ld",
-                    env!("CARGO_MANIFEST_DIR")
-                ),
-            },
-            "nanox" => Device {
-                name: DeviceName::NanoX,
-                c_sdk: match env::var("LEDGER_SDK_PATH").or_else(|_| env::var("NANOX_SDK")) {
-                    Ok(path) => PathBuf::from(path),
-                    Err(_) => return Err(SDKBuildError::MissingSDKPath),
-                },
-                target: "thumbv6m-none-eabi",
-                defines: {
-                    let mut v = header2define(
-                        format!(
-                            "{}/devices/nanox/c_sdk_build_nanox.defines",
-                            env!("CARGO_MANIFEST_DIR")
-                        )
-                        .as_str(),
-                    );
-                    if env::var_os("CARGO_FEATURE_NANO_NBGL").is_some() {
-                        println!("cargo:warning=NBGL is built");
-                        v.push((String::from("HAVE_NBGL"), None));
-                        v.push((String::from("NBGL_STEP"), None));
-                        v.push((String::from("NBGL_USE_CASE"), None));
-                    } else {
-                        println!("cargo:warning=BAGL is built");
-                        println!("cargo:rustc-env=C_SDK_GRAPHICS=bagl");
-                        v.push((String::from("HAVE_BAGL"), None));
-                        v.push((String::from("HAVE_UX_FLOW"), None));
-                    }
-                    v
-                },
-                cflags: {
-                    let m_path = format!(
-                        "{}/devices/nanox/c_sdk_build_nanox.cflags",
-                        env!("CARGO_MANIFEST_DIR")
-                    );
-                    let f =
-                        File::open(m_path).expect("Failed to open c_sdk_build_nanox.cflags file");
-                    let reader = BufReader::new(f);
-                    reader
-                        .lines()
-                        .map(|l| l.expect("Failed to read line"))
-                        .collect::<Vec<String>>()
-                },
-                glyphs_folders: Vec::new(),
-                arm_libs: Default::default(),
-                linker_script: format!(
-                    "{}/devices/nanox/nanox_layout.ld",
-                    env!("CARGO_MANIFEST_DIR")
-                ),
-            },
-            "stax" => Device {
-                name: DeviceName::Stax,
-                c_sdk: match env::var("LEDGER_SDK_PATH").or_else(|_| env::var("STAX_SDK")) {
-                    Ok(path) => PathBuf::from(path),
-                    Err(_) => return Err(SDKBuildError::MissingSDKPath),
-                },
-                target: "thumbv8m.main-none-eabi",
-                defines: header2define(
-                    format!(
-                        "{}/devices/stax/c_sdk_build_stax.defines",
-                        env!("CARGO_MANIFEST_DIR")
-                    )
-                    .as_str(),
-                ),
-                cflags: {
-                    let m_path = format!(
-                        "{}/devices/stax/c_sdk_build_stax.cflags",
-                        env!("CARGO_MANIFEST_DIR")
-                    );
-                    let f =
-                        File::open(m_path).expect("Failed to open c_sdk_build_stax.cflags file");
-                    let reader = BufReader::new(f);
-                    reader
-                        .lines()
-                        .map(|l| l.expect("Failed to read line"))
-                        .collect::<Vec<String>>()
-                },
-                glyphs_folders: Vec::new(),
-                arm_libs: Default::default(),
-                linker_script: format!(
-                    "{}/devices/stax/stax_layout.ld",
-                    env!("CARGO_MANIFEST_DIR")
-                ),
-            },
-            "flex" => Device {
-                name: DeviceName::Flex,
-                c_sdk: match env::var("LEDGER_SDK_PATH").or_else(|_| env::var("FLEX_SDK")) {
-                    Ok(path) => PathBuf::from(path),
-                    Err(_) => return Err(SDKBuildError::MissingSDKPath),
-                },
-                target: "thumbv8m.main-none-eabi",
-                defines: header2define(
-                    format!(
-                        "{}/devices/flex/c_sdk_build_flex.defines",
-                        env!("CARGO_MANIFEST_DIR")
-                    )
-                    .as_str(),
-                ),
-                cflags: {
-                    let m_path = format!(
-                        "{}/devices/flex/c_sdk_build_flex.cflags",
-                        env!("CARGO_MANIFEST_DIR")
-                    );
-                    let f =
-                        File::open(m_path).expect("Failed to open c_sdk_build_flex.cflags file");
-                    let reader = BufReader::new(f);
-                    reader
-                        .lines()
-                        .map(|l| l.expect("Failed to read line"))
-                        .collect::<Vec<String>>()
-                },
-                glyphs_folders: Vec::new(),
-                arm_libs: Default::default(),
-                linker_script: format!(
-                    "{}/devices/flex/flex_layout.ld",
-                    env!("CARGO_MANIFEST_DIR")
-                ),
-            },
-            "apex_p" => Device {
-                name: DeviceName::ApexP,
-                c_sdk: match env::var("LEDGER_SDK_PATH").or_else(|_| env::var("APEX_P_SDK")) {
-                    Ok(path) => PathBuf::from(path),
-                    Err(_) => return Err(SDKBuildError::MissingSDKPath),
-                },
-                target: "thumbv8m.main-none-eabi",
-                defines: header2define(
-                    format!(
-                        "{}/devices/apex_p/c_sdk_build_apex_p.defines",
-                        env!("CARGO_MANIFEST_DIR")
-                    )
-                    .as_str(),
-                ),
-                cflags: {
-                    let m_path = format!(
-                        "{}/devices/apex_p/c_sdk_build_apex_p.cflags",
-                        env!("CARGO_MANIFEST_DIR")
-                    );
-                    let f =
-                        File::open(m_path).expect("Failed to open c_sdk_build_apex_p.cflags file");
-                    let reader = BufReader::new(f);
-                    reader
-                        .lines()
-                        .map(|l| l.expect("Failed to read line"))
-                        .collect::<Vec<String>>()
-                },
-                glyphs_folders: Vec::new(),
-                arm_libs: Default::default(),
-                linker_script: format!(
-                    "{}/devices/apex_p/apex_p_layout.ld",
-                    env!("CARGO_MANIFEST_DIR")
-                ),
-            },
-            _ => {
-                return Err(SDKBuildError::UnsupportedDevice);
-            }
-        };
+        let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
+        let spec = SPECS
+            .iter()
+            .find(|s| s.target_os == target_os)
+            .ok_or(SDKBuildError::UnsupportedDevice)?;
 
-        // set glyphs folders
-        match self.device.name {
-            DeviceName::Flex => {
-                self.device
-                    .glyphs_folders
-                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/wallet"));
-                self.device
-                    .glyphs_folders
-                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/64px"));
-                self.device
-                    .glyphs_folders
-                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/40px"));
-            }
-            DeviceName::Stax => {
-                self.device
-                    .glyphs_folders
-                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/wallet"));
-                self.device
-                    .glyphs_folders
-                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/64px"));
-                self.device
-                    .glyphs_folders
-                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/32px"));
-            }
-            DeviceName::ApexP => {
-                self.device
-                    .glyphs_folders
-                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/wallet"));
-                self.device
-                    .glyphs_folders
-                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/48px"));
-                self.device
-                    .glyphs_folders
-                    .push(self.device.c_sdk.join("lib_nbgl/glyphs/24px"));
-            }
-            DeviceName::NanoSPlus | DeviceName::NanoX => {
-                if env::var_os("CARGO_FEATURE_NANO_NBGL").is_some() {
-                    self.device
-                        .glyphs_folders
-                        .push(self.device.c_sdk.join("lib_nbgl/glyphs/nano"));
-                } else {
-                    self.device
-                        .glyphs_folders
-                        .push(self.device.c_sdk.join("lib_ux/glyphs"));
-                }
+        let c_sdk = env::var("LEDGER_SDK_PATH")
+            .or_else(|_| env::var(spec.env_fallback))
+            .map(PathBuf::from)
+            .map_err(|_| SDKBuildError::MissingSDKPath)?;
+
+        // Defines from the per-device .defines header. Nano devices toggle
+        // between BAGL and NBGL based on the `nano_nbgl` feature; touchscreen
+        // devices encode the choice directly in their .defines file.
+        let mut defines = header2define(spec.defines_file().to_str().unwrap());
+        if spec.is_nano() {
+            if env::var_os("CARGO_FEATURE_NANO_NBGL").is_some() {
+                println!("cargo:warning=NBGL is built");
+                defines.push(("HAVE_NBGL".into(), None));
+                defines.push(("NBGL_STEP".into(), None));
+                defines.push(("NBGL_USE_CASE".into(), None));
+            } else {
+                println!("cargo:warning=BAGL is built");
+                println!("cargo:rustc-env=C_SDK_GRAPHICS=bagl");
+                defines.push(("HAVE_BAGL".into(), None));
+                defines.push(("HAVE_UX_FLOW".into(), None));
             }
         }
 
-        // Set ARM pre-compiled libraries path
-        self.device.arm_libs = match self.device.name {
-            DeviceName::NanoX => {
-                let mut path = self.device.c_sdk.display().to_string();
-                path.push_str("/arch/st33/lib");
-                path
-            }
-            DeviceName::NanoSPlus | DeviceName::Flex | DeviceName::Stax | DeviceName::ApexP => {
-                let mut path = self.device.c_sdk.display().to_string();
-                path.push_str("/arch/st33k1/lib");
-                path
-            }
+        let cflags = read_lines(&spec.cflags_file());
+
+        let glyphs_folders: Vec<PathBuf> = if spec.is_nano()
+            && env::var_os("CARGO_FEATURE_NANO_NBGL").is_none()
+        {
+            vec![c_sdk.join("lib_ux/glyphs")]
+        } else {
+            spec.nbgl_glyph_dirs.iter().map(|d| c_sdk.join(d)).collect()
+        };
+
+        let arm_libs = c_sdk
+            .join("arch")
+            .join(spec.arch_lib_dir)
+            .join("lib")
+            .display()
+            .to_string();
+
+        self.device = Device {
+            name: spec.name,
+            c_sdk,
+            target: spec.target_triple,
+            defines,
+            cflags,
+            glyphs_folders,
+            arm_libs,
+            linker_script: spec.linker_script().display().to_string(),
         };
 
         // export TARGET into env for 'infos.rs'
@@ -597,18 +502,10 @@ impl SDKBuilder<'_> {
 
         // Target specific files
         let csdk_target_name = self.device.name.to_string();
-        let header = match self.device.name {
-            DeviceName::NanoSPlus => {
-                String::from("devices/nanosplus/c_sdk_build_nanosplus.defines")
-            }
-            DeviceName::NanoX => String::from("devices/nanox/c_sdk_build_nanox.defines"),
-            DeviceName::Stax => String::from("devices/stax/c_sdk_build_stax.defines"),
-            DeviceName::Flex => String::from("devices/flex/c_sdk_build_flex.defines"),
-            DeviceName::ApexP => String::from("devices/apex_p/c_sdk_build_apex_p.defines"),
-        };
+        let header = self.device.spec().defines_file();
 
         bindings = bindings.clang_arg(format!("-I{bsdk}/target/{csdk_target_name}/include/"));
-        bindings = bindings.header(header);
+        bindings = bindings.header(header.to_str().unwrap());
 
         // SDK headers to bind against
         for header in headers.iter().map(|p| p.to_str().unwrap()) {
