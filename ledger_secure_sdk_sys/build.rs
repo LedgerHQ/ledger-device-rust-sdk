@@ -127,7 +127,6 @@ impl SDKBuilder<'_> {
     }
 
     pub fn device(&mut self) -> Result<(), SDKBuildError> {
-        println!("cargo:rerun-if-env-changed=LEDGER_SDK_PATH");
         // determine device
         self.device = match env::var_os("CARGO_CFG_TARGET_OS")
             .unwrap()
@@ -537,9 +536,6 @@ impl SDKBuilder<'_> {
         // This allows apps to customize the build process. Since they are added after the default includes, they can
         // override previous definitions.
 
-        println!("cargo:rerun-if-env-changed=LEDGER_SDK_EXTRA_DEFINES");
-        println!("cargo:rerun-if-env-changed=LEDGER_SDK_EXTRA_CFLAGS");
-
         if let Ok(defs) = env::var("LEDGER_SDK_EXTRA_DEFINES") {
             for d in defs.split_whitespace() {
                 if let Some((k, v)) = d.split_once('=') {
@@ -749,6 +745,28 @@ impl SDKBuilder<'_> {
 }
 
 fn main() {
+    // Inputs that can invalidate the build. Emitted up-front so they fire
+    // even if a later phase panics. `cc::Build::files(...)` already emits
+    // rerun-if-changed for the SDK C files it pulls from <c_sdk>/…; we
+    // list the local crate-root C sources explicitly.
+    for var in [
+        "LEDGER_SDK_PATH",
+        "NANOX_SDK",
+        "NANOSP_SDK",
+        "STAX_SDK",
+        "FLEX_SDK",
+        "APEX_P_SDK",
+        "HEAP_SIZE",
+        "LEDGER_SDK_EXTRA_DEFINES",
+        "LEDGER_SDK_EXTRA_CFLAGS",
+        "CC",
+    ] {
+        println!("cargo:rerun-if-env-changed={var}");
+    }
+    for path in ["devices", "link.ld", "src/c/src.c", "src/c/sjlj.s"] {
+        println!("cargo:rerun-if-changed={path}");
+    }
+
     let start = Instant::now();
     let mut sdk_builder = SDKBuilder::new();
     sdk_builder.gcc_toolchain().unwrap();
