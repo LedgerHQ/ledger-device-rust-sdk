@@ -6,7 +6,6 @@
 #![test_runner(testing::sdk_test_runner)]
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
-#![feature(cfg_version)]
 #![feature(const_option_ops)]
 #![feature(const_trait_impl)]
 
