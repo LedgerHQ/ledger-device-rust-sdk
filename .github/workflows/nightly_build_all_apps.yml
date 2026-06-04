@@ -111,9 +111,6 @@ jobs:
           ' "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
           echo "Resulting [patch.crates-io] section:"
           grep -n -A3 '\[patch\.crates-io\]' "$manifest" || true
-          # Refresh Cargo.lock so the patched SDK supersedes the version the app
-          # previously locked.
-          (cd "$build_directory" && cargo update ledger_device_sdk)
 
       - name: Build
         env:
@@ -121,6 +118,12 @@ jobs:
         run: |
           build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
           cd $build_directory
+          # Refresh Cargo.lock so the app builds against the newest SDK it permits:
+          # the patched prep-branch checkout when a bump is in preparation, or the
+          # latest published (crates.io) release otherwise — rather than whatever
+          # older version the committed lockfile pinned.
+          echo "Updating ledger_device_sdk to the newest version the app permits"
+          cargo update ledger_device_sdk
           device=$(echo ${{ matrix.device }} | sed 's/+/plus/')
           echo "Building ${{ matrix.app-name }} for $device with latest Rust nightly"
           cargo ledger build $device
