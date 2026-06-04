@@ -2,9 +2,15 @@ name: Build all Rust apps with latest Rust nightly
 
 on:
   workflow_dispatch:
-  # schedule:
-  #   # Every Monday at 4 AM UTC
-  #   - cron: '0 4 * * 1'
+    inputs:
+      rust_sdk_ref:
+        description: 'Rust SDK ref to build the apps against. Defaults to the NIGHTLY_PREP_REF repo variable; when neither is set, apps build against their pinned (crates.io) SDK.'
+        required: false
+        default: ''
+        type: string
+    schedule:
+      # every Monday at 4 AM UTC
+      - cron: '0 4 * * 1'
 
 jobs:
   retrieve-rust-apps:
@@ -33,6 +39,12 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
+    env:
+      # While a nightly bump is in preparation, build every app against the SDK
+      # prep branch (see NIGHTLY.md §3). When neither the dispatch input nor the
+      # NIGHTLY_PREP_REF repo variable is set, apps build against their pinned
+      # (crates.io) SDK.
+      RUST_SDK_REF: ${{ github.event.inputs.rust_sdk_ref || vars.NIGHTLY_PREP_REF }}
     strategy:
       fail-fast: false
       matrix:
@@ -43,7 +55,6 @@ jobs:
       - name: Install latest Rust nightly
         run: |
           rustup toolchain install nightly --component rust-src
-          rustup target add thumbv6m-none-eabi --toolchain nightly
           cargo +nightly ledger setup -t custom_target_nightly
           echo "RUST_NIGHTLY=nightly" >> $GITHUB_ENV
           echo "Rust nightly version:"
@@ -65,12 +76,54 @@ jobs:
           echo "Overridden rust-toolchain.toml:"
           cat $build_directory/rust-toolchain.toml
 
+      - name: Use bump-preparation Rust SDK
+        if: ${{ env.RUST_SDK_REF != '' }}
+        run: |
+          echo "Building apps against Rust SDK ref '$RUST_SDK_REF'"
+          git clone https://github.com/LedgerHQ/ledger-device-rust-sdk /tmp/rust-sdk
+          git -C /tmp/rust-sdk checkout "$RUST_SDK_REF"
+          build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
+          manifest="$build_directory/Cargo.toml"
+          # Override the published SDK with the prep-branch checkout. ledger_device_sdk
+          # pulls ledger_secure_sdk_sys / include_gif / testmacro via path within the
+          # same checkout, so patching this single crate is enough.
+          #
+          # Merge into the app's existing [patch.crates-io] section if it has one
+          # (replacing any prior ledger_device_sdk entry there), otherwise create the
+          # section. A blind append would duplicate the table and break the TOML; a
+          # plain sed of "ledger_device_sdk" lines would also wrongly hit the
+          # [dependencies] entry, hence the section-aware awk.
+          awk '
+            /^[[:space:]]*\[/ {
+              if ($0 ~ /^[[:space:]]*\[patch\.crates-io\]/) {
+                in_patch=1; seen=1; print;
+                print "ledger_device_sdk = { path = \"/tmp/rust-sdk/ledger_device_sdk\" }";
+                next
+              } else { in_patch=0 }
+            }
+            { if (in_patch == 1 && $0 ~ /^[[:space:]]*ledger_device_sdk[[:space:]]*=/) next; print }
+            END {
+              if (seen != 1) {
+                print ""; print "[patch.crates-io]";
+                print "ledger_device_sdk = { path = \"/tmp/rust-sdk/ledger_device_sdk\" }"
+              }
+            }
+          ' "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
+          echo "Resulting [patch.crates-io] section:"
+          grep -n -A3 '\[patch\.crates-io\]' "$manifest" || true
+
       - name: Build
         env:
           RUSTFLAGS: "-Zunstable-options"
         run: |
           build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
           cd $build_directory
+          # Refresh Cargo.lock so the app builds against the newest SDK it permits:
+          # the patched prep-branch checkout when a bump is in preparation, or the
+          # latest published (crates.io) release otherwise — rather than whatever
+          # older version the committed lockfile pinned.
+          echo "Updating ledger_device_sdk to the newest version the app permits"
+          cargo update ledger_device_sdk
           device=$(echo ${{ matrix.device }} | sed 's/+/plus/')
           echo "Building ${{ matrix.app-name }} for $device with latest Rust nightly"
           cargo ledger build $device

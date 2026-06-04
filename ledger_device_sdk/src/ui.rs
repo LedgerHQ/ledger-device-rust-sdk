@@ -1,5 +1,3 @@
-#![cfg_attr(not(version("1.63")), feature(array_from_fn))]
-
 pub mod bagls;
 
 pub mod string_se;
