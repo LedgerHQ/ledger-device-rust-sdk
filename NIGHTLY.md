@@ -58,7 +58,6 @@ adapted.
 - `generic_const_exprs` — incomplete; highest breakage risk on bumps
 - `const_trait_impl`
 - `const_option_ops`
-- `cfg_version`
 - `custom_test_frameworks` — the `#![no_std]` test harness
 
 > When a feature on this list is **stabilized**, remove its `#![feature(...)]`
@@ -80,6 +79,26 @@ Policy:
   upstream.
 - The canary never modifies the committed pin; it overrides
   `rust-toolchain.toml` only inside the CI job.
+
+### Tracking a bump-preparation branch
+
+When a canary failure is being fixed ahead of a bump (§4), the adaptations land
+on a dedicated **bump-preparation branch** rather than the default branch. To
+have the canary continuously validate those staged fixes against the moving
+`nightly` target, point it at that branch via the **`NIGHTLY_PREP_REF`
+repository variable**:
+
+- The checkout ref resolves as
+  `workflow_dispatch input → vars.NIGHTLY_PREP_REF → default branch`.
+- **Set** `NIGHTLY_PREP_REF` to the prep branch when a bump cycle starts;
+  **clear** it once the bump PR lands (§4.7). While unset, the canary tracks the
+  default branch as before.
+- A single `workflow_dispatch` run can override the ref ad hoc via the
+  `rust_sdk_ref` input without touching the variable.
+
+Note: while `NIGHTLY_PREP_REF` is set, the canary builds *only* the prep branch,
+so it no longer reports whether latest `nightly` breaks the shipped SDK on the
+default branch. That signal returns automatically when the variable is cleared.
 
 ## 4. Bump procedure
 

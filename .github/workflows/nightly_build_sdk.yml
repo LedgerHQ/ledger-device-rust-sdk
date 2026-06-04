@@ -2,6 +2,12 @@ name: Build and test SDK with latest Rust nightly
 
 on:
   workflow_dispatch:
+    inputs:
+      rust_sdk_ref:
+        description: 'Ref to build. Defaults to the NIGHTLY_PREP_REF repo variable, then the default branch.'
+        required: false
+        default: ''
+        type: string
   schedule:
     # Every Monday at 3 AM UTC
     - cron: '0 3 * * 1'
@@ -22,6 +28,11 @@ jobs:
     steps:
       - name: Clone
         uses: actions/checkout@v6
+        with:
+          # While a nightly bump is in preparation, point the canary at the
+          # prep branch via the NIGHTLY_PREP_REF repo variable (see NIGHTLY.md
+          # §3). When unset, this falls back to the default branch.
+          ref: ${{ github.event.inputs.rust_sdk_ref || vars.NIGHTLY_PREP_REF || github.ref }}
 
       - name: Install latest Rust nightly
         run: |
