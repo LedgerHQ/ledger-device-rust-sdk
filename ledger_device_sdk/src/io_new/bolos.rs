@@ -9,6 +9,8 @@ use crate::io_legacy::{
 };
 
 /// Handle internal BOLOS APDUs (CLA = 0xB0).
+// `p1`/`p2` are only consumed by the `stack_usage` INS handler below.
+#[cfg_attr(not(feature = "stack_usage"), allow(unused_variables))]
 pub(crate) fn handle_bolos_apdu<const N: usize>(comm: &mut Comm<N>, ins: u8, p1: u8, p2: u8) {
     match ins {
         // Get Information INS: retrieve App name and version
