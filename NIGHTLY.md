@@ -100,6 +100,15 @@ Note: while `NIGHTLY_PREP_REF` is set, the canary builds *only* the prep branch,
 so it no longer reports whether latest `nightly` breaks the shipped SDK on the
 default branch. That signal returns automatically when the variable is cleared.
 
+The same `NIGHTLY_PREP_REF` variable is also consumed by
+[`.github/workflows/nightly_build_all_apps.yml`](./.github/workflows/nightly_build_all_apps.yml),
+which builds the downstream Rust apps against bare `nightly`. When it is set,
+that workflow overrides each app's published SDK crates (via a
+`[patch.crates-io]` pointing at a checkout of the prep branch) so the apps are
+exercised against the staged fixes too; when unset, apps build against their
+pinned (crates.io) SDK. A single shared variable therefore steers both canaries
+through one bump-preparation branch.
+
 ## 4. Bump procedure
 
 Bump cadence: **quarterly by default**, or sooner when driven by a needed
