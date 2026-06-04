@@ -76,11 +76,14 @@ jobs:
         working-directory: ledger_device_sdk
         shell: bash
         run: |
-          echo "Building SDK for ${{matrix.target}} with io_legacy"
+          echo "Building SDK for ${{matrix.target}}"
           cargo build --target ${{ matrix.target }}
-          echo "Building SDK for ${{matrix.target}} with io_new"
-          cargo build --target ${{ matrix.target }} --features io_new
           if [[ "${{ matrix.target }}" == "nanosplus" || "${{ matrix.target }}" == "nanox" ]]; then
-            echo "Building with nano_nbgl feature for ${{matrix.target}}"
+            echo "Building SDK with nano_nbgl feature for ${{matrix.target}}"
             cargo build --target ${{ matrix.target }} --features nano_nbgl
+            echo "Building SDK with nano_nbgl and io_new features for ${{matrix.target}}"
+            cargo build --target ${{ matrix.target }} --features nano_nbgl,io_new
+          else
+            echo "Building SDK for ${{matrix.target}} with io_new"
+            cargo build --target ${{ matrix.target }} --features io_new
           fi
