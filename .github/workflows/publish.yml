@@ -64,7 +64,7 @@ jobs:
   deploy_ledger_device_sdk:
     name: Deploy ledger_device_sdk
     uses: LedgerHQ/ledger-app-workflows/.github/workflows/reusable_crates_deployment.yml@v1
-    needs: [check_versions, deploy_ledger_secure_sdk_sys]
+    needs: [check_versions, deploy_include_gif, deploy_ledger_secure_sdk_sys]
     permissions:
       id-token: write
       attestations: write
