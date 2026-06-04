@@ -45,11 +45,14 @@ jobs:
           cargo build --target ${{ matrix.target }}
           if [[ "${{ matrix.target }}" == "nanosplus" || "${{ matrix.target }}" == "nanox" ]]; then
             echo "Building SDK with nano_nbgl feature for ${{matrix.target}}"
+            cargo clean
             cargo build --target ${{ matrix.target }} --features nano_nbgl
             echo "Building SDK with nano_nbgl and io_new features for ${{matrix.target}}"
+            cargo clean
             cargo build --target ${{ matrix.target }} --features nano_nbgl,io_new
           else
             echo "Building SDK for ${{matrix.target}} with io_new"
+            cargo clean
             cargo build --target ${{ matrix.target }} --features io_new
           fi
 
