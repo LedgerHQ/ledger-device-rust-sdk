@@ -38,6 +38,7 @@ jobs:
 
       - name: Build SDK
         working-directory: ledger_device_sdk
+        shell: bash
         env:
           RUSTFLAGS: "-Zunstable-options"
         run: |
