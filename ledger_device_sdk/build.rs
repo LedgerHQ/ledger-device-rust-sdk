@@ -46,13 +46,35 @@ fn generate_install_parameters() {
                     pkg_name
                 );
 
+                // Get device name
+                let device = env::var_os("CARGO_CFG_TARGET_OS").unwrap();
+                let device_name = device.to_str().unwrap();
+                println!("cargo:warning=Device is {}", device_name);
+
                 // Fill APP_NAME environment variable (stored in ledger.app_name section in the ELF (see app_info.rs))
                 let app_name = metadata_ledger["name"].as_str().expect("name not found");
                 println!("cargo:rustc-env=APP_NAME={}", app_name);
                 println!("cargo:warning=APP_NAME is {}", app_name);
 
                 // Fill APP_FLAGS environment variable (stored in ledger.app_flags section in the ELF (see app_info.rs))
-                let app_flags = metadata_ledger["flags"].as_str().expect("flags not found");
+                // APPLICATION_FLAG_BOLOS_SETTINGS, see ledger-secure-sdk/include/appflags.h.
+                // Required on these devices but not on nanosplus (Bluetooth enabling).
+                const APPLICATION_FLAG_BOLOS_SETTINGS: u32 = 0x200;
+                let flags = metadata_ledger["flags"].as_str().expect("flags not found");
+                let app_flags = match device_name {
+                    "nanosplus" => String::from(flags),
+                    "nanox" | "stax" | "flex" | "apex_p" => {
+                        let base = u32::from_str_radix(flags.trim_start_matches("0x"), 16)
+                            .unwrap_or_else(|_| {
+                                panic!(
+                                    "package `{pkg_name}`: ledger.flags must be a hex string like \"0x200\", got {flags:?}"
+                                )
+                            });
+                        format!("0x{:x}", base | APPLICATION_FLAG_BOLOS_SETTINGS)
+                    }
+                    other => panic!("Unsupported device target_os: {other:?}"),
+                };
+
                 println!("cargo:rustc-env=APP_FLAGS={}", app_flags);
                 println!("cargo:warning=APP_FLAGS is {}", app_flags);
 
@@ -94,10 +116,6 @@ fn generate_install_parameters() {
                 }
 
                 // Handle icon
-                let device = env::var_os("CARGO_CFG_TARGET_OS").unwrap();
-                let device_name = device.to_str().unwrap();
-                println!("cargo:warning=Device is {}", device_name);
-
                 let icon = metadata_ledger
                     .get(device_name)
                     .and_then(|device_metadata| device_metadata.get("icon"))
