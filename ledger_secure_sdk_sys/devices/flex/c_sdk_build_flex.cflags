@@ -19,3 +19,4 @@
 -mlittle-endian
 -mthumb
 -Wno-unused-command-line-argument
+-fstack-protector-strong

@@ -15,11 +15,15 @@
   "pre-link-args": {
       "ld.lld": [
           "-Tflex_layout.ld",
-          "-Tlink.ld"
+          "-Tlink.ld",
+          "--wrap=__stack_chk_fail",
+          "--wrap=__stack_chk_init"
       ],
       "ld": [
           "-Tflex_layout.ld",
-          "-Tlink.ld"
+          "-Tlink.ld",
+          "--wrap=__stack_chk_fail",
+          "--wrap=__stack_chk_init"
       ]
   },
   "relocation-model": "ropi-rwpi",

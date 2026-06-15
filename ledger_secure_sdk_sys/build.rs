@@ -8,11 +8,14 @@ use std::{env, fs::File, io::BufRead, io::BufReader, io::Read, io::Write};
 
 const AUX_C_FILES: [&str; 2] = ["./src/c/src.c", "./src/c/sjlj.s"];
 
-const SDK_C_FILES: [&str; 12] = [
-    // System
+const SDK_C_FILES: [&str; 14] = [
+    // Syscalls
     "src/cx_stubs.S",
     "src/svc_call.s",
     "src/svc_cx_call.s",
+    // stack protector
+    "src/stack_protector.c",
+    "src/stack_protector_init.S",
     // OS
     "src/pic.c",
     "src/os.c",
