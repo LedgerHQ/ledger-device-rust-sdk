@@ -71,7 +71,10 @@ jobs:
             echo "::error::${TOOLCHAIN_FILE} not found in ${APP_REPOSITORY}; nothing to bump."
             exit 1
           fi
-          sed -i -E 's/^channel *= *".*"/channel = "'"${NEW_NIGHTLY}"'"/' "${TOOLCHAIN_FILE}"
+          # Capture and preserve any leading indentation: some repos indent the
+          # channel key, and a column-1-only anchor would no-op there and make us
+          # wrongly report "Already pinned".
+          sed -i -E 's/^([[:space:]]*)channel[[:space:]]*=[[:space:]]*".*"/\1channel = "'"${NEW_NIGHTLY}"'"/' "${TOOLCHAIN_FILE}"
           git status
           if [ -z "$(git status --porcelain)" ]; then
             echo "Already pinned to ${NEW_NIGHTLY}; nothing to do."
@@ -108,8 +111,11 @@ jobs:
           git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${APP_REPOSITORY}.git" > /dev/null 2>&1
           git push -u origin "${branch_name}" --force-with-lease
 
-          # Create 'auto' label if missing (matches the snapshots-PR convention)
-          if [ -z "$(gh label list --repo "${APP_REPOSITORY}" --search auto)" ]; then
+          # Create 'auto' label if missing (matches the snapshots-PR convention).
+          # Match the exact label name: --search does substring matching, so a
+          # repo with e.g. 'automation' but no 'auto' would wrongly skip creation
+          # and the gh pr create --label below would then fail.
+          if ! gh label list --repo "${APP_REPOSITORY}" --json name -q '.[].name' | grep -qx 'auto'; then
             gh label create 'auto' --repo "${APP_REPOSITORY}" --color 'b4a8d1' --description 'Automatically created' || true
           fi
 

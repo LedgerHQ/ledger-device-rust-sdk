@@ -47,9 +47,12 @@ jobs:
       - name: Build repository list
         id: list
         env:
-          # PAT / GitHub App token with read access to the org and write access
-          # to the app repositories.
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Dedicated PAT / GitHub App token (secret APPS_BUMP_TOKEN) with read
+          # access across the LedgerHQ app repositories. The default GITHUB_TOKEN
+          # is scoped to this repo only, so it cannot enumerate the app repos
+          # reliably (and definitely cannot push/open PRs in them — see the bump
+          # job below).
+          GH_TOKEN: ${{ secrets.APPS_BUMP_TOKEN }}
           REPOS_INPUT: ${{ inputs.repositories }}
         run: |
           if [ -n "${REPOS_INPUT}" ]; then
@@ -81,4 +84,7 @@ jobs:
       new_nightly: ${{ inputs.new_nightly }}
       dry_run: ${{ inputs.dry_run }}
     secrets:
-      token: ${{ secrets.GITHUB_TOKEN }}
+      # Dedicated PAT / GitHub App token with contents:write and
+      # pull-requests:write on the target app repositories. The default
+      # GITHUB_TOKEN is repo-scoped and cannot push branches / open PRs in them.
+      token: ${{ secrets.APPS_BUMP_TOKEN }}
