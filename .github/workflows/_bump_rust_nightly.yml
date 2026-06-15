@@ -1,0 +1,129 @@
+---
+name: Bump Rust nightly (open PR)
+
+# Reusable workflow: updates the pinned nightly in a single app's
+# `rust-toolchain.toml` and opens a PR. `rust-toolchain.toml` is the single
+# source of truth for the toolchain (the build/deploy pipelines build from it
+# and a consistency guard fails on drift), so this is how the builder's blessed
+# `$RUST_NIGHTLY` gets rolled out across apps: one PR per repository.
+
+on:
+  workflow_call:
+    inputs:
+      app_repository:
+        description: 'The GIT repository to update (format: owner/name)'
+        required: true
+        type: string
+      new_nightly:
+        description: 'The nightly toolchain to pin (format: nightly-YYYY-MM-DD)'
+        required: true
+        type: string
+      toolchain_file:
+        description: 'Path to the rust-toolchain.toml to update (relative to repo root)'
+        required: false
+        default: 'rust-toolchain.toml'
+        type: string
+      dry_run:
+        description: 'Dry run: compute the bump and show the diff, but do not push a branch or open a PR'
+        required: false
+        default: false
+        type: boolean
+    secrets:
+      token:
+        description: 'A token with contents:write and pull-requests:write on the target repository'
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  APP_REPOSITORY: ${{ inputs.app_repository }}
+  NEW_NIGHTLY: ${{ inputs.new_nightly }}
+  TOOLCHAIN_FILE: ${{ inputs.toolchain_file }}
+  DRY_RUN: ${{ inputs.dry_run }}
+
+jobs:
+  bump:
+    name: Bump ${{ inputs.app_repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate new_nightly format
+        run: |
+          if [[ ! "${NEW_NIGHTLY}" =~ ^nightly-[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+            echo "::error::new_nightly must look like 'nightly-YYYY-MM-DD' (got '${NEW_NIGHTLY}')."
+            exit 1
+          fi
+
+      - name: Checkout app repository
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ inputs.app_repository }}
+          token: ${{ secrets.token }}
+          # fetch-depth 0 so we can push a new branch; persist-credentials false
+          # so the push below uses the provided token, not the default ones.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Update toolchain pin
+        id: bump
+        run: |
+          if [ ! -f "${TOOLCHAIN_FILE}" ]; then
+            echo "::error::${TOOLCHAIN_FILE} not found in ${APP_REPOSITORY}; nothing to bump."
+            exit 1
+          fi
+          sed -i -E 's/^channel *= *".*"/channel = "'"${NEW_NIGHTLY}"'"/' "${TOOLCHAIN_FILE}"
+          git status
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Already pinned to ${NEW_NIGHTLY}; nothing to do."
+            echo "changed=false" >> "${GITHUB_OUTPUT}"
+          else
+            echo "Pending change to ${TOOLCHAIN_FILE}:"
+            git --no-pager diff -- "${TOOLCHAIN_FILE}"
+            echo "changed=true" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Commit, push and open a PR
+        if: ${{ steps.bump.outputs.changed == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.token }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          base_branch=$(gh repo view "${APP_REPOSITORY}" --json defaultBranchRef -q .defaultBranchRef.name)
+          branch_name="auto/bump-rust-nightly-${NEW_NIGHTLY}"
+          echo "Base branch: ${base_branch} ; PR branch: ${branch_name}"
+
+          git add "${TOOLCHAIN_FILE}"
+          git commit -m "[auto-update] Bump Rust toolchain to ${NEW_NIGHTLY}"
+          git checkout -b "${branch_name}"
+
+          if [ "${DRY_RUN}" = "true" ]; then
+            echo "::notice title=Dry run::Would push branch '${branch_name}' to ${APP_REPOSITORY} and open a PR against '${base_branch}'. Skipping push and PR creation."
+            echo "Commit that would be pushed:"
+            git --no-pager show --stat HEAD
+            exit 0
+          fi
+
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${APP_REPOSITORY}.git" > /dev/null 2>&1
+          git push -u origin "${branch_name}" --force-with-lease
+
+          # Create 'auto' label if missing (matches the snapshots-PR convention)
+          if [ -z "$(gh label list --repo "${APP_REPOSITORY}" --search auto)" ]; then
+            gh label create 'auto' --repo "${APP_REPOSITORY}" --color 'b4a8d1' --description 'Automatically created' || true
+          fi
+
+          # Idempotent: update the branch in place if a PR already exists for it
+          if gh pr list --repo "${APP_REPOSITORY}" --head "${branch_name}" --json number -q '.[0].number' | grep -q .; then
+            echo "A PR already exists for ${branch_name}; branch updated, skipping creation."
+            exit 0
+          fi
+
+          body="PR created by the Rust-nightly bump workflow.\n\nUpdates \`${TOOLCHAIN_FILE}\` to \`${NEW_NIGHTLY}\` to match the builder's blessed nightly.\n\n:warning: Merge once CI is green — the toolchain-consistency guard verifies the pin matches the builder."
+          gh pr create \
+            --repo "${APP_REPOSITORY}" \
+            --base "${base_branch}" \
+            --head "${branch_name}" \
+            --label "auto" \
+            --title "[auto-update] Bump Rust nightly to ${NEW_NIGHTLY}" \
+            --body "$(echo -e "$body")"

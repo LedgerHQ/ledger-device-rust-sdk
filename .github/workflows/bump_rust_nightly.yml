@@ -1,0 +1,84 @@
+---
+name: Bump Rust nightly across all Rust apps
+
+# Orchestrator: discovers the Rust application repositories and fans out one
+# `rust-toolchain.toml` bump PR per repository. Trigger this (manually, or from
+# the ledger-app-builder image bump) after you have validated the new nightly,
+# so every app's committed pin catches up to the builder's blessed $RUST_NIGHTLY.
+
+on:
+  workflow_dispatch:
+    inputs:
+      new_nightly:
+        description: 'The nightly toolchain to pin everywhere (format: nightly-YYYY-MM-DD)'
+        required: true
+        type: string
+      repositories:
+        description: 'Optional: comma-separated owner/name list to target instead of get_rust_apps.py discovery'
+        required: false
+        default: ''
+        type: string
+      dry_run:
+        description: 'Dry run: compute the bump and show the diff, but do not push a branch or open a PR'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    name: Discover Rust app repositories
+    runs-on: ubuntu-latest
+    outputs:
+      repos: ${{ steps.list.outputs.repos }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Set up Python
+        if: ${{ inputs.repositories == '' }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+      - name: Install ledgered
+        if: ${{ inputs.repositories == '' }}
+        run: pip install ledgered
+      - name: Build repository list
+        id: list
+        env:
+          # PAT / GitHub App token with read access to the org and write access
+          # to the app repositories.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOS_INPUT: ${{ inputs.repositories }}
+        run: |
+          if [ -n "${REPOS_INPUT}" ]; then
+            # Explicit list takes precedence: turn "a/b, c/d" into a JSON array
+            repos=$(echo "${REPOS_INPUT}" | tr ',' '\n' | sed '/^[[:space:]]*$/d' | sed 's/[[:space:]]//g' | jq -R . | jq -cs .)
+          else
+            # Discover Rust apps on LedgerHQ via the shared helper (filters the org
+            # by manifest sdk == "rust"). It writes rust_apps_names.json as a list
+            # of {"app-name": "..."} objects; map each to an "owner/name" repo slug
+            # so the bump matrix can target them directly.
+            python .github/workflows/get_rust_apps.py "${GH_TOKEN}"
+            repos=$(jq -c '[.[] | "LedgerHQ/" + ."app-name"]' rust_apps_names.json)
+          fi
+          echo "Targeting repositories: ${repos}"
+          echo "repos=${repos}" >> "${GITHUB_OUTPUT}"
+
+  bump:
+    name: Open bump PR
+    needs: discover
+    if: ${{ needs.discover.outputs.repos != '' && needs.discover.outputs.repos != '[]' }}
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        repo: ${{ fromJSON(needs.discover.outputs.repos) }}
+    uses: ./.github/workflows/_bump_rust_nightly.yml
+    with:
+      app_repository: ${{ matrix.repo }}
+      new_nightly: ${{ inputs.new_nightly }}
+      dry_run: ${{ inputs.dry_run }}
+    secrets:
+      token: ${{ secrets.GITHUB_TOKEN }}
