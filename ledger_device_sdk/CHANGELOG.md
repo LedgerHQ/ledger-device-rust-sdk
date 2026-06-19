@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Build variants: `[package.metadata.ledger.variants.<name>]` tables are overlaid
+  on the base `[package.metadata.ledger]` metadata at build time, letting one
+  source tree produce variant apps (e.g. testnet) that differ only in name, icon,
+  or derivation path. Select a variant with the `testnet` cargo feature or the
+  generic `LEDGER_APP_VARIANT` env var. Resolution is fail-closed: a missing
+  selected variant aborts the build rather than falling back to the base values.
+
 ## [1.35.3] - 2026-06-11
 
 ### Changed

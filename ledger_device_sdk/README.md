@@ -88,6 +88,63 @@ cargo build --release --target=flex        # Flex
 cargo build --release --target=apex_p      # Apex P
 ```
 
+### App metadata and build variants
+
+`cargo-ledger` and the SDK build script read your app's install parameters
+(name, icon, flags, allowed curves and derivation paths) from the
+`[package.metadata.ledger]` table of your app's `Cargo.toml`:
+
+```toml
+[package.metadata.ledger]
+curve = ["secp256k1"]            # curves the app is allowed to use
+flags = "0x000"                  # application flags (hex string)
+path  = ["44'/0'"]               # allowed BIP32 derivation-path prefixes
+name  = "MyApp"                  # name shown on the device dashboard
+# one icon table per supported device
+nanox     = { icon = "icons/app_nanox.gif" }
+nanosplus = { icon = "icons/app_nanosplus.gif" }
+stax      = { icon = "icons/app_stax.gif" }
+flex      = { icon = "icons/app_flex.gif" }
+apex_p    = { icon = "icons/app_apexp.png" }
+```
+
+#### Build variants (e.g. testnet)
+
+A single source tree can produce several installable apps that differ only in a
+few metadata fields — typically a testnet build with a different name, icon, and
+derivation path. Declare just the differing keys under
+`[package.metadata.ledger.variants.<name>]`; every key you omit is inherited
+from the base table:
+
+```toml
+[package.metadata.ledger.variants.testnet]
+name = "MyApp Testnet"
+path = ["44'/1'"]                # standard testnet coin type
+nanox = { icon = "icons/app_testnet_nanox.gif" }
+# flags, curve, and any non-overridden icon are inherited from the base table
+```
+
+Select a variant at build time in either of two ways:
+
+```bash
+# 1. Cargo feature — forward the SDK's `testnet` feature from your app:
+#      [features]
+#      testnet = ["ledger_device_sdk/testnet"]
+cargo ledger build nanosplus -- --features testnet
+
+# 2. Generic env var — works for any variant name, no feature wiring needed:
+LEDGER_APP_VARIANT=testnet cargo ledger build nanosplus
+```
+
+Notes:
+- Variant resolution is **fail-closed**: selecting a variant whose
+  `[package.metadata.ledger.variants.<name>]` table is absent aborts the build
+  instead of silently using the base values. This prevents shipping a
+  "Testnet"-labelled binary that carries mainnet paths or curves.
+- Unspecified per-device icons fall back to the base table's icon (icons are
+  cosmetic).
+- `LEDGER_APP_VARIANT` takes precedence over the `testnet` feature.
+
 ## Getting Started
 
 For a complete application example, see the [Rust Boilerplate App](https://github.com/LedgerHQ/app-boilerplate-rust).
