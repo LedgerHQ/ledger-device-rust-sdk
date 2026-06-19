@@ -41,6 +41,12 @@ debug_csdk = [ "ledger_secure_sdk_sys/debug_csdk" ]
 io_new = []  # switch to new 'io' module
 stack_usage = []
 
+# Build a network/app variant. When enabled, build.rs overlays the
+# [package.metadata.ledger.variants.testnet] table onto the base
+# [package.metadata.ledger] table (keys it defines win; the rest are inherited).
+# A generic override is also available via the LEDGER_APP_VARIANT env var.
+testnet = []
+
 # When enabled, this feature re-exports the `ledger_secure_sdk_sys` crate containing the
 # Ledger C SDK bindings through the `sys` module. Use it to access low-level (unsafe) FFI
 # functions, types, and constants directly from the underlying C SDK.

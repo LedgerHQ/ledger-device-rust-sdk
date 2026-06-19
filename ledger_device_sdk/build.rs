@@ -46,13 +46,48 @@ fn generate_install_parameters() {
                     pkg_name
                 );
 
+                // Optional build variant (e.g. "testnet"). When selected, the table
+                // [package.metadata.ledger.variants.<name>] is overlaid on top of the base
+                // [package.metadata.ledger]: any key the variant defines wins, and everything
+                // it omits (curve, flags, …) is inherited from the base. Selecting a variant
+                // whose table is absent is a hard error — we never silently fall back to the
+                // base (mainnet) values, since that could ship a "Testnet"-labelled binary
+                // carrying mainnet derivation paths/curves (fail closed).
+                let variant = resolve_variant();
+                let overlay: Option<&serde_json::Map<String, serde_json::Value>> = match &variant {
+                    Some(name) => {
+                        println!("cargo:warning=Building variant `{}`", name);
+                        let table = metadata_ledger
+                            .get("variants")
+                            .and_then(|v| v.get(name.as_str()))
+                            .and_then(|v| v.as_object())
+                            .unwrap_or_else(|| {
+                                panic!(
+                                    "package `{pkg_name}`: build variant `{name}` selected but \
+                                     [package.metadata.ledger.variants.{name}] is missing or is not a table"
+                                )
+                            });
+                        Some(table)
+                    }
+                    None => None,
+                };
+
+                // Resolve a top-level key: the variant overlay wins, else the base table.
+                let lookup = |key: &str| -> Option<&serde_json::Value> {
+                    overlay
+                        .and_then(|o| o.get(key))
+                        .or_else(|| metadata_ledger.get(key))
+                };
+
                 // Get device name
                 let device = env::var_os("CARGO_CFG_TARGET_OS").unwrap();
                 let device_name = device.to_str().unwrap();
                 println!("cargo:warning=Device is {}", device_name);
 
                 // Fill APP_NAME environment variable (stored in ledger.app_name section in the ELF (see app_info.rs))
-                let app_name = metadata_ledger["name"].as_str().expect("name not found");
+                let app_name = lookup("name")
+                    .and_then(|v| v.as_str())
+                    .expect("name not found");
                 println!("cargo:rustc-env=APP_NAME={}", app_name);
                 println!("cargo:warning=APP_NAME is {}", app_name);
 
@@ -60,7 +95,9 @@ fn generate_install_parameters() {
                 // APPLICATION_FLAG_BOLOS_SETTINGS, see ledger-secure-sdk/include/appflags.h.
                 // Required on these devices but not on nanosplus (Bluetooth enabling).
                 const APPLICATION_FLAG_BOLOS_SETTINGS: u32 = 0x200;
-                let flags = metadata_ledger["flags"].as_str().expect("flags not found");
+                let flags = lookup("flags")
+                    .and_then(|v| v.as_str())
+                    .expect("flags not found");
                 let app_flags = match device_name {
                     "nanosplus" => String::from(flags),
                     "nanox" | "stax" | "flex" | "apex_p" => {
@@ -83,16 +120,16 @@ fn generate_install_parameters() {
                 println!("cargo:rustc-env=APP_VERSION={}", app_version);
                 println!("cargo:warning=APP_VERSION is {}", app_version);
 
-                let curves = metadata_ledger["curve"]
-                    .as_array()
+                let curves = lookup("curve")
+                    .and_then(|v| v.as_array())
                     .expect("curves not found")
                     .iter()
                     .map(|v| v.as_str().unwrap().to_string())
                     .collect::<Vec<_>>();
                 println!("cargo:warning=curves are {:x?}", curves);
 
-                let paths = metadata_ledger["path"]
-                    .as_array()
+                let paths = lookup("path")
+                    .and_then(|v| v.as_array())
                     .expect("paths not found")
                     .iter()
                     .map(|v| v.as_str().unwrap().to_string())
@@ -100,8 +137,7 @@ fn generate_install_parameters() {
                 println!("cargo:warning=paths are {:x?}", paths);
 
                 // Handle optional path_slip21 field
-                let paths_slip21: Vec<String> = metadata_ledger
-                    .get("path_slip21")
+                let paths_slip21: Vec<String> = lookup("path_slip21")
                     .and_then(|v| v.as_array())
                     .map(|arr| {
                         arr.iter()
@@ -115,11 +151,19 @@ fn generate_install_parameters() {
                     println!("cargo:warning=paths_slip21 are {:x?}", paths_slip21);
                 }
 
-                // Handle icon
-                let icon = metadata_ledger
-                    .get(device_name)
+                // Handle icon: a variant may override the per-device icon; if it does not,
+                // the base [package.metadata.ledger.<device>] icon is used (icons are
+                // cosmetic, so inheriting the base icon is acceptable).
+                let icon = overlay
+                    .and_then(|o| o.get(device_name))
                     .and_then(|device_metadata| device_metadata.get("icon"))
                     .and_then(|icon| icon.as_str())
+                    .or_else(|| {
+                        metadata_ledger
+                            .get(device_name)
+                            .and_then(|device_metadata| device_metadata.get("icon"))
+                            .and_then(|icon| icon.as_str())
+                    })
                     .unwrap_or_else(|| {
                         panic!(
                             "missing Ledger app icon metadata for device `{}`; expected \
@@ -296,7 +340,30 @@ fn convert_icon_to_hex(
         .to_string()
 }
 
+/// Resolve the optional build variant to overlay onto `[package.metadata.ledger]`.
+///
+/// Precedence:
+/// 1. `LEDGER_APP_VARIANT` env var — explicit, generic override (any variant name).
+/// 2. The `testnet` cargo feature on `ledger_device_sdk` — convenience trigger that maps
+///    to the `testnet` variant. A build script receives a `CARGO_FEATURE_<NAME>` env var
+///    for every feature enabled on its own crate, which is how we observe it here.
+///
+/// Returns `None` for a normal (base / mainnet) build.
+fn resolve_variant() -> Option<String> {
+    if let Ok(v) = env::var("LEDGER_APP_VARIANT") {
+        let v = v.trim();
+        if !v.is_empty() {
+            return Some(v.to_string());
+        }
+    }
+    if env::var_os("CARGO_FEATURE_TESTNET").is_some() {
+        return Some("testnet".to_string());
+    }
+    None
+}
+
 fn main() {
     println!("cargo:rerun-if-changed=Cargo.toml");
+    println!("cargo:rerun-if-env-changed=LEDGER_APP_VARIANT");
     generate_install_parameters();
 }
