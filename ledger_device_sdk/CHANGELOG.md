@@ -8,12 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Build variants: `[package.metadata.ledger.variants.<name>]` tables are overlaid
-  on the base `[package.metadata.ledger]` metadata at build time, letting one
-  source tree produce variant apps (e.g. testnet) that differ only in name, icon,
-  or derivation path. Select a variant with the `testnet` cargo feature or the
-  generic `LEDGER_APP_VARIANT` env var. Resolution is fail-closed: a missing
-  selected variant aborts the build rather than falling back to the base values.
+- Build variants: up to 10 per app via the numbered `variant_0` … `variant_9`
+  cargo features. The matching `[package.metadata.ledger.variants.<N>]` table is
+  overlaid on the base `[package.metadata.ledger]` metadata at build time,
+  letting one source tree produce variant apps (e.g. testnet) that differ only in
+  name, icon, or derivation path. An app forwards a human-named feature to a slot
+  (e.g. `variant_testnet = ["ledger_device_sdk/variant_0"]`) and selects it with
+  `--features variant_testnet`. Resolution is fail-closed: a missing selected
+  variant table aborts the build rather than falling back to the base values, and
+  enabling more than one `variant_<N>` feature is a hard error.
 
 ## [1.35.3] - 2026-06-11
 

@@ -340,30 +340,40 @@ fn convert_icon_to_hex(
         .to_string()
 }
 
+/// Maximum number of build variant slots exposed by the SDK (`variant_0` … `variant_9`).
+const MAX_VARIANTS: u8 = 10;
+
 /// Resolve the optional build variant to overlay onto `[package.metadata.ledger]`.
 ///
-/// Precedence:
-/// 1. `LEDGER_APP_VARIANT` env var — explicit, generic override (any variant name).
-/// 2. The `testnet` cargo feature on `ledger_device_sdk` — convenience trigger that maps
-///    to the `testnet` variant. A build script receives a `CARGO_FEATURE_<NAME>` env var
-///    for every feature enabled on its own crate, which is how we observe it here.
+/// The SDK exposes generic, numbered variant features `variant_0` … `variant_9`. An app
+/// forwards its own human-named feature to one of these slots, e.g.
+/// `variant_testnet = ["ledger_device_sdk/variant_0"]`, and supplies the matching metadata
+/// table `[package.metadata.ledger.variants.0]`. The slot number is the channel between the
+/// app and this build script: a build script only receives `CARGO_FEATURE_<NAME>` for
+/// features enabled on its *own* crate, so it cannot observe the app's feature name — only
+/// which numbered SDK slot was switched on.
+///
+/// Enabling more than one `variant_N` feature is a hard error: we must never silently ship
+/// one of several conflicting variants.
 ///
 /// Returns `None` for a normal (base / mainnet) build.
 fn resolve_variant() -> Option<String> {
-    if let Ok(v) = env::var("LEDGER_APP_VARIANT") {
-        let v = v.trim();
-        if !v.is_empty() {
-            return Some(v.to_string());
+    let mut selected: Option<u8> = None;
+    for i in 0..MAX_VARIANTS {
+        if env::var_os(format!("CARGO_FEATURE_VARIANT_{i}")).is_some() {
+            if let Some(prev) = selected {
+                panic!(
+                    "multiple Ledger build variants selected (variant_{prev} and variant_{i}); \
+                     enable at most one variant_N feature on `ledger_device_sdk`"
+                );
+            }
+            selected = Some(i);
         }
     }
-    if env::var_os("CARGO_FEATURE_TESTNET").is_some() {
-        return Some("testnet".to_string());
-    }
-    None
+    selected.map(|i| i.to_string())
 }
 
 fn main() {
     println!("cargo:rerun-if-changed=Cargo.toml");
-    println!("cargo:rerun-if-env-changed=LEDGER_APP_VARIANT");
     generate_install_parameters();
 }
