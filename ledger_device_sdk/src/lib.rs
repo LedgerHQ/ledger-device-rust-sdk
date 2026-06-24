@@ -30,6 +30,10 @@ pub mod io {
 pub mod libcall;
 pub mod log;
 pub mod math;
+#[cfg(feature = "mldsa")]
+pub mod mldsa;
+#[cfg(feature = "mlkem")]
+pub mod mlkem;
 pub mod nvm;
 pub mod pki;
 pub mod random;
