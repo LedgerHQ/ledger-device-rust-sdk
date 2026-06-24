@@ -422,6 +422,27 @@ impl SDKBuilder<'_> {
             }
         }
 
+        // Configure PQC algorithms (compiled app-side)
+        if env::var_os("CARGO_FEATURE_MLKEM").is_some() {
+            configure_lib_mlkem(&mut command, &self.device.c_sdk);
+        }
+        if env::var_os("CARGO_FEATURE_MLDSA").is_some() {
+            configure_lib_mldsa(&mut command, &self.device.c_sdk);
+            if env::var_os("CARGO_FEATURE_MLDSA_87").is_some() {
+                command.define("HAVE_MLDSA_87", None);
+            }
+            if env::var_os("CARGO_FEATURE_MLDSA_OPTIMIZATION").is_some() {
+                command.define("HAVE_MLDSA_OPTIMIZATION", None);
+            }
+        }
+        if env::var_os("CARGO_FEATURE_MLKEM").is_some()
+            || env::var_os("CARGO_FEATURE_MLDSA").is_some()
+        {
+            command
+                .file(self.device.c_sdk.join("src/cx_hash_iovec.c"))
+                .include(&self.device.c_sdk);
+        }
+
         // Add the defines found in the Makefile.conf.cx to our build command.
         for define in self.cxdefines.iter() {
             command.define(define, None);
@@ -533,6 +554,15 @@ impl SDKBuilder<'_> {
 
         for define in &self.cxdefines {
             bindings = bindings.clang_arg(format!("-D{define}"));
+        }
+
+        // ML-DSA feature-gated defines for bindgen
+        if env::var_os("CARGO_FEATURE_MLDSA_87").is_some() {
+            bindings = bindings.clang_arg("-DHAVE_MLDSA_87");
+        }
+
+        if env::var_os("CARGO_FEATURE_MLDSA_OPTIMIZATION").is_some() {
+            bindings = bindings.clang_arg("-DHAVE_MLDSA_OPTIMIZATION");
         }
 
         let bindings = bindings
@@ -982,4 +1012,37 @@ fn header2define(headername: &str) -> Vec<(String, Option<String>)> {
             }
         })
         .collect()
+}
+
+fn configure_lib_mlkem(command: &mut cc::Build, c_sdk: &Path) {
+    let src = c_sdk.join("lib_cxng/src");
+    command
+        .file(src.join("cx_mlkem.c"))
+        .file(src.join("cx_mlkem_internal.c"))
+        .file(src.join("cx_mlkem_indcpa.c"))
+        .file(src.join("cx_mlkem_poly.c"))
+        .file(src.join("cx_mlkem_polymat.c"))
+        .file(src.join("cx_mlkem_polyvec.c"))
+        .file(src.join("cx_mlkem_sample.c"))
+        .file(src.join("cx_mlkem_util.c"))
+        .file(src.join("cx_mlkem_params.c"))
+        .include(&src);
+}
+
+fn configure_lib_mldsa(command: &mut cc::Build, c_sdk: &Path) {
+    let src = c_sdk.join("lib_cxng/src");
+    command
+        .file(src.join("cx_mldsa.c"))
+        .file(src.join("cx_mldsa_internal.c"))
+        .file(src.join("cx_mldsa_lowram.c"))
+        .file(src.join("cx_mldsa_packing.c"))
+        .file(src.join("cx_mldsa_poly.c"))
+        .file(src.join("cx_mldsa_polymat.c"))
+        .file(src.join("cx_mldsa_polyvec.c"))
+        .file(src.join("cx_mldsa_rounding.c"))
+        .file(src.join("cx_mldsa_sample.c"))
+        .file(src.join("cx_mldsa_smallpoly.c"))
+        .file(src.join("cx_mldsa_util.c"))
+        .file(src.join("cx_mldsa_params.c"))
+        .include(&src);
 }

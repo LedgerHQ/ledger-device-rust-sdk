@@ -40,6 +40,10 @@ nano_nbgl = [ "ledger_secure_sdk_sys/nano_nbgl" ]
 debug_csdk = [ "ledger_secure_sdk_sys/debug_csdk" ]
 io_new = []  # switch to new 'io' module
 stack_usage = []
+mlkem = [ "ledger_secure_sdk_sys/mlkem" ]
+mldsa = [ "ledger_secure_sdk_sys/mldsa" ]
+mldsa_87 = [ "mldsa", "ledger_secure_sdk_sys/mldsa_87" ]
+mldsa_optimization = [ "mldsa", "ledger_secure_sdk_sys/mldsa_optimization" ]
 
 # Build a network/app variant. When enabled, build.rs overlays the
 # [package.metadata.ledger.variants.x] table onto the base

@@ -20,6 +20,10 @@ critical-section = { version = "1.2.0", optional = true }
 heap = ["dep:embedded-alloc", "dep:critical-section"]
 nano_nbgl = []
 debug_csdk = []
+mlkem = []
+mldsa = []
+mldsa_87 = ["mldsa"]
+mldsa_optimization = ["mldsa"]
 
 [lints.rust.unexpected_cfgs]
 level = "warn"
