@@ -65,7 +65,7 @@ pub fn include_gif(input: TokenStream) -> TokenStream {
 // pins the output against the previous `image`-based implementation).
 // ---------------------------------------------------------------------------
 
-/// A single 8-bit grayscale pixel, layout-compatible with `image::Luma<u8>`.
+/// A single 8-bit grayscale pixel, mirroring `image::Luma<u8>`'s API.
 #[derive(Clone, Copy)]
 struct Luma(pub [u8; 1]);
 
@@ -204,6 +204,17 @@ fn decode_png(path: &str) -> GrayImage {
         other => panic!("include_gif: unsupported PNG format {other:?} in {path}"),
     };
 
+    let expected = (info.width as usize) * (info.height as usize);
+    assert_eq!(
+        pixels.len(),
+        expected,
+        "include_gif: decoded {} pixels but expected {}x{}={} in {path}",
+        pixels.len(),
+        info.width,
+        info.height,
+        expected
+    );
+
     GrayImage {
         width: info.width,
         height: info.height,
@@ -234,6 +245,10 @@ fn decode_gif(path: &str) -> GrayImage {
         let fh = frame.height as u32;
         let left = frame.left as u32;
         let top = frame.top as u32;
+        assert!(
+            left + fw <= canvas_w && top + fh <= canvas_h,
+            "include_gif: frame {fw}x{fh} at ({left},{top}) exceeds {canvas_w}x{canvas_h} canvas in {path}"
+        );
         for fy in 0..fh {
             for fx in 0..fw {
                 let idx = ((fy * fw + fx) * 4) as usize;
