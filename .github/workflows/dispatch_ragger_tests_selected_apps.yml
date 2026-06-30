@@ -1,0 +1,220 @@
+name: Ragger tests for selected Rust apps against a Rust SDK branch
+
+# Manually-triggered workflow that, for an explicit set of LedgerHQ Rust apps:
+#   1. builds each app for every (selected) device against a *specific branch*
+#      of this Rust SDK (the app's pinned `ledger_device_sdk` dependency is
+#      overridden with a `[patch.crates-io]` pointing at the cloned branch), and
+#   2. runs the app's Ragger functional tests (Speculos) on the freshly built
+#      binaries, through LedgerHQ's official `reusable_ragger_tests.yml`.
+#
+# Use it to validate that an in-progress SDK change does not break downstream
+# apps before publishing a new SDK release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      apps:
+        description: >
+          Apps to build & test. Space- and/or comma-separated list of LedgerHQ
+          app repositories, e.g. "app-boilerplate-rust app-xrp". Append "@<ref>"
+          to pin a specific app branch/tag (e.g. "app-boilerplate-rust@develop").
+        required: true
+        type: string
+      rust_sdk_branch:
+        description: 'Branch / tag / commit of ledger-device-rust-sdk to test the apps against.'
+        required: true
+        type: string
+      devices:
+        description: >
+          Optional device filter (space-/comma-separated subset of
+          nanos+, nanox, stax, flex, apex_p). Empty = every device each app
+          supports.
+        required: false
+        default: ''
+        type: string
+      c_sdk_branch:
+        description: >
+          Optional branch of the Ledger C SDK (ledger-secure-sdk) to build
+          against via LEDGER_SDK_PATH. Empty = use the C SDK bundled in the
+          builder image. The chosen C SDK must be API-level compatible with the
+          targeted devices, otherwise the build will fail.
+        required: false
+        default: ''
+        type: string
+      test_dir:
+        description: >
+          Optional pytest directory to run for every app (passed through to the
+          Ragger reusable workflow). Leave as "None" to use each app's
+          `ledger_app.toml` test configuration.
+        required: false
+        default: 'None'
+        type: string
+
+jobs:
+  prepare:
+    name: Build test matrix
+    runs-on: ubuntu-latest
+    outputs:
+      build_matrix: ${{ steps.matrix.outputs.build_matrix }}
+      apps_matrix: ${{ steps.matrix.outputs.apps_matrix }}
+      run_for_devices: ${{ steps.matrix.outputs.run_for_devices }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+      - name: Install ledgered
+        run: pip install ledgered
+      - name: Compute matrices
+        id: matrix
+        env:
+          APP_LIST: ${{ inputs.apps }}
+          DEVICES: ${{ inputs.devices }}
+        run: |
+          python .github/workflows/get_apps_test_matrix.py "${{ secrets.GITHUB_TOKEN }}"
+          echo "build_matrix=$(cat build_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "apps_matrix=$(cat apps_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "run_for_devices=$(cat run_for_devices.json)" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.entry.app }} (${{ matrix.entry.device }})
+    needs: prepare
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
+    strategy:
+      fail-fast: false
+      matrix:
+        entry: ${{ fromJSON(needs.prepare.outputs.build_matrix) }}
+    steps:
+      - name: Install ledgered
+        run: pip install ledgered --break-system-packages
+
+      - name: Clone Rust SDK branch
+        uses: actions/checkout@v6
+        with:
+          repository: LedgerHQ/ledger-device-rust-sdk
+          ref: ${{ inputs.rust_sdk_branch }}
+          path: sdk
+
+      - name: Clone app
+        uses: actions/checkout@v6
+        with:
+          repository: LedgerHQ/${{ matrix.entry.app }}
+          ref: ${{ matrix.entry.ref }}
+          submodules: recursive
+          path: app
+
+      - name: Override ledger_device_sdk with the SDK branch checkout
+        working-directory: app
+        run: |
+          build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
+          cd "$build_directory"
+          # The [patch.crates-io] table must live in the workspace root manifest.
+          # (The lockfile is refreshed in the build step, after this patch is in
+          # place, with `cargo update ledger_device_sdk`.)
+          manifest="$(cargo metadata --no-deps --format-version 1 | jq -r '.workspace_root')/Cargo.toml"
+          sdk_path="$GITHUB_WORKSPACE/sdk/ledger_device_sdk"
+          echo "Patching '$manifest' to use ledger_device_sdk from '$sdk_path'"
+          # Merge into the app's existing [patch.crates-io] section if it has one
+          # (replacing any prior ledger_device_sdk entry there), otherwise create
+          # the section. A blind append would duplicate the table and break the
+          # TOML; a plain sed of "ledger_device_sdk" lines would also wrongly hit
+          # the [dependencies] entry, hence the section-aware awk.
+          awk -v sdkpath="$sdk_path" '
+            /^[[:space:]]*\[/ {
+              if ($0 ~ /^[[:space:]]*\[patch\.crates-io\]/) {
+                in_patch=1; seen=1; print;
+                print "ledger_device_sdk = { path = \"" sdkpath "\" }";
+                next
+              } else { in_patch=0 }
+            }
+            { if (in_patch == 1 && $0 ~ /^[[:space:]]*ledger_device_sdk[[:space:]]*=/) next; print }
+            END {
+              if (seen != 1) {
+                print ""; print "[patch.crates-io]";
+                print "ledger_device_sdk = { path = \"" sdkpath "\" }"
+              }
+            }
+          ' "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
+          echo "Resulting [patch.crates-io] section:"
+          grep -n -A3 '\[patch\.crates-io\]' "$manifest" || true
+
+      - name: Build app against the SDK branch
+        id: build
+        working-directory: app
+        shell: bash
+        run: |
+          # Optionally build against a specific C SDK branch.
+          if [ -n "${{ inputs.c_sdk_branch }}" ]; then
+            git clone https://github.com/LedgerHQ/ledger-secure-sdk \
+              --branch "${{ inputs.c_sdk_branch }}" --single-branch "$GITHUB_WORKSPACE/c_sdk"
+            export LEDGER_SDK_PATH="$GITHUB_WORKSPACE/c_sdk"
+            echo "Using C SDK from $LEDGER_SDK_PATH"
+          else
+            echo "Using the C SDK bundled in the builder image"
+          fi
+
+          build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
+          cd "$build_directory"
+          # Re-pin to the patched (branch) SDK in the lockfile, then build.
+          cargo update ledger_device_sdk
+          echo "Building ${{ matrix.entry.app }} for ${{ matrix.entry.target }}"
+          cargo ledger build "${{ matrix.entry.target }}"
+          binary_path=$(cargo metadata --no-deps --format-version 1 | jq -r '.target_directory')
+          echo "binary_path=${binary_path}" >> "$GITHUB_OUTPUT"
+
+      - name: Prune intermediate build artifacts before upload
+        run: |
+          # Keep only target/<device>/release/<elf>, matching the layout the
+          # Ragger reusable workflow expects when it downloads the artifact into
+          # the cargo target directory.
+          find "${{ steps.build.outputs.binary_path }}" -mindepth 3 -maxdepth 3 -type d -exec rm -rf {} +
+          rm -rf "${{ steps.build.outputs.binary_path }}/release"
+
+      - name: Display built binaries
+        run: ls -1 "${{ steps.build.outputs.binary_path }}"
+
+      - name: Upload app binary
+        uses: actions/upload-artifact@v6
+        with:
+          # Per-device suffix keeps parallel uploads unique; merged below. The
+          # '~' separator avoids one app's merge pattern (`<artifact>~*`) also
+          # matching another app whose name is a prefix of this one.
+          name: ${{ matrix.entry.artifact }}~${{ matrix.entry.target }}
+          path: ${{ steps.build.outputs.binary_path }}
+          if-no-files-found: error
+
+  merge-binaries:
+    name: Merge ${{ matrix.app.name }} binaries
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJSON(needs.prepare.outputs.apps_matrix) }}
+    steps:
+      - name: Merge per-device artifacts into a single app artifact
+        uses: actions/upload-artifact/merge@v6
+        with:
+          name: ${{ matrix.app.artifact }}
+          pattern: ${{ matrix.app.artifact }}~*
+          delete-merged: true
+
+  ragger-tests:
+    name: Ragger tests for ${{ matrix.app.name }}
+    needs: [prepare, merge-binaries]
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJSON(needs.prepare.outputs.apps_matrix) }}
+    uses: LedgerHQ/ledger-app-workflows/.github/workflows/reusable_ragger_tests.yml@v1
+    with:
+      app_repository: LedgerHQ/${{ matrix.app.name }}
+      app_branch_name: ${{ matrix.app.ref }}
+      download_app_binaries_artifact: ${{ matrix.app.artifact }}
+      run_for_devices: ${{ needs.prepare.outputs.run_for_devices }}
+      test_dir: ${{ inputs.test_dir }}
+    secrets: inherit
