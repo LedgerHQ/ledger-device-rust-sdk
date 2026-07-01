@@ -253,8 +253,6 @@ pub struct TagValueList {
     _cfields: Vec<CField>,
     /// Vector of C-compatible strings representing the tag/value pairs.
     pairs: Vec<nbgl_contentTagValue_t>,
-    /// Maximum number of lines allowed for each value before truncation.
-    nb_max_lines_for_value: u8,
     /// If `true`, values are rendered in a smaller font.
     small_case_for_value: bool,
     /// If `true`, long values are word-wrapped instead of truncated.
@@ -268,15 +266,15 @@ impl TagValueList {
     ///
     /// * `tvl` — Slice of [`Field`] items, each containing a `name` (tag)
     ///   and a `value`.
-    /// * `nb_max_lines_for_value` — Maximum number of lines allowed for each
-    ///   value before truncation.
+    /// * `_nb_max_lines_for_valuemax_lines_for_value` — Maximum number of lines allowed for each
+    ///   value before truncation. (ignored, enforced to 0 when calling C function)
     /// * `small_case_for_value` — If `true`, values are rendered in a smaller
     ///   font.
     /// * `wrapping` — If `true`, long values are word-wrapped instead of
     ///   truncated.
     pub fn new(
         tvl: &[Field],
-        nb_max_lines_for_value: u8,
+        _nb_max_lines_for_value: u8,
         small_case_for_value: bool,
         wrapping: bool,
     ) -> TagValueList {
@@ -285,7 +283,6 @@ impl TagValueList {
         TagValueList {
             _cfields: cfields,
             pairs,
-            nb_max_lines_for_value,
             small_case_for_value,
             wrapping,
         }
@@ -298,7 +295,7 @@ impl From<&TagValueList> for nbgl_contentTagValueList_t {
         nbgl_contentTagValueList_t {
             pairs: tvl.pairs.as_ptr(),
             nbPairs: tvl.pairs.len() as u8,
-            nbMaxLinesForValue: tvl.nb_max_lines_for_value,
+            nbMaxLinesForValue: 0,
             token: FIRST_USER_TOKEN as u8,
             smallCaseForValue: tvl.small_case_for_value,
             wrapping: tvl.wrapping,
