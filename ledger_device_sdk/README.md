@@ -88,6 +88,94 @@ cargo build --release --target=flex        # Flex
 cargo build --release --target=apex_p      # Apex P
 ```
 
+### App metadata and build variants
+
+`cargo-ledger` and the SDK build script read your app's install parameters
+(name, icon, flags, allowed curves and derivation paths) from the
+`[package.metadata.ledger]` table of your app's `Cargo.toml`:
+
+```toml
+[package.metadata.ledger]
+curve = ["secp256k1"]            # curves the app is allowed to use
+flags = "0x000"                  # application flags (hex string)
+path  = ["44'/0'"]               # allowed BIP32 derivation-path prefixes
+name  = "MyApp"                  # name shown on the device dashboard
+# one icon table per supported device
+nanox     = { icon = "icons/app_nanox.gif" }
+nanosplus = { icon = "icons/app_nanosplus.gif" }
+stax      = { icon = "icons/app_stax.gif" }
+flex      = { icon = "icons/app_flex.gif" }
+apex_p    = { icon = "icons/app_apexp.png" }
+```
+
+#### Build variants (e.g. testnet)
+
+A single source tree can produce several installable apps that differ only in a
+few metadata fields — typically a testnet build with a different name, icon, and
+derivation path. The SDK supports up to **10 variants per app**.
+
+How it works — the variant **slot number** (`0` … `9`) is the channel between
+your app and the SDK build script. A build script only sees `CARGO_FEATURE_*`
+for features on its *own* crate, so the SDK cannot observe your app's feature
+name — only which numbered slot you switched on. Three things must therefore
+agree on the same number:
+
+1. the SDK feature you forward to — `ledger_device_sdk/variant_<N>`;
+2. the metadata table — `[package.metadata.ledger.variants.<N>]`;
+3. (implicitly) the app feature you give a human name to.
+
+The app feature name is the human-readable label; the number is just a slot
+index. Wire it up in your app's `Cargo.toml`:
+
+```toml
+[features]
+# Human-named app features forward to numbered SDK slots (variant_0 … variant_9).
+variant_testnet = ["ledger_device_sdk/variant_0"]
+variant_betanet = ["ledger_device_sdk/variant_1"]
+
+# Declare only the differing keys; every key you omit is inherited from the
+# base [package.metadata.ledger] table. The table key MUST match the slot
+# number forwarded above.
+[package.metadata.ledger.variants.0]
+name = "MyApp Testnet"
+path = ["44'/1'"]                # standard testnet coin type
+nanox = { icon = "icons/app_testnet_nanox.gif" }
+# flags, curve, and any non-overridden icon are inherited from the base table
+
+[package.metadata.ledger.variants.1]
+name = "MyApp Betanet"
+```
+
+Select a variant at build time with its app feature:
+
+```bash
+cargo ledger build nanosplus -- --features variant_testnet
+```
+
+The same app feature also gates your app's **runtime** code, so a variant can
+change behaviour as well as metadata:
+
+```rust
+#[cfg(feature = "variant_testnet")]
+const COIN_TYPE: u32 = 1; // testnet
+#[cfg(not(feature = "variant_testnet"))]
+const COIN_TYPE: u32 = 0; // mainnet
+```
+
+Note the split of responsibilities: the SDK's `variant_<N>` feature is
+**metadata-only** (it tells `build.rs` which overlay to apply); your app's own
+`variant_<name>` feature is what gates Rust code via `#[cfg(feature = …)]`.
+
+Notes:
+- Variant resolution is **fail-closed**: selecting a slot whose
+  `[package.metadata.ledger.variants.<N>]` table is absent aborts the build
+  instead of silently using the base values. This prevents shipping a
+  "Testnet"-labelled binary that carries mainnet paths or curves.
+- Enabling more than one `variant_<N>` feature at once is a **hard error** — the
+  build aborts rather than silently picking one of several conflicting variants.
+- Unspecified per-device icons fall back to the base table's icon (icons are
+  cosmetic).
+
 ## Getting Started
 
 For a complete application example, see the [Rust Boilerplate App](https://github.com/LedgerHQ/app-boilerplate-rust).

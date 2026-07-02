@@ -1,6 +1,5 @@
 extern crate proc_macro;
 
-use image::*;
 use proc_macro::TokenStream;
 use std::io::Write;
 use syn::{Ident, LitStr, parse_macro_input};
@@ -54,13 +53,231 @@ pub fn include_gif(input: TokenStream) -> TokenStream {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Minimal grayscale image + PNG/GIF decoding
+//
+// This crate only needs to turn a PNG or GIF icon into an 8-bit grayscale
+// buffer. Rather than depend on the full `image` crate (which pulls in a color
+// management stack via `moxcms`/`pxfm`, `bytemuck`, ...), we decode directly
+// with the `png` and `gif` crates and reproduce `image`'s `to_luma8()`
+// conversion byte-for-byte. The conversions below mirror `image`'s
+// `FromColor`/`FromPrimitive` impls (see `include_gif`'s snapshot test, which
+// pins the output against the previous `image`-based implementation).
+// ---------------------------------------------------------------------------
+
+/// A single 8-bit grayscale pixel, mirroring `image::Luma<u8>`'s API.
+#[derive(Clone, Copy)]
+struct Luma(pub [u8; 1]);
+
+impl core::ops::Index<usize> for Luma {
+    type Output = u8;
+    fn index(&self, i: usize) -> &u8 {
+        &self.0[i]
+    }
+}
+
+/// An 8-bit grayscale image, a drop-in subset of `image::GrayImage`.
+struct GrayImage {
+    width: u32,
+    height: u32,
+    pixels: Vec<Luma>,
+}
+
+impl GrayImage {
+    fn width(&self) -> u32 {
+        self.width
+    }
+
+    fn height(&self) -> u32 {
+        self.height
+    }
+
+    fn get_pixel(&self, x: u32, y: u32) -> Luma {
+        self.pixels[(y * self.width + x) as usize]
+    }
+
+    fn pixels(&self) -> impl Iterator<Item = &Luma> {
+        self.pixels.iter()
+    }
+
+    fn pixels_mut(&mut self) -> impl Iterator<Item = &mut Luma> {
+        self.pixels.iter_mut()
+    }
+}
+
+/// sRGB -> luma, 8-bit domain. Matches `image`'s integer `rgb_to_luma`:
+/// `(2126*R + 7152*G + 722*B) / 10000` with truncating division.
+fn luma8_from_rgb8(r: u8, g: u8, b: u8) -> u8 {
+    ((2126 * r as u32 + 7152 * g as u32 + 722 * b as u32) / 10000) as u8
+}
+
+/// sRGB -> luma, 16-bit domain (used before downscaling 16-bit PNGs).
+fn luma16_from_rgb16(r: u16, g: u16, b: u16) -> u16 {
+    ((2126 * r as u64 + 7152 * g as u64 + 722 * b as u64) / 10000) as u16
+}
+
+/// 16-bit -> 8-bit sample, matching `image`'s `FromPrimitive<u16> for u8`:
+/// `round(c * 255 / 65535)`, implemented as `(c + 128) / 257`.
+fn u16_to_u8(c16: u16) -> u8 {
+    ((c16 as u32 + 128) / 257) as u8
+}
+
+fn be16(p: &[u8]) -> u16 {
+    ((p[0] as u16) << 8) | p[1] as u16
+}
+
+/// Decode an image file into 8-bit grayscale, dispatching on file extension.
+/// Mirrors `image::open(path).to_luma8()` for the PNG and GIF inputs this
+/// macro supports.
+fn open_as_luma(path: &str) -> GrayImage {
+    let lower = path.to_ascii_lowercase();
+    if lower.ends_with(".png") {
+        decode_png(path)
+    } else if lower.ends_with(".gif") {
+        decode_gif(path)
+    } else {
+        panic!("include_gif: unsupported file extension (expected .png or .gif): {path}");
+    }
+}
+
+fn decode_png(path: &str) -> GrayImage {
+    let file = std::fs::File::open(path)
+        .unwrap_or_else(|e| panic!("include_gif: cannot open {path}: {e}"));
+    let mut decoder = png::Decoder::new(std::io::BufReader::new(file));
+    // Same transformation `image` applies: expand palette, sub-8-bit grayscale
+    // and tRNS so we only ever see Grayscale/GrayscaleAlpha/Rgb/Rgba samples.
+    decoder.set_transformations(png::Transformations::EXPAND);
+    let mut reader = decoder
+        .read_info()
+        .unwrap_or_else(|e| panic!("include_gif: invalid PNG {path}: {e}"));
+    let mut buf = vec![
+        0u8;
+        reader
+            .output_buffer_size()
+            .unwrap_or_else(|| panic!("include_gif: PNG too large {path}"))
+    ];
+    let info = reader
+        .next_frame(&mut buf)
+        .unwrap_or_else(|e| panic!("include_gif: cannot decode PNG {path}: {e}"));
+    let data = &buf[..info.buffer_size()];
+
+    use png::{BitDepth::*, ColorType::*};
+    let pixels: Vec<Luma> = match (info.color_type, info.bit_depth) {
+        (Grayscale, Eight) => data.iter().map(|&v| Luma([v])).collect(),
+        (GrayscaleAlpha, Eight) => data.chunks_exact(2).map(|p| Luma([p[0]])).collect(),
+        (Rgb, Eight) => data
+            .chunks_exact(3)
+            .map(|p| Luma([luma8_from_rgb8(p[0], p[1], p[2])]))
+            .collect(),
+        (Rgba, Eight) => data
+            .chunks_exact(4)
+            .map(|p| Luma([luma8_from_rgb8(p[0], p[1], p[2])]))
+            .collect(),
+        (Grayscale, Sixteen) => data
+            .chunks_exact(2)
+            .map(|p| Luma([u16_to_u8(be16(p))]))
+            .collect(),
+        (GrayscaleAlpha, Sixteen) => data
+            .chunks_exact(4)
+            .map(|p| Luma([u16_to_u8(be16(&p[0..2]))]))
+            .collect(),
+        (Rgb, Sixteen) => data
+            .chunks_exact(6)
+            .map(|p| {
+                Luma([u16_to_u8(luma16_from_rgb16(
+                    be16(&p[0..2]),
+                    be16(&p[2..4]),
+                    be16(&p[4..6]),
+                ))])
+            })
+            .collect(),
+        (Rgba, Sixteen) => data
+            .chunks_exact(8)
+            .map(|p| {
+                Luma([u16_to_u8(luma16_from_rgb16(
+                    be16(&p[0..2]),
+                    be16(&p[2..4]),
+                    be16(&p[4..6]),
+                ))])
+            })
+            .collect(),
+        other => panic!("include_gif: unsupported PNG format {other:?} in {path}"),
+    };
+
+    let expected = (info.width as usize) * (info.height as usize);
+    assert_eq!(
+        pixels.len(),
+        expected,
+        "include_gif: decoded {} pixels but expected {}x{}={} in {path}",
+        pixels.len(),
+        info.width,
+        info.height,
+        expected
+    );
+
+    GrayImage {
+        width: info.width,
+        height: info.height,
+        pixels,
+    }
+}
+
+fn decode_gif(path: &str) -> GrayImage {
+    let file = std::fs::File::open(path)
+        .unwrap_or_else(|e| panic!("include_gif: cannot open {path}: {e}"));
+    let mut options = gif::DecodeOptions::new();
+    options.set_color_output(gif::ColorOutput::RGBA);
+    let mut reader = options
+        .read_info(file)
+        .unwrap_or_else(|e| panic!("include_gif: invalid GIF {path}: {e}"));
+
+    // Like `image`, composite the first frame onto a fully transparent
+    // (luma 0) canvas of the logical screen size, honouring its offset.
+    let canvas_w = reader.width() as u32;
+    let canvas_h = reader.height() as u32;
+    let mut pixels = vec![Luma([0u8]); (canvas_w * canvas_h) as usize];
+
+    if let Some(frame) = reader
+        .read_next_frame()
+        .unwrap_or_else(|e| panic!("include_gif: cannot decode GIF {path}: {e}"))
+    {
+        let fw = frame.width as u32;
+        let fh = frame.height as u32;
+        let left = frame.left as u32;
+        let top = frame.top as u32;
+        assert!(
+            left + fw <= canvas_w && top + fh <= canvas_h,
+            "include_gif: frame {fw}x{fh} at ({left},{top}) exceeds {canvas_w}x{canvas_h} canvas in {path}"
+        );
+        for fy in 0..fh {
+            for fx in 0..fw {
+                let idx = ((fy * fw + fx) * 4) as usize;
+                let luma = luma8_from_rgb8(
+                    frame.buffer[idx],
+                    frame.buffer[idx + 1],
+                    frame.buffer[idx + 2],
+                );
+                let cx = left + fx;
+                let cy = top + fy;
+                pixels[(cy * canvas_w + cx) as usize] = Luma([luma]);
+            }
+        }
+    }
+
+    GrayImage {
+        width: canvas_w,
+        height: canvas_h,
+        pixels,
+    }
+}
+
 fn generate_glyph(filename: LitStr, glyph_type: GlyphType) -> TokenStream {
     let path = format!(
         "{}/{}",
         std::env::var("CARGO_MANIFEST_DIR").unwrap(),
         filename.value()
     );
-    let mut grayscale_image: GrayImage = open(path).unwrap().to_luma8();
+    let mut grayscale_image: GrayImage = open_as_luma(&path);
     let mut vec_output = Vec::new();
 
     match glyph_type {
@@ -248,4 +465,91 @@ fn generate_nbgl_glyph(frame: &mut GrayImage) -> (Vec<u8>, u8, bool) {
     result.extend_from_slice(&compressed_image);
 
     (result, bpp, true)
+}
+
+#[cfg(test)]
+mod tests {
+    //! Snapshot test pinning the generated glyph bytes against the values
+    //! produced by the previous `image`-crate-based implementation. The golden
+    //! bytes were captured from that implementation for the fixtures under
+    //! `testdata/`. Run with:
+    //!   cargo test -p include_gif --target <host-triple>
+    use super::*;
+
+    fn fixture(name: &str) -> GrayImage {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/testdata/");
+        open_as_luma(&format!("{path}{name}"))
+    }
+
+    fn bagl(name: &str) -> Vec<u8> {
+        generate_bagl_glyph(&fixture(name))
+    }
+
+    fn nbgl(name: &str) -> (Vec<u8>, u8, bool) {
+        generate_nbgl_glyph(&mut fixture(name))
+    }
+
+    #[test]
+    fn crab_48x48_png() {
+        let img = fixture("crab_48x48.png");
+        assert_eq!((img.width(), img.height()), (48, 48));
+        assert_eq!(
+            bagl("crab_48x48.png"),
+            include!("../testdata/golden/crab_48x48.png.bagl")
+        );
+        let (buf, bpp, is_file) = nbgl("crab_48x48.png");
+        assert_eq!((bpp, is_file), (1, true));
+        assert_eq!(buf, include!("../testdata/golden/crab_48x48.png.nbgl"));
+    }
+
+    #[test]
+    fn crab_14x14_png() {
+        let img = fixture("crab_14x14.png");
+        assert_eq!((img.width(), img.height()), (14, 14));
+        assert_eq!(
+            bagl("crab_14x14.png"),
+            include!("../testdata/golden/crab_14x14.png.bagl")
+        );
+        let (buf, bpp, is_file) = nbgl("crab_14x14.png");
+        assert_eq!((bpp, is_file), (1, false));
+        assert_eq!(buf, include!("../testdata/golden/crab_14x14.png.nbgl"));
+    }
+
+    #[test]
+    fn crab_64x64_gif() {
+        let img = fixture("crab_64x64.gif");
+        assert_eq!((img.width(), img.height()), (64, 64));
+        assert_eq!(
+            bagl("crab_64x64.gif"),
+            include!("../testdata/golden/crab_64x64.gif.bagl")
+        );
+        let (buf, bpp, is_file) = nbgl("crab_64x64.gif");
+        assert_eq!((bpp, is_file), (4, true));
+        assert_eq!(buf, include!("../testdata/golden/crab_64x64.gif.nbgl"));
+    }
+
+    #[test]
+    fn icon_cross_badge_gif() {
+        assert_eq!(
+            bagl("icon_cross_badge.gif"),
+            include!("../testdata/golden/icon_cross_badge.gif.bagl")
+        );
+        let (buf, bpp, is_file) = nbgl("icon_cross_badge.gif");
+        assert_eq!((bpp, is_file), (1, false));
+        assert_eq!(
+            buf,
+            include!("../testdata/golden/icon_cross_badge.gif.nbgl")
+        );
+    }
+
+    #[test]
+    fn badge_check_gif() {
+        assert_eq!(
+            bagl("badge_check.gif"),
+            include!("../testdata/golden/badge_check.gif.bagl")
+        );
+        let (buf, bpp, is_file) = nbgl("badge_check.gif");
+        assert_eq!((bpp, is_file), (1, false));
+        assert_eq!(buf, include!("../testdata/golden/badge_check.gif.nbgl"));
+    }
 }

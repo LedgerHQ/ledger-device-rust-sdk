@@ -8,9 +8,9 @@ on:
         required: false
         default: ''
         type: string
-    schedule:
-      # every Monday at 4 AM UTC
-      - cron: '0 4 * * 1'
+  schedule:
+    # every Monday at 4 AM UTC
+    - cron: '0 4 * * 1'
 
 jobs:
   retrieve-rust-apps:

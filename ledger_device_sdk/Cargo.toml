@@ -1,6 +1,6 @@
 [package]
 name = "ledger_device_sdk"
-version = "1.35.3"
+version = "1.36.0"
 authors = ["Ledger"]
 edition = "2024"
 license.workspace = true
@@ -17,7 +17,7 @@ ledger_device_sdk = { path = ".", features = ["unit_test"] }
 testmacro = { path = "../testmacro"}
 
 [dependencies]
-include_gif = { path = "../include_gif", version = "1.3.1" }
+include_gif = { path = "../include_gif", version = "1.3.2" }
 num-traits = { version = "0.2.14", default-features = false }
 rand_core = { version = "0.6.3", default-features = false }
 zeroize = { version = "1.6.0", default-features = false }
@@ -40,6 +40,20 @@ nano_nbgl = [ "ledger_secure_sdk_sys/nano_nbgl" ]
 debug_csdk = [ "ledger_secure_sdk_sys/debug_csdk" ]
 io_new = []  # switch to new 'io' module
 stack_usage = []
+
+# Build a network/app variant. When enabled, build.rs overlays the
+# [package.metadata.ledger.variants.x] table onto the base
+# [package.metadata.ledger] table (keys it defines win; the rest are inherited).
+variant_0 = []
+variant_1 = []
+variant_2 = []
+variant_3 = []
+variant_4 = []
+variant_5 = []
+variant_6 = []
+variant_7 = []
+variant_8 = []
+variant_9 = []
 
 # When enabled, this feature re-exports the `ledger_secure_sdk_sys` crate containing the
 # Ledger C SDK bindings through the `sys` module. Use it to access low-level (unsafe) FFI
