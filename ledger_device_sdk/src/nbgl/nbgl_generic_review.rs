@@ -266,7 +266,7 @@ impl TagValueList {
     ///
     /// * `tvl` — Slice of [`Field`] items, each containing a `name` (tag)
     ///   and a `value`.
-    /// * `_nb_max_lines_for_valuemax_lines_for_value` — Maximum number of lines allowed for each
+    /// * `_nb_max_lines_for_value` — Maximum number of lines allowed for each
     ///   value before truncation. (ignored, enforced to 0 when calling C function)
     /// * `small_case_for_value` — If `true`, values are rendered in a smaller
     ///   font.
