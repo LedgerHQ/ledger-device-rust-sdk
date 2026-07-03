@@ -7,6 +7,16 @@
 //! The `mldsa_optimization` feature enables an alternative implementation that
 //! trades RAM for speed.
 //!
+//! # Memory considerations
+//!
+//! The underlying C routines use large stack-allocated workspaces. On the
+//! memory-constrained Nano X (28 KB of SRAM), the default 8 KB heap leaves too
+//! little stack: a key-generation, signing, or verification call can overflow
+//! the stack into the heap and corrupt it. Apps enabling `mldsa` on Nano X must
+//! therefore budget a smaller heap, for example by setting
+//! `HEAP_SIZE="nanox: 2048"` (the per-target syntax only affects Nano X and
+//! leaves the default heap on the other devices).
+//!
 //! This module is only available when the `mldsa` Cargo feature is enabled.
 
 use ledger_secure_sdk_sys::*;
