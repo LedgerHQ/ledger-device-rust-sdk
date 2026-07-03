@@ -98,6 +98,8 @@ jobs:
         working-directory: ledger_device_sdk
         env:
           LEDGER_SDK_PATH: /tmp/c_sdk
+          # Shrink the heap for Nano X only, other targets keep the default.
+          HEAP_SIZE: "nanox: 2048"
         run: |
           cargo test --target ${{ matrix.target }} --features unit_test,mlkem,mldsa --tests
 
