@@ -105,6 +105,7 @@ SECTIONS
 
   .bss :
   {
+    _ram = .;
     _bss = .;
     *(.bss*)
     _ebss = .;
