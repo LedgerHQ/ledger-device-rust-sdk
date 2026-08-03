@@ -80,6 +80,29 @@ jobs:
         run: |
           cargo test --target ${{ matrix.target }} --features unit_test --tests
 
+  test-pqc:
+    name: Run ML-KEM and ML-DSA unit tests
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
+    strategy:
+      matrix:
+        target: ["nanox", "nanosplus", "stax", "flex", "apex_p"]
+    steps:
+      - name: Clone
+        uses: actions/checkout@v6
+      - name: Setup C SDK (API_LEVEL_26)
+        run: |
+          git clone https://github.com/LedgerHQ/ledger-secure-sdk --branch API_LEVEL_26 --single-branch /tmp/c_sdk
+      - name: ML-KEM and ML-DSA unit tests
+        working-directory: ledger_device_sdk
+        env:
+          LEDGER_SDK_PATH: /tmp/c_sdk
+          # Shrink the heap for Nano X only, other targets keep the default.
+          HEAP_SIZE: "nanox: 2048"
+        run: |
+          cargo test --target ${{ matrix.target }} --features unit_test,mlkem,mldsa --tests
+
   build-apps:
     name: Build all Rust apps
     if: github.event_name != 'workflow_dispatch'
