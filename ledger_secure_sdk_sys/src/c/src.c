@@ -263,6 +263,13 @@ void c_reset_bss() {
 
 bolos_ux_params_t G_ux_params = {0};
 
+#if defined(HAVE_BAGL) && !defined(USE_OS_IO_STACK)
+// Rust BAGL apps never touch the C UX stack, so `lib_ux` is not compiled and redisplaying
+// it is a no-op. Referenced by os_io_seph_ux.c, so we define a weak version here to avoid link errors,
+// but allow an app to replace the implementation if needed.
+__attribute__((weak)) void ux_stack_redisplay(void) {}
+#endif  // HAVE_BAGL && !USE_OS_IO_STACK
+
 void c_boot_std() {
 
     // Warn UX layer of io reset to avoid unwanted pin lock
