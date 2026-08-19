@@ -131,6 +131,7 @@ SECTIONS
     libc.a ( * )
     *(.ARM.exidx* .gnu.linkonce.armexidx.*)
     *(.debug_info)
+    *(.init_array)
   }
 
   ledger.target (INFO): { KEEP(*(ledger.target)) }
