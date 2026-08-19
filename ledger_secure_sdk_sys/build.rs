@@ -997,9 +997,13 @@ fn str2path(c_sdk: &Path, pathlist: &[&str]) -> Vec<PathBuf> {
 
 /// Get all #define from a header file
 fn header2define(headername: &str) -> Vec<(String, Option<String>)> {
-    let mut headerfile = File::open(headername).unwrap();
+    let mut headerfile = File::open(headername).unwrap_or_else(|e| {
+        panic!("Could not open defines file '{headername}': {e}");
+    });
     let mut header = String::new();
-    headerfile.read_to_string(&mut header).unwrap();
+    headerfile.read_to_string(&mut header).unwrap_or_else(|e| {
+        panic!("Could not read defines file '{headername}': {e}");
+    });
 
     header
         .lines()

@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.38.0] - 2026-08-25
+
+### Added
+- `NbglHomeAndSettings::info_list(&[(&str, &str)])` sets an arbitrary number of
+  information fields on the home screen's info page, and
+  `NbglHomeAndSettings::app_name(&str)` sets the application name on its own.
+  The info list was previously frozen to the two `Version` / `Developer` fields.
+
+### Changed
+- `NbglHomeAndSettings::infos(app_name, version, author)` is unchanged and now a
+  shortcut over `app_name()` + `info_list()`.
+- `NbglHomeAndSettings` passes a NULL `infosList` to the C use case when no
+  information field is set, instead of announcing two fields backed by an empty
+  array.
+- updating ref to ledger_secure_sdk_sys to 1.16.5
+
 ## [1.37.0] - 2026-08-24
 
 ### Added
@@ -31,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `NbglHomeAndSettings::show()` is now marked with the `#[deprecated]` attribute,
   matching what its documentation already stated. Use `show_and_return()`
   instead, which does not force a home screen refresh for every received APDU.
+
 
 ## [1.36.2] - 2026-08-18
 

@@ -10,7 +10,7 @@ use crate::nvm::*;
 use const_zero::const_zero;
 extern crate alloc;
 use alloc::ffi::CString;
-use alloc::{vec, vec::Vec};
+use alloc::vec::Vec;
 use core::ffi::{c_char, c_int};
 use ledger_secure_sdk_sys::*;
 
