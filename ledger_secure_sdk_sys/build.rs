@@ -8,13 +8,15 @@ use std::{env, fs::File, io::BufRead, io::BufReader, io::Read, io::Write};
 
 const AUX_C_FILES: [&str; 2] = ["./src/c/src.c", "./src/c/sjlj.s"];
 
-const SDK_C_FILES: [&str; 12] = [
+const SDK_C_FILES: [&str; 14] = [
     // Syscalls
     "src/cx_stubs.S",
     "src/svc_call.s",
     "src/svc_cx_call.s",
-    "src/syscalls.c",
-    //
+    // stack protector
+    "src/stack_protector.c",
+    "src/stack_protector_init.S",
+    // OS
     "src/pic.c",
     "src/os.c",
     "src/os_printf.c",
@@ -24,6 +26,8 @@ const SDK_C_FILES: [&str; 12] = [
     "io/src/os_io_default_apdu.c",
     "io/src/os_io_seph_cmd.c",
     "io/src/os_io_seph_ux.c",
+    // Syscalls
+    "src/syscalls.c", // It must be listed after os_io.c, because it defines weak symbols
 ];
 
 #[derive(Debug, Default, PartialEq, Clone, Copy)]
