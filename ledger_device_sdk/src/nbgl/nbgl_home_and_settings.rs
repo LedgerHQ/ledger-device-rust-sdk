@@ -43,10 +43,6 @@ unsafe extern "C" fn settings_callback(token: c_int, _index: u8, _page: c_int) {
     }
 }
 
-/// Informations fields name to display in the dedicated
-/// page of the home screen.
-const INFO_FIELDS: [*const c_char; 2] = [c"Version".as_ptr(), c"Developer".as_ptr()];
-
 /// Initial page to display when showing the home and settings screen.
 pub enum PageIndex {
     Settings(u8),
@@ -57,7 +53,9 @@ pub enum PageIndex {
 pub struct NbglHomeAndSettings {
     app_name: CString,
     tag_line: Option<CString>,
+    info_types: Vec<CString>,
     info_contents: Vec<CString>,
+    info_types_ptr: Vec<*const c_char>,
     info_contents_ptr: Vec<*const c_char>,
     setting_contents: Vec<[CString; 2]>,
     nb_settings: u8,
@@ -88,7 +86,9 @@ impl NbglHomeAndSettings {
         NbglHomeAndSettings {
             app_name: CString::new("").unwrap(),
             tag_line: None,
+            info_types: Vec::default(),
             info_contents: Vec::default(),
+            info_types_ptr: Vec::default(),
             info_contents_ptr: Vec::default(),
             setting_contents: Vec::default(),
             nb_settings: 0,
@@ -110,8 +110,48 @@ impl NbglHomeAndSettings {
         NbglHomeAndSettings { icon, ..self }
     }
 
+    /// Sets the name of the application, displayed on the home screen and used
+    /// as the title of the settings pages.
+    /// # Arguments
+    /// * `app_name` - The name of the application.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
+    pub fn app_name(self, app_name: &str) -> NbglHomeAndSettings {
+        NbglHomeAndSettings {
+            app_name: CString::new(app_name).unwrap(),
+            ..self
+        }
+    }
+
+    /// Sets an arbitrary list of informations to display in the dedicated
+    /// page of the home screen.
+    ///
+    /// Replaces any list previously set, either by [`Self::infos`] or by an
+    /// earlier call to this method.
+    /// # Arguments
+    /// * `infos` - Slice of `(type, content)` pairs, where `type` is the label
+    ///   shown in bold and `content` the value below it. For instance
+    ///   `[("Version", "1.0.0"), ("Developer", "Ledger"), ("Copyright", "(c) 2026 Ledger")]`.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
+    pub fn info_list(mut self, infos: &[(&str, &str)]) -> NbglHomeAndSettings {
+        self.info_types = infos
+            .iter()
+            .map(|(t, _)| CString::new(*t).unwrap())
+            .collect();
+        self.info_contents = infos
+            .iter()
+            .map(|(_, c)| CString::new(*c).unwrap())
+            .collect();
+        self
+    }
+
     /// Sets the application informations to display in the dedicated
     /// page of the home screen.
+    ///
+    /// Shortcut for the usual `Version` / `Developer` pair. Use
+    /// [`Self::app_name`] together with [`Self::info_list`] to display an
+    /// arbitrary set of fields instead.
     /// # Arguments
     /// * `app_name` - The name of the application.
     /// * `version` - The version of the application.
@@ -119,16 +159,8 @@ impl NbglHomeAndSettings {
     /// # Returns
     /// Returns the builder itself to allow method chaining.
     pub fn infos(self, app_name: &str, version: &str, author: &str) -> NbglHomeAndSettings {
-        let v: Vec<CString> = vec![
-            CString::new(version).unwrap(),
-            CString::new(author).unwrap(),
-        ];
-
-        NbglHomeAndSettings {
-            app_name: CString::new(app_name).unwrap(),
-            info_contents: v,
-            ..self
-        }
+        self.app_name(app_name)
+            .info_list(&[("Version", version), ("Developer", author)])
     }
 
     /// Sets the tagline to display below the application name on the home screen.
@@ -186,6 +218,94 @@ impl NbglHomeAndSettings {
         self.start_page = page;
     }
 
+    /// Builds the C structures handed over to `nbgl_useCaseHomeAndSettings` from
+    /// the builder state. The C API only borrows them, so they are kept alive in
+    /// `self` and refreshed before every call.
+    fn prepare(&mut self) {
+        unsafe {
+            self.info_types_ptr = self.info_types.iter().map(|s| s.as_ptr()).collect();
+            self.info_contents_ptr = self.info_contents.iter().map(|s| s.as_ptr()).collect();
+
+            self.info_list = nbgl_contentInfoList_t {
+                infoTypes: self.info_types_ptr.as_ptr(),
+                infoContents: self.info_contents_ptr.as_ptr(),
+                nbInfos: self.info_types_ptr.len() as u8,
+                infoExtensions: core::ptr::null(),
+                token: 0,
+                withExtensions: false,
+            };
+
+            for (i, setting) in self.setting_contents.iter().enumerate() {
+                SWITCH_ARRAY[i].text = setting[0].as_ptr();
+                SWITCH_ARRAY[i].subText = setting[1].as_ptr();
+                let ptr = NVM_REF.load(Ordering::Relaxed);
+                let state = if !ptr.is_null() {
+                    (&*ptr).get_ref()[i]
+                } else {
+                    OFF_STATE
+                };
+                SWITCH_ARRAY[i].initState = state;
+                SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
+                #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+                {
+                    SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
+                }
+            }
+
+            self.content = nbgl_content_t {
+                content: nbgl_content_u {
+                    switchesList: nbgl_pageSwitchesList_s {
+                        switches: &raw const SWITCH_ARRAY as *const nbgl_contentSwitch_t,
+                        nbSwitches: self.nb_settings,
+                    },
+                },
+                contentActionCallback: Some(settings_callback),
+                type_: SWITCHES_LIST,
+            };
+
+            self.generic_contents = nbgl_genericContents_t {
+                callbackCallNeeded: false,
+                __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
+                    contentsList: &self.content as *const nbgl_content_t,
+                },
+                nbContents: 1,
+            };
+        }
+    }
+
+    /// Pointer to the info list, or NULL when no information field was set
+    /// (the C API accepts a NULL `infosList`).
+    fn info_list_ptr(&self) -> *const nbgl_contentInfoList_t {
+        match self.info_list.nbInfos {
+            0 => core::ptr::null(),
+            _ => &self.info_list as *const nbgl_contentInfoList_t,
+        }
+    }
+
+    /// Pointer to the settings contents, or NULL when no setting was set.
+    fn settings_ptr(&self) -> *const nbgl_genericContents_t {
+        match self.nb_settings {
+            0 => core::ptr::null(),
+            _ => &self.generic_contents as *const nbgl_genericContents_t,
+        }
+    }
+
+    /// Pointer to the tagline, or NULL when none was set.
+    fn tagline_ptr(&self) -> *const c_char {
+        match self.tag_line {
+            None => core::ptr::null(),
+            Some(ref tag) => tag.as_ptr() as *const c_char,
+        }
+    }
+
+    /// Index of the page to start on.
+    fn start_page_index(&self) -> u8 {
+        match self.start_page {
+            PageIndex::Home => INIT_HOME_PAGE as u8,
+            PageIndex::Settings(idx) => idx,
+        }
+    }
+
     /// Show the home screen and settings page (internal implementation).
     fn show_internal<T: TryFrom<ApduHeader>>(&mut self) -> Event<T>
     where
@@ -193,74 +313,16 @@ impl NbglHomeAndSettings {
     {
         unsafe {
             loop {
-                self.info_contents_ptr = self
-                    .info_contents
-                    .iter()
-                    .map(|s| s.as_ptr())
-                    .collect::<Vec<_>>();
-
-                self.info_list = nbgl_contentInfoList_t {
-                    infoTypes: INFO_FIELDS.as_ptr(),
-                    infoContents: self.info_contents_ptr[..].as_ptr(),
-                    nbInfos: INFO_FIELDS.len() as u8,
-                    infoExtensions: core::ptr::null(),
-                    token: 0,
-                    withExtensions: false,
-                };
-
-                for (i, setting) in self.setting_contents.iter().enumerate() {
-                    SWITCH_ARRAY[i].text = setting[0].as_ptr();
-                    SWITCH_ARRAY[i].subText = setting[1].as_ptr();
-                    let ptr = NVM_REF.load(Ordering::Relaxed);
-                    let state = if !ptr.is_null() {
-                        (&*ptr).get_ref()[i]
-                    } else {
-                        OFF_STATE
-                    };
-                    SWITCH_ARRAY[i].initState = state;
-                    SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
-                    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
-                    {
-                        SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
-                    }
-                }
-
-                self.content = nbgl_content_t {
-                    content: nbgl_content_u {
-                        switchesList: nbgl_pageSwitchesList_s {
-                            switches: &raw const SWITCH_ARRAY as *const nbgl_contentSwitch_t,
-                            nbSwitches: self.nb_settings,
-                        },
-                    },
-                    contentActionCallback: Some(settings_callback),
-                    type_: SWITCHES_LIST,
-                };
-
-                self.generic_contents = nbgl_genericContents_t {
-                    callbackCallNeeded: false,
-                    __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
-                        contentsList: &self.content as *const nbgl_content_t,
-                    },
-                    nbContents: 1,
-                };
+                self.prepare();
 
                 self.ux_sync_init();
                 nbgl_useCaseHomeAndSettings(
                     self.app_name.as_ptr() as *const c_char,
                     &self.icon as *const nbgl_icon_details_t,
-                    match self.tag_line {
-                        None => core::ptr::null(),
-                        Some(ref tag) => tag.as_ptr() as *const c_char,
-                    },
-                    match self.start_page {
-                        PageIndex::Home => INIT_HOME_PAGE as u8,
-                        PageIndex::Settings(idx) => idx,
-                    },
-                    match self.nb_settings {
-                        0 => core::ptr::null(),
-                        _ => &self.generic_contents as *const nbgl_genericContents_t,
-                    },
-                    &self.info_list as *const nbgl_contentInfoList_t,
+                    self.tagline_ptr(),
+                    self.start_page_index(),
+                    self.settings_ptr(),
+                    self.info_list_ptr(),
                     core::ptr::null(),
                     Some(quit_callback),
                 );
@@ -327,74 +389,16 @@ impl NbglHomeAndSettings {
     /// Show the home screen and settings page.
     /// This function returns immediately after the screen is displayed.
     pub fn show_and_return(&mut self) {
+        self.prepare();
+
         unsafe {
-            self.info_contents_ptr = self
-                .info_contents
-                .iter()
-                .map(|s| s.as_ptr())
-                .collect::<Vec<_>>();
-
-            self.info_list = nbgl_contentInfoList_t {
-                infoTypes: INFO_FIELDS.as_ptr(),
-                infoContents: self.info_contents_ptr[..].as_ptr(),
-                nbInfos: INFO_FIELDS.len() as u8,
-                infoExtensions: core::ptr::null(),
-                token: 0,
-                withExtensions: false,
-            };
-
-            for (i, setting) in self.setting_contents.iter().enumerate() {
-                SWITCH_ARRAY[i].text = setting[0].as_ptr();
-                SWITCH_ARRAY[i].subText = setting[1].as_ptr();
-                let ptr = NVM_REF.load(Ordering::Relaxed);
-                let state = if !ptr.is_null() {
-                    (&*ptr).get_ref()[i]
-                } else {
-                    OFF_STATE
-                };
-                SWITCH_ARRAY[i].initState = state;
-                SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
-                #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
-                {
-                    SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
-                }
-            }
-
-            self.content = nbgl_content_t {
-                content: nbgl_content_u {
-                    switchesList: nbgl_pageSwitchesList_s {
-                        switches: &raw const SWITCH_ARRAY as *const nbgl_contentSwitch_t,
-                        nbSwitches: self.nb_settings,
-                    },
-                },
-                contentActionCallback: Some(settings_callback),
-                type_: SWITCHES_LIST,
-            };
-
-            self.generic_contents = nbgl_genericContents_t {
-                callbackCallNeeded: false,
-                __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
-                    contentsList: &self.content as *const nbgl_content_t,
-                },
-                nbContents: 1,
-            };
-
             nbgl_useCaseHomeAndSettings(
                 self.app_name.as_ptr() as *const c_char,
                 &self.icon as *const nbgl_icon_details_t,
-                match self.tag_line {
-                    None => core::ptr::null(),
-                    Some(ref tag) => tag.as_ptr() as *const c_char,
-                },
-                match self.start_page {
-                    PageIndex::Home => INIT_HOME_PAGE as u8,
-                    PageIndex::Settings(idx) => idx,
-                },
-                match self.nb_settings {
-                    0 => core::ptr::null(),
-                    _ => &self.generic_contents as *const nbgl_genericContents_t,
-                },
-                &self.info_list as *const nbgl_contentInfoList_t,
+                self.tagline_ptr(),
+                self.start_page_index(),
+                self.settings_ptr(),
+                self.info_list_ptr(),
                 core::ptr::null(),
                 Some(quit_cb),
             );

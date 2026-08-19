@@ -102,14 +102,18 @@ extern "C" fn sample_main() {
     let mut settings: settings::Settings = Default::default();
 
     // Display the home screen.
+    // `info_list` takes an arbitrary number of (type, content) pairs; the
+    // shorter `.infos(app_name, version, author)` covers the usual
+    // Version/Developer pair.
     let mut home = NbglHomeAndSettings::new()
         .glyph(&FERRIS)
         .settings(settings.get_mut(), &settings_strings)
-        .infos(
-            "Example App",
-            env!("CARGO_PKG_VERSION"),
-            env!("CARGO_PKG_AUTHORS"),
-        );
+        .app_name("Example App")
+        .info_list(&[
+            ("Version", env!("CARGO_PKG_VERSION")),
+            ("Developer", env!("CARGO_PKG_AUTHORS")),
+            ("Copyright", "(c) 2026 Ledger"),
+        ]);
 
     home.show_and_return();
 
