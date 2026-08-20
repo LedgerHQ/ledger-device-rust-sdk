@@ -39,6 +39,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `NbglAdvanceReview::warning(&NbglWarning)` and
   `NbglStreamingReview::warning(&NbglWarning)`.
 - `nbgl_warning` example, showing both the pre-defined and the manual paths.
+- Four more `NbglGenericReview` content types, taking it from 6 to 10 of the 11
+  members of the C content union: `SwitchesList` (`SWITCHES_LIST`),
+  `ChoicesList` (`CHOICES_LIST`), `BarsList` (`BARS_LIST`) and `ExtendedCenter`
+  (`EXTENDED_CENTER`, a centered info block with an inline tip box). They are
+  added through the corresponding new `NbglPageContent` variants.
+  `TAG_VALUE_DETAILS` is deliberately not offered: the C dispatch for
+  app-supplied content rejects it (`nbgl_use_case.c`, `default:` arm returning
+  false), NBGL only producing it internally when a pair is too long to fit, so
+  a page built from it renders empty.
 - Tip box on a review's first page, exposing `nbgl_tipBox_t` through the new
   `TipBox` type: `NbglAdvanceReview::tip_box()`. Touching it opens a modal
   listing `[type, content]` rows; the parameter was previously always NULL.

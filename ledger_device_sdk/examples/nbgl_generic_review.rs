@@ -3,9 +3,9 @@
 
 use include_gif::include_gif;
 use ledger_device_sdk::nbgl::{
-    CenteredInfo, CenteredInfoStyle, Field, InfoButton, InfoLongPress, InfosList, NbglChoice,
-    NbglGenericReview, NbglGlyph, NbglPageContent, NbglStatus, TagValueConfirm, TagValueList,
-    TuneIndex, init_comm,
+    BarsList, CenterInfo, CenteredInfo, CenteredInfoStyle, ChoicesList, ExtendedCenter, Field,
+    InfoButton, InfoLongPress, InfosList, NbglChoice, NbglGenericReview, NbglGlyph,
+    NbglPageContent, NbglStatus, SwitchesList, TagValueConfirm, TagValueList, TuneIndex, init_comm,
 };
 
 use core::ops::Not;
@@ -93,9 +93,28 @@ extern "C" fn sample_main() {
         review = review.add_content(NbglPageContent::InfoLongPress(info_long_press));
     }
 
+    // The five content types added below complete coverage of the C union.
+    let switches_list = SwitchesList::new(&[
+        ("Expert mode", "Show raw values", false),
+        ("Blind signing", "Allow unverified contracts", true),
+    ]);
+    let choices_list = ChoicesList::new(&["Slow", "Standard", "Fast"], 1);
+    let bars_list = BarsList::new(&["Network details", "Fee breakdown"]);
+    let extended_center = ExtendedCenter::new(
+        &CenterInfo::new()
+            .title("Extended center")
+            .description("A centered block with a tip box under it."),
+        Some("Tip box text"),
+        Some(&FERRIS),
+    );
+
     review = review
         .add_content(NbglPageContent::TagValueList(tag_values_list))
         .add_content(NbglPageContent::InfosList(infos_list))
+        .add_content(NbglPageContent::SwitchesList(switches_list))
+        .add_content(NbglPageContent::ChoicesList(choices_list))
+        .add_content(NbglPageContent::BarsList(bars_list))
+        .add_content(NbglPageContent::ExtendedCenter(extended_center))
         .add_content(NbglPageContent::TagValueConfirm(tag_value_confirm));
 
     #[cfg(target_os = "apex_p")]
