@@ -133,6 +133,11 @@ doc-scrape-examples = true
 required-features = ["io_new"]
 
 [[example]]
+name = "nbgl_tag_value_alias"
+doc-scrape-examples = true
+required-features = ["io_new"]
+
+[[example]]
 name = "pki"
 doc-scrape-examples = true
 required-features = ["io_new"]

@@ -100,33 +100,12 @@ impl<'a> NbglReview<'a> {
         }
     }
 
-    fn show_internal(&self, fields: &[Field]) -> bool {
+    fn show_internal(&self, values: &[TagValue]) -> bool {
         unsafe {
-            let v: Vec<CField> = fields
-                .iter()
-                .map(|f| CField {
-                    name: CString::new(f.name).unwrap(),
-                    value: CString::new(f.value).unwrap(),
-                })
-                .collect();
-
-            // Fill the tag_value_array with the fields converted to nbgl_contentTagValue_t
-            let mut tag_value_array: Vec<nbgl_contentTagValue_t> = Vec::new();
-            for field in v.iter() {
-                let val = nbgl_contentTagValue_t {
-                    item: field.name.as_ptr() as *const ::core::ffi::c_char,
-                    value: field.value.as_ptr() as *const ::core::ffi::c_char,
-                    ..Default::default()
-                };
-                tag_value_array.push(val);
-            }
-
-            // Create the tag_value_list with the tag_value_array.
-            let tag_value_list = nbgl_contentTagValueList_t {
-                pairs: tag_value_array.as_ptr(),
-                nbPairs: fields.len() as u8,
-                ..Default::default()
-            };
+            // Owns the C strings and the extension structs the pairs point at;
+            // must outlive the use-case call below.
+            let c_values = CTagValueList::new(values);
+            let tag_value_list = c_values.as_c_list();
 
             let icon: nbgl_icon_details_t = match self.glyph {
                 Some(g) => g.into(),
@@ -214,7 +193,7 @@ impl<'a> NbglReview<'a> {
     /// Returns `true` if the user approved the transaction, `false` otherwise.
     #[cfg(feature = "io_new")]
     pub fn show<const N: usize>(&self, _comm: &mut crate::io::Comm<N>, fields: &[Field]) -> bool {
-        self.show_internal(fields)
+        self.show_internal(&to_tag_values(fields))
     }
 
     /// Shows the review flow with the provided fields on the review pages.
@@ -224,6 +203,35 @@ impl<'a> NbglReview<'a> {
     /// Returns `true` if the user approved the transaction, `false` otherwise.
     #[cfg(not(feature = "io_new"))]
     pub fn show(&self, fields: &[Field]) -> bool {
-        self.show_internal(fields)
+        self.show_internal(&to_tag_values(fields))
+    }
+
+    /// Shows the review flow with tag/value pairs that may carry a
+    /// [`FieldExtension`], letting a value be expanded into a QR code, an ENS
+    /// or address book entry, or a nested list.
+    /// # Arguments
+    /// * `_comm` - Mutable reference to Comm.
+    /// * `values` - A slice of `TagValue` representing the pairs to display.
+    /// # Returns
+    /// Returns `true` if the user approved the transaction, `false` otherwise.
+    #[cfg(feature = "io_new")]
+    pub fn show_ext<const N: usize>(
+        &self,
+        _comm: &mut crate::io::Comm<N>,
+        values: &[TagValue],
+    ) -> bool {
+        self.show_internal(values)
+    }
+
+    /// Shows the review flow with tag/value pairs that may carry a
+    /// [`FieldExtension`], letting a value be expanded into a QR code, an ENS
+    /// or address book entry, or a nested list.
+    /// # Arguments
+    /// * `values` - A slice of `TagValue` representing the pairs to display.
+    /// # Returns
+    /// Returns `true` if the user approved the transaction, `false` otherwise.
+    #[cfg(not(feature = "io_new"))]
+    pub fn show_ext(&self, values: &[TagValue]) -> bool {
+        self.show_internal(values)
     }
 }

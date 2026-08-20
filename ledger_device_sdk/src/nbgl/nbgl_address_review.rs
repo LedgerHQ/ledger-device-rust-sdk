@@ -11,7 +11,9 @@ pub struct NbglAddressReview<'a> {
     glyph: Option<&'a NbglGlyph<'a>>,
     review_title: CString,
     review_subtitle: CString,
-    tag_value_list: Vec<CField>,
+    /// Owns the C strings and extension structs for the pairs; `None` until
+    /// one of the `set_tag_value_list` methods is called.
+    tag_value_list: Option<CTagValueList>,
 }
 
 impl SyncNBGL for NbglAddressReview<'_> {}
@@ -29,7 +31,7 @@ impl<'a> NbglAddressReview<'a> {
             review_title: CString::default(),
             review_subtitle: CString::default(),
             glyph: None,
-            tag_value_list: Vec::default(),
+            tag_value_list: None,
         }
     }
     /// Sets the icon to display in the center of the page.
@@ -81,9 +83,22 @@ impl<'a> NbglAddressReview<'a> {
     /// * `tag_value_list` - A slice of `Field` representing the tag/value pairs to display.
     /// # Returns
     /// Returns the builder itself to allow method chaining.
-    pub fn set_tag_value_list(self, tag_value_list: &'a [Field<'a>]) -> NbglAddressReview<'a> {
+    pub fn set_tag_value_list(self, tag_value_list: &[Field]) -> NbglAddressReview<'a> {
         NbglAddressReview {
-            tag_value_list: tag_value_list.iter().map(|f| f.into()).collect(),
+            tag_value_list: Some(CTagValueList::from_fields(tag_value_list)),
+            ..self
+        }
+    }
+
+    /// Sets the list of tag/value pairs to display in the address review flow,
+    /// allowing each pair to carry a [`FieldExtension`].
+    /// # Arguments
+    /// * `values` - A slice of `TagValue` representing the tag/value pairs to display.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
+    pub fn set_tag_value_list_ext(self, values: &[TagValue]) -> NbglAddressReview<'a> {
+        NbglAddressReview {
+            tag_value_list: Some(CTagValueList::new(values)),
             ..self
         }
     }
@@ -97,16 +112,9 @@ impl<'a> NbglAddressReview<'a> {
 
             let address = CString::new(address).unwrap();
 
-            let mut tag_value_array: Vec<nbgl_contentTagValue_t> = Vec::new();
-            for field in self.tag_value_list.iter() {
-                let val: nbgl_contentTagValue_t = field.into();
-                tag_value_array.push(val);
-            }
-
-            let tag_value_list = nbgl_contentTagValueList_t {
-                pairs: tag_value_array.as_ptr(),
-                nbPairs: tag_value_array.len() as u8,
-                ..Default::default()
+            let tag_value_list = match &self.tag_value_list {
+                Some(list) => list.as_c_list(),
+                None => nbgl_contentTagValueList_t::default(),
             };
 
             self.ux_sync_init();

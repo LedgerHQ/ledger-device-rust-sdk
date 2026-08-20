@@ -250,9 +250,8 @@ impl From<&InfoButton> for nbgl_contentInfoButton_t {
 /// right). Display options control the maximum number of lines per value,
 /// text casing, and word-wrapping behaviour.
 pub struct TagValueList {
-    _cfields: Vec<CField>,
-    /// Vector of C-compatible strings representing the tag/value pairs.
-    pairs: Vec<nbgl_contentTagValue_t>,
+    /// Owns the C strings, and the extension structs the pairs point at.
+    values: CTagValueList,
     /// If `true`, values are rendered in a smaller font.
     small_case_for_value: bool,
     /// If `true`, long values are word-wrapped instead of truncated.
@@ -278,11 +277,30 @@ impl TagValueList {
         small_case_for_value: bool,
         wrapping: bool,
     ) -> TagValueList {
-        let cfields: Vec<CField> = tvl.iter().map(|field| field.into()).collect();
-        let pairs: Vec<nbgl_contentTagValue_t> = cfields.iter().map(|pair| pair.into()).collect();
         TagValueList {
-            _cfields: cfields,
-            pairs,
+            values: CTagValueList::from_fields(tvl),
+            small_case_for_value,
+            wrapping,
+        }
+    }
+
+    /// Creates a new [`TagValueList`] whose pairs may each carry a
+    /// [`FieldExtension`].
+    ///
+    /// # Arguments
+    ///
+    /// * `values` — Slice of [`TagValue`] items.
+    /// * `small_case_for_value` — If `true`, values are rendered in a smaller
+    ///   font.
+    /// * `wrapping` — If `true`, long values are word-wrapped instead of
+    ///   truncated.
+    pub fn new_ext(
+        values: &[TagValue],
+        small_case_for_value: bool,
+        wrapping: bool,
+    ) -> TagValueList {
+        TagValueList {
+            values: CTagValueList::new(values),
             small_case_for_value,
             wrapping,
         }
@@ -293,8 +311,8 @@ impl TagValueList {
 impl From<&TagValueList> for nbgl_contentTagValueList_t {
     fn from(tvl: &TagValueList) -> nbgl_contentTagValueList_t {
         nbgl_contentTagValueList_t {
-            pairs: tvl.pairs.as_ptr(),
-            nbPairs: tvl.pairs.len() as u8,
+            pairs: tvl.values.pairs_ptr(),
+            nbPairs: tvl.values.len(),
             nbMaxLinesForValue: 0,
             token: FIRST_USER_TOKEN as u8,
             smallCaseForValue: tvl.small_case_for_value,

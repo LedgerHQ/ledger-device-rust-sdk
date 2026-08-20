@@ -134,19 +134,12 @@ impl<'a> NbglAdvanceReview<'a> {
         }
     }
 
-    fn show_internal(&self, fields: &[Field]) -> SyncNbgl {
+    fn show_internal(&self, values: &[TagValue]) -> SyncNbgl {
         unsafe {
-            let v: Vec<CField> = fields.iter().map(|f| f.into()).collect();
-            let mut tag_value_array: Vec<nbgl_contentTagValue_t> = Vec::new();
-            for field in v.iter() {
-                let val = nbgl_contentTagValue_t::from(field);
-                tag_value_array.push(val);
-            }
-            let tag_value_list = nbgl_contentTagValueList_t {
-                pairs: tag_value_array.as_ptr(),
-                nbPairs: fields.len() as u8,
-                ..Default::default()
-            };
+            // Owns the C strings and the extension structs the pairs point at;
+            // must outlive the use-case call below.
+            let c_values = CTagValueList::new(values);
+            let tag_value_list = c_values.as_c_list();
 
             let icon: nbgl_icon_details_t = match self.glyph {
                 Some(g) => g.into(),
@@ -196,12 +189,7 @@ impl<'a> NbglAdvanceReview<'a> {
         _comm: &mut crate::io::Comm<N>,
         fields: &[Field],
     ) -> Result<bool, u8> {
-        let ret = self.show_internal(fields);
-        match ret {
-            SyncNbgl::UxSyncRetApproved => Ok(true),
-            SyncNbgl::UxSyncRetRejected => Ok(false),
-            _ => Err(u8::from(ret)),
-        }
+        self.show_ext(_comm, &to_tag_values(fields))
     }
 
     /// Shows the advanced review flow.
@@ -211,6 +199,40 @@ impl<'a> NbglAdvanceReview<'a> {
     /// Returns a `SyncNbgl` instance to manage the synchronous NBGL flow.
     #[cfg(not(feature = "io_new"))]
     pub fn show(&self, fields: &[Field]) -> SyncNbgl {
-        self.show_internal(fields)
+        self.show_internal(&to_tag_values(fields))
+    }
+
+    /// Shows the advanced review flow with tag/value pairs that may carry a
+    /// [`FieldExtension`].
+    /// # Arguments
+    /// * `_comm` - Mutable reference to Comm.
+    /// * `values` - A slice of `TagValue` representing the pairs to display.
+    /// # Returns
+    /// Returns `Ok(true)` if the user accepts the review,
+    /// `Ok(false)` if the user rejects it,
+    /// or `Err(u8)` with the error code in case of an error.
+    #[cfg(feature = "io_new")]
+    pub fn show_ext<const N: usize>(
+        &self,
+        _comm: &mut crate::io::Comm<N>,
+        values: &[TagValue],
+    ) -> Result<bool, u8> {
+        let ret = self.show_internal(values);
+        match ret {
+            SyncNbgl::UxSyncRetApproved => Ok(true),
+            SyncNbgl::UxSyncRetRejected => Ok(false),
+            _ => Err(u8::from(ret)),
+        }
+    }
+
+    /// Shows the advanced review flow with tag/value pairs that may carry a
+    /// [`FieldExtension`].
+    /// # Arguments
+    /// * `values` - A slice of `TagValue` representing the pairs to display.
+    /// # Returns
+    /// Returns a `SyncNbgl` instance to manage the synchronous NBGL flow.
+    #[cfg(not(feature = "io_new"))]
+    pub fn show_ext(&self, values: &[TagValue]) -> SyncNbgl {
+        self.show_internal(values)
     }
 }

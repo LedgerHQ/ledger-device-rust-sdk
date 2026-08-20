@@ -12,6 +12,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   information fields on the home screen's info page, and
   `NbglHomeAndSettings::app_name(&str)` sets the application name on its own.
   The info list was previously frozen to the two `Version` / `Developer` fields.
+- Tag/value pairs can carry a value extension (alias), exposing
+  `nbgl_contentValueExt_t` and `nbgl_contentValueAliasType_t`. New `TagValue`
+  type (`Field` plus an optional extension, with `From<&Field>`) and
+  `FieldExtension`, built with one constructor per alias kind —
+  `full_value`, `ens`, `address_book`, `qr_code`, `info_list`,
+  `tag_value_list` — and the chainable `alias_sub_name`, `explanation`,
+  `title`, `back_text` setters. NBGL draws a `>` next to an aliased value and
+  opens a modal built from the extension.
+- Extension-aware variants of the review entry points, taking `&[TagValue]`
+  where the existing ones take `&[Field]`: `NbglReview::show_ext`,
+  `NbglAdvanceReview::show_ext`, `NbglReviewExtended::show_ext`,
+  `NbglStreamingReview::next_ext`, `NbglAddressReview::set_tag_value_list_ext`
+  and `TagValueList::new_ext`.
+- `nbgl_tag_value_alias` example, covering all six alias kinds on one review
+  screen.
 
 ### Changed
 - `NbglHomeAndSettings::infos(app_name, version, author)` is unchanged and now a
@@ -19,6 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `NbglHomeAndSettings` passes a NULL `infosList` to the C use case when no
   information field is set, instead of announcing two fields backed by an empty
   array.
+- The `&[Field]` review methods are unchanged and now lift their fields into
+  extension-less `TagValue`s, so every use case builds its C tag/value array
+  through a single path.
+- `NbglAddressReview::set_tag_value_list` no longer ties the borrowed fields to
+  the builder's lifetime (it copies them), which only relaxes what callers may
+  pass.
 - updating ref to ledger_secure_sdk_sys to 1.16.5
 
 ## [1.37.0] - 2026-08-24
