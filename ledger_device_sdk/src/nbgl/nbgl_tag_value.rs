@@ -229,10 +229,11 @@ pub(crate) fn to_tag_values<'a>(fields: &'a [Field<'a>]) -> Vec<TagValue<'a>> {
     fields.iter().map(|f| f.into()).collect()
 }
 
-/// Owned C strings and pointer arrays backing a nested info list.
+/// Owned C strings and pointer arrays backing an info list.
 ///
-/// Boxed so its address is stable once the parent extension points at `list`.
-struct CNestedInfoList {
+/// Boxed so its address is stable once something points at `list`. Shared with
+/// the tip box, which carries the same `nbgl_contentInfoList_t`.
+pub(crate) struct CInfoList {
     _types: Vec<CString>,
     _contents: Vec<CString>,
     _types_ptr: Vec<*const c_char>,
@@ -240,8 +241,8 @@ struct CNestedInfoList {
     list: nbgl_contentInfoList_t,
 }
 
-impl CNestedInfoList {
-    fn new(infos: &[Field]) -> Box<CNestedInfoList> {
+impl CInfoList {
+    pub(crate) fn new(infos: &[Field]) -> Box<CInfoList> {
         let types: Vec<CString> = infos
             .iter()
             .map(|f| CString::new(f.name).unwrap())
@@ -262,7 +263,7 @@ impl CNestedInfoList {
             ..Default::default()
         };
 
-        Box::new(CNestedInfoList {
+        Box::new(CInfoList {
             _types: types,
             _contents: contents,
             _types_ptr: types_ptr,
@@ -272,7 +273,7 @@ impl CNestedInfoList {
     }
 
     /// A copy owning its own strings.
-    fn duplicate(&self) -> Box<CNestedInfoList> {
+    fn duplicate(&self) -> Box<CInfoList> {
         let types: Vec<CString> = self._types.clone();
         let contents: Vec<CString> = self._contents.clone();
         let types_ptr: Vec<*const c_char> = types.iter().map(|s| s.as_ptr()).collect();
@@ -282,13 +283,18 @@ impl CNestedInfoList {
             infoContents: contents_ptr.as_ptr(),
             ..self.list
         };
-        Box::new(CNestedInfoList {
+        Box::new(CInfoList {
             _types: types,
             _contents: contents,
             _types_ptr: types_ptr,
             _contents_ptr: contents_ptr,
             list,
         })
+    }
+
+    /// The `nbgl_contentInfoList_t` borrowing this list's buffers.
+    pub(crate) fn as_c_type(&self) -> nbgl_contentInfoList_t {
+        self.list
     }
 }
 
@@ -340,7 +346,7 @@ struct CFieldExtension {
     explanation: Option<CString>,
     title: Option<CString>,
     back_text: Option<CString>,
-    nested_infos: Option<Box<CNestedInfoList>>,
+    nested_infos: Option<Box<CInfoList>>,
     nested_pairs: Option<Box<CNestedTagValueList>>,
     alias_type: AliasType,
 }
@@ -359,7 +365,7 @@ fn opt_ptr(s: &Option<CString>) -> *const c_char {
 impl CFieldExtension {
     fn new(ext: &FieldExtension) -> CFieldExtension {
         let (nested_infos, nested_pairs) = match ext.nested {
-            Some(NestedContent::InfoList(infos)) => (Some(CNestedInfoList::new(infos)), None),
+            Some(NestedContent::InfoList(infos)) => (Some(CInfoList::new(infos)), None),
             Some(NestedContent::TagValueList(pairs)) => {
                 (None, Some(CNestedTagValueList::new(pairs)))
             }

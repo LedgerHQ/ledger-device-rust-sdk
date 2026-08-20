@@ -31,6 +31,7 @@ pub mod nbgl_spinner;
 pub mod nbgl_status;
 pub mod nbgl_streaming_review;
 pub mod nbgl_tag_value;
+pub mod nbgl_tip_box;
 pub mod nbgl_warning;
 
 #[doc(inline)]
@@ -65,6 +66,8 @@ pub use nbgl_status::*;
 pub use nbgl_streaming_review::*;
 #[doc(inline)]
 pub use nbgl_tag_value::*;
+#[doc(inline)]
+pub use nbgl_tip_box::*;
 #[doc(inline)]
 pub use nbgl_warning::*;
 
