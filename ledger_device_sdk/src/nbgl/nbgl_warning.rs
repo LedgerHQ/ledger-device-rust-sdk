@@ -501,7 +501,10 @@ fn opt_icon_ptr(icon: &Option<Box<nbgl_icon_details_t>>) -> *const nbgl_icon_det
 }
 
 /// Owns the strings and icon behind one `nbgl_contentCenter_t`.
-struct CCenterInfo {
+///
+/// Shared with the generic review's `EXTENDED_CENTER` content, which embeds the
+/// same struct.
+pub(crate) struct CCenterInfo {
     icon: Option<Box<nbgl_icon_details_t>>,
     title: Option<CString>,
     small_title: Option<CString>,
@@ -512,7 +515,7 @@ struct CCenterInfo {
 }
 
 impl CCenterInfo {
-    fn new(info: &CenterInfo) -> CCenterInfo {
+    pub(crate) fn new(info: &CenterInfo) -> CCenterInfo {
         CCenterInfo {
             icon: opt_icon(info.icon),
             title: opt_cstring(info.title),
@@ -524,7 +527,7 @@ impl CCenterInfo {
         }
     }
 
-    fn as_c_type(&self) -> nbgl_contentCenter_t {
+    pub(crate) fn as_c_type(&self) -> nbgl_contentCenter_t {
         nbgl_contentCenter_t {
             illustrType: ICON_ILLUSTRATION,
             icon: opt_icon_ptr(&self.icon),

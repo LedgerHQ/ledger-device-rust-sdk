@@ -456,8 +456,202 @@ unsafe extern "C" fn action_callback(token: c_int, _index: u8, _page: c_int) {
 /// | `InfoLongPress` | [`InfoLongPress`] | Long-press confirmation |
 /// | `InfoButton` | [`InfoButton`] | Tap-button confirmation |
 /// | `TagValueList` | [`TagValueList`] | Field review (no buttons) |
+/// A list of on/off switches, for a `SWITCHES_LIST` content.
+///
+/// The switches are drawn with their initial state; `NbglGenericReview` does
+/// not itself route touches back to the app, so this is for display within a
+/// review rather than for settings — see `NbglHomeAndSettings::settings` for
+/// switches that persist.
+pub struct SwitchesList {
+    _texts: Vec<[CString; 2]>,
+    switches: Vec<nbgl_contentSwitch_t>,
+}
+
+impl SwitchesList {
+    /// Creates a new [`SwitchesList`].
+    ///
+    /// # Arguments
+    ///
+    /// * `switches` — One `(text, sub_text, initial_state)` per switch.
+    pub fn new(switches: &[(&str, &str, bool)]) -> SwitchesList {
+        let texts: Vec<[CString; 2]> = switches
+            .iter()
+            .map(|(text, sub_text, _)| {
+                [
+                    CString::new(*text).unwrap(),
+                    CString::new(*sub_text).unwrap(),
+                ]
+            })
+            .collect();
+
+        let c_switches: Vec<nbgl_contentSwitch_t> = texts
+            .iter()
+            .zip(switches.iter())
+            .enumerate()
+            .map(|(i, (pair, (_, _, state)))| nbgl_contentSwitch_t {
+                text: pair[0].as_ptr(),
+                subText: pair[1].as_ptr(),
+                initState: if *state { ON_STATE } else { OFF_STATE },
+                token: (FIRST_USER_TOKEN + i as u32) as u8,
+                ..Default::default()
+            })
+            .collect();
+
+        SwitchesList {
+            _texts: texts,
+            switches: c_switches,
+        }
+    }
+}
+
+impl From<&SwitchesList> for nbgl_contentSwitchesList_t {
+    fn from(list: &SwitchesList) -> nbgl_contentSwitchesList_t {
+        nbgl_contentSwitchesList_t {
+            switches: list.switches.as_ptr(),
+            nbSwitches: list.switches.len() as u8,
+        }
+    }
+}
+
+/// A list of radio-button choices, for a `CHOICES_LIST` content.
+pub struct ChoicesList {
+    _names: Vec<CString>,
+    names_ptr: Vec<*const c_char>,
+    init_choice: u8,
+}
+
+impl ChoicesList {
+    /// Creates a new [`ChoicesList`].
+    ///
+    /// # Arguments
+    ///
+    /// * `names` — The choices, in display order.
+    /// * `init_choice` — Index of the choice selected when the page opens.
+    pub fn new(names: &[&str], init_choice: u8) -> ChoicesList {
+        let cnames: Vec<CString> = names.iter().map(|n| CString::new(*n).unwrap()).collect();
+        let names_ptr: Vec<*const c_char> = cnames.iter().map(|n| n.as_ptr()).collect();
+        ChoicesList {
+            _names: cnames,
+            names_ptr,
+            init_choice,
+        }
+    }
+}
+
+#[allow(clippy::needless_update)]
+impl From<&ChoicesList> for nbgl_contentRadioChoice_t {
+    fn from(list: &ChoicesList) -> nbgl_contentRadioChoice_t {
+        nbgl_contentRadioChoice_t {
+            __bindgen_anon_1: nbgl_contentRadioChoice_t__bindgen_ty_1 {
+                names: list.names_ptr.as_ptr(),
+            },
+            nbChoices: list.names_ptr.len() as u8,
+            initChoice: list.init_choice,
+            token: FIRST_USER_TOKEN as u8,
+            ..Default::default()
+        }
+    }
+}
+
+/// A list of touchable bars, for a `BARS_LIST` content.
+pub struct BarsList {
+    _texts: Vec<CString>,
+    texts_ptr: Vec<*const c_char>,
+    tokens: Vec<u8>,
+}
+
+impl BarsList {
+    /// Creates a new [`BarsList`].
+    ///
+    /// # Arguments
+    ///
+    /// * `texts` — Label of each bar, in display order.
+    pub fn new(texts: &[&str]) -> BarsList {
+        let ctexts: Vec<CString> = texts.iter().map(|t| CString::new(*t).unwrap()).collect();
+        let texts_ptr: Vec<*const c_char> = ctexts.iter().map(|t| t.as_ptr()).collect();
+        let tokens: Vec<u8> = (0..texts.len())
+            .map(|i| (FIRST_USER_TOKEN + i as u32) as u8)
+            .collect();
+        BarsList {
+            _texts: ctexts,
+            texts_ptr,
+            tokens,
+        }
+    }
+}
+
+#[allow(clippy::needless_update)]
+impl From<&BarsList> for nbgl_contentBarsList_t {
+    fn from(list: &BarsList) -> nbgl_contentBarsList_t {
+        nbgl_contentBarsList_t {
+            barTexts: list.texts_ptr.as_ptr(),
+            tokens: list.tokens.as_ptr(),
+            nbBars: list.texts_ptr.len() as u8,
+            ..Default::default()
+        }
+    }
+}
+
+/// A centered info block with an optional tip box under it, for an
+/// `EXTENDED_CENTER` content.
+///
+/// The tip box here is the inline `nbgl_contentTipBox_t` — text and icon only.
+/// It is not the [`TipBox`] of a review's first page, which additionally
+/// carries the modal opened on touch.
+pub struct ExtendedCenter {
+    center: CCenterInfo,
+    tip_text: Option<CString>,
+    tip_icon: Option<nbgl_icon_details_t>,
+}
+
+impl ExtendedCenter {
+    /// Creates a new [`ExtendedCenter`].
+    ///
+    /// # Arguments
+    ///
+    /// * `center` — The centered icon-and-text block.
+    /// * `tip_text` — Label of the tip box drawn under it, if any.
+    /// * `tip_icon` — Icon of that tip box.
+    pub fn new(
+        center: &CenterInfo,
+        tip_text: Option<&str>,
+        tip_icon: Option<&NbglGlyph>,
+    ) -> ExtendedCenter {
+        ExtendedCenter {
+            center: CCenterInfo::new(center),
+            tip_text: tip_text.map(|t| CString::new(t).unwrap()),
+            tip_icon: tip_icon.map(|g| g.into()),
+        }
+    }
+}
+
+#[allow(clippy::needless_update)]
+impl From<&ExtendedCenter> for nbgl_contentExtendedCenter_t {
+    fn from(center: &ExtendedCenter) -> nbgl_contentExtendedCenter_t {
+        nbgl_contentExtendedCenter_t {
+            contentCenter: center.center.as_c_type(),
+            tipBox: nbgl_contentTipBox_t {
+                text: match &center.tip_text {
+                    Some(text) => text.as_ptr(),
+                    None => core::ptr::null(),
+                },
+                icon: match &center.tip_icon {
+                    Some(icon) => icon as *const nbgl_icon_details_t,
+                    None => core::ptr::null(),
+                },
+                token: FIRST_USER_TOKEN as u8,
+                ..Default::default()
+            },
+        }
+    }
+}
+
 /// | `TagValueConfirm` | [`TagValueConfirm`] | Field review with confirm/cancel |
 /// | `InfosList` | [`InfosList`] | Read-only info list |
+/// | `SwitchesList` | [`SwitchesList`] | On/off switch list |
+/// | `ChoicesList` | [`ChoicesList`] | Radio-button choices |
+/// | `BarsList` | [`BarsList`] | Touchable bars |
+/// | `ExtendedCenter` | [`ExtendedCenter`] | Centered info with a tip box |
 pub enum NbglPageContent {
     /// Centered information screen.
     CenteredInfo(CenteredInfo),
@@ -471,6 +665,14 @@ pub enum NbglPageContent {
     TagValueConfirm(TagValueConfirm),
     /// Read-only information list.
     InfosList(InfosList),
+    /// List of on/off switches.
+    SwitchesList(SwitchesList),
+    /// Radio-button choices.
+    ChoicesList(ChoicesList),
+    /// List of touchable bars.
+    BarsList(BarsList),
+    /// Centered info with an optional tip box.
+    ExtendedCenter(ExtendedCenter),
 }
 
 impl From<&NbglPageContent> for nbgl_content_t {
@@ -516,6 +718,34 @@ impl From<&NbglPageContent> for nbgl_content_t {
                     infosList: data.into(),
                 },
                 type_: INFOS_LIST,
+                contentActionCallback: None,
+            },
+            NbglPageContent::SwitchesList(data) => nbgl_content_t {
+                content: nbgl_content_u {
+                    switchesList: data.into(),
+                },
+                type_: SWITCHES_LIST,
+                contentActionCallback: None,
+            },
+            NbglPageContent::ChoicesList(data) => nbgl_content_t {
+                content: nbgl_content_u {
+                    choicesList: data.into(),
+                },
+                type_: CHOICES_LIST,
+                contentActionCallback: None,
+            },
+            NbglPageContent::BarsList(data) => nbgl_content_t {
+                content: nbgl_content_u {
+                    barsList: data.into(),
+                },
+                type_: BARS_LIST,
+                contentActionCallback: None,
+            },
+            NbglPageContent::ExtendedCenter(data) => nbgl_content_t {
+                content: nbgl_content_u {
+                    extendedCenter: data.into(),
+                },
+                type_: EXTENDED_CENTER,
                 contentActionCallback: None,
             },
         }
