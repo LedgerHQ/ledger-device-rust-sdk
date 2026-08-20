@@ -155,7 +155,10 @@ extern "C" fn sample_main() {
     // `sample_main` never returns.
     let comm = unsafe {
         COMM_REF = Some(comm);
-        HOME_REF = &mut home as *mut NbglHomeAndSettings;
+        // `home` lives until the app exits, so its borrow is extended to
+        // 'static through a raw pointer. Going via the pointer here keeps the
+        // callback itself free of raw-pointer dereferences.
+        HOME_REF = Some(&mut *(&raw mut home));
         #[allow(static_mut_refs)]
         COMM_REF.as_mut().unwrap()
     };
