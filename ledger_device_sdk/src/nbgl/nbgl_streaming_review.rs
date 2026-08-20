@@ -10,20 +10,14 @@
 //! Used to display streamed transaction review screens.
 use super::*;
 
-struct WarningDetailsType {
-    dapp_provider_name: CString,
-    report_url: CString,
-    report_provider: CString,
-    provider_message: CString,
-}
-
 /// A builder to create and show a streaming review flow.
 pub struct NbglStreamingReview {
     icon: nbgl_icon_details_t,
     tx_type: TransactionType,
     blind: bool,
     skip: bool,
-    warning_details_type: Option<WarningDetailsType>,
+    /// Owns the C strings, icons and details tree behind the warning.
+    warning: Option<CWarning>,
 }
 
 impl SyncNBGL for NbglStreamingReview {}
@@ -51,7 +45,7 @@ impl NbglStreamingReview {
             tx_type: TransactionType::Transaction,
             blind: false,
             skip: false,
-            warning_details_type: None,
+            warning: None,
         }
     }
 
@@ -94,6 +88,10 @@ impl NbglStreamingReview {
     }
 
     /// Configures the warning details to display in case of a risky transaction.
+    ///
+    /// This raises exactly one pre-defined warning,
+    /// [`WarningType::W3cRiskDetected`]. Use [`Self::warning`] to raise any
+    /// other combination, or to configure the pages manually.
     /// # Arguments
     /// * `dapp_provider` - The name of the dApp provider.
     /// * `report_url` - The URL where the user can report the issue.
@@ -108,25 +106,27 @@ impl NbglStreamingReview {
         report_provider: Option<&str>,
         provider_message: Option<&str>,
     ) -> NbglStreamingReview {
+        self.warning(&build_legacy_warning(
+            dapp_provider,
+            report_url,
+            report_provider,
+            provider_message,
+        ))
+    }
+
+    /// Sets the warning shown before the review, and reachable from the
+    /// top-right button during it.
+    ///
+    /// Setting a warning selects `nbgl_useCaseAdvancedReviewStreamingStart`
+    /// over the plain blind-signing start, so it takes effect only in
+    /// combination with [`Self::blind`].
+    /// # Arguments
+    /// * `warning` - The warning configuration; see [`NbglWarning`].
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
+    pub fn warning(self, warning: &NbglWarning) -> NbglStreamingReview {
         NbglStreamingReview {
-            warning_details_type: Some(WarningDetailsType {
-                dapp_provider_name: match dapp_provider {
-                    Some(s) => CString::new(s).unwrap(),
-                    None => CString::default(),
-                },
-                report_url: match report_url {
-                    Some(s) => CString::new(s).unwrap(),
-                    None => CString::default(),
-                },
-                report_provider: match report_provider {
-                    Some(s) => CString::new(s).unwrap(),
-                    None => CString::default(),
-                },
-                provider_message: match provider_message {
-                    Some(s) => CString::new(s).unwrap(),
-                    None => CString::default(),
-                },
-            }),
+            warning: Some(CWarning::new(warning)),
             ..self
         }
     }
@@ -147,19 +147,9 @@ impl NbglStreamingReview {
 
             self.ux_sync_init();
             match self.blind {
-                true => match &self.warning_details_type {
+                true => match &self.warning {
                     Some(w) => {
-                        let warning_details = nbgl_warning_t {
-                            predefinedSet: (1u32 << W3C_RISK_DETECTED_WARN),
-                            dAppProvider: w.dapp_provider_name.as_ptr()
-                                as *const ::core::ffi::c_char,
-                            reportUrl: w.report_url.as_ptr() as *const ::core::ffi::c_char,
-                            reportProvider: w.report_provider.as_ptr()
-                                as *const ::core::ffi::c_char,
-                            providerMessage: w.provider_message.as_ptr()
-                                as *const ::core::ffi::c_char,
-                            ..Default::default()
-                        };
+                        let warning_details = w.as_c_type();
                         nbgl_useCaseAdvancedReviewStreamingStart(
                             self.tx_type.to_c_type(self.skip),
                             &self.icon as *const nbgl_icon_details_t,

@@ -11,13 +11,6 @@
 //! computed, the last page being a long press one
 use super::*;
 
-struct WarningDetailsType {
-    dapp_provider_name: CString,
-    report_url: CString,
-    report_provider: CString,
-    provider_message: CString,
-}
-
 /// A builder to create and show an advanced review flow.
 pub struct NbglAdvanceReview<'a> {
     operation_type: TransactionType,
@@ -25,7 +18,8 @@ pub struct NbglAdvanceReview<'a> {
     review_title: CString,
     review_subtitle: CString,
     finish_title: CString,
-    warning_details_type: Option<WarningDetailsType>,
+    /// Owns the C strings, icons and details tree behind the warning.
+    warning: Option<CWarning>,
 }
 
 impl SyncNBGL for NbglAdvanceReview<'_> {}
@@ -43,7 +37,7 @@ impl<'a> NbglAdvanceReview<'a> {
             review_subtitle: CString::default(),
             finish_title: CString::default(),
             glyph: None,
-            warning_details_type: None,
+            warning: None,
         }
     }
 
@@ -97,6 +91,10 @@ impl<'a> NbglAdvanceReview<'a> {
 
     /// Sets the warning details to display when the user taps on the warning icon.
     /// All parameters are optional and can be set to `None` if not needed.
+    ///
+    /// This raises exactly one pre-defined warning,
+    /// [`WarningType::W3cRiskDetected`]. Use [`Self::warning`] to raise any
+    /// other combination, or to configure the pages manually.
     /// # Arguments
     /// * `dapp_provider` - The name of the dApp provider.
     /// * `report_url` - The URL to report the issue.
@@ -111,25 +109,23 @@ impl<'a> NbglAdvanceReview<'a> {
         report_provider: Option<&str>,
         provider_message: Option<&str>,
     ) -> NbglAdvanceReview<'a> {
+        self.warning(&build_legacy_warning(
+            dapp_provider,
+            report_url,
+            report_provider,
+            provider_message,
+        ))
+    }
+
+    /// Sets the warning shown before the review, and reachable from the
+    /// top-right button during it.
+    /// # Arguments
+    /// * `warning` - The warning configuration; see [`NbglWarning`].
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
+    pub fn warning(self, warning: &NbglWarning) -> NbglAdvanceReview<'a> {
         NbglAdvanceReview {
-            warning_details_type: Some(WarningDetailsType {
-                dapp_provider_name: match dapp_provider {
-                    Some(s) => CString::new(s).unwrap(),
-                    None => CString::default(),
-                },
-                report_url: match report_url {
-                    Some(s) => CString::new(s).unwrap(),
-                    None => CString::default(),
-                },
-                report_provider: match report_provider {
-                    Some(s) => CString::new(s).unwrap(),
-                    None => CString::default(),
-                },
-                provider_message: match provider_message {
-                    Some(s) => CString::new(s).unwrap(),
-                    None => CString::default(),
-                },
-            }),
+            warning: Some(CWarning::new(warning)),
             ..self
         }
     }
@@ -146,15 +142,8 @@ impl<'a> NbglAdvanceReview<'a> {
                 None => nbgl_icon_details_t::default(),
             };
 
-            let warning_details = match &self.warning_details_type {
-                Some(w) => nbgl_warning_t {
-                    predefinedSet: (1u32 << W3C_RISK_DETECTED_WARN),
-                    dAppProvider: w.dapp_provider_name.as_ptr() as *const ::core::ffi::c_char,
-                    reportUrl: w.report_url.as_ptr() as *const ::core::ffi::c_char,
-                    reportProvider: w.report_provider.as_ptr() as *const ::core::ffi::c_char,
-                    providerMessage: w.provider_message.as_ptr() as *const ::core::ffi::c_char,
-                    ..Default::default()
-                },
+            let warning_details = match &self.warning {
+                Some(w) => w.as_c_type(),
                 None => nbgl_warning_t::default(),
             };
 

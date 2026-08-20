@@ -27,6 +27,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and `TagValueList::new_ext`.
 - `nbgl_tag_value_alias` example, covering all six alias kinds on one review
   screen.
+- Full coverage of `nbgl_warning_t` through the new `NbglWarning` builder.
+  `predefined(&[WarningType])` raises any combination of the six pre-defined
+  warnings (`W3cIssue`, `W3cRiskDetected`, `W3cThreatDetected`, `W3cNoThreat`,
+  `BlindSigning`, `GatedSigning`); the set was previously frozen to
+  `W3cRiskDetected` alone. The manual path is also exposed: `info`,
+  `intro_details`, `review_details`, `intro_top_right_icon`,
+  `review_top_right_icon` and `prelude`, with the supporting `CenterInfo`,
+  `QrCode`, `Prelude`, `WarningBar` and `WarningDetails` types. Bar lists nest
+  to arbitrary depth.
+- `NbglAdvanceReview::warning(&NbglWarning)` and
+  `NbglStreamingReview::warning(&NbglWarning)`.
+- `nbgl_warning` example, showing both the pre-defined and the manual paths.
 
 ### Changed
 - `NbglHomeAndSettings::infos(app_name, version, author)` is unchanged and now a
@@ -40,6 +52,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `NbglAddressReview::set_tag_value_list` no longer ties the borrowed fields to
   the builder's lifetime (it copies them), which only relaxes what callers may
   pass.
+- `warning_details(...)` on `NbglAdvanceReview` and `NbglStreamingReview` is
+  unchanged and still raises exactly `W3cRiskDetected`; it now delegates to
+  `warning()`, so both use cases build the C warning through one path.
+- `QrCode` and `WarningDetails::QrCode` are compiled only for Stax, Flex and
+  Apex. `NBGL_QRCODE` is not defined for Nano, so the C bindings there have
+  neither `nbgl_layoutQRCode_t` nor the union member.
 - updating ref to ledger_secure_sdk_sys to 1.16.5
 
 ## [1.37.0] - 2026-08-24
