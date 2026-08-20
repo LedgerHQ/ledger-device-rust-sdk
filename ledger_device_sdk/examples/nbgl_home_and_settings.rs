@@ -2,10 +2,10 @@
 #![no_main]
 
 use include_gif::include_gif;
-use ledger_device_sdk::nbgl::{NbglGlyph, NbglHomeAndSettings, init_comm};
+use ledger_device_sdk::nbgl::{HomeAction, NbglGlyph, NbglHomeAndSettings, NbglStatus, init_comm};
 // use ledger_device_sdk::nvm::*;
 // use ledger_device_sdk::NVMData;
-use ledger_device_sdk::io::{ApduHeader, StatusWords};
+use ledger_device_sdk::io::{ApduHeader, Comm, DEFAULT_BUF_SIZE, StatusWords};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 ledger_device_sdk::define_comm!(COMM);
@@ -84,6 +84,38 @@ mod settings {
     }
 }
 
+/// The action button's callback is a plain `fn()` with no user data, and
+/// `init_comm` may only be called once, so the `Comm` obtained in `sample_main`
+/// is parked here for the callback to borrow.
+static mut COMM_REF: Option<&'static mut Comm<DEFAULT_BUF_SIZE>> = None;
+
+/// Points at the home screen builder owned by `sample_main`, so the action
+/// callback can draw it again.
+///
+/// A raw pointer rather than an `Option<NbglHomeAndSettings>`: a null pointer
+/// initialiser lands in `.bss`, whereas storing the struct itself would put its
+/// initialiser in `.data`, which the app linker script rejects.
+static mut HOME_REF: *mut NbglHomeAndSettings = core::ptr::null_mut();
+
+/// Runs when the home screen's action button is touched.
+fn on_action() {
+    let comm = unsafe {
+        #[allow(static_mut_refs)]
+        COMM_REF.as_mut().unwrap()
+    };
+    NbglStatus::new()
+        .text("Action button clicked")
+        .show(comm, true);
+
+    // `show` returns once the status page times out after 3s. Nothing is drawn
+    // at that point, so put the home screen back.
+    unsafe {
+        if !HOME_REF.is_null() {
+            (*HOME_REF).show_and_return();
+        }
+    }
+}
+
 #[unsafe(no_mangle)]
 extern "C" fn sample_main() {
     let comm = init_comm(&COMM);
@@ -105,6 +137,8 @@ extern "C" fn sample_main() {
     // `info_list` takes an arbitrary number of (type, content) pairs; the
     // shorter `.infos(app_name, version, author)` covers the usual
     // Version/Developer pair.
+    let action = HomeAction::new("Start action", on_action).icon(&FERRIS);
+
     let mut home = NbglHomeAndSettings::new()
         .glyph(&FERRIS)
         .settings(settings.get_mut(), &settings_strings)
@@ -113,7 +147,18 @@ extern "C" fn sample_main() {
             ("Version", env!("CARGO_PKG_VERSION")),
             ("Developer", env!("CARGO_PKG_AUTHORS")),
             ("Copyright", "(c) 2026 Ledger"),
-        ]);
+        ])
+        .action(&action);
+
+    // Both statics must be populated before the home screen goes up, since the
+    // action button can be touched as soon as it does. `home` outlives them:
+    // `sample_main` never returns.
+    let comm = unsafe {
+        COMM_REF = Some(comm);
+        HOME_REF = &mut home as *mut NbglHomeAndSettings;
+        #[allow(static_mut_refs)]
+        COMM_REF.as_mut().unwrap()
+    };
 
     home.show_and_return();
 

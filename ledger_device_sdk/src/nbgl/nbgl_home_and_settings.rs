@@ -49,6 +49,108 @@ pub enum PageIndex {
     Home,
 }
 
+/// App function to run when the home action button is touched.
+///
+/// `nbgl_callback_t` carries no user data, so the app's function is parked here
+/// for [`action_callback`] to find.
+static mut ACTION_CALLBACK: Option<fn()> = None;
+
+/// Callback registered with NBGL for the home action button, forwarding to the
+/// app's own function.
+unsafe extern "C" fn action_callback() {
+    if let Some(callback) = unsafe { ACTION_CALLBACK } {
+        callback();
+    }
+}
+
+/// Style of the home screen action button, mapped to `nbgl_homeActionStyle_t`.
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
+pub enum HomeActionStyle {
+    /// Black button, for the app's main action.
+    #[default]
+    Strong,
+    /// White button, for extended features.
+    Soft,
+}
+
+impl HomeActionStyle {
+    fn to_c_type(self) -> nbgl_homeActionStyle_t {
+        match self {
+            HomeActionStyle::Strong => STRONG_HOME_ACTION,
+            HomeActionStyle::Soft => SOFT_HOME_ACTION,
+        }
+    }
+}
+
+/// An action button on the home screen, mapped to `nbgl_homeAction_t`.
+///
+/// `callback` runs from NBGL's event dispatch when the button is touched; what
+/// it does is entirely up to the app.
+pub struct HomeAction<'a> {
+    text: &'a str,
+    icon: Option<&'a NbglGlyph<'a>>,
+    style: HomeActionStyle,
+    callback: fn(),
+}
+
+impl<'a> HomeAction<'a> {
+    /// Creates a strong (black) action button labelled `text`, running
+    /// `callback` when touched.
+    pub fn new(text: &'a str, callback: fn()) -> HomeAction<'a> {
+        HomeAction {
+            text,
+            icon: None,
+            style: HomeActionStyle::Strong,
+            callback,
+        }
+    }
+
+    /// Icon drawn in the button.
+    pub fn icon(self, icon: &'a NbglGlyph<'a>) -> HomeAction<'a> {
+        HomeAction {
+            icon: Some(icon),
+            ..self
+        }
+    }
+
+    /// Button style.
+    pub fn style(self, style: HomeActionStyle) -> HomeAction<'a> {
+        HomeAction { style, ..self }
+    }
+}
+
+/// Owns the C string and icon behind an `nbgl_homeAction_t`.
+struct CHomeAction {
+    text: CString,
+    icon: Option<nbgl_icon_details_t>,
+    style: nbgl_homeActionStyle_t,
+}
+
+impl CHomeAction {
+    fn new(action: &HomeAction) -> CHomeAction {
+        unsafe {
+            ACTION_CALLBACK = Some(action.callback);
+        }
+        CHomeAction {
+            text: CString::new(action.text).unwrap(),
+            icon: action.icon.map(|g| g.into()),
+            style: action.style.to_c_type(),
+        }
+    }
+
+    fn as_c_type(&self) -> nbgl_homeAction_t {
+        nbgl_homeAction_t {
+            text: self.text.as_ptr(),
+            icon: match &self.icon {
+                Some(icon) => icon as *const nbgl_icon_details_t,
+                None => core::ptr::null(),
+            },
+            callback: Some(action_callback),
+            style: self.style,
+        }
+    }
+}
+
 /// A builder to create and show a home and settings page.
 pub struct NbglHomeAndSettings {
     app_name: CString,
@@ -64,6 +166,8 @@ pub struct NbglHomeAndSettings {
     info_list: nbgl_contentInfoList_t,
     icon: nbgl_icon_details_t,
     start_page: PageIndex,
+    /// Owns the C string and icon behind the action button.
+    action: Option<CHomeAction>,
 }
 
 impl SyncNBGL for NbglHomeAndSettings {}
@@ -97,6 +201,20 @@ impl NbglHomeAndSettings {
             info_list: nbgl_contentInfoList_t::default(),
             icon: nbgl_icon_details_t::default(),
             start_page: PageIndex::Home,
+            action: None,
+        }
+    }
+
+    /// Adds an action button to the home screen.
+    /// # Arguments
+    /// * `action` - The button and the function to run when it is touched;
+    ///   see [`HomeAction`].
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
+    pub fn action(self, action: &HomeAction) -> NbglHomeAndSettings {
+        NbglHomeAndSettings {
+            action: Some(CHomeAction::new(action)),
+            ..self
         }
     }
 
@@ -298,6 +416,12 @@ impl NbglHomeAndSettings {
         }
     }
 
+    /// The action button struct, materialised so the call sites have something
+    /// with a stable address to point at.
+    fn action_c_type(&self) -> Option<nbgl_homeAction_t> {
+        self.action.as_ref().map(|a| a.as_c_type())
+    }
+
     /// Index of the page to start on.
     fn start_page_index(&self) -> u8 {
         match self.start_page {
@@ -314,6 +438,7 @@ impl NbglHomeAndSettings {
         unsafe {
             loop {
                 self.prepare();
+                let action = self.action_c_type();
 
                 self.ux_sync_init();
                 nbgl_useCaseHomeAndSettings(
@@ -323,7 +448,10 @@ impl NbglHomeAndSettings {
                     self.start_page_index(),
                     self.settings_ptr(),
                     self.info_list_ptr(),
-                    core::ptr::null(),
+                    match &action {
+                        Some(action) => action as *const nbgl_homeAction_t,
+                        None => core::ptr::null(),
+                    },
                     Some(quit_callback),
                 );
                 match self.ux_sync_wait(true) {
@@ -390,6 +518,7 @@ impl NbglHomeAndSettings {
     /// This function returns immediately after the screen is displayed.
     pub fn show_and_return(&mut self) {
         self.prepare();
+        let action = self.action_c_type();
 
         unsafe {
             nbgl_useCaseHomeAndSettings(
@@ -399,7 +528,10 @@ impl NbglHomeAndSettings {
                 self.start_page_index(),
                 self.settings_ptr(),
                 self.info_list_ptr(),
-                core::ptr::null(),
+                match &action {
+                    Some(action) => action as *const nbgl_homeAction_t,
+                    None => core::ptr::null(),
+                },
                 Some(quit_cb),
             );
         }

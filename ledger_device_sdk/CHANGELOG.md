@@ -39,6 +39,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `NbglAdvanceReview::warning(&NbglWarning)` and
   `NbglStreamingReview::warning(&NbglWarning)`.
 - `nbgl_warning` example, showing both the pre-defined and the manual paths.
+- Home screen action button, exposing `nbgl_homeAction_t` through the new
+  `HomeAction` and `HomeActionStyle` types, set with
+  `NbglHomeAndSettings::action()`. The button's function is supplied by the app
+  and NBGL runs it on touch, so it can start any use case; the parameter was
+  previously always NULL. The `nbgl_home_and_settings` example shows one
+  displaying a status page.
 
 ### Changed
 - `NbglHomeAndSettings::infos(app_name, version, author)` is unchanged and now a
