@@ -92,10 +92,9 @@ static mut COMM_REF: Option<&'static mut Comm<DEFAULT_BUF_SIZE>> = None;
 /// Points at the home screen builder owned by `sample_main`, so the action
 /// callback can draw it again.
 ///
-/// A raw pointer rather than an `Option<NbglHomeAndSettings>`: a null pointer
-/// initialiser lands in `.bss`, whereas storing the struct itself would put its
-/// initialiser in `.data`, which the app linker script rejects.
-static mut HOME_REF: *mut NbglHomeAndSettings = core::ptr::null_mut();
+/// Store only a reference handle in `.bss` and avoid raw-pointer dereference
+/// in the callback.
+static mut HOME_REF: Option<&'static mut NbglHomeAndSettings> = None;
 
 /// Runs when the home screen's action button is touched.
 fn on_action() {
@@ -110,8 +109,9 @@ fn on_action() {
     // `show` returns once the status page times out after 3s. Nothing is drawn
     // at that point, so put the home screen back.
     unsafe {
-        if !HOME_REF.is_null() {
-            (*HOME_REF).show_and_return();
+        #[allow(static_mut_refs)]
+        if let Some(home) = HOME_REF.as_mut() {
+            home.show_and_return();
         }
     }
 }
