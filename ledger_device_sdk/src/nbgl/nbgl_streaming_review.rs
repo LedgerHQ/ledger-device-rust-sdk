@@ -200,35 +200,13 @@ impl NbglStreamingReview {
     }
 
     fn continue_review_internal(&self, fields: &[Field]) -> bool {
-        let Some(nb_pairs) = nb_items(fields.len()) else {
+        if nb_items(fields.len()).is_none() {
             return false;
-        };
+        }
         unsafe {
-            let v: Vec<CField> = fields
-                .iter()
-                .map(|f| CField {
-                    name: CString::new(f.name).unwrap(),
-                    value: CString::new(f.value).unwrap(),
-                })
-                .collect();
-
-            // Fill the tag_value_array with the fields converted to nbgl_contentTagValue_t
-            let mut tag_value_array: Vec<nbgl_contentTagValue_t> = Vec::new();
-            for field in v.iter() {
-                let val = nbgl_contentTagValue_t {
-                    item: field.name.as_ptr() as *const ::core::ffi::c_char,
-                    value: field.value.as_ptr() as *const ::core::ffi::c_char,
-                    ..Default::default()
-                };
-                tag_value_array.push(val);
-            }
-
-            // Create the tag_value_list with the tag_value_array.
-            let tag_value_list = nbgl_contentTagValueList_t {
-                pairs: tag_value_array.as_ptr(),
-                nbPairs: nb_pairs,
-                ..Default::default()
-            };
+            // Owns the C strings the pairs point at; must outlive the call below.
+            let c_values = CTagValueList::from_fields(fields);
+            let tag_value_list = c_values.as_c_list();
 
             self.ux_sync_init();
             nbgl_useCaseReviewStreamingContinue(
@@ -242,36 +220,15 @@ impl NbglStreamingReview {
         }
     }
 
-    fn next_internal(&self, fields: &[Field]) -> NbglStreamingReviewStatus {
-        let Some(nb_pairs) = nb_items(fields.len()) else {
+    fn next_internal(&self, values: &[TagValue]) -> NbglStreamingReviewStatus {
+        if nb_items(values.len()).is_none() {
             return NbglStreamingReviewStatus::Rejected;
-        };
+        }
         unsafe {
-            let v: Vec<CField> = fields
-                .iter()
-                .map(|f| CField {
-                    name: CString::new(f.name).unwrap(),
-                    value: CString::new(f.value).unwrap(),
-                })
-                .collect();
-
-            // Fill the tag_value_array with the fields converted to nbgl_contentTagValue_t
-            let mut tag_value_array: Vec<nbgl_contentTagValue_t> = Vec::new();
-            for field in v.iter() {
-                let val = nbgl_contentTagValue_t {
-                    item: field.name.as_ptr() as *const ::core::ffi::c_char,
-                    value: field.value.as_ptr() as *const ::core::ffi::c_char,
-                    ..Default::default()
-                };
-                tag_value_array.push(val);
-            }
-
-            // Create the tag_value_list with the tag_value_array.
-            let tag_value_list = nbgl_contentTagValueList_t {
-                pairs: tag_value_array.as_ptr(),
-                nbPairs: nb_pairs,
-                ..Default::default()
-            };
+            // Owns the C strings and the extension structs the pairs point at;
+            // must outlive the use-case call below.
+            let c_values = CTagValueList::new(values);
+            let tag_value_list = c_values.as_c_list();
 
             self.ux_sync_init();
             nbgl_useCaseReviewStreamingContinueExt(
@@ -363,7 +320,24 @@ impl NbglStreamingReview {
         _comm: &mut crate::io::Comm<N>,
         fields: &[Field],
     ) -> NbglStreamingReviewStatus {
-        self.next_internal(fields)
+        self.next_internal(&to_tag_values(fields))
+    }
+
+    /// Proceeds to the next page in the streaming review flow with tag/value
+    /// pairs that may carry a [`FieldExtension`].
+    /// # Arguments
+    /// * `_comm` - Mutable reference to Comm.
+    /// * `values` - A slice of `TagValue` representing the pairs to display on the next page.
+    /// # Returns
+    /// Returns an `NbglStreamingReviewStatus` indicating whether the user proceeded to the next
+    /// page, skipped the review, or rejected it.
+    #[cfg(feature = "io_new")]
+    pub fn next_ext<const N: usize>(
+        &self,
+        _comm: &mut crate::io::Comm<N>,
+        values: &[TagValue],
+    ) -> NbglStreamingReviewStatus {
+        self.next_internal(values)
     }
 
     /// Proceeds to the next page in the streaming review flow with the provided fields.
@@ -374,7 +348,19 @@ impl NbglStreamingReview {
     /// page, skipped the review, or rejected it.
     #[cfg(not(feature = "io_new"))]
     pub fn next(&self, fields: &[Field]) -> NbglStreamingReviewStatus {
-        self.next_internal(fields)
+        self.next_internal(&to_tag_values(fields))
+    }
+
+    /// Proceeds to the next page in the streaming review flow with tag/value
+    /// pairs that may carry a [`FieldExtension`].
+    /// # Arguments
+    /// * `values` - A slice of `TagValue` representing the pairs to display on the next page.
+    /// # Returns
+    /// Returns an `NbglStreamingReviewStatus` indicating whether the user proceeded to the next
+    /// page, skipped the review, or rejected it.
+    #[cfg(not(feature = "io_new"))]
+    pub fn next_ext(&self, values: &[TagValue]) -> NbglStreamingReviewStatus {
+        self.next_internal(values)
     }
 
     /// Finishes the streaming review flow by displaying the final confirmation page.

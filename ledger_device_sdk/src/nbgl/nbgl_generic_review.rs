@@ -250,9 +250,8 @@ impl From<&InfoButton> for nbgl_contentInfoButton_t {
 /// right). Display options control the maximum number of lines per value,
 /// text casing, and word-wrapping behaviour.
 pub struct TagValueList {
-    _cfields: Vec<CField>,
-    /// Vector of C-compatible strings representing the tag/value pairs.
-    pairs: Vec<nbgl_contentTagValue_t>,
+    /// Owns the C strings, and the extension structs the pairs point at.
+    values: CTagValueList,
     /// If `true`, values are rendered in a smaller font.
     small_case_for_value: bool,
     /// If `true`, long values are word-wrapped instead of truncated.
@@ -278,15 +277,30 @@ impl TagValueList {
         small_case_for_value: bool,
         wrapping: bool,
     ) -> TagValueList {
-        let cfields: Vec<CField> = tvl.iter().map(|field| field.into()).collect();
-        Self::from_cfields(cfields, small_case_for_value, wrapping)
+        TagValueList {
+            values: CTagValueList::from_fields(tvl),
+            small_case_for_value,
+            wrapping,
+        }
     }
 
-    fn from_cfields(cfields: Vec<CField>, small_case_for_value: bool, wrapping: bool) -> Self {
-        let pairs: Vec<nbgl_contentTagValue_t> = cfields.iter().map(|pair| pair.into()).collect();
+    /// Creates a new [`TagValueList`] whose pairs may each carry a
+    /// [`FieldExtension`].
+    ///
+    /// # Arguments
+    ///
+    /// * `values` — Slice of [`TagValue`] items.
+    /// * `small_case_for_value` — If `true`, values are rendered in a smaller
+    ///   font.
+    /// * `wrapping` — If `true`, long values are word-wrapped instead of
+    ///   truncated.
+    pub fn new_ext(
+        values: &[TagValue],
+        small_case_for_value: bool,
+        wrapping: bool,
+    ) -> TagValueList {
         TagValueList {
-            _cfields: cfields,
-            pairs,
+            values: CTagValueList::new(values),
             small_case_for_value,
             wrapping,
         }
@@ -294,11 +308,11 @@ impl TagValueList {
 
     /// A copy owning its own strings.
     fn duplicate(&self) -> Self {
-        Self::from_cfields(
-            self._cfields.clone(),
-            self.small_case_for_value,
-            self.wrapping,
-        )
+        TagValueList {
+            values: self.values.duplicate(),
+            small_case_for_value: self.small_case_for_value,
+            wrapping: self.wrapping,
+        }
     }
 }
 
@@ -306,8 +320,8 @@ impl TagValueList {
 impl From<&TagValueList> for nbgl_contentTagValueList_t {
     fn from(tvl: &TagValueList) -> nbgl_contentTagValueList_t {
         nbgl_contentTagValueList_t {
-            pairs: tvl.pairs.as_ptr(),
-            nbPairs: tvl.pairs.len() as u8,
+            pairs: tvl.values.pairs_ptr(),
+            nbPairs: tvl.values.len(),
             nbMaxLinesForValue: 0,
             token: FIRST_USER_TOKEN as u8,
             smallCaseForValue: tvl.small_case_for_value,
@@ -481,9 +495,9 @@ impl NbglPageContent {
     /// Whether every list in this content fits in the NBGL item count.
     fn fits(&self) -> bool {
         match self {
-            NbglPageContent::TagValueList(tvl) => nb_items(tvl.pairs.len()).is_some(),
+            NbglPageContent::TagValueList(tvl) => nb_items(tvl.values.nb_pairs()).is_some(),
             NbglPageContent::TagValueConfirm(tvc) => {
-                nb_items(tvc.tag_value_list.pairs.len()).is_some()
+                nb_items(tvc.tag_value_list.values.nb_pairs()).is_some()
             }
             NbglPageContent::InfosList(infos) => {
                 nb_items(infos.info_types_cstrings.len()).is_some()

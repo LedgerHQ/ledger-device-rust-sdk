@@ -30,6 +30,7 @@ pub mod nbgl_review_status;
 pub mod nbgl_spinner;
 pub mod nbgl_status;
 pub mod nbgl_streaming_review;
+pub mod nbgl_tag_value;
 
 #[doc(inline)]
 pub use nbgl_action::*;
@@ -61,6 +62,8 @@ pub use nbgl_spinner::*;
 pub use nbgl_status::*;
 #[doc(inline)]
 pub use nbgl_streaming_review::*;
+#[doc(inline)]
+pub use nbgl_tag_value::*;
 
 #[cfg(not(feature = "io_new"))]
 #[derive(Copy, Clone, PartialEq, Eq)]
