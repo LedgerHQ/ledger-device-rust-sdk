@@ -20,6 +20,8 @@ pub struct NbglAdvanceReview<'a> {
     finish_title: CString,
     /// Owns the C strings, icons and details tree behind the warning.
     warning: Option<CWarning>,
+    /// Owns the C strings and info list behind the tip box.
+    tip_box: Option<CTipBox>,
 }
 
 impl SyncNBGL for NbglAdvanceReview<'_> {}
@@ -38,6 +40,28 @@ impl<'a> NbglAdvanceReview<'a> {
             finish_title: CString::default(),
             glyph: None,
             warning: None,
+            tip_box: None,
+        }
+    }
+
+    /// Sets the tip box shown on the review's first page.
+    ///
+    /// Only takes effect on a review whose warning set raises no tip box of its
+    /// own. Any of the `W3c*` warnings, or `BlindSigning`, makes NBGL draw its
+    /// own tip box instead and route the touch to the security report, ignoring
+    /// this one entirely — both its text and its info list.
+    ///
+    /// This is why there is no equivalent on `NbglReview`: the only use case it
+    /// wraps that accepts a tip box is the blind-signing one, which always
+    /// raises `BlindSigning`.
+    /// # Arguments
+    /// * `tip_box` - The tip box; see [`TipBox`].
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
+    pub fn tip_box(self, tip_box: &TipBox) -> NbglAdvanceReview<'a> {
+        NbglAdvanceReview {
+            tip_box: Some(CTipBox::new(tip_box)),
+            ..self
         }
     }
 
@@ -147,6 +171,9 @@ impl<'a> NbglAdvanceReview<'a> {
                 None => nbgl_warning_t::default(),
             };
 
+            // Materialised here so the pointer passed below outlives the call.
+            let tip_box = self.tip_box.as_ref().map(|t| t.as_c_type());
+
             self.ux_sync_init();
             nbgl_useCaseAdvancedReview(
                 self.operation_type.to_c_type(false),
@@ -155,7 +182,10 @@ impl<'a> NbglAdvanceReview<'a> {
                 self.review_title.as_ptr() as *const c_char,
                 self.review_subtitle.as_ptr() as *const c_char,
                 self.finish_title.as_ptr() as *const c_char,
-                core::ptr::null(),
+                match &tip_box {
+                    Some(tip_box) => tip_box as *const nbgl_tipBox_t,
+                    None => core::ptr::null(),
+                },
                 &warning_details as *const nbgl_warning_t,
                 Some(choice_callback),
             );

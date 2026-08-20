@@ -39,6 +39,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `NbglAdvanceReview::warning(&NbglWarning)` and
   `NbglStreamingReview::warning(&NbglWarning)`.
 - `nbgl_warning` example, showing both the pre-defined and the manual paths.
+- Tip box on a review's first page, exposing `nbgl_tipBox_t` through the new
+  `TipBox` type: `NbglAdvanceReview::tip_box()`. Touching it opens a modal
+  listing `[type, content]` rows; the parameter was previously always NULL.
+  Only `INFOS_LIST` is offered, the sole member of the C union. It applies only
+  to a review whose warning set raises no tip box of its own: any `W3c*`
+  warning, or `BlindSigning`, makes NBGL draw its own tip box and route the
+  touch to the security report instead. That is also why `NbglReview` has no
+  equivalent — the only use case it wraps that takes a tip box is the
+  blind-signing one, which always raises `BlindSigning`. The
+  `nbgl_advance_review` example shows one on a review with no warning.
 - Home screen action button, exposing `nbgl_homeAction_t` through the new
   `HomeAction` and `HomeActionStyle` types, set with
   `NbglHomeAndSettings::action()`. The button's function is supplied by the app
