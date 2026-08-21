@@ -13,6 +13,9 @@ use core::ops::Not;
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 ledger_device_sdk::define_comm!(COMM);
 
+/// Runs when a switch, choice or bar in one of the contents is touched.
+fn on_action(_token: u8, _index: u8) {}
+
 #[unsafe(no_mangle)]
 extern "C" fn sample_main() {
     let comm = init_comm(&COMM);
@@ -85,6 +88,7 @@ extern "C" fn sample_main() {
     let infos_list = InfosList::new(&my_example_fields);
 
     let mut review = NbglGenericReview::new()
+        .on_action(on_action)
         .add_content(NbglPageContent::CenteredInfo(centered_info))
         .add_content(NbglPageContent::InfoButton(info_button));
 

@@ -39,6 +39,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `NbglAdvanceReview::warning(&NbglWarning)` and
   `NbglStreamingReview::warning(&NbglWarning)`.
 - `nbgl_warning` example, showing both the pre-defined and the manual paths.
+- `NbglGenericConfiguration`, wrapping `nbgl_useCaseGenericConfiguration` — a
+  configuration screen built from arbitrary `NbglPageContent`, paginated by
+  NBGL, ended through the header. It is the general form of
+  `NbglGenericSettings`, which is fixed to one switch list backed by NVM.
+- `NbglGenericConfiguration::on_action` and `NbglGenericReview::on_action`,
+  reporting touches on a switch, choice or bar back to the app through
+  `nbgl_content_t.contentActionCallback`. That field was previously always NULL,
+  so the interactive content types added earlier in this release were drawn but
+  reported nothing. `TagValueConfirm`, `InfoLongPress` and `InfoButton` keep the
+  SDK's own callback either way, since that is how a review detects approval.
 - `NbglChoice::show_with_details` and `NbglChoice::show_advanced_with_details`,
   wrapping `nbgl_useCaseChoiceWithDetails` and
   `nbgl_useCaseAdvancedChoiceWithDetails`. Both take a `WarningDetails`, the
