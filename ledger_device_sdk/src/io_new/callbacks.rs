@@ -3,7 +3,7 @@
 //! This module holds the erased pointer to the current `Comm` instance and the
 //! generic callback wrappers that are registered through `nbgl_register_callbacks`.
 
-use crate::io_legacy::{ApduHeader, Reply};
+use crate::io_legacy::{ApduHeader, Reply, StatusWords};
 
 #[cfg(feature = "stack_usage")]
 use super::bolos::handle_bolos_apdu;
@@ -73,7 +73,8 @@ pub(super) fn next_event_ahead_impl<const N: usize>() -> bool {
     // fetching another event. This prevents consuming the same APDU repeatedly
     // when ux_sync_wait loops with exit_on_apdu=false.
     if comm.pending_apdu {
-        return true;
+        reply_status_impl::<N>(Reply(StatusWords::CmdNotAccepted as u16));
+        return false;
     }
     match comm.next_event().into_type() {
         DecodedEventType::Apdu {

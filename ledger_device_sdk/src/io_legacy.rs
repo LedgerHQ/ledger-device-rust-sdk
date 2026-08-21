@@ -44,6 +44,7 @@ pub enum StatusWords {
     Unknown = 0x6d00,
     Panic = 0xe000,
     DeviceLocked = 0x5515,
+    CmdNotAccepted = 0x6901,
 }
 
 #[derive(Debug)]
@@ -363,7 +364,12 @@ impl Comm {
         let status = sys_seph::io_rx(&mut self.io_buffer, true);
 
         if status > 0 {
-            return self.detect_apdu::<T>(status);
+            let is_apdu = self.detect_apdu::<T>(status);
+            if is_apdu && self.event_pending {
+                self.reply(Reply(StatusWords::CmdNotAccepted as u16));
+                return false;
+            }
+            return is_apdu;
         }
         false
     }
