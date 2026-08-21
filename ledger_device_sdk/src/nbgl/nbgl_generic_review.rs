@@ -675,22 +675,61 @@ pub enum NbglPageContent {
     ExtendedCenter(ExtendedCenter),
 }
 
+/// App function to run when a control inside a generic content is touched.
+///
+/// `nbgl_contentActionCallback_t` carries no user data, so the app's function is
+/// parked here for [`content_action_callback`] to find. Only one such flow is on
+/// screen at a time, so a single slot is enough for every container that emits
+/// these contents.
+static mut CONTENT_ACTION: Option<fn(u8, u8)> = None;
+
+/// Records the app function the next flow should report control touches to.
+pub(crate) fn set_content_action(on_action: Option<fn(u8, u8)>) {
+    unsafe {
+        CONTENT_ACTION = on_action;
+    }
+}
+
+/// Callback registered with NBGL for content whose controls the app can act on.
+///
+/// The page index NBGL also supplies is dropped: the token already identifies
+/// the element, each content type assigning `FIRST_USER_TOKEN + i` to its `i`th.
+pub(crate) unsafe extern "C" fn content_action_callback(token: c_int, index: u8, _page: c_int) {
+    if let Some(on_action) = unsafe { CONTENT_ACTION } {
+        on_action(token as u8, index);
+    }
+}
+
 impl From<&NbglPageContent> for nbgl_content_t {
+    /// Builds the C content with no action callback on the interactive lists.
+    /// Use [`NbglPageContent::to_c_content`] to route their controls to the app.
     fn from(content: &NbglPageContent) -> nbgl_content_t {
+        content.to_c_content(None)
+    }
+}
+
+impl NbglPageContent {
+    /// Builds the C content, reporting control touches through `on_action`.
+    ///
+    /// `TagValueConfirm`, `InfoLongPress` and `InfoButton` keep the SDK's own
+    /// callback regardless: that is how a review detects approval, and
+    /// overriding it would break the flow's result.
+    pub(crate) fn to_c_content(&self, on_action: nbgl_contentActionCallback_t) -> nbgl_content_t {
+        let content = self;
         match content {
             NbglPageContent::CenteredInfo(data) => nbgl_content_t {
                 content: nbgl_content_u {
                     centeredInfo: data.into(),
                 },
                 type_: CENTERED_INFO,
-                contentActionCallback: None,
+                contentActionCallback: on_action,
             },
             NbglPageContent::TagValueList(data) => nbgl_content_t {
                 content: nbgl_content_u {
                     tagValueList: data.into(),
                 },
                 type_: TAG_VALUE_LIST,
-                contentActionCallback: None,
+                contentActionCallback: on_action,
             },
             NbglPageContent::TagValueConfirm(data) => nbgl_content_t {
                 content: nbgl_content_u {
@@ -718,35 +757,35 @@ impl From<&NbglPageContent> for nbgl_content_t {
                     infosList: data.into(),
                 },
                 type_: INFOS_LIST,
-                contentActionCallback: None,
+                contentActionCallback: on_action,
             },
             NbglPageContent::SwitchesList(data) => nbgl_content_t {
                 content: nbgl_content_u {
                     switchesList: data.into(),
                 },
                 type_: SWITCHES_LIST,
-                contentActionCallback: None,
+                contentActionCallback: on_action,
             },
             NbglPageContent::ChoicesList(data) => nbgl_content_t {
                 content: nbgl_content_u {
                     choicesList: data.into(),
                 },
                 type_: CHOICES_LIST,
-                contentActionCallback: None,
+                contentActionCallback: on_action,
             },
             NbglPageContent::BarsList(data) => nbgl_content_t {
                 content: nbgl_content_u {
                     barsList: data.into(),
                 },
                 type_: BARS_LIST,
-                contentActionCallback: None,
+                contentActionCallback: on_action,
             },
             NbglPageContent::ExtendedCenter(data) => nbgl_content_t {
                 content: nbgl_content_u {
                     extendedCenter: data.into(),
                 },
                 type_: EXTENDED_CENTER,
-                contentActionCallback: None,
+                contentActionCallback: on_action,
             },
         }
     }
@@ -771,6 +810,7 @@ impl From<&NbglPageContent> for nbgl_content_t {
 /// ```
 pub struct NbglGenericReview {
     content_list: Vec<NbglPageContent>,
+    on_action: Option<fn(u8, u8)>,
 }
 
 impl SyncNBGL for NbglGenericReview {}
@@ -786,7 +826,22 @@ impl NbglGenericReview {
     pub fn new() -> NbglGenericReview {
         NbglGenericReview {
             content_list: Vec::new(),
+            on_action: None,
         }
+    }
+
+    /// Sets the function run when a control inside one of the contents is
+    /// touched — a switch, a choice, or a bar.
+    ///
+    /// It receives the token of the touched element and, for a choices list,
+    /// the index chosen. Each content type assigns `FIRST_USER_TOKEN + i` to
+    /// its `i`th element, except `ChoicesList`, which uses one token and
+    /// reports the selection in `index`.
+    ///
+    /// Without this the interactive lists are drawn but report nothing.
+    pub fn on_action(mut self, on_action: fn(u8, u8)) -> NbglGenericReview {
+        self.on_action = Some(on_action);
+        self
     }
 
     /// Appends a content page to the review.
@@ -806,10 +861,20 @@ impl NbglGenericReview {
     /// Converts the Rust content list into the C representation expected by
     /// the NBGL library.
     fn to_c_content_list(&self) -> Vec<nbgl_content_t> {
+        let on_action = self.action_callback();
         self.content_list
             .iter()
-            .map(|content| content.into())
+            .map(|content| content.to_c_content(on_action))
             .collect()
+    }
+
+    /// The C callback to hand the contents, or None if the app set no handler.
+    fn action_callback(&self) -> nbgl_contentActionCallback_t {
+        set_content_action(self.on_action);
+        match self.on_action {
+            Some(_) => Some(content_action_callback),
+            None => None,
+        }
     }
 
     fn show_internal(&self, reject_button_str: &str) -> bool {

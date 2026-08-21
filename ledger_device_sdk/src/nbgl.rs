@@ -19,6 +19,7 @@ pub mod nbgl_address_review;
 pub mod nbgl_advance_review;
 pub mod nbgl_choice;
 pub mod nbgl_confirm;
+pub mod nbgl_generic_configuration;
 pub mod nbgl_generic_review;
 pub mod nbgl_generic_settings;
 pub mod nbgl_home_and_settings;
@@ -45,6 +46,8 @@ pub use nbgl_advance_review::*;
 pub use nbgl_choice::*;
 #[doc(inline)]
 pub use nbgl_confirm::*;
+#[doc(inline)]
+pub use nbgl_generic_configuration::*;
 #[doc(inline)]
 pub use nbgl_generic_review::*;
 #[doc(inline)]
