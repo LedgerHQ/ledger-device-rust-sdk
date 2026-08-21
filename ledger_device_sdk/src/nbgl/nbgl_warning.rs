@@ -651,7 +651,10 @@ impl CBarList {
 }
 
 /// Owns one details page and, for a bar list, the whole sub-tree under it.
-struct CDetails {
+///
+/// Shared with the choice-with-details use cases, which take the same
+/// `nbgl_warningDetails_t`.
+pub(crate) struct CDetails {
     title: CString,
     center: Option<Box<CCenterInfo>>,
     #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
@@ -661,7 +664,7 @@ struct CDetails {
 }
 
 impl CDetails {
-    fn new(details: &WarningDetails) -> Box<CDetails> {
+    pub(crate) fn new(details: &WarningDetails) -> Box<CDetails> {
         match details {
             WarningDetails::CenteredInfo { title, info } => Box::new(CDetails {
                 title: CString::new(*title).unwrap(),
@@ -690,7 +693,7 @@ impl CDetails {
         }
     }
 
-    fn as_c_type(&self) -> nbgl_genericDetails_t {
+    pub(crate) fn as_c_type(&self) -> nbgl_genericDetails_t {
         // Written as a sequence of checks rather than one match on a tuple:
         // the `qr` arm only exists on touchscreen devices, and a cfg inside a
         // tuple pattern would not compile away cleanly.

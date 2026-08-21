@@ -39,6 +39,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `NbglAdvanceReview::warning(&NbglWarning)` and
   `NbglStreamingReview::warning(&NbglWarning)`.
 - `nbgl_warning` example, showing both the pre-defined and the manual paths.
+- `NbglChoice::show_with_details` and `NbglChoice::show_advanced_with_details`,
+  wrapping `nbgl_useCaseChoiceWithDetails` and
+  `nbgl_useCaseAdvancedChoiceWithDetails`. Both take a `WarningDetails`, the
+  same details tree `NbglWarning` uses, and return the user's choice; the
+  advanced variant adds a header icon and title.
+- `NbglConfirm`, wrapping `nbgl_useCaseConfirm`, previously reachable only
+  indirectly through `NbglChoice::ask_confirmation`. It is a modal, so it must
+  be raised over a screen that is already drawn, and `show_and_return` does not
+  block: the C API reports the button being touched and says nothing about
+  dismissal, since dismissing simply reveals what was underneath. The
+  `nbgl_home_and_settings` example raises one from the home action button.
 - `NbglNavigableContent`, wrapping `nbgl_useCaseNavigableContent` — a flow of
   pages under a touchable header, for content that is not a review. The module
   existed but was commented out and unusable: its navigation callback ignored
