@@ -2,7 +2,9 @@
 #![no_main]
 
 use include_gif::include_gif;
-use ledger_device_sdk::nbgl::{HomeAction, NbglGlyph, NbglHomeAndSettings, NbglStatus, init_comm};
+use ledger_device_sdk::nbgl::{
+    HomeAction, NbglConfirm, NbglGlyph, NbglHomeAndSettings, NbglStatus, init_comm,
+};
 // use ledger_device_sdk::nvm::*;
 // use ledger_device_sdk::NVMData;
 use ledger_device_sdk::io::{ApduHeader, Comm, DEFAULT_BUF_SIZE, StatusWords};
@@ -97,14 +99,30 @@ static mut COMM_REF: Option<&'static mut Comm<DEFAULT_BUF_SIZE>> = None;
 static mut HOME_REF: Option<&'static mut NbglHomeAndSettings> = None;
 
 /// Runs when the home screen's action button is touched.
+///
+/// Draws a confirmation modal over the home screen. Being a modal it needs
+/// something underneath, which is why it is raised from here rather than from
+/// the top of `sample_main`: dismissing it through the footer simply reveals the
+/// home screen again, and reports nothing back.
 fn on_action() {
+    NbglConfirm::new()
+        .message("Delete this account?")
+        .sub_message("This cannot be undone.")
+        .texts("Delete", "Cancel")
+        .show_and_return(on_confirm);
+}
+
+/// Runs when the confirmation modal's button is touched.
+///
+/// There is no counterpart for the footer: `nbgl_useCaseConfirm` reports only
+/// confirmation, and dismissal needs no handling here because the home screen is
+/// already drawn behind the modal.
+fn on_confirm() {
     let comm = unsafe {
         #[allow(static_mut_refs)]
         COMM_REF.as_mut().unwrap()
     };
-    NbglStatus::new()
-        .text("Action button clicked")
-        .show(comm, true);
+    NbglStatus::new().text("Account deleted").show(comm, true);
 
     // `show` returns once the status page times out after 3s. Nothing is drawn
     // at that point, so put the home screen back.
@@ -137,7 +155,7 @@ extern "C" fn sample_main() {
     // `info_list` takes an arbitrary number of (type, content) pairs; the
     // shorter `.infos(app_name, version, author)` covers the usual
     // Version/Developer pair.
-    let action = HomeAction::new("Start action", on_action).icon(&FERRIS);
+    let action = HomeAction::new("Delete account", on_action).icon(&FERRIS);
 
     let mut home = NbglHomeAndSettings::new()
         .glyph(&FERRIS)
