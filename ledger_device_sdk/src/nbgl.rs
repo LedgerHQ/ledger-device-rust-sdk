@@ -22,7 +22,7 @@ pub mod nbgl_generic_review;
 pub mod nbgl_generic_settings;
 pub mod nbgl_home_and_settings;
 pub mod nbgl_keypad;
-//pub mod nbgl_navigable_content;
+pub mod nbgl_navigable_content;
 pub mod nbgl_review;
 #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 pub mod nbgl_review_extended;
@@ -51,8 +51,9 @@ pub use nbgl_home_and_settings::*;
 #[doc(inline)]
 pub use nbgl_keypad::*;
 #[doc(inline)]
+pub use nbgl_navigable_content::*;
+#[doc(inline)]
 pub use nbgl_review::*;
-//pub use nbgl_navigable_content::*; // integration issue
 #[doc(inline)]
 #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 pub use nbgl_review_extended::*;

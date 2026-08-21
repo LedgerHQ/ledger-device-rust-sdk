@@ -113,6 +113,11 @@ doc-scrape-examples = true
 required-features = ["io_new"]
 
 [[example]]
+name = "nbgl_navigable_content"
+doc-scrape-examples = true
+required-features = ["io_new"]
+
+[[example]]
 name = "nbgl_review"
 doc-scrape-examples = true
 required-features = ["io_new"]

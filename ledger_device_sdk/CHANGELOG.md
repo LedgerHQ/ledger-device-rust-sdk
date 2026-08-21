@@ -39,6 +39,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `NbglAdvanceReview::warning(&NbglWarning)` and
   `NbglStreamingReview::warning(&NbglWarning)`.
 - `nbgl_warning` example, showing both the pre-defined and the manual paths.
+- `NbglNavigableContent`, wrapping `nbgl_useCaseNavigableContent` — a flow of
+  pages under a touchable header, for content that is not a review. The module
+  existed but was commented out and unusable: its navigation callback ignored
+  the page index and returned four hard-coded choices through a pointer to a
+  temporary array, using non-NUL-terminated `&str`s. Pages are now declared up
+  front with `add_page` / `add_titled_page`, one `NbglPageContent` each, and
+  `on_control` receives control touches. Declaring pages up front is what makes
+  it sound: content built inside the callback would be dropped before NBGL drew
+  it. On Nano the per-page title and top-right icon are ignored, and
+  `ExtendedCenter` / `InfoLongPress` pages are rejected by `show`, that device's
+  page union having eight members against the touchscreen devices' eleven.
 - Four more `NbglGenericReview` content types, taking it from 6 to 10 of the 11
   members of the C content union: `SwitchesList` (`SWITCHES_LIST`),
   `ChoicesList` (`CHOICES_LIST`), `BarsList` (`BARS_LIST`) and `ExtendedCenter`
