@@ -301,6 +301,7 @@ impl Comm {
         }
         self.tx_length = 0;
         self.rx_length = 0;
+        self.event_pending = false;
     }
 
     /// Wait and return next button press event or APDU command.
@@ -365,11 +366,10 @@ impl Comm {
 
         if status > 0 {
             let is_apdu = self.detect_apdu::<T>(status);
-            if is_apdu && self.event_pending {
+            if is_apdu {
                 self.reply(Reply(StatusWords::CmdNotAccepted as u16));
                 return false;
             }
-            return is_apdu;
         }
         false
     }

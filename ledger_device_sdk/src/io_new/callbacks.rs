@@ -69,9 +69,7 @@ fn panic_reply_impl<const N: usize>(reply: Reply) {
 
 pub(super) fn next_event_ahead_impl<const N: usize>() -> bool {
     let comm = unsafe { get_comm::<N>() };
-    // If there's already a pending APDU, return true immediately without
-    // fetching another event. This prevents consuming the same APDU repeatedly
-    // when ux_sync_wait loops with exit_on_apdu=false.
+    // If there's already a pending APDU, return Cmd not accepted error status
     if comm.pending_apdu {
         reply_status_impl::<N>(Reply(StatusWords::CmdNotAccepted as u16));
         return false;
