@@ -195,6 +195,10 @@ pub struct Comm {
     /// Used when replying to BOLOS APDUs where io_rx(false) would deadlock.
     #[allow(dead_code)]
     skip_rx_on_send: bool,
+    /// True from the moment a command is handed to the application until the
+    /// application replies to it. This is what makes a second incoming APDU a
+    /// *double* APDU rather than the normal way of receiving work.
+    apdu_in_progress: bool,
 }
 
 impl Default for Comm {
@@ -232,6 +236,7 @@ impl Comm {
             rx_length: 0,
             tx_length: 0,
             skip_rx_on_send: false,
+            apdu_in_progress: false,
         }
     }
 
@@ -301,7 +306,8 @@ impl Comm {
         }
         self.tx_length = 0;
         self.rx_length = 0;
-        self.event_pending = false;
+        // Replying completes the current command.
+        self.apdu_in_progress = false;
     }
 
     /// Wait and return next button press event or APDU command.
@@ -357,21 +363,41 @@ impl Comm {
         }
     }
 
+    /// Fetch and process one event while an NBGL screen is displayed, and report
+    /// whether it was an APDU command.
+    ///
+    /// This is called from `ux_sync_wait` in two different situations:
+    ///
+    /// * no command is being processed (idle home screen): an incoming APDU is
+    ///   the normal way of receiving work, so it is decoded and `true` is
+    ///   returned so the caller can leave the screen and handle it.
+    /// * a command is being processed (review, status, … screen): an incoming
+    ///   APDU is a double APDU and is answered [`StatusWords::CmdNotAccepted`].
     pub fn next_event_ahead<T>(&mut self) -> bool
     where
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
         let status = sys_seph::io_rx(&mut self.io_buffer, true);
-
-        if status > 0 {
-            let is_apdu = self.detect_apdu::<T>(status);
-            if is_apdu {
-                self.reply(Reply(StatusWords::CmdNotAccepted as u16));
-                return false;
-            }
+        if status <= 0 {
+            return false;
         }
-        false
+
+        // Reject a double APDU on the raw frame, before any decoding: the
+        // in-flight command owns apdu_buffer / apdu_type / rx / tx, so the
+        // intruder must never be decoded into them. BOLOS APDUs (CLA 0xB0) and
+        // frames too short to hold a header fall through to keep their existing
+        // handling in `check_event`.
+        if self.apdu_in_progress
+            && Self::is_apdu_packet(self.io_buffer[0])
+            && status >= 5
+            && self.io_buffer[1] != 0xB0
+        {
+            self.reject_apdu(StatusWords::CmdNotAccepted);
+            return false;
+        }
+
+        self.detect_apdu::<T>(status)
     }
 
     pub fn check_event<T>(&mut self) -> Option<Event<T>>
@@ -419,6 +445,9 @@ impl Comm {
             let res = T::try_from(*self.get_apdu_metadata());
             match res {
                 Ok(ins) => {
+                    // The command is about to be handed to the application: any
+                    // APDU arriving from now until the reply is a double APDU.
+                    self.apdu_in_progress = true;
                     return Some(Event::Command(ins));
                 }
                 Err(sw) => {
@@ -606,6 +635,31 @@ impl Comm {
             }
             _ => false,
         }
+    }
+
+    /// True if a received SEPH frame carries an APDU rather than an event.
+    fn is_apdu_packet(packet_type: u8) -> bool {
+        matches!(
+            seph::PacketTypes::from(packet_type),
+            seph::PacketTypes::PacketTypeRawApdu
+                | seph::PacketTypes::PacketTypeUsbHidApdu
+                | seph::PacketTypes::PacketTypeUsbWebusbApdu
+                | seph::PacketTypes::PacketTypeBleApdu
+        )
+    }
+
+    /// Answer `sw` to an APDU received while another command is in flight.
+    ///
+    /// The status word is sent on the intruder's own transport, taken from the
+    /// received frame, and nothing owned by the in-flight command is touched:
+    /// `apdu_buffer`, `apdu_type`, `rx`, `rx_length`, `tx`, `tx_length` and
+    /// `event_pending` are all left as they were. This deliberately bypasses
+    /// [`Comm::reply`]/`apdu_send`, which would flush any staged response bytes,
+    /// reset the response state and consume a SEPH event.
+    fn reject_apdu(&self, sw: StatusWords) {
+        let sw = sw as u16;
+        let resp = [(sw >> 8) as u8, sw as u8];
+        sys_seph::io_tx(self.io_buffer[0], &resp, resp.len());
     }
 
     /// Wait for the next Command event. Discards received button events.

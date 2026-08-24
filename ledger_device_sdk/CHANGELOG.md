@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.37.0] - 2026-08-24
+
+### Added
+- `StatusWords::CmdNotAccepted` (0x6901). An APDU received while a previous
+  command is still being processed is now answered with this status word instead
+  of being queued or silently dropped. Note that adding a variant to the public
+  `StatusWords` enum breaks downstream exhaustive `match` expressions over it.
+
+### Deprecated
+- `NbglHomeAndSettings::show()` is now marked with the `#[deprecated]` attribute,
+  matching what its documentation already stated. Use `show_and_return()`
+  instead, which does not force a home screen refresh for every received APDU.
+
 ## [1.36.2] - 2026-08-18
 
 ### Changed
