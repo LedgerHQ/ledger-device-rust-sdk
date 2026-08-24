@@ -13,6 +13,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   of being queued or silently dropped. Note that adding a variant to the public
   `StatusWords` enum breaks downstream exhaustive `match` expressions over it.
 
+### Fixed
+- `io_new`: BOLOS internal APDUs (CLA 0xB0) arriving while an NBGL screen is
+  displayed are handled inline again instead of being answered
+  `CmdNotAccepted`. That handling was gated behind the `stack_usage` feature, so
+  default builds rejected OS level requests that `next_command` answers.
+- `io_new`: a double APDU is now answered on the polling iteration that detects
+  it. It used to be answered on the next one, so a screen completing in between
+  discarded it with no response at all, leaving the host waiting.
+- `io_new`: a malformed APDU received while a screen is displayed is answered
+  `BadLen` instead of being ignored, matching `next_command` and `io_legacy`.
+- `io_new`: rejecting an APDU no longer leaves `apdu_type` overwritten with the
+  rejected APDU's transport, which made the in-flight command reply on the
+  wrong channel.
+
 ### Deprecated
 - `NbglHomeAndSettings::show()` is now marked with the `#[deprecated]` attribute,
   matching what its documentation already stated. Use `show_and_return()`
