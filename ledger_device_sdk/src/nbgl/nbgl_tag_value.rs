@@ -202,6 +202,7 @@ impl<'a> FieldExtension<'a> {
 ///
 /// This is [`Field`] plus the optional extension. Use `TagValue::from(&field)`
 /// (or `.into()`) to lift a plain `Field`.
+#[derive(Default)]
 pub struct TagValue<'a> {
     /// Tag name, displayed in bold.
     pub name: &'a str,
@@ -209,6 +210,11 @@ pub struct TagValue<'a> {
     pub value: &'a str,
     /// When set, NBGL draws a `>` affordance opening a modal built from it.
     pub extension: Option<FieldExtension<'a>>,
+    /// Starts a new review page at this pair rather than packing it after the
+    /// previous one.
+    pub force_page_start: bool,
+    /// Draws this pair as a centered info block instead of a tag/value row.
+    pub centered_info: bool,
 }
 
 impl<'a> From<&Field<'a>> for TagValue<'a> {
@@ -216,7 +222,7 @@ impl<'a> From<&Field<'a>> for TagValue<'a> {
         TagValue {
             name: field.name,
             value: field.value,
-            extension: None,
+            ..Default::default()
         }
     }
 }
@@ -416,8 +422,15 @@ impl CTagValueList {
         let pairs: Vec<nbgl_contentTagValue_t> = cfields
             .iter()
             .zip(ext_of_pair.iter())
-            .map(|(field, ext_idx)| {
+            .zip(values.iter())
+            .map(|((field, ext_idx), value)| {
                 let mut pair: nbgl_contentTagValue_t = field.into();
+                if value.force_page_start {
+                    pair.set_forcePageStart(1);
+                }
+                if value.centered_info {
+                    pair.set_centeredInfo(1);
+                }
                 if let Some(idx) = *ext_idx {
                     pair.__bindgen_anon_1.extension = &exts[idx] as *const nbgl_contentValueExt_t;
                     // `extension` shares storage with `valueIcon`; C only reads
