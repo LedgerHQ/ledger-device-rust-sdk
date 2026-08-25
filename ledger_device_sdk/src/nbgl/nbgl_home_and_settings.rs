@@ -6,39 +6,77 @@
 use super::*;
 use crate::io::{Reply, StatusWords};
 use crate::io_callbacks::{nbgl_fetch_apdu_header, nbgl_reply_status};
-use core::sync::atomic::{AtomicPtr, Ordering};
+use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 
+/// The number of settings the examples store in NVM.
+///
+/// No longer a limit: [`NbglHomeAndSettings::settings`] takes an
+/// `AtomicStorage<[u8; N]>` of whatever size the app declares, and the switch
+/// descriptors are heap-allocated. An app may keep as many settings as its NVM
+/// array has bytes.
 pub const SETTINGS_SIZE: usize = 10;
-static NVM_REF: AtomicPtr<AtomicStorage<[u8; SETTINGS_SIZE]>> =
-    AtomicPtr::new(core::ptr::null_mut());
-static mut SWITCH_ARRAY: [nbgl_contentSwitch_t; SETTINGS_SIZE] =
-    [unsafe { const_zero!(nbgl_contentSwitch_t) }; SETTINGS_SIZE];
+
+/// The app's NVM settings storage, type-erased.
+///
+/// `settings` is generic over the array length, which a static cannot name, so
+/// the pointer is erased and paired with functions monomorphised for it.
+static NVM_PTR: AtomicPtr<()> = AtomicPtr::new(core::ptr::null_mut());
+
+/// Reads and writes for the registered NVM storage, instantiated for its
+/// concrete length.
+#[derive(Copy, Clone)]
+pub(crate) struct NvmOps {
+    pub(crate) read: unsafe fn(*mut (), usize) -> u8,
+    pub(crate) toggle: unsafe fn(*mut (), usize),
+}
+
+static mut NVM_OPS: Option<NvmOps> = None;
+
+pub(crate) unsafe fn nvm_read<const N: usize>(ptr: *mut (), idx: usize) -> u8 {
+    let data = unsafe { &*(ptr as *const AtomicStorage<[u8; N]>) };
+    data.get_ref()[idx]
+}
+
+pub(crate) unsafe fn nvm_toggle<const N: usize>(ptr: *mut (), idx: usize) {
+    let data = unsafe { &mut *(ptr as *mut AtomicStorage<[u8; N]>) };
+    let mut values: [u8; N] = *data.get_ref();
+    values[idx] = match values[idx] {
+        OFF_STATE => ON_STATE,
+        _ => OFF_STATE,
+    };
+    data.update(&values);
+}
+
+/// The switch descriptors handed to C, owned by the builder on the heap.
+///
+/// The callback reaches them through this pointer rather than a fixed-size
+/// static, which is what used to cap the number of settings.
+static SWITCHES_PTR: AtomicPtr<nbgl_contentSwitch_t> = AtomicPtr::new(core::ptr::null_mut());
+static SWITCHES_LEN: AtomicUsize = AtomicUsize::new(0);
 
 /// Callback triggered by the NBGL API when a setting switch is toggled.
 unsafe extern "C" fn settings_callback(token: c_int, _index: u8, _page: c_int) {
     unsafe {
         let idx = token - FIRST_USER_TOKEN as i32;
-        if idx < 0 || idx >= SETTINGS_SIZE as i32 {
+        if idx < 0 || idx as usize >= SWITCHES_LEN.load(Ordering::Relaxed) {
             panic!("Invalid token.");
         }
+        let setting_idx = idx as usize;
 
-        let setting_idx: usize = idx as usize;
-
-        match SWITCH_ARRAY[setting_idx].initState {
-            OFF_STATE => SWITCH_ARRAY[setting_idx].initState = ON_STATE,
-            ON_STATE => SWITCH_ARRAY[setting_idx].initState = OFF_STATE,
-            _ => panic!("Invalid state."),
+        let switches = SWITCHES_PTR.load(Ordering::Relaxed);
+        if switches.is_null() {
+            return;
         }
-        let ptr = NVM_REF.load(Ordering::Relaxed);
-        if !ptr.is_null() {
-            let data = &mut *ptr;
-            let mut switch_values: [u8; SETTINGS_SIZE] = *data.get_ref();
-            if switch_values[setting_idx] == OFF_STATE {
-                switch_values[setting_idx] = ON_STATE;
-            } else {
-                switch_values[setting_idx] = OFF_STATE;
-            }
-            data.update(&switch_values);
+        let switch = &mut *switches.add(setting_idx);
+        switch.initState = match switch.initState {
+            OFF_STATE => ON_STATE,
+            ON_STATE => OFF_STATE,
+            _ => panic!("Invalid state."),
+        };
+
+        let ptr = NVM_PTR.load(Ordering::Relaxed);
+        if let (false, Some(ops)) = (ptr.is_null(), NVM_OPS) {
+            (ops.toggle)(ptr, setting_idx);
         }
     }
 }
@@ -160,6 +198,8 @@ pub struct NbglHomeAndSettings {
     info_types_ptr: Vec<*const c_char>,
     info_contents_ptr: Vec<*const c_char>,
     setting_contents: Vec<[CString; 2]>,
+    /// Switch descriptors handed to C; owned here so their number is not capped.
+    switches: Vec<nbgl_contentSwitch_t>,
     nb_settings: u8,
     content: nbgl_content_t,
     generic_contents: nbgl_genericContents_t,
@@ -195,6 +235,7 @@ impl NbglHomeAndSettings {
             info_types_ptr: Vec::default(),
             info_contents_ptr: Vec::default(),
             setting_contents: Vec::default(),
+            switches: Vec::default(),
             nb_settings: 0,
             content: nbgl_content_t::default(),
             generic_contents: nbgl_genericContents_t::default(),
@@ -298,21 +339,30 @@ impl NbglHomeAndSettings {
     /// * `nvm_data` - A mutable reference to an `AtomicStorage` containing the settings data.
     /// * `settings_strings` - A slice of tuples containing the setting name and description.
     /// # Panics
-    /// Panics if the number of settings exceeds [SETTINGS_SIZE].
+    /// Panics if there are more settings than the NVM array has bytes, each
+    /// setting needing one byte of storage.
     /// # Returns
     /// Returns the builder itself to allow method chaining.
-    pub fn settings(
+    pub fn settings<const N: usize>(
         self,
-        nvm_data: &mut AtomicStorage<[u8; SETTINGS_SIZE]>,
+        nvm_data: &mut AtomicStorage<[u8; N]>,
         settings_strings: &[[&str; 2]],
     ) -> NbglHomeAndSettings {
-        NVM_REF.store(
-            nvm_data as *mut AtomicStorage<[u8; SETTINGS_SIZE]>,
+        if settings_strings.len() > N {
+            panic!("More settings than the NVM array has bytes.");
+        }
+
+        NVM_PTR.store(
+            nvm_data as *mut AtomicStorage<[u8; N]> as *mut (),
             Ordering::Relaxed,
         );
-
-        if settings_strings.len() > SETTINGS_SIZE {
-            panic!("Too many settings.");
+        // Records reads and writes instantiated for this N, the length being
+        // invisible to the statics above.
+        unsafe {
+            NVM_OPS = Some(NvmOps {
+                read: nvm_read::<N>,
+                toggle: nvm_toggle::<N>,
+            });
         }
 
         let v: Vec<[CString; 2]> = settings_strings
@@ -336,6 +386,9 @@ impl NbglHomeAndSettings {
         self.start_page = page;
     }
 
+    // `tuneId` is touchscreen-only, so the struct update below is needed on
+    // Nano and redundant elsewhere.
+    #[allow(clippy::needless_update)]
     /// Builds the C structures handed over to `nbgl_useCaseHomeAndSettings` from
     /// the builder state. The C API only borrows them, so they are kept alive in
     /// `self` and refreshed before every call.
@@ -353,27 +406,37 @@ impl NbglHomeAndSettings {
                 withExtensions: false,
             };
 
-            for (i, setting) in self.setting_contents.iter().enumerate() {
-                SWITCH_ARRAY[i].text = setting[0].as_ptr();
-                SWITCH_ARRAY[i].subText = setting[1].as_ptr();
-                let ptr = NVM_REF.load(Ordering::Relaxed);
-                let state = if !ptr.is_null() {
-                    (&*ptr).get_ref()[i]
-                } else {
-                    OFF_STATE
-                };
-                SWITCH_ARRAY[i].initState = state;
-                SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
-                #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
-                {
-                    SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
-                }
-            }
+            let nvm = NVM_PTR.load(Ordering::Relaxed);
+            self.switches = self
+                .setting_contents
+                .iter()
+                .enumerate()
+                .map(|(i, setting)| {
+                    let state = match (nvm.is_null(), NVM_OPS) {
+                        (false, Some(ops)) => (ops.read)(nvm, i),
+                        _ => OFF_STATE,
+                    };
+                    nbgl_contentSwitch_t {
+                        text: setting[0].as_ptr(),
+                        subText: setting[1].as_ptr(),
+                        initState: state,
+                        token: (FIRST_USER_TOKEN + i as u32) as u8,
+                        #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+                        tuneId: TuneIndex::TapCasual as u8,
+                        ..Default::default()
+                    }
+                })
+                .collect();
+
+            // The callback toggles state through these, so they must point at
+            // the vector before the screen can be touched.
+            SWITCHES_PTR.store(self.switches.as_mut_ptr(), Ordering::Relaxed);
+            SWITCHES_LEN.store(self.switches.len(), Ordering::Relaxed);
 
             self.content = nbgl_content_t {
                 content: nbgl_content_u {
                     switchesList: nbgl_pageSwitchesList_s {
-                        switches: &raw const SWITCH_ARRAY as *const nbgl_contentSwitch_t,
+                        switches: self.switches.as_ptr(),
                         nbSwitches: self.nb_settings,
                     },
                 },

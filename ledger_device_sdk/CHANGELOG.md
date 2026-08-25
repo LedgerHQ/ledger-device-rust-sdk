@@ -49,6 +49,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   see nothing change. Of the list-level struct only `wrapping` and `token` are
   honoured — which is also why the existing `small_case_for_value` argument has
   no effect.
+- Settings are no longer capped at ten. `NbglHomeAndSettings::settings` and
+  `NbglGenericSettings::settings` take an `AtomicStorage<[u8; N]>` of whatever
+  size the app declares, and the switch descriptors are heap-allocated rather
+  than living in a fixed-size static. The only limit left is the app's own NVM
+  array, one byte per setting, which is what `settings` now checks against.
+  Existing callers are unaffected: `N` is inferred, and `SETTINGS_SIZE` stays
+  exported, now describing the size the examples use rather than a maximum.
 - `TagValue::value_icon` draws an icon at the right of a value and makes the row
   touchable, with `NbglReview::on_value_icon` and
   `NbglAdvanceReview::on_value_icon` receiving the index of the touched pair.

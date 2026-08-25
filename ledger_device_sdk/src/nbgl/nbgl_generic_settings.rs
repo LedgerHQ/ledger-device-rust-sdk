@@ -1,37 +1,37 @@
 use super::*;
-use core::sync::atomic::{AtomicPtr, Ordering};
+use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 
-static NVM_REF: AtomicPtr<AtomicStorage<[u8; SETTINGS_SIZE]>> =
-    AtomicPtr::new(core::ptr::null_mut());
-static mut SWITCH_ARRAY: [nbgl_contentSwitch_t; SETTINGS_SIZE] =
-    [unsafe { const_zero!(nbgl_contentSwitch_t) }; SETTINGS_SIZE];
+// Own state, sharing the type-erasure helpers with the home screen: the two
+// screens are never up at once, but keeping the pointers separate means neither
+// can be left holding the other's.
+static NVM_PTR: AtomicPtr<()> = AtomicPtr::new(core::ptr::null_mut());
+static mut NVM_OPS: Option<NvmOps> = None;
+static SWITCHES_PTR: AtomicPtr<nbgl_contentSwitch_t> = AtomicPtr::new(core::ptr::null_mut());
+static SWITCHES_LEN: AtomicUsize = AtomicUsize::new(0);
 
 /// Callback triggered by the NBGL API  when a setting switch is toggled.
 unsafe extern "C" fn settings_callback(token: c_int, _index: u8, _page: c_int) {
     unsafe {
         let idx = token - FIRST_USER_TOKEN as i32;
-        if idx < 0 || idx >= SETTINGS_SIZE as i32 {
+        if idx < 0 || idx as usize >= SWITCHES_LEN.load(Ordering::Relaxed) {
             panic!("Invalid token.");
         }
+        let setting_idx = idx as usize;
 
-        let setting_idx: usize = idx as usize;
-
-        match SWITCH_ARRAY[setting_idx].initState {
-            OFF_STATE => SWITCH_ARRAY[setting_idx].initState = ON_STATE,
-            ON_STATE => SWITCH_ARRAY[setting_idx].initState = OFF_STATE,
-            _ => panic!("Invalid state."),
+        let switches = SWITCHES_PTR.load(Ordering::Relaxed);
+        if switches.is_null() {
+            return;
         }
+        let switch = &mut *switches.add(setting_idx);
+        switch.initState = match switch.initState {
+            OFF_STATE => ON_STATE,
+            ON_STATE => OFF_STATE,
+            _ => panic!("Invalid state."),
+        };
 
-        let ptr = NVM_REF.load(Ordering::Relaxed);
-        if !ptr.is_null() {
-            let data = &mut *ptr;
-            let mut switch_values: [u8; SETTINGS_SIZE] = *data.get_ref();
-            if switch_values[setting_idx] == OFF_STATE {
-                switch_values[setting_idx] = ON_STATE;
-            } else {
-                switch_values[setting_idx] = OFF_STATE;
-            }
-            data.update(&switch_values);
+        let ptr = NVM_PTR.load(Ordering::Relaxed);
+        if let (false, Some(ops)) = (ptr.is_null(), NVM_OPS) {
+            (ops.toggle)(ptr, setting_idx);
         }
     }
 }
@@ -50,6 +50,8 @@ pub struct NbglGenericSettings {
     info: InfoHolder,
     info_list: Option<nbgl_contentInfoList_t>,
     settings_title_subtitle: Vec<[CString; 2]>,
+    /// Switch descriptors handed to C; owned here so their number is not capped.
+    switches: Vec<nbgl_contentSwitch_t>,
     content: nbgl_content_t,
     generic_contents: nbgl_genericContents_t,
 }
@@ -70,6 +72,7 @@ impl NbglGenericSettings {
             info: InfoHolder::default(),
             info_list: None,
             settings_title_subtitle: Vec::default(),
+            switches: Vec::default(),
             content: nbgl_content_t::default(),
             generic_contents: nbgl_genericContents_t::default(),
         }
@@ -109,13 +112,19 @@ impl NbglGenericSettings {
         self
     }
 
-    pub fn settings(
+    /// # Panics
+    /// Panics if there are more settings than the NVM array has bytes, each
+    /// setting needing one byte of storage.
+    // `tuneId` is touchscreen-only, so the struct update below is needed on
+    // Nano and redundant elsewhere.
+    #[allow(clippy::needless_update)]
+    pub fn settings<const N: usize>(
         mut self,
-        nvm_data: &mut AtomicStorage<[u8; SETTINGS_SIZE]>,
+        nvm_data: &mut AtomicStorage<[u8; N]>,
         settings_strings: &[[&str; 2]],
     ) -> NbglGenericSettings {
-        if settings_strings.len() > SETTINGS_SIZE {
-            panic!("Too many settings.");
+        if settings_strings.len() > N {
+            panic!("More settings than the NVM array has bytes.");
         }
 
         self.settings_title_subtitle = settings_strings
@@ -123,33 +132,46 @@ impl NbglGenericSettings {
             .map(|s| [CString::new(s[0]).unwrap(), CString::new(s[1]).unwrap()])
             .collect();
 
-        NVM_REF.store(
-            nvm_data as *mut AtomicStorage<[u8; SETTINGS_SIZE]>,
+        NVM_PTR.store(
+            nvm_data as *mut AtomicStorage<[u8; N]> as *mut (),
             Ordering::Relaxed,
         );
         unsafe {
-            for (i, setting) in self.settings_title_subtitle.iter().enumerate() {
-                SWITCH_ARRAY[i].text = setting[0].as_ptr();
-                SWITCH_ARRAY[i].subText = setting[1].as_ptr();
-                let ptr = NVM_REF.load(Ordering::Relaxed);
-                let state = if !ptr.is_null() {
-                    (&*ptr).get_ref()[i]
-                } else {
-                    OFF_STATE
-                };
-                SWITCH_ARRAY[i].initState = state;
-                SWITCH_ARRAY[i].token = (FIRST_USER_TOKEN + i as u32) as u8;
-                #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
-                {
-                    SWITCH_ARRAY[i].tuneId = TuneIndex::TapCasual as u8;
-                }
-            }
+            NVM_OPS = Some(NvmOps {
+                read: nvm_read::<N>,
+                toggle: nvm_toggle::<N>,
+            });
+
+            let nvm = NVM_PTR.load(Ordering::Relaxed);
+            self.switches = self
+                .settings_title_subtitle
+                .iter()
+                .enumerate()
+                .map(|(i, setting)| {
+                    let state = match (nvm.is_null(), NVM_OPS) {
+                        (false, Some(ops)) => (ops.read)(nvm, i),
+                        _ => OFF_STATE,
+                    };
+                    nbgl_contentSwitch_t {
+                        text: setting[0].as_ptr(),
+                        subText: setting[1].as_ptr(),
+                        initState: state,
+                        token: (FIRST_USER_TOKEN + i as u32) as u8,
+                        #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+                        tuneId: TuneIndex::TapCasual as u8,
+                        ..Default::default()
+                    }
+                })
+                .collect();
+
+            SWITCHES_PTR.store(self.switches.as_mut_ptr(), Ordering::Relaxed);
+            SWITCHES_LEN.store(self.switches.len(), Ordering::Relaxed);
         }
 
         self.content = nbgl_content_t {
             content: nbgl_content_u {
                 switchesList: nbgl_pageSwitchesList_s {
-                    switches: &raw const SWITCH_ARRAY as *const nbgl_contentSwitch_t,
+                    switches: self.switches.as_ptr(),
                     nbSwitches: settings_strings.len() as u8,
                 },
             },
