@@ -39,6 +39,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `NbglAdvanceReview::warning(&NbglWarning)` and
   `NbglStreamingReview::warning(&NbglWarning)`.
 - `nbgl_warning` example, showing both the pre-defined and the manual paths.
+- Per-pair layout control on `TagValue`: `force_page_start` starts a new review
+  page at that pair, `centered_info` draws it as a centered block rather than a
+  tag/value row. `TagValue` now derives `Default`, so a literal that sets only
+  some fields needs `..Default::default()`.
+- `TagValueList::hide_end_of_last_line`, replacing the last three characters of
+  the final line with "...".
+  `valueIcon` is deliberately still absent: a touch on it is reported through
+  the list's `token`, and `BACK_TOKEN` is 0, so an icon with the token left
+  unset would be reported as "navigate back" rather than being inert. It has to
+  land together with `token` and `actionCallback` and an app handler routed
+  through the review entry points. `startIndex` likewise stays out, being the
+  first index fetched through the pair-retrieval callback, which is not wrapped.
 - `OperationFlag`, exposing the flag bits of `nbgl_operationType_t` alongside
   the base transaction type: `Skippable`, `Blind`, `Risky`, `NoThreat` and
   `AddressBook`. Only the base type and `Skippable` were reachable before.

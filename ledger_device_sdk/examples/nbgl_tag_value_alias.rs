@@ -65,6 +65,7 @@ extern "C" fn sample_main() {
             extension: Some(FieldExtension::ens(
                 "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
             )),
+            ..Default::default()
         },
         // Address book: alias_sub_name is the saved name.
         TagValue {
@@ -74,6 +75,7 @@ extern "C" fn sample_main() {
                 FieldExtension::address_book("0x742d35Cc6634C0532925a3b844Bc454e4438f44e")
                     .alias_sub_name("Saved 2026-01-14"),
             ),
+            ..Default::default()
         },
         // QR code: title captions the code in the modal.
         TagValue {
@@ -83,18 +85,21 @@ extern "C" fn sample_main() {
                 FieldExtension::qr_code("bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq")
                     .title("Scan to verify"),
             ),
+            ..Default::default()
         },
         // Info list: expands into [type, content] rows.
         TagValue {
             name: "Token",
             value: "USDC",
             extension: Some(FieldExtension::info_list(&token_details).back_text("Token details")),
+            ..Default::default()
         },
         // Tag/value list: expands into a nested review-style list.
         TagValue {
             name: "Calldata",
             value: "transfer(...)",
             extension: Some(FieldExtension::tag_value_list(&raw_calldata)),
+            ..Default::default()
         },
         // Plain full-value expansion for a value too long to fit.
         TagValue {
@@ -106,6 +111,16 @@ extern "C" fn sample_main() {
                 )
                 .explanation("Full memo as submitted"),
             ),
+            ..Default::default()
+        },
+        // Per-pair layout: this one opens its own page rather than being packed
+        // after the previous pair, and is drawn as a centered block.
+        TagValue {
+            name: "Total",
+            value: "1.5 ETH",
+            force_page_start: true,
+            centered_info: true,
+            ..Default::default()
         },
     ];
 

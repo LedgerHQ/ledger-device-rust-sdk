@@ -256,6 +256,8 @@ pub struct TagValueList {
     small_case_for_value: bool,
     /// If `true`, long values are word-wrapped instead of truncated.
     wrapping: bool,
+    /// If `true`, the last line's final characters are replaced by "...".
+    hide_end_of_last_line: bool,
 }
 
 impl TagValueList {
@@ -281,6 +283,7 @@ impl TagValueList {
             values: CTagValueList::from_fields(tvl),
             small_case_for_value,
             wrapping,
+            hide_end_of_last_line: false,
         }
     }
 
@@ -303,6 +306,7 @@ impl TagValueList {
             values: CTagValueList::new(values),
             small_case_for_value,
             wrapping,
+            hide_end_of_last_line: false,
         }
     }
 
@@ -312,7 +316,17 @@ impl TagValueList {
             values: self.values.duplicate(),
             small_case_for_value: self.small_case_for_value,
             wrapping: self.wrapping,
+            hide_end_of_last_line: self.hide_end_of_last_line,
         }
+    }
+
+    /// Replaces the last three characters of the final line with "...".
+    ///
+    /// Useful when a value is knowingly truncated and the cut should be
+    /// visible.
+    pub fn hide_end_of_last_line(mut self, hide: bool) -> TagValueList {
+        self.hide_end_of_last_line = hide;
+        self
     }
 }
 
@@ -326,6 +340,7 @@ impl From<&TagValueList> for nbgl_contentTagValueList_t {
             token: FIRST_USER_TOKEN as u8,
             smallCaseForValue: tvl.small_case_for_value,
             wrapping: tvl.wrapping,
+            hideEndOfLastLine: tvl.hide_end_of_last_line,
             ..Default::default()
         }
     }
