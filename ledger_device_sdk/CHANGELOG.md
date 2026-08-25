@@ -43,8 +43,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   page at that pair, `centered_info` draws it as a centered block rather than a
   tag/value row. `TagValue` now derives `Default`, so a literal that sets only
   some fields needs `..Default::default()`.
-- `TagValueList::hide_end_of_last_line`, replacing the last three characters of
-  the final line with "...".
+  `nbMaxLinesForValue` and `hideEndOfLastLine` are deliberately not offered:
+  NBGL overwrites both, along with `smallCaseForValue`, on every page it draws
+  from a tag/value list (`nbgl_use_case.c:1144`), so an app setting them would
+  see nothing change. Of the list-level struct only `wrapping` and `token` are
+  honoured — which is also why the existing `small_case_for_value` argument has
+  no effect.
   `valueIcon` is deliberately still absent: a touch on it is reported through
   the list's `token`, and `BACK_TOKEN` is 0, so an icon with the token left
   unset would be reported as "navigate back" rather than being inert. It has to
