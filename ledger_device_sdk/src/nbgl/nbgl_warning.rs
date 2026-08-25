@@ -825,6 +825,16 @@ impl CWarning {
         }
     }
 
+    /// Whether touching the review's warning button would find something to
+    /// draw.
+    ///
+    /// The C handler takes the pre-defined path when `predefinedSet` is
+    /// non-zero, and otherwise dereferences `reviewDetails` without checking it
+    /// for NULL, so a warning with neither cannot safely raise that button.
+    pub(crate) fn raises_review_report(&self) -> bool {
+        self.predefined != 0 || self._review_details.is_some()
+    }
+
     pub(crate) fn as_c_type(&self) -> nbgl_warning_t {
         nbgl_warning_t {
             predefinedSet: self.predefined,

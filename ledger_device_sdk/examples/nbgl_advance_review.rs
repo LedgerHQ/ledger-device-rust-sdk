@@ -3,8 +3,8 @@
 
 use include_gif::include_gif;
 use ledger_device_sdk::nbgl::{
-    Field, NbglAdvanceReview, NbglGlyph, NbglReviewStatus, StatusType, TipBox, TransactionType,
-    init_comm,
+    Field, NbglAdvanceReview, NbglGlyph, NbglReviewStatus, OperationFlag, StatusType, TipBox,
+    TransactionType, init_comm,
 };
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
@@ -44,6 +44,11 @@ extern "C" fn sample_main() {
         .review_title("Review Title")
         .review_subtitle("Review Subtitle")
         .finish_title("Finish Title")
+        // `Risky` is what makes NBGL draw the warning button in the top-right
+        // of the review's first and last pages. Without it the warning is only
+        // reachable from the intro page. It needs a warning able to fill that
+        // button, which `warning_details` provides.
+        .operation_flags(&[OperationFlag::Risky])
         .warning_details(
             Some("DApp Provider"),
             Some("https://report.url"),
