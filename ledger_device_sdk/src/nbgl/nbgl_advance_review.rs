@@ -22,6 +22,8 @@ pub struct NbglAdvanceReview<'a> {
     warning: Option<CWarning>,
     /// Owns the C strings and info list behind the tip box.
     tip_box: Option<CTipBox>,
+    /// Extra `nbgl_operationType_t` bits set alongside the operation type.
+    operation_flags: nbgl_operationType_t,
 }
 
 impl SyncNBGL for NbglAdvanceReview<'_> {}
@@ -41,6 +43,29 @@ impl<'a> NbglAdvanceReview<'a> {
             glyph: None,
             warning: None,
             tip_box: None,
+            operation_flags: 0,
+        }
+    }
+
+    /// Sets the flags accompanying the operation type.
+    ///
+    /// `Blind`, `Risky` and `NoThreat` are what make NBGL draw the warning
+    /// button in the top-right of the first and last review pages. Setting any
+    /// of them requires a warning that can fill that button — one with
+    /// [`NbglWarning::predefined`] or [`NbglWarning::review_details`] — since
+    /// NBGL reads it without checking for NULL. [`Self::show`] panics rather
+    /// than let that reach C.
+    ///
+    /// The button appears on the last page only for a review whose final page
+    /// is a long-press one.
+    /// # Arguments
+    /// * `flags` - The flags to set; see [`OperationFlag`].
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
+    pub fn operation_flags(self, flags: &[OperationFlag]) -> NbglAdvanceReview<'a> {
+        NbglAdvanceReview {
+            operation_flags: OperationFlag::mask(flags),
+            ..self
         }
     }
 
@@ -166,6 +191,13 @@ impl<'a> NbglAdvanceReview<'a> {
                 None => nbgl_icon_details_t::default(),
             };
 
+            check_report_flags(
+                self.operation_flags,
+                self.warning
+                    .as_ref()
+                    .is_some_and(|w| w.raises_review_report()),
+            );
+
             let warning_details = match &self.warning {
                 Some(w) => w.as_c_type(),
                 None => nbgl_warning_t::default(),
@@ -176,7 +208,7 @@ impl<'a> NbglAdvanceReview<'a> {
 
             self.ux_sync_init();
             nbgl_useCaseAdvancedReview(
-                self.operation_type.to_c_type(false),
+                self.operation_type.to_c_type(self.operation_flags),
                 &tag_value_list as *const nbgl_contentTagValueList_t,
                 &icon as *const nbgl_icon_details_t,
                 self.review_title.as_ptr() as *const c_char,

@@ -39,6 +39,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `NbglAdvanceReview::warning(&NbglWarning)` and
   `NbglStreamingReview::warning(&NbglWarning)`.
 - `nbgl_warning` example, showing both the pre-defined and the manual paths.
+- `OperationFlag`, exposing the flag bits of `nbgl_operationType_t` alongside
+  the base transaction type: `Skippable`, `Blind`, `Risky`, `NoThreat` and
+  `AddressBook`. Only the base type and `Skippable` were reachable before.
+  `NbglAdvanceReview::operation_flags` and
+  `NbglStreamingReview::operation_flags` set them.
+  `Blind`, `Risky` and `NoThreat` are what make NBGL draw the warning button on
+  a review's first and last pages, so a warning configured through
+  `warning_details` or `warning` was previously reachable only from the intro
+  page. The button appears on the last page only when that page is a long-press
+  one, which excludes a light review.
+  These three flags are offered only where NBGL has a warning to fill the
+  button with: the handler reads `warning->predefinedSet`, and falls back to
+  `reviewDetails->title`, neither of them NULL-checked, and only
+  `nbgl_useCaseAdvancedReview` and `nbgl_useCaseAdvancedReviewStreamingStart`
+  set that context. Hence no equivalent on `NbglReview`, and a panic if the
+  warning could not fill the button.
 - `NbglGenericConfiguration`, wrapping `nbgl_useCaseGenericConfiguration` — a
   configuration screen built from arbitrary `NbglPageContent`, paginated by
   NBGL, ended through the header. It is the general form of

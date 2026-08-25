@@ -18,6 +18,8 @@ pub struct NbglStreamingReview {
     skip: bool,
     /// Owns the C strings, icons and details tree behind the warning.
     warning: Option<CWarning>,
+    /// Extra `nbgl_operationType_t` bits set alongside the transaction type.
+    operation_flags: nbgl_operationType_t,
 }
 
 impl SyncNBGL for NbglStreamingReview {}
@@ -46,7 +48,46 @@ impl NbglStreamingReview {
             blind: false,
             skip: false,
             warning: None,
+            operation_flags: 0,
         }
+    }
+
+    /// Sets the flags accompanying the transaction type.
+    ///
+    /// `Blind`, `Risky` and `NoThreat` are what make NBGL draw the warning
+    /// button in the top-right of the first and last review pages. Setting any
+    /// of them requires a warning that can fill that button — see
+    /// [`Self::warning`] — since NBGL reads it without checking for NULL.
+    /// [`Self::skip`] already sets `Skippable`, so it need not be repeated here.
+    /// # Arguments
+    /// * `flags` - The flags to set; see [`OperationFlag`].
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
+    pub fn operation_flags(self, flags: &[OperationFlag]) -> NbglStreamingReview {
+        NbglStreamingReview {
+            operation_flags: OperationFlag::mask(flags),
+            ..self
+        }
+    }
+
+    /// The operation type handed to C: the transaction type, the app's flags,
+    /// and `Skippable` when `skip` was set.
+    ///
+    /// # Panics
+    /// Panics if a flag that raises the review's warning button is set without
+    /// a warning able to fill it, which NBGL would dereference as NULL.
+    fn c_operation_type(&self) -> nbgl_operationType_t {
+        check_report_flags(
+            self.operation_flags,
+            self.warning
+                .as_ref()
+                .is_some_and(|w| w.raises_review_report()),
+        );
+        let mut flags = self.operation_flags;
+        if self.skip {
+            flags |= OperationFlag::Skippable.bit();
+        }
+        self.tx_type.to_c_type(flags)
     }
 
     /// Sets the transaction type for the streaming review flow.
@@ -151,7 +192,7 @@ impl NbglStreamingReview {
                     Some(w) => {
                         let warning_details = w.as_c_type();
                         nbgl_useCaseAdvancedReviewStreamingStart(
-                            self.tx_type.to_c_type(self.skip),
+                            self.c_operation_type(),
                             &self.icon as *const nbgl_icon_details_t,
                             title.as_ptr() as *const c_char,
                             match subtitle.is_empty() {
@@ -164,7 +205,7 @@ impl NbglStreamingReview {
                     }
                     None => {
                         nbgl_useCaseReviewStreamingBlindSigningStart(
-                            self.tx_type.to_c_type(self.skip),
+                            self.c_operation_type(),
                             &self.icon as *const nbgl_icon_details_t,
                             title.as_ptr() as *const c_char,
                             match subtitle.is_empty() {
@@ -177,7 +218,7 @@ impl NbglStreamingReview {
                 },
                 false => {
                     nbgl_useCaseReviewStreamingStart(
-                        self.tx_type.to_c_type(self.skip),
+                        self.c_operation_type(),
                         &self.icon as *const nbgl_icon_details_t,
                         title.as_ptr() as *const c_char,
                         match subtitle.is_empty() {

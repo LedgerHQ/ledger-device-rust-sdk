@@ -117,7 +117,7 @@ impl<'a> NbglReview<'a> {
             match self.blind {
                 true => {
                     nbgl_useCaseReviewBlindSigning(
-                        self.tx_type.to_c_type(false),
+                        self.tx_type.to_c_type(0),
                         &tag_value_list as *const nbgl_contentTagValueList_t,
                         &icon as *const nbgl_icon_details_t,
                         match self.title.is_empty() {
@@ -139,7 +139,7 @@ impl<'a> NbglReview<'a> {
                 false => {
                     if self.light {
                         nbgl_useCaseReviewLight(
-                            self.tx_type.to_c_type(false),
+                            self.tx_type.to_c_type(0),
                             &tag_value_list as *const nbgl_contentTagValueList_t,
                             &icon as *const nbgl_icon_details_t,
                             match self.title.is_empty() {
@@ -158,7 +158,7 @@ impl<'a> NbglReview<'a> {
                         );
                     } else {
                         nbgl_useCaseReview(
-                            self.tx_type.to_c_type(false),
+                            self.tx_type.to_c_type(0),
                             &tag_value_list as *const nbgl_contentTagValueList_t,
                             &icon as *const nbgl_icon_details_t,
                             match self.title.is_empty() {

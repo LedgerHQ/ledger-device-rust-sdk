@@ -379,17 +379,79 @@ trait ToMessage {
     fn to_message(&self, success: bool) -> nbgl_reviewStatusType_t;
 }
 
+/// A flag bit of `nbgl_operationType_t`, set alongside the base
+/// [`TransactionType`].
+///
+/// The C type is a mask: the transaction type occupies the low bits and each
+/// flag adds one above them. Several may apply at once, which is why the review
+/// builders take a slice.
+///
+/// `Blind`, `Risky` and `NoThreat` are what make NBGL draw the warning button in
+/// the top-right of a review's first and last pages.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum OperationFlag {
+    /// The review may be skipped. Only `NbglStreamingReview` acts on it, and
+    /// `NbglStreamingReview::skip` already sets it.
+    Skippable,
+    /// The transaction cannot be decoded and is signed blind.
+    Blind,
+    /// The transaction was flagged as risky.
+    Risky,
+    /// The transaction was checked and no threat was found.
+    NoThreat,
+    /// The operation involves an Address Book entry.
+    AddressBook,
+}
+
+impl OperationFlag {
+    /// This flag's bit in the `nbgl_operationType_t` mask.
+    fn bit(self) -> nbgl_operationType_t {
+        match self {
+            OperationFlag::Skippable => SKIPPABLE_OPERATION,
+            OperationFlag::Blind => BLIND_OPERATION,
+            OperationFlag::Risky => RISKY_OPERATION,
+            OperationFlag::NoThreat => NO_THREAT_OPERATION,
+            OperationFlag::AddressBook => ADDRESS_BOOK_OPERATION,
+        }
+    }
+
+    /// Folds a slice of flags into the mask the C API expects.
+    pub(crate) fn mask(flags: &[OperationFlag]) -> nbgl_operationType_t {
+        flags.iter().fold(0, |mask, flag| mask | flag.bit())
+    }
+
+    /// The bits that make NBGL draw the review's top-right warning button.
+    fn report_bits() -> nbgl_operationType_t {
+        OperationFlag::Blind.bit() | OperationFlag::Risky.bit() | OperationFlag::NoThreat.bit()
+    }
+}
+
+/// Rejects a flag/warning combination that would crash inside NBGL.
+///
+/// `Blind`, `Risky` and `NoThreat` make NBGL draw the warning button on the
+/// review's first and last pages. Its handler reads
+/// `reviewWithWarnCtx.warning->predefinedSet` unguarded, and falls back to
+/// dereferencing `reviewDetails->title` just as unguarded, so raising that
+/// button without a warning that can fill it is a NULL dereference in C rather
+/// than an empty page.
+pub(crate) fn check_report_flags(flags: nbgl_operationType_t, warning_renders: bool) {
+    if flags & OperationFlag::report_bits() != 0 && !warning_renders {
+        panic!(
+            "OperationFlag::Blind/Risky/NoThreat need a warning that renders: \
+             set predefined() or review_details() on it."
+        );
+    }
+}
+
 impl TransactionType {
-    fn to_c_type(&self, skippable: bool) -> nbgl_operationType_t {
-        let mut tx_type = match self {
+    /// Builds the `nbgl_operationType_t` for this type, with `flags` OR'd in.
+    fn to_c_type(&self, flags: nbgl_operationType_t) -> nbgl_operationType_t {
+        let tx_type: nbgl_operationType_t = match self {
             TransactionType::Transaction => TYPE_TRANSACTION.into(),
             TransactionType::Message => TYPE_MESSAGE.into(),
             TransactionType::Operation => TYPE_OPERATION.into(),
         };
-        if skippable {
-            tx_type |= SKIPPABLE_OPERATION;
-        }
-        tx_type
+        tx_type | flags
     }
 }
 
