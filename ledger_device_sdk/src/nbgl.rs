@@ -7,7 +7,6 @@
 use crate::io::{ApduHeader, Event};
 use crate::io_callbacks::nbgl_next_event_ahead;
 use crate::nvm::*;
-use const_zero::const_zero;
 extern crate alloc;
 use alloc::ffi::CString;
 use alloc::vec::Vec;
