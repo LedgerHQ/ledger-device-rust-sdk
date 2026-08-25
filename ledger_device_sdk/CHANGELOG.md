@@ -60,9 +60,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `VALUE_ALIAS_TOKEN` as soon as one pair on it is an alias, and that handler
   reads the union as an extension for whichever pair was touched — and NBGL, not
   the app, decides which pairs share a page.
-  `NbglReviewExtended`, `NbglStreamingReview::next_ext` and
-  `NbglAddressReview::set_tag_value_list_ext` accept the same pairs but have no
-  handler yet, so an icon there is drawn without reporting.
+  `on_value_icon` is available on all five use cases that take `TagValue`s:
+  `NbglReview`, `NbglAdvanceReview`, `NbglReviewExtended`,
+  `NbglStreamingReview` and `NbglAddressReview`. Each installs its handler on
+  the way to C, which also clears it when none is set — without that a touch
+  could have reached a handler left behind by an earlier flow.
   `startIndex` stays out, being the first index fetched through the
   pair-retrieval callback, which is not wrapped.
 - `OperationFlag`, exposing the flag bits of `nbgl_operationType_t` alongside

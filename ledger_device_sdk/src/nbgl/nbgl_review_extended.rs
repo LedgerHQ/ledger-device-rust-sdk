@@ -14,6 +14,8 @@ pub struct NbglReviewExtended<'a> {
     longpress_text: CString,
     glyph_end: Option<&'a NbglGlyph<'a>>,
     light_end: bool,
+    /// App handler for a touched value icon.
+    on_value_icon: Option<fn(u8)>,
 }
 
 impl SyncNBGL for NbglReviewExtended<'_> {}
@@ -38,6 +40,22 @@ impl<'a> NbglReviewExtended<'a> {
             longpress_text: CString::default(),
             glyph_end: None,
             light_end: false,
+            on_value_icon: None,
+        }
+    }
+
+    /// Sets the function run when a value icon is touched.
+    ///
+    /// It receives the index of the pair whose icon was touched. Without it the
+    /// icons are drawn but report nothing.
+    ///
+    /// Only meaningful for pairs carrying [`TagValue::value_icon`].
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
+    pub fn on_value_icon(self, on_value_icon: fn(u8)) -> NbglReviewExtended<'a> {
+        NbglReviewExtended {
+            on_value_icon: Some(on_value_icon),
+            ..self
         }
     }
 
@@ -139,6 +157,7 @@ impl<'a> NbglReviewExtended<'a> {
         unsafe {
             // Owns the C strings and the extension structs the pairs point at;
             // must outlive the use-case call below.
+            set_value_icon_handler(self.on_value_icon);
             let c_values = CTagValueList::new(values);
             let tag_value_list = c_values.as_c_list();
 

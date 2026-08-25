@@ -14,6 +14,8 @@ pub struct NbglAddressReview<'a> {
     /// Owns the C strings and extension structs for the pairs; `None` until
     /// one of the `set_tag_value_list` methods is called.
     tag_value_list: Option<CTagValueList>,
+    /// App handler for a touched value icon.
+    on_value_icon: Option<fn(u8)>,
 }
 
 impl SyncNBGL for NbglAddressReview<'_> {}
@@ -32,8 +34,25 @@ impl<'a> NbglAddressReview<'a> {
             review_subtitle: CString::default(),
             glyph: None,
             tag_value_list: None,
+            on_value_icon: None,
         }
     }
+
+    /// Sets the function run when a value icon is touched.
+    ///
+    /// It receives the index of the pair whose icon was touched. Without it the
+    /// icons are drawn but report nothing.
+    ///
+    /// Only meaningful for pairs carrying [`TagValue::value_icon`].
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
+    pub fn on_value_icon(self, on_value_icon: fn(u8)) -> NbglAddressReview<'a> {
+        NbglAddressReview {
+            on_value_icon: Some(on_value_icon),
+            ..self
+        }
+    }
+
     /// Sets the icon to display in the center of the page.
     /// # Arguments
     /// * `glyph` - The icon to display in the center of the page.
@@ -105,6 +124,8 @@ impl<'a> NbglAddressReview<'a> {
 
     fn show_internal(&self, address: &str) -> bool {
         unsafe {
+            set_value_icon_handler(self.on_value_icon);
+
             let icon: nbgl_icon_details_t = match self.glyph {
                 Some(g) => g.into(),
                 None => nbgl_icon_details_t::default(),

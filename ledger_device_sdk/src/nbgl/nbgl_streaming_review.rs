@@ -20,6 +20,8 @@ pub struct NbglStreamingReview {
     warning: Option<CWarning>,
     /// Extra `nbgl_operationType_t` bits set alongside the transaction type.
     operation_flags: nbgl_operationType_t,
+    /// App handler for a touched value icon.
+    on_value_icon: Option<fn(u8)>,
 }
 
 impl SyncNBGL for NbglStreamingReview {}
@@ -49,6 +51,22 @@ impl NbglStreamingReview {
             skip: false,
             warning: None,
             operation_flags: 0,
+            on_value_icon: None,
+        }
+    }
+
+    /// Sets the function run when a value icon is touched.
+    ///
+    /// It receives the index of the pair whose icon was touched. Without it the
+    /// icons are drawn but report nothing.
+    ///
+    /// Only meaningful for pairs carrying [`TagValue::value_icon`].
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
+    pub fn on_value_icon(self, on_value_icon: fn(u8)) -> NbglStreamingReview {
+        NbglStreamingReview {
+            on_value_icon: Some(on_value_icon),
+            ..self
         }
     }
 
@@ -276,6 +294,7 @@ impl NbglStreamingReview {
         unsafe {
             // Owns the C strings and the extension structs the pairs point at;
             // must outlive the use-case call below.
+            set_value_icon_handler(self.on_value_icon);
             let c_values = CTagValueList::new(values);
             let tag_value_list = c_values.as_c_list();
 
