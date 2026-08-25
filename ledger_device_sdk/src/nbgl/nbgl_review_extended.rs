@@ -2,6 +2,13 @@
 //! [nbgl_useCaseStaticReview](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L3838), [nbgl_useCaseStaticReviewLight](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L3894) C API binding.
 //!
 //! Used to display transaction review screens.
+//!
+//! Touchscreen only. All three C use cases wrapped here are declared inside
+//! `#ifdef HAVE_SE_TOUCH`, so they do not exist on Nano, and the module is not
+//! compiled there. [`NbglReview`] is the Nano equivalent: it draws the same
+//! intro, pairs and long-press finish, but as a single call rather than a
+//! separate `start` and `show`, so the review's content has to be known up
+//! front.
 use super::*;
 
 /// A builder to create and show an extended review flow.
