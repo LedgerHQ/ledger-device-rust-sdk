@@ -256,8 +256,6 @@ pub struct TagValueList {
     small_case_for_value: bool,
     /// If `true`, long values are word-wrapped instead of truncated.
     wrapping: bool,
-    /// If `true`, the last line's final characters are replaced by "...".
-    hide_end_of_last_line: bool,
 }
 
 impl TagValueList {
@@ -270,9 +268,16 @@ impl TagValueList {
     /// * `_nb_max_lines_for_value` — Maximum number of lines allowed for each
     ///   value before truncation. (ignored, enforced to 0 when calling C function)
     /// * `small_case_for_value` — If `true`, values are rendered in a smaller
-    ///   font.
+    ///   font. Note that NBGL overrides this to `false` on every page it draws
+    ///   from a tag/value list (`nbgl_use_case.c:1144`), so it currently has no
+    ///   effect.
     /// * `wrapping` — If `true`, long values are word-wrapped instead of
-    ///   truncated.
+    ///   truncated. This one is honoured.
+    ///
+    /// `nbMaxLinesForValue` and `hideEndOfLastLine` are deliberately not
+    /// offered: NBGL overwrites both with its own values just below
+    /// `smallCaseForValue`, so an app setting them would see nothing change.
+    /// Of the whole list-level struct only `wrapping` and `token` survive.
     pub fn new(
         tvl: &[Field],
         _nb_max_lines_for_value: u8,
@@ -283,7 +288,6 @@ impl TagValueList {
             values: CTagValueList::from_fields(tvl),
             small_case_for_value,
             wrapping,
-            hide_end_of_last_line: false,
         }
     }
 
@@ -306,17 +310,7 @@ impl TagValueList {
             values: CTagValueList::new(values),
             small_case_for_value,
             wrapping,
-            hide_end_of_last_line: false,
         }
-    }
-
-    /// Replaces the last three characters of the final line with "...".
-    ///
-    /// Useful when a value is knowingly truncated and the cut should be
-    /// visible.
-    pub fn hide_end_of_last_line(mut self, hide: bool) -> TagValueList {
-        self.hide_end_of_last_line = hide;
-        self
     }
 }
 
@@ -330,7 +324,6 @@ impl From<&TagValueList> for nbgl_contentTagValueList_t {
             token: FIRST_USER_TOKEN as u8,
             smallCaseForValue: tvl.small_case_for_value,
             wrapping: tvl.wrapping,
-            hideEndOfLastLine: tvl.hide_end_of_last_line,
             ..Default::default()
         }
     }
