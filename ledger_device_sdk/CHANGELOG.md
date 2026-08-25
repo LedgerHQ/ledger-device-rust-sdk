@@ -49,12 +49,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   see nothing change. Of the list-level struct only `wrapping` and `token` are
   honoured — which is also why the existing `small_case_for_value` argument has
   no effect.
-  `valueIcon` is deliberately still absent: a touch on it is reported through
-  the list's `token`, and `BACK_TOKEN` is 0, so an icon with the token left
-  unset would be reported as "navigate back" rather than being inert. It has to
-  land together with `token` and `actionCallback` and an app handler routed
-  through the review entry points. `startIndex` likewise stays out, being the
-  first index fetched through the pair-retrieval callback, which is not wrapped.
+- `TagValue::value_icon` draws an icon at the right of a value and makes the row
+  touchable, with `NbglReview::on_value_icon` and
+  `NbglAdvanceReview::on_value_icon` receiving the index of the touched pair.
+  The list sets its own token, `BACK_TOKEN` being 0 and a touch otherwise
+  reading as "navigate back".
+  Two combinations panic rather than let C misread the union `value_icon` shares
+  with `extension`: a pair carrying both, and a list mixing icon pairs with
+  extension pairs. The second is list-wide because NBGL forces a page's token to
+  `VALUE_ALIAS_TOKEN` as soon as one pair on it is an alias, and that handler
+  reads the union as an extension for whichever pair was touched — and NBGL, not
+  the app, decides which pairs share a page.
+  `NbglReviewExtended`, `NbglStreamingReview::next_ext` and
+  `NbglAddressReview::set_tag_value_list_ext` accept the same pairs but have no
+  handler yet, so an icon there is drawn without reporting.
+  `startIndex` stays out, being the first index fetched through the
+  pair-retrieval callback, which is not wrapped.
 - `OperationFlag`, exposing the flag bits of `nbgl_operationType_t` alongside
   the base transaction type: `Skippable`, `Blind`, `Risky`, `NoThreat` and
   `AddressBook`. Only the base type and `Skippable` were reachable before.

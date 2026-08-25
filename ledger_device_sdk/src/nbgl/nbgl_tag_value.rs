@@ -202,6 +202,18 @@ impl<'a> FieldExtension<'a> {
 ///
 /// This is [`Field`] plus the optional extension. Use `TagValue::from(&field)`
 /// (or `.into()`) to lift a plain `Field`.
+///
+/// # Extensions and value icons do not mix
+///
+/// `extension` and `value_icon` occupy the same union in C, with the pair's
+/// `aliasValue` bit saying which one is meant. NBGL also forces a page's touch
+/// token to `VALUE_ALIAS_TOKEN` as soon as *one* pair on it is an alias, and
+/// that handler reads the union as an extension for whichever pair was touched.
+/// Since NBGL decides which pairs share a page, an icon pair could always land
+/// beside an alias pair and be read as one.
+///
+/// A list must therefore use one or the other throughout; building one that
+/// mixes them panics rather than leaving the union to be misread.
 #[derive(Default)]
 pub struct TagValue<'a> {
     /// Tag name, displayed in bold.
@@ -210,6 +222,13 @@ pub struct TagValue<'a> {
     pub value: &'a str,
     /// When set, NBGL draws a `>` affordance opening a modal built from it.
     pub extension: Option<FieldExtension<'a>>,
+    /// Icon drawn at the right of the value, making the row touchable.
+    ///
+    /// Mutually exclusive with [`Self::extension`]: the two share a union in C,
+    /// and the `aliasValue` bit selects between them. A list may not mix pairs
+    /// carrying an icon with pairs carrying an extension either — see
+    /// [`TagValue`] for why.
+    pub value_icon: Option<&'a NbglGlyph<'a>>,
     /// Starts a new review page at this pair rather than packing it after the
     /// previous one.
     pub force_page_start: bool,
@@ -224,6 +243,33 @@ impl<'a> From<&Field<'a>> for TagValue<'a> {
             value: field.value,
             ..Default::default()
         }
+    }
+}
+
+/// Installs the app's value-icon handler on the shared content-action slot.
+///
+/// A touched value icon reaches Rust through `contentActionCallback`, the same
+/// path `NbglGenericReview::on_action` uses, so the handler is adapted to drop
+/// the token and keep the pair index.
+pub(crate) fn set_value_icon_handler(handler: Option<fn(u8)>) {
+    match handler {
+        Some(handler) => {
+            unsafe { VALUE_ICON_HANDLER = Some(handler) };
+            set_content_action(Some(value_icon_trampoline));
+        }
+        None => {
+            unsafe { VALUE_ICON_HANDLER = None };
+            set_content_action(None);
+        }
+    }
+}
+
+static mut VALUE_ICON_HANDLER: Option<fn(u8)> = None;
+
+/// Drops the token and forwards the pair index to the app's handler.
+fn value_icon_trampoline(_token: u8, index: u8) {
+    if let Some(handler) = unsafe { VALUE_ICON_HANDLER } {
+        handler(index);
     }
 }
 
@@ -390,7 +436,12 @@ pub(crate) struct CTagValueList {
     _cfields: Vec<CField>,
     _cexts: Vec<CFieldExtension>,
     _exts: Vec<nbgl_contentValueExt_t>,
+    /// Owns the icons the pairs point at; finalised before any pair does.
+    _icons: Vec<nbgl_icon_details_t>,
     pairs: Vec<nbgl_contentTagValue_t>,
+    /// Whether any pair carries a value icon, which is what decides whether the
+    /// list needs a touch token and an action callback.
+    has_value_icon: bool,
 }
 
 impl CTagValueList {
@@ -419,17 +470,47 @@ impl CTagValueList {
         }
         let exts: Vec<nbgl_contentValueExt_t> = cexts.iter().map(|ext| ext.to_c_type()).collect();
 
+        // Same discipline as `exts`: complete the vector before any pair points
+        // into it, so a later push cannot reallocate under those pointers.
+        let mut icons: Vec<nbgl_icon_details_t> = Vec::new();
+        let mut icon_of_pair: Vec<Option<usize>> = Vec::with_capacity(values.len());
+        for value in values.iter() {
+            match value.value_icon {
+                Some(glyph) => {
+                    if value.extension.is_some() {
+                        panic!("A TagValue carries either an extension or a value icon, not both.");
+                    }
+                    icon_of_pair.push(Some(icons.len()));
+                    icons.push(glyph.into());
+                }
+                None => icon_of_pair.push(None),
+            }
+        }
+        if !icons.is_empty() && !cexts.is_empty() {
+            panic!(
+                "A tag/value list uses either extensions or value icons throughout: NBGL reads \
+                 the shared union as an extension for every touchable pair on a page holding an \
+                 alias."
+            );
+        }
+
         let pairs: Vec<nbgl_contentTagValue_t> = cfields
             .iter()
             .zip(ext_of_pair.iter())
             .zip(values.iter())
-            .map(|((field, ext_idx), value)| {
+            .zip(icon_of_pair.iter())
+            .map(|(((field, ext_idx), value), icon_idx)| {
                 let mut pair: nbgl_contentTagValue_t = field.into();
                 if value.force_page_start {
                     pair.set_forcePageStart(1);
                 }
                 if value.centered_info {
                     pair.set_centeredInfo(1);
+                }
+                if let Some(idx) = *icon_idx {
+                    // `aliasValue` stays clear, which is what tells C to read
+                    // the union as an icon rather than an extension.
+                    pair.__bindgen_anon_1.valueIcon = &icons[idx] as *const nbgl_icon_details_t;
                 }
                 if let Some(idx) = *ext_idx {
                     pair.__bindgen_anon_1.extension = &exts[idx] as *const nbgl_contentValueExt_t;
@@ -443,11 +524,14 @@ impl CTagValueList {
             })
             .collect();
 
+        let has_value_icon = !icons.is_empty();
         CTagValueList {
             _cfields: cfields,
             _cexts: cexts,
             _exts: exts,
+            _icons: icons,
             pairs,
+            has_value_icon,
         }
     }
 
@@ -466,9 +550,18 @@ impl CTagValueList {
 
     /// A `nbgl_contentTagValueList_t` borrowing this list's pairs.
     pub(crate) fn as_c_list(&self) -> nbgl_contentTagValueList_t {
+        // A touched value icon is reported through the list's token, and
+        // BACK_TOKEN is 0, so a list carrying icons must name a token of its own
+        // or touching one would read as "navigate back".
+        let (token, action) = match self.has_value_icon {
+            true => (FIRST_USER_TOKEN as u8, Some(content_action_callback as _)),
+            false => (0, None),
+        };
         nbgl_contentTagValueList_t {
             pairs: self.pairs_ptr(),
             nbPairs: self.len(),
+            token,
+            actionCallback: action,
             ..Default::default()
         }
     }
