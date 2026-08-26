@@ -12,6 +12,8 @@ pub struct NbglReview<'a> {
     tx_type: TransactionType,
     blind: bool,
     light: bool,
+    /// App handler for a touched value icon.
+    on_value_icon: Option<fn(u8)>,
 }
 
 impl SyncNBGL for NbglReview<'_> {}
@@ -35,6 +37,22 @@ impl<'a> NbglReview<'a> {
             tx_type: TransactionType::Transaction,
             blind: false,
             light: false,
+            on_value_icon: None,
+        }
+    }
+    /// Sets the function run when a value icon is touched.
+    ///
+    /// It receives the index of the pair whose icon was touched. Without it the
+    /// icons are drawn but report nothing.
+    ///
+    /// Only meaningful for a list built from [`TagValue`]s carrying
+    /// [`TagValue::value_icon`].
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
+    pub fn on_value_icon(self, on_value_icon: fn(u8)) -> NbglReview<'a> {
+        NbglReview {
+            on_value_icon: Some(on_value_icon),
+            ..self
         }
     }
 
@@ -100,33 +118,13 @@ impl<'a> NbglReview<'a> {
         }
     }
 
-    fn show_internal(&self, fields: &[Field]) -> bool {
+    fn show_internal(&self, values: &[TagValue]) -> bool {
         unsafe {
-            let v: Vec<CField> = fields
-                .iter()
-                .map(|f| CField {
-                    name: CString::new(f.name).unwrap(),
-                    value: CString::new(f.value).unwrap(),
-                })
-                .collect();
-
-            // Fill the tag_value_array with the fields converted to nbgl_contentTagValue_t
-            let mut tag_value_array: Vec<nbgl_contentTagValue_t> = Vec::new();
-            for field in v.iter() {
-                let val = nbgl_contentTagValue_t {
-                    item: field.name.as_ptr() as *const ::core::ffi::c_char,
-                    value: field.value.as_ptr() as *const ::core::ffi::c_char,
-                    ..Default::default()
-                };
-                tag_value_array.push(val);
-            }
-
-            // Create the tag_value_list with the tag_value_array.
-            let tag_value_list = nbgl_contentTagValueList_t {
-                pairs: tag_value_array.as_ptr(),
-                nbPairs: fields.len() as u8,
-                ..Default::default()
-            };
+            // Owns the C strings and the extension structs the pairs point at;
+            // must outlive the use-case call below.
+            set_value_icon_handler(self.on_value_icon);
+            let c_values = CTagValueList::new(values);
+            let tag_value_list = c_values.as_c_list();
 
             let icon: nbgl_icon_details_t = match self.glyph {
                 Some(g) => g.into(),
@@ -138,7 +136,7 @@ impl<'a> NbglReview<'a> {
             match self.blind {
                 true => {
                     nbgl_useCaseReviewBlindSigning(
-                        self.tx_type.to_c_type(false),
+                        self.tx_type.to_c_type(0),
                         &tag_value_list as *const nbgl_contentTagValueList_t,
                         &icon as *const nbgl_icon_details_t,
                         match self.title.is_empty() {
@@ -160,7 +158,7 @@ impl<'a> NbglReview<'a> {
                 false => {
                     if self.light {
                         nbgl_useCaseReviewLight(
-                            self.tx_type.to_c_type(false),
+                            self.tx_type.to_c_type(0),
                             &tag_value_list as *const nbgl_contentTagValueList_t,
                             &icon as *const nbgl_icon_details_t,
                             match self.title.is_empty() {
@@ -179,7 +177,7 @@ impl<'a> NbglReview<'a> {
                         );
                     } else {
                         nbgl_useCaseReview(
-                            self.tx_type.to_c_type(false),
+                            self.tx_type.to_c_type(0),
                             &tag_value_list as *const nbgl_contentTagValueList_t,
                             &icon as *const nbgl_icon_details_t,
                             match self.title.is_empty() {
@@ -214,7 +212,7 @@ impl<'a> NbglReview<'a> {
     /// Returns `true` if the user approved the transaction, `false` otherwise.
     #[cfg(feature = "io_new")]
     pub fn show<const N: usize>(&self, _comm: &mut crate::io::Comm<N>, fields: &[Field]) -> bool {
-        self.show_internal(fields)
+        self.show_internal(&to_tag_values(fields))
     }
 
     /// Shows the review flow with the provided fields on the review pages.
@@ -224,6 +222,35 @@ impl<'a> NbglReview<'a> {
     /// Returns `true` if the user approved the transaction, `false` otherwise.
     #[cfg(not(feature = "io_new"))]
     pub fn show(&self, fields: &[Field]) -> bool {
-        self.show_internal(fields)
+        self.show_internal(&to_tag_values(fields))
+    }
+
+    /// Shows the review flow with tag/value pairs that may carry a
+    /// [`FieldExtension`], letting a value be expanded into a QR code, an ENS
+    /// or address book entry, or a nested list.
+    /// # Arguments
+    /// * `_comm` - Mutable reference to Comm.
+    /// * `values` - A slice of `TagValue` representing the pairs to display.
+    /// # Returns
+    /// Returns `true` if the user approved the transaction, `false` otherwise.
+    #[cfg(feature = "io_new")]
+    pub fn show_ext<const N: usize>(
+        &self,
+        _comm: &mut crate::io::Comm<N>,
+        values: &[TagValue],
+    ) -> bool {
+        self.show_internal(values)
+    }
+
+    /// Shows the review flow with tag/value pairs that may carry a
+    /// [`FieldExtension`], letting a value be expanded into a QR code, an ENS
+    /// or address book entry, or a nested list.
+    /// # Arguments
+    /// * `values` - A slice of `TagValue` representing the pairs to display.
+    /// # Returns
+    /// Returns `true` if the user approved the transaction, `false` otherwise.
+    #[cfg(not(feature = "io_new"))]
+    pub fn show_ext(&self, values: &[TagValue]) -> bool {
+        self.show_internal(values)
     }
 }

@@ -10,20 +10,18 @@
 //! Used to display streamed transaction review screens.
 use super::*;
 
-struct WarningDetailsType {
-    dapp_provider_name: CString,
-    report_url: CString,
-    report_provider: CString,
-    provider_message: CString,
-}
-
 /// A builder to create and show a streaming review flow.
 pub struct NbglStreamingReview {
     icon: nbgl_icon_details_t,
     tx_type: TransactionType,
     blind: bool,
     skip: bool,
-    warning_details_type: Option<WarningDetailsType>,
+    /// Owns the C strings, icons and details tree behind the warning.
+    warning: Option<CWarning>,
+    /// Extra `nbgl_operationType_t` bits set alongside the transaction type.
+    operation_flags: nbgl_operationType_t,
+    /// App handler for a touched value icon.
+    on_value_icon: Option<fn(u8)>,
 }
 
 impl SyncNBGL for NbglStreamingReview {}
@@ -51,8 +49,63 @@ impl NbglStreamingReview {
             tx_type: TransactionType::Transaction,
             blind: false,
             skip: false,
-            warning_details_type: None,
+            warning: None,
+            operation_flags: 0,
+            on_value_icon: None,
         }
+    }
+
+    /// Sets the function run when a value icon is touched.
+    ///
+    /// It receives the index of the pair whose icon was touched. Without it the
+    /// icons are drawn but report nothing.
+    ///
+    /// Only meaningful for pairs carrying [`TagValue::value_icon`].
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
+    pub fn on_value_icon(self, on_value_icon: fn(u8)) -> NbglStreamingReview {
+        NbglStreamingReview {
+            on_value_icon: Some(on_value_icon),
+            ..self
+        }
+    }
+
+    /// Sets the flags accompanying the transaction type.
+    ///
+    /// `Blind`, `Risky` and `NoThreat` are what make NBGL draw the warning
+    /// button in the top-right of the first and last review pages. Setting any
+    /// of them requires a warning that can fill that button — see
+    /// [`Self::warning`] — since NBGL reads it without checking for NULL.
+    /// [`Self::skip`] already sets `Skippable`, so it need not be repeated here.
+    /// # Arguments
+    /// * `flags` - The flags to set; see [`OperationFlag`].
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
+    pub fn operation_flags(self, flags: &[OperationFlag]) -> NbglStreamingReview {
+        NbglStreamingReview {
+            operation_flags: OperationFlag::mask(flags),
+            ..self
+        }
+    }
+
+    /// The operation type handed to C: the transaction type, the app's flags,
+    /// and `Skippable` when `skip` was set.
+    ///
+    /// # Panics
+    /// Panics if a flag that raises the review's warning button is set without
+    /// a warning able to fill it, which NBGL would dereference as NULL.
+    fn c_operation_type(&self) -> nbgl_operationType_t {
+        check_report_flags(
+            self.operation_flags,
+            self.warning
+                .as_ref()
+                .is_some_and(|w| w.raises_review_report()),
+        );
+        let mut flags = self.operation_flags;
+        if self.skip {
+            flags |= OperationFlag::Skippable.bit();
+        }
+        self.tx_type.to_c_type(flags)
     }
 
     /// Sets the transaction type for the streaming review flow.
@@ -94,6 +147,10 @@ impl NbglStreamingReview {
     }
 
     /// Configures the warning details to display in case of a risky transaction.
+    ///
+    /// This raises exactly one pre-defined warning,
+    /// [`WarningType::W3cRiskDetected`]. Use [`Self::warning`] to raise any
+    /// other combination, or to configure the pages manually.
     /// # Arguments
     /// * `dapp_provider` - The name of the dApp provider.
     /// * `report_url` - The URL where the user can report the issue.
@@ -108,25 +165,27 @@ impl NbglStreamingReview {
         report_provider: Option<&str>,
         provider_message: Option<&str>,
     ) -> NbglStreamingReview {
+        self.warning(&build_legacy_warning(
+            dapp_provider,
+            report_url,
+            report_provider,
+            provider_message,
+        ))
+    }
+
+    /// Sets the warning shown before the review, and reachable from the
+    /// top-right button during it.
+    ///
+    /// Setting a warning selects `nbgl_useCaseAdvancedReviewStreamingStart`
+    /// over the plain blind-signing start, so it takes effect only in
+    /// combination with [`Self::blind`].
+    /// # Arguments
+    /// * `warning` - The warning configuration; see [`NbglWarning`].
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
+    pub fn warning(self, warning: &NbglWarning) -> NbglStreamingReview {
         NbglStreamingReview {
-            warning_details_type: Some(WarningDetailsType {
-                dapp_provider_name: match dapp_provider {
-                    Some(s) => CString::new(s).unwrap(),
-                    None => CString::default(),
-                },
-                report_url: match report_url {
-                    Some(s) => CString::new(s).unwrap(),
-                    None => CString::default(),
-                },
-                report_provider: match report_provider {
-                    Some(s) => CString::new(s).unwrap(),
-                    None => CString::default(),
-                },
-                provider_message: match provider_message {
-                    Some(s) => CString::new(s).unwrap(),
-                    None => CString::default(),
-                },
-            }),
+            warning: Some(CWarning::new(warning)),
             ..self
         }
     }
@@ -147,21 +206,11 @@ impl NbglStreamingReview {
 
             self.ux_sync_init();
             match self.blind {
-                true => match &self.warning_details_type {
+                true => match &self.warning {
                     Some(w) => {
-                        let warning_details = nbgl_warning_t {
-                            predefinedSet: (1u32 << W3C_RISK_DETECTED_WARN),
-                            dAppProvider: w.dapp_provider_name.as_ptr()
-                                as *const ::core::ffi::c_char,
-                            reportUrl: w.report_url.as_ptr() as *const ::core::ffi::c_char,
-                            reportProvider: w.report_provider.as_ptr()
-                                as *const ::core::ffi::c_char,
-                            providerMessage: w.provider_message.as_ptr()
-                                as *const ::core::ffi::c_char,
-                            ..Default::default()
-                        };
+                        let warning_details = w.as_c_type();
                         nbgl_useCaseAdvancedReviewStreamingStart(
-                            self.tx_type.to_c_type(self.skip),
+                            self.c_operation_type(),
                             &self.icon as *const nbgl_icon_details_t,
                             title.as_ptr() as *const c_char,
                             match subtitle.is_empty() {
@@ -174,7 +223,7 @@ impl NbglStreamingReview {
                     }
                     None => {
                         nbgl_useCaseReviewStreamingBlindSigningStart(
-                            self.tx_type.to_c_type(self.skip),
+                            self.c_operation_type(),
                             &self.icon as *const nbgl_icon_details_t,
                             title.as_ptr() as *const c_char,
                             match subtitle.is_empty() {
@@ -187,7 +236,7 @@ impl NbglStreamingReview {
                 },
                 false => {
                     nbgl_useCaseReviewStreamingStart(
-                        self.tx_type.to_c_type(self.skip),
+                        self.c_operation_type(),
                         &self.icon as *const nbgl_icon_details_t,
                         title.as_ptr() as *const c_char,
                         match subtitle.is_empty() {
@@ -208,31 +257,9 @@ impl NbglStreamingReview {
     #[deprecated(note = "use next instead")]
     pub fn continue_review(&self, fields: &[Field]) -> bool {
         unsafe {
-            let v: Vec<CField> = fields
-                .iter()
-                .map(|f| CField {
-                    name: CString::new(f.name).unwrap(),
-                    value: CString::new(f.value).unwrap(),
-                })
-                .collect();
-
-            // Fill the tag_value_array with the fields converted to nbgl_contentTagValue_t
-            let mut tag_value_array: Vec<nbgl_contentTagValue_t> = Vec::new();
-            for field in v.iter() {
-                let val = nbgl_contentTagValue_t {
-                    item: field.name.as_ptr() as *const ::core::ffi::c_char,
-                    value: field.value.as_ptr() as *const ::core::ffi::c_char,
-                    ..Default::default()
-                };
-                tag_value_array.push(val);
-            }
-
-            // Create the tag_value_list with the tag_value_array.
-            let tag_value_list = nbgl_contentTagValueList_t {
-                pairs: tag_value_array.as_ptr(),
-                nbPairs: fields.len() as u8,
-                ..Default::default()
-            };
+            // Owns the C strings the pairs point at; must outlive the call below.
+            let c_values = CTagValueList::from_fields(fields);
+            let tag_value_list = c_values.as_c_list();
 
             self.ux_sync_init();
             nbgl_useCaseReviewStreamingContinue(
@@ -253,32 +280,23 @@ impl NbglStreamingReview {
     /// Returns an `NbglStreamingReviewStatus` indicating whether the user proceeded to the next
     /// page, skipped the review, or rejected it.
     pub fn next(&self, fields: &[Field]) -> NbglStreamingReviewStatus {
+        self.next_ext(&to_tag_values(fields))
+    }
+
+    /// Proceeds to the next page in the streaming review flow with tag/value
+    /// pairs that may carry a [`FieldExtension`].
+    /// # Arguments
+    /// * `values` - A slice of `TagValue` representing the pairs to display on the next page.
+    /// # Returns
+    /// Returns an `NbglStreamingReviewStatus` indicating whether the user proceeded to the next
+    /// page, skipped the review, or rejected it.
+    pub fn next_ext(&self, values: &[TagValue]) -> NbglStreamingReviewStatus {
         unsafe {
-            let v: Vec<CField> = fields
-                .iter()
-                .map(|f| CField {
-                    name: CString::new(f.name).unwrap(),
-                    value: CString::new(f.value).unwrap(),
-                })
-                .collect();
-
-            // Fill the tag_value_array with the fields converted to nbgl_contentTagValue_t
-            let mut tag_value_array: Vec<nbgl_contentTagValue_t> = Vec::new();
-            for field in v.iter() {
-                let val = nbgl_contentTagValue_t {
-                    item: field.name.as_ptr() as *const ::core::ffi::c_char,
-                    value: field.value.as_ptr() as *const ::core::ffi::c_char,
-                    ..Default::default()
-                };
-                tag_value_array.push(val);
-            }
-
-            // Create the tag_value_list with the tag_value_array.
-            let tag_value_list = nbgl_contentTagValueList_t {
-                pairs: tag_value_array.as_ptr(),
-                nbPairs: fields.len() as u8,
-                ..Default::default()
-            };
+            // Owns the C strings and the extension structs the pairs point at;
+            // must outlive the use-case call below.
+            set_value_icon_handler(self.on_value_icon);
+            let c_values = CTagValueList::new(values);
+            let tag_value_list = c_values.as_c_list();
 
             self.ux_sync_init();
             nbgl_useCaseReviewStreamingContinueExt(

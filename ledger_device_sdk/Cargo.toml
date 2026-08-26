@@ -1,6 +1,6 @@
 [package]
 name = "ledger_device_sdk"
-version = "1.37.0"
+version = "1.38.0"
 authors = ["Ledger"]
 edition = "2024"
 license.workspace = true
@@ -23,7 +23,7 @@ rand_core = { version = "0.6.3", default-features = false }
 zeroize = { version = "1.6.0", default-features = false }
 numtoa = "0.2.4"
 const-zero = "0.1.1"
-ledger_secure_sdk_sys = { path = "../ledger_secure_sdk_sys", version = "1.16.4" }
+ledger_secure_sdk_sys = { path = "../ledger_secure_sdk_sys", version = "1.16.5" }
 
 [features]
 debug = ["log_error"]
@@ -93,6 +93,11 @@ doc-scrape-examples = true
 required-features = ["io_new"]
 
 [[example]]
+name = "nbgl_generic_configuration"
+doc-scrape-examples = true
+required-features = ["io_new"]
+
+[[example]]
 name = "nbgl_generic_review"
 doc-scrape-examples = true
 required-features = ["io_new"]
@@ -113,6 +118,11 @@ doc-scrape-examples = true
 required-features = ["io_new"]
 
 [[example]]
+name = "nbgl_navigable_content"
+doc-scrape-examples = true
+required-features = ["io_new"]
+
+[[example]]
 name = "nbgl_review"
 doc-scrape-examples = true
 required-features = ["io_new"]
@@ -129,6 +139,16 @@ required-features = ["io_new"]
 
 [[example]]
 name = "nbgl_streaming_review"
+doc-scrape-examples = true
+required-features = ["io_new"]
+
+[[example]]
+name = "nbgl_tag_value_alias"
+doc-scrape-examples = true
+required-features = ["io_new"]
+
+[[example]]
+name = "nbgl_warning"
 doc-scrape-examples = true
 required-features = ["io_new"]
 

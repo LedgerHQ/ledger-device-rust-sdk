@@ -5,6 +5,169 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.38.0] - 2026-08-25
+
+### Added
+- `NbglHomeAndSettings::info_list(&[(&str, &str)])` sets an arbitrary number of
+  information fields on the home screen's info page, and
+  `NbglHomeAndSettings::app_name(&str)` sets the application name on its own.
+  The info list was previously frozen to the two `Version` / `Developer` fields.
+- Tag/value pairs can carry a value extension (alias), exposing
+  `nbgl_contentValueExt_t` and `nbgl_contentValueAliasType_t`. New `TagValue`
+  type (`Field` plus an optional extension, with `From<&Field>`) and
+  `FieldExtension`, built with one constructor per alias kind —
+  `full_value`, `ens`, `address_book`, `qr_code`, `info_list`,
+  `tag_value_list` — and the chainable `alias_sub_name`, `explanation`,
+  `title`, `back_text` setters. NBGL draws a `>` next to an aliased value and
+  opens a modal built from the extension.
+- Extension-aware variants of the review entry points, taking `&[TagValue]`
+  where the existing ones take `&[Field]`: `NbglReview::show_ext`,
+  `NbglAdvanceReview::show_ext`, `NbglReviewExtended::show_ext`,
+  `NbglStreamingReview::next_ext`, `NbglAddressReview::set_tag_value_list_ext`
+  and `TagValueList::new_ext`.
+- `nbgl_tag_value_alias` example, covering all six alias kinds on one review
+  screen.
+- Full coverage of `nbgl_warning_t` through the new `NbglWarning` builder.
+  `predefined(&[WarningType])` raises any combination of the six pre-defined
+  warnings (`W3cIssue`, `W3cRiskDetected`, `W3cThreatDetected`, `W3cNoThreat`,
+  `BlindSigning`, `GatedSigning`); the set was previously frozen to
+  `W3cRiskDetected` alone. The manual path is also exposed: `info`,
+  `intro_details`, `review_details`, `intro_top_right_icon`,
+  `review_top_right_icon` and `prelude`, with the supporting `CenterInfo`,
+  `QrCode`, `Prelude`, `WarningBar` and `WarningDetails` types. Bar lists nest
+  to arbitrary depth.
+- `NbglAdvanceReview::warning(&NbglWarning)` and
+  `NbglStreamingReview::warning(&NbglWarning)`.
+- `nbgl_warning` example, showing both the pre-defined and the manual paths.
+- Per-pair layout control on `TagValue`: `force_page_start` starts a new review
+  page at that pair, `centered_info` draws it as a centered block rather than a
+  tag/value row. `TagValue` now derives `Default`, so a literal that sets only
+  some fields needs `..Default::default()`.
+  `nbMaxLinesForValue` and `hideEndOfLastLine` are deliberately not offered:
+  NBGL overwrites both, along with `smallCaseForValue`, on every page it draws
+  from a tag/value list (`nbgl_use_case.c:1144`), so an app setting them would
+  see nothing change. Of the list-level struct only `wrapping` and `token` are
+  honoured — which is also why the existing `small_case_for_value` argument has
+  no effect.
+- Settings are no longer capped at ten. `NbglHomeAndSettings::settings` and
+  `NbglGenericSettings::settings` take an `AtomicStorage<[u8; N]>` of whatever
+  size the app declares, and the switch descriptors are heap-allocated rather
+  than living in a fixed-size static. The only limit left is the app's own NVM
+  array, one byte per setting, which is what `settings` now checks against.
+  Existing callers are unaffected: `N` is inferred, and `SETTINGS_SIZE` stays
+  exported, now describing the size the examples use rather than a maximum.
+- `TagValue::value_icon` draws an icon at the right of a value and makes the row
+  touchable, with `NbglReview::on_value_icon` and
+  `NbglAdvanceReview::on_value_icon` receiving the index of the touched pair.
+  The list sets its own token, `BACK_TOKEN` being 0 and a touch otherwise
+  reading as "navigate back".
+  Two combinations panic rather than let C misread the union `value_icon` shares
+  with `extension`: a pair carrying both, and a list mixing icon pairs with
+  extension pairs. The second is list-wide because NBGL forces a page's token to
+  `VALUE_ALIAS_TOKEN` as soon as one pair on it is an alias, and that handler
+  reads the union as an extension for whichever pair was touched — and NBGL, not
+  the app, decides which pairs share a page.
+  `on_value_icon` is available on all five use cases that take `TagValue`s:
+  `NbglReview`, `NbglAdvanceReview`, `NbglReviewExtended`,
+  `NbglStreamingReview` and `NbglAddressReview`. Each installs its handler on
+  the way to C, which also clears it when none is set — without that a touch
+  could have reached a handler left behind by an earlier flow.
+  `startIndex` stays out, being the first index fetched through the
+  pair-retrieval callback, which is not wrapped.
+- `OperationFlag`, exposing the flag bits of `nbgl_operationType_t` alongside
+  the base transaction type: `Skippable`, `Blind`, `Risky`, `NoThreat` and
+  `AddressBook`. Only the base type and `Skippable` were reachable before.
+  `NbglAdvanceReview::operation_flags` and
+  `NbglStreamingReview::operation_flags` set them.
+  `Blind`, `Risky` and `NoThreat` are what make NBGL draw the warning button on
+  a review's first and last pages, so a warning configured through
+  `warning_details` or `warning` was previously reachable only from the intro
+  page. The button appears on the last page only when that page is a long-press
+  one, which excludes a light review.
+  These three flags are offered only where NBGL has a warning to fill the
+  button with: the handler reads `warning->predefinedSet`, and falls back to
+  `reviewDetails->title`, neither of them NULL-checked, and only
+  `nbgl_useCaseAdvancedReview` and `nbgl_useCaseAdvancedReviewStreamingStart`
+  set that context. Hence no equivalent on `NbglReview`, and a panic if the
+  warning could not fill the button.
+- `NbglGenericConfiguration`, wrapping `nbgl_useCaseGenericConfiguration` — a
+  configuration screen built from arbitrary `NbglPageContent`, paginated by
+  NBGL, ended through the header. It is the general form of
+  `NbglGenericSettings`, which is fixed to one switch list backed by NVM.
+- `NbglGenericConfiguration::on_action` and `NbglGenericReview::on_action`,
+  reporting touches on a switch, choice or bar back to the app through
+  `nbgl_content_t.contentActionCallback`. That field was previously always NULL,
+  so the interactive content types added earlier in this release were drawn but
+  reported nothing. `TagValueConfirm`, `InfoLongPress` and `InfoButton` keep the
+  SDK's own callback either way, since that is how a review detects approval.
+- `NbglChoice::show_with_details` and `NbglChoice::show_advanced_with_details`,
+  wrapping `nbgl_useCaseChoiceWithDetails` and
+  `nbgl_useCaseAdvancedChoiceWithDetails`. Both take a `WarningDetails`, the
+  same details tree `NbglWarning` uses, and return the user's choice; the
+  advanced variant adds a header icon and title.
+- `NbglConfirm`, wrapping `nbgl_useCaseConfirm`, previously reachable only
+  indirectly through `NbglChoice::ask_confirmation`. It is a modal, so it must
+  be raised over a screen that is already drawn, and `show_and_return` does not
+  block: the C API reports the button being touched and says nothing about
+  dismissal, since dismissing simply reveals what was underneath. The
+  `nbgl_home_and_settings` example raises one from the home action button.
+- `NbglNavigableContent`, wrapping `nbgl_useCaseNavigableContent` — a flow of
+  pages under a touchable header, for content that is not a review. The module
+  existed but was commented out and unusable: its navigation callback ignored
+  the page index and returned four hard-coded choices through a pointer to a
+  temporary array, using non-NUL-terminated `&str`s. Pages are now declared up
+  front with `add_page` / `add_titled_page`, one `NbglPageContent` each, and
+  `on_control` receives control touches. Declaring pages up front is what makes
+  it sound: content built inside the callback would be dropped before NBGL drew
+  it. On Nano the per-page title and top-right icon are ignored, and
+  `ExtendedCenter` / `InfoLongPress` pages are rejected by `show`, that device's
+  page union having eight members against the touchscreen devices' eleven.
+- Four more `NbglGenericReview` content types, taking it from 6 to 10 of the 11
+  members of the C content union: `SwitchesList` (`SWITCHES_LIST`),
+  `ChoicesList` (`CHOICES_LIST`), `BarsList` (`BARS_LIST`) and `ExtendedCenter`
+  (`EXTENDED_CENTER`, a centered info block with an inline tip box). They are
+  added through the corresponding new `NbglPageContent` variants.
+  `TAG_VALUE_DETAILS` is deliberately not offered: the C dispatch for
+  app-supplied content rejects it (`nbgl_use_case.c`, `default:` arm returning
+  false), NBGL only producing it internally when a pair is too long to fit, so
+  a page built from it renders empty.
+- Tip box on a review's first page, exposing `nbgl_tipBox_t` through the new
+  `TipBox` type: `NbglAdvanceReview::tip_box()`. Touching it opens a modal
+  listing `[type, content]` rows; the parameter was previously always NULL.
+  Only `INFOS_LIST` is offered, the sole member of the C union. It applies only
+  to a review whose warning set raises no tip box of its own: any `W3c*`
+  warning, or `BlindSigning`, makes NBGL draw its own tip box and route the
+  touch to the security report instead. That is also why `NbglReview` has no
+  equivalent — the only use case it wraps that takes a tip box is the
+  blind-signing one, which always raises `BlindSigning`. The
+  `nbgl_advance_review` example shows one on a review with no warning.
+- Home screen action button, exposing `nbgl_homeAction_t` through the new
+  `HomeAction` and `HomeActionStyle` types, set with
+  `NbglHomeAndSettings::action()`. The button's function is supplied by the app
+  and NBGL runs it on touch, so it can start any use case; the parameter was
+  previously always NULL. The `nbgl_home_and_settings` example shows one
+  displaying a status page.
+
+### Changed
+- `NbglHomeAndSettings::infos(app_name, version, author)` is unchanged and now a
+  shortcut over `app_name()` + `info_list()`.
+- `NbglHomeAndSettings` passes a NULL `infosList` to the C use case when no
+  information field is set, instead of announcing two fields backed by an empty
+  array.
+- The `&[Field]` review methods are unchanged and now lift their fields into
+  extension-less `TagValue`s, so every use case builds its C tag/value array
+  through a single path.
+- `NbglAddressReview::set_tag_value_list` no longer ties the borrowed fields to
+  the builder's lifetime (it copies them), which only relaxes what callers may
+  pass.
+- `warning_details(...)` on `NbglAdvanceReview` and `NbglStreamingReview` is
+  unchanged and still raises exactly `W3cRiskDetected`; it now delegates to
+  `warning()`, so both use cases build the C warning through one path.
+- `QrCode` and `WarningDetails::QrCode` are compiled only for Stax, Flex and
+  Apex. `NBGL_QRCODE` is not defined for Nano, so the C bindings there have
+  neither `nbgl_layoutQRCode_t` nor the union member.
+- updating ref to ledger_secure_sdk_sys to 1.16.5
+
 ## [1.37.0] - 2026-08-24
 
 ### Added
@@ -31,6 +194,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `NbglHomeAndSettings::show()` is now marked with the `#[deprecated]` attribute,
   matching what its documentation already stated. Use `show_and_return()`
   instead, which does not force a home screen refresh for every received APDU.
+
 
 ## [1.36.2] - 2026-08-18
 

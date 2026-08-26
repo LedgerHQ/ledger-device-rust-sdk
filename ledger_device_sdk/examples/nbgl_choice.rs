@@ -2,7 +2,9 @@
 #![no_main]
 
 use include_gif::include_gif;
-use ledger_device_sdk::nbgl::{NbglChoice, NbglGlyph, NbglStatus, init_comm};
+use ledger_device_sdk::nbgl::{
+    CenterInfo, NbglChoice, NbglGlyph, NbglStatus, WarningDetails, init_comm,
+};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 ledger_device_sdk::define_comm!(COMM);
@@ -54,6 +56,44 @@ extern "C" fn sample_main() {
             })
             .show(comm, confirmed);
     }
+
+    // A choice carrying a details page, reachable before deciding.
+    let details = WarningDetails::CenteredInfo {
+        title: "About this risk",
+        info: CenterInfo::new()
+            .title("Unverified contract")
+            .description("This contract is not in Ledger's registry.")
+            .sub_text("Proceed only if you trust the source."),
+    };
+
+    let accepted = NbglChoice::new().glyph(&WARNING).show_with_details(
+        comm,
+        "Unverified contract",
+        "Read the details before deciding.",
+        "Accept",
+        "Reject",
+        &details,
+    );
+    NbglStatus::new()
+        .text(if accepted { "Accepted" } else { "Rejected" })
+        .show(comm, accepted);
+
+    // The same, with a header icon and title above the message.
+    let accepted = NbglChoice::new()
+        .glyph(&WARNING)
+        .show_advanced_with_details(
+            comm,
+            Some(&WARNING),
+            "Review risk",
+            "Unverified contract",
+            "Read the details before deciding.",
+            "Accept",
+            "Reject",
+            &details,
+        );
+    NbglStatus::new()
+        .text(if accepted { "Accepted" } else { "Rejected" })
+        .show(comm, accepted);
 
     ledger_device_sdk::exit_app(0);
 }

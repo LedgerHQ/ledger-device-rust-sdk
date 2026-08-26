@@ -250,9 +250,8 @@ impl From<&InfoButton> for nbgl_contentInfoButton_t {
 /// right). Display options control the maximum number of lines per value,
 /// text casing, and word-wrapping behaviour.
 pub struct TagValueList {
-    _cfields: Vec<CField>,
-    /// Vector of C-compatible strings representing the tag/value pairs.
-    pairs: Vec<nbgl_contentTagValue_t>,
+    /// Owns the C strings, and the extension structs the pairs point at.
+    values: CTagValueList,
     /// If `true`, values are rendered in a smaller font.
     small_case_for_value: bool,
     /// If `true`, long values are word-wrapped instead of truncated.
@@ -269,20 +268,46 @@ impl TagValueList {
     /// * `_nb_max_lines_for_value` — Maximum number of lines allowed for each
     ///   value before truncation. (ignored, enforced to 0 when calling C function)
     /// * `small_case_for_value` — If `true`, values are rendered in a smaller
-    ///   font.
+    ///   font. Note that NBGL overrides this to `false` on every page it draws
+    ///   from a tag/value list (`nbgl_use_case.c:1144`), so it currently has no
+    ///   effect.
     /// * `wrapping` — If `true`, long values are word-wrapped instead of
-    ///   truncated.
+    ///   truncated. This one is honoured.
+    ///
+    /// `nbMaxLinesForValue` and `hideEndOfLastLine` are deliberately not
+    /// offered: NBGL overwrites both with its own values just below
+    /// `smallCaseForValue`, so an app setting them would see nothing change.
+    /// Of the whole list-level struct only `wrapping` and `token` survive.
     pub fn new(
         tvl: &[Field],
         _nb_max_lines_for_value: u8,
         small_case_for_value: bool,
         wrapping: bool,
     ) -> TagValueList {
-        let cfields: Vec<CField> = tvl.iter().map(|field| field.into()).collect();
-        let pairs: Vec<nbgl_contentTagValue_t> = cfields.iter().map(|pair| pair.into()).collect();
         TagValueList {
-            _cfields: cfields,
-            pairs,
+            values: CTagValueList::from_fields(tvl),
+            small_case_for_value,
+            wrapping,
+        }
+    }
+
+    /// Creates a new [`TagValueList`] whose pairs may each carry a
+    /// [`FieldExtension`].
+    ///
+    /// # Arguments
+    ///
+    /// * `values` — Slice of [`TagValue`] items.
+    /// * `small_case_for_value` — If `true`, values are rendered in a smaller
+    ///   font.
+    /// * `wrapping` — If `true`, long values are word-wrapped instead of
+    ///   truncated.
+    pub fn new_ext(
+        values: &[TagValue],
+        small_case_for_value: bool,
+        wrapping: bool,
+    ) -> TagValueList {
+        TagValueList {
+            values: CTagValueList::new(values),
             small_case_for_value,
             wrapping,
         }
@@ -293,8 +318,8 @@ impl TagValueList {
 impl From<&TagValueList> for nbgl_contentTagValueList_t {
     fn from(tvl: &TagValueList) -> nbgl_contentTagValueList_t {
         nbgl_contentTagValueList_t {
-            pairs: tvl.pairs.as_ptr(),
-            nbPairs: tvl.pairs.len() as u8,
+            pairs: tvl.values.pairs_ptr(),
+            nbPairs: tvl.values.len(),
             nbMaxLinesForValue: 0,
             token: FIRST_USER_TOKEN as u8,
             smallCaseForValue: tvl.small_case_for_value,
@@ -438,8 +463,202 @@ unsafe extern "C" fn action_callback(token: c_int, _index: u8, _page: c_int) {
 /// | `InfoLongPress` | [`InfoLongPress`] | Long-press confirmation |
 /// | `InfoButton` | [`InfoButton`] | Tap-button confirmation |
 /// | `TagValueList` | [`TagValueList`] | Field review (no buttons) |
+/// A list of on/off switches, for a `SWITCHES_LIST` content.
+///
+/// The switches are drawn with their initial state; `NbglGenericReview` does
+/// not itself route touches back to the app, so this is for display within a
+/// review rather than for settings — see `NbglHomeAndSettings::settings` for
+/// switches that persist.
+pub struct SwitchesList {
+    _texts: Vec<[CString; 2]>,
+    switches: Vec<nbgl_contentSwitch_t>,
+}
+
+impl SwitchesList {
+    /// Creates a new [`SwitchesList`].
+    ///
+    /// # Arguments
+    ///
+    /// * `switches` — One `(text, sub_text, initial_state)` per switch.
+    pub fn new(switches: &[(&str, &str, bool)]) -> SwitchesList {
+        let texts: Vec<[CString; 2]> = switches
+            .iter()
+            .map(|(text, sub_text, _)| {
+                [
+                    CString::new(*text).unwrap(),
+                    CString::new(*sub_text).unwrap(),
+                ]
+            })
+            .collect();
+
+        let c_switches: Vec<nbgl_contentSwitch_t> = texts
+            .iter()
+            .zip(switches.iter())
+            .enumerate()
+            .map(|(i, (pair, (_, _, state)))| nbgl_contentSwitch_t {
+                text: pair[0].as_ptr(),
+                subText: pair[1].as_ptr(),
+                initState: if *state { ON_STATE } else { OFF_STATE },
+                token: (FIRST_USER_TOKEN + i as u32) as u8,
+                ..Default::default()
+            })
+            .collect();
+
+        SwitchesList {
+            _texts: texts,
+            switches: c_switches,
+        }
+    }
+}
+
+impl From<&SwitchesList> for nbgl_contentSwitchesList_t {
+    fn from(list: &SwitchesList) -> nbgl_contentSwitchesList_t {
+        nbgl_contentSwitchesList_t {
+            switches: list.switches.as_ptr(),
+            nbSwitches: list.switches.len() as u8,
+        }
+    }
+}
+
+/// A list of radio-button choices, for a `CHOICES_LIST` content.
+pub struct ChoicesList {
+    _names: Vec<CString>,
+    names_ptr: Vec<*const c_char>,
+    init_choice: u8,
+}
+
+impl ChoicesList {
+    /// Creates a new [`ChoicesList`].
+    ///
+    /// # Arguments
+    ///
+    /// * `names` — The choices, in display order.
+    /// * `init_choice` — Index of the choice selected when the page opens.
+    pub fn new(names: &[&str], init_choice: u8) -> ChoicesList {
+        let cnames: Vec<CString> = names.iter().map(|n| CString::new(*n).unwrap()).collect();
+        let names_ptr: Vec<*const c_char> = cnames.iter().map(|n| n.as_ptr()).collect();
+        ChoicesList {
+            _names: cnames,
+            names_ptr,
+            init_choice,
+        }
+    }
+}
+
+#[allow(clippy::needless_update)]
+impl From<&ChoicesList> for nbgl_contentRadioChoice_t {
+    fn from(list: &ChoicesList) -> nbgl_contentRadioChoice_t {
+        nbgl_contentRadioChoice_t {
+            __bindgen_anon_1: nbgl_contentRadioChoice_t__bindgen_ty_1 {
+                names: list.names_ptr.as_ptr(),
+            },
+            nbChoices: list.names_ptr.len() as u8,
+            initChoice: list.init_choice,
+            token: FIRST_USER_TOKEN as u8,
+            ..Default::default()
+        }
+    }
+}
+
+/// A list of touchable bars, for a `BARS_LIST` content.
+pub struct BarsList {
+    _texts: Vec<CString>,
+    texts_ptr: Vec<*const c_char>,
+    tokens: Vec<u8>,
+}
+
+impl BarsList {
+    /// Creates a new [`BarsList`].
+    ///
+    /// # Arguments
+    ///
+    /// * `texts` — Label of each bar, in display order.
+    pub fn new(texts: &[&str]) -> BarsList {
+        let ctexts: Vec<CString> = texts.iter().map(|t| CString::new(*t).unwrap()).collect();
+        let texts_ptr: Vec<*const c_char> = ctexts.iter().map(|t| t.as_ptr()).collect();
+        let tokens: Vec<u8> = (0..texts.len())
+            .map(|i| (FIRST_USER_TOKEN + i as u32) as u8)
+            .collect();
+        BarsList {
+            _texts: ctexts,
+            texts_ptr,
+            tokens,
+        }
+    }
+}
+
+#[allow(clippy::needless_update)]
+impl From<&BarsList> for nbgl_contentBarsList_t {
+    fn from(list: &BarsList) -> nbgl_contentBarsList_t {
+        nbgl_contentBarsList_t {
+            barTexts: list.texts_ptr.as_ptr(),
+            tokens: list.tokens.as_ptr(),
+            nbBars: list.texts_ptr.len() as u8,
+            ..Default::default()
+        }
+    }
+}
+
+/// A centered info block with an optional tip box under it, for an
+/// `EXTENDED_CENTER` content.
+///
+/// The tip box here is the inline `nbgl_contentTipBox_t` — text and icon only.
+/// It is not the [`TipBox`] of a review's first page, which additionally
+/// carries the modal opened on touch.
+pub struct ExtendedCenter {
+    center: CCenterInfo,
+    tip_text: Option<CString>,
+    tip_icon: Option<nbgl_icon_details_t>,
+}
+
+impl ExtendedCenter {
+    /// Creates a new [`ExtendedCenter`].
+    ///
+    /// # Arguments
+    ///
+    /// * `center` — The centered icon-and-text block.
+    /// * `tip_text` — Label of the tip box drawn under it, if any.
+    /// * `tip_icon` — Icon of that tip box.
+    pub fn new(
+        center: &CenterInfo,
+        tip_text: Option<&str>,
+        tip_icon: Option<&NbglGlyph>,
+    ) -> ExtendedCenter {
+        ExtendedCenter {
+            center: CCenterInfo::new(center),
+            tip_text: tip_text.map(|t| CString::new(t).unwrap()),
+            tip_icon: tip_icon.map(|g| g.into()),
+        }
+    }
+}
+
+#[allow(clippy::needless_update)]
+impl From<&ExtendedCenter> for nbgl_contentExtendedCenter_t {
+    fn from(center: &ExtendedCenter) -> nbgl_contentExtendedCenter_t {
+        nbgl_contentExtendedCenter_t {
+            contentCenter: center.center.as_c_type(),
+            tipBox: nbgl_contentTipBox_t {
+                text: match &center.tip_text {
+                    Some(text) => text.as_ptr(),
+                    None => core::ptr::null(),
+                },
+                icon: match &center.tip_icon {
+                    Some(icon) => icon as *const nbgl_icon_details_t,
+                    None => core::ptr::null(),
+                },
+                token: FIRST_USER_TOKEN as u8,
+                ..Default::default()
+            },
+        }
+    }
+}
+
 /// | `TagValueConfirm` | [`TagValueConfirm`] | Field review with confirm/cancel |
 /// | `InfosList` | [`InfosList`] | Read-only info list |
+/// | `SwitchesList` | [`SwitchesList`] | On/off switch list |
+/// | `ChoicesList` | [`ChoicesList`] | Radio-button choices |
+/// | `BarsList` | [`BarsList`] | Touchable bars |
+/// | `ExtendedCenter` | [`ExtendedCenter`] | Centered info with a tip box |
 pub enum NbglPageContent {
     /// Centered information screen.
     CenteredInfo(CenteredInfo),
@@ -453,24 +672,71 @@ pub enum NbglPageContent {
     TagValueConfirm(TagValueConfirm),
     /// Read-only information list.
     InfosList(InfosList),
+    /// List of on/off switches.
+    SwitchesList(SwitchesList),
+    /// Radio-button choices.
+    ChoicesList(ChoicesList),
+    /// List of touchable bars.
+    BarsList(BarsList),
+    /// Centered info with an optional tip box.
+    ExtendedCenter(ExtendedCenter),
+}
+
+/// App function to run when a control inside a generic content is touched.
+///
+/// `nbgl_contentActionCallback_t` carries no user data, so the app's function is
+/// parked here for [`content_action_callback`] to find. Only one such flow is on
+/// screen at a time, so a single slot is enough for every container that emits
+/// these contents.
+static mut CONTENT_ACTION: Option<fn(u8, u8)> = None;
+
+/// Records the app function the next flow should report control touches to.
+pub(crate) fn set_content_action(on_action: Option<fn(u8, u8)>) {
+    unsafe {
+        CONTENT_ACTION = on_action;
+    }
+}
+
+/// Callback registered with NBGL for content whose controls the app can act on.
+///
+/// The page index NBGL also supplies is dropped: the token already identifies
+/// the element, each content type assigning `FIRST_USER_TOKEN + i` to its `i`th.
+pub(crate) unsafe extern "C" fn content_action_callback(token: c_int, index: u8, _page: c_int) {
+    if let Some(on_action) = unsafe { CONTENT_ACTION } {
+        on_action(token as u8, index);
+    }
 }
 
 impl From<&NbglPageContent> for nbgl_content_t {
+    /// Builds the C content with no action callback on the interactive lists.
+    /// Use [`NbglPageContent::to_c_content`] to route their controls to the app.
     fn from(content: &NbglPageContent) -> nbgl_content_t {
+        content.to_c_content(None)
+    }
+}
+
+impl NbglPageContent {
+    /// Builds the C content, reporting control touches through `on_action`.
+    ///
+    /// `TagValueConfirm`, `InfoLongPress` and `InfoButton` keep the SDK's own
+    /// callback regardless: that is how a review detects approval, and
+    /// overriding it would break the flow's result.
+    pub(crate) fn to_c_content(&self, on_action: nbgl_contentActionCallback_t) -> nbgl_content_t {
+        let content = self;
         match content {
             NbglPageContent::CenteredInfo(data) => nbgl_content_t {
                 content: nbgl_content_u {
                     centeredInfo: data.into(),
                 },
                 type_: CENTERED_INFO,
-                contentActionCallback: None,
+                contentActionCallback: on_action,
             },
             NbglPageContent::TagValueList(data) => nbgl_content_t {
                 content: nbgl_content_u {
                     tagValueList: data.into(),
                 },
                 type_: TAG_VALUE_LIST,
-                contentActionCallback: None,
+                contentActionCallback: on_action,
             },
             NbglPageContent::TagValueConfirm(data) => nbgl_content_t {
                 content: nbgl_content_u {
@@ -498,7 +764,35 @@ impl From<&NbglPageContent> for nbgl_content_t {
                     infosList: data.into(),
                 },
                 type_: INFOS_LIST,
-                contentActionCallback: None,
+                contentActionCallback: on_action,
+            },
+            NbglPageContent::SwitchesList(data) => nbgl_content_t {
+                content: nbgl_content_u {
+                    switchesList: data.into(),
+                },
+                type_: SWITCHES_LIST,
+                contentActionCallback: on_action,
+            },
+            NbglPageContent::ChoicesList(data) => nbgl_content_t {
+                content: nbgl_content_u {
+                    choicesList: data.into(),
+                },
+                type_: CHOICES_LIST,
+                contentActionCallback: on_action,
+            },
+            NbglPageContent::BarsList(data) => nbgl_content_t {
+                content: nbgl_content_u {
+                    barsList: data.into(),
+                },
+                type_: BARS_LIST,
+                contentActionCallback: on_action,
+            },
+            NbglPageContent::ExtendedCenter(data) => nbgl_content_t {
+                content: nbgl_content_u {
+                    extendedCenter: data.into(),
+                },
+                type_: EXTENDED_CENTER,
+                contentActionCallback: on_action,
             },
         }
     }
@@ -523,6 +817,7 @@ impl From<&NbglPageContent> for nbgl_content_t {
 /// ```
 pub struct NbglGenericReview {
     content_list: Vec<NbglPageContent>,
+    on_action: Option<fn(u8, u8)>,
 }
 
 impl SyncNBGL for NbglGenericReview {}
@@ -538,7 +833,22 @@ impl NbglGenericReview {
     pub fn new() -> NbglGenericReview {
         NbglGenericReview {
             content_list: Vec::new(),
+            on_action: None,
         }
+    }
+
+    /// Sets the function run when a control inside one of the contents is
+    /// touched — a switch, a choice, or a bar.
+    ///
+    /// It receives the token of the touched element and, for a choices list,
+    /// the index chosen. Each content type assigns `FIRST_USER_TOKEN + i` to
+    /// its `i`th element, except `ChoicesList`, which uses one token and
+    /// reports the selection in `index`.
+    ///
+    /// Without this the interactive lists are drawn but report nothing.
+    pub fn on_action(mut self, on_action: fn(u8, u8)) -> NbglGenericReview {
+        self.on_action = Some(on_action);
+        self
     }
 
     /// Appends a content page to the review.
@@ -558,10 +868,20 @@ impl NbglGenericReview {
     /// Converts the Rust content list into the C representation expected by
     /// the NBGL library.
     fn to_c_content_list(&self) -> Vec<nbgl_content_t> {
+        let on_action = self.action_callback();
         self.content_list
             .iter()
-            .map(|content| content.into())
+            .map(|content| content.to_c_content(on_action))
             .collect()
+    }
+
+    /// The C callback to hand the contents, or None if the app set no handler.
+    fn action_callback(&self) -> nbgl_contentActionCallback_t {
+        set_content_action(self.on_action);
+        match self.on_action {
+            Some(_) => Some(content_action_callback),
+            None => None,
+        }
     }
 
     fn show_internal(&self, reject_button_str: &str) -> bool {

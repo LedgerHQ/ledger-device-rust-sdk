@@ -7,10 +7,9 @@
 use crate::io::{ApduHeader, Event};
 use crate::io_callbacks::nbgl_next_event_ahead;
 use crate::nvm::*;
-use const_zero::const_zero;
 extern crate alloc;
 use alloc::ffi::CString;
-use alloc::{vec, vec::Vec};
+use alloc::vec::Vec;
 use core::ffi::{c_char, c_int};
 use ledger_secure_sdk_sys::*;
 
@@ -18,11 +17,13 @@ pub mod nbgl_action;
 pub mod nbgl_address_review;
 pub mod nbgl_advance_review;
 pub mod nbgl_choice;
+pub mod nbgl_confirm;
+pub mod nbgl_generic_configuration;
 pub mod nbgl_generic_review;
 pub mod nbgl_generic_settings;
 pub mod nbgl_home_and_settings;
 pub mod nbgl_keypad;
-//pub mod nbgl_navigable_content;
+pub mod nbgl_navigable_content;
 pub mod nbgl_review;
 #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 pub mod nbgl_review_extended;
@@ -30,6 +31,9 @@ pub mod nbgl_review_status;
 pub mod nbgl_spinner;
 pub mod nbgl_status;
 pub mod nbgl_streaming_review;
+pub mod nbgl_tag_value;
+pub mod nbgl_tip_box;
+pub mod nbgl_warning;
 
 #[doc(inline)]
 pub use nbgl_action::*;
@@ -40,6 +44,10 @@ pub use nbgl_advance_review::*;
 #[doc(inline)]
 pub use nbgl_choice::*;
 #[doc(inline)]
+pub use nbgl_confirm::*;
+#[doc(inline)]
+pub use nbgl_generic_configuration::*;
+#[doc(inline)]
 pub use nbgl_generic_review::*;
 #[doc(inline)]
 pub use nbgl_generic_settings::*;
@@ -48,8 +56,9 @@ pub use nbgl_home_and_settings::*;
 #[doc(inline)]
 pub use nbgl_keypad::*;
 #[doc(inline)]
+pub use nbgl_navigable_content::*;
+#[doc(inline)]
 pub use nbgl_review::*;
-//pub use nbgl_navigable_content::*; // integration issue
 #[doc(inline)]
 #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 pub use nbgl_review_extended::*;
@@ -61,6 +70,12 @@ pub use nbgl_spinner::*;
 pub use nbgl_status::*;
 #[doc(inline)]
 pub use nbgl_streaming_review::*;
+#[doc(inline)]
+pub use nbgl_tag_value::*;
+#[doc(inline)]
+pub use nbgl_tip_box::*;
+#[doc(inline)]
+pub use nbgl_warning::*;
 
 #[cfg(not(feature = "io_new"))]
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -363,17 +378,79 @@ trait ToMessage {
     fn to_message(&self, success: bool) -> nbgl_reviewStatusType_t;
 }
 
+/// A flag bit of `nbgl_operationType_t`, set alongside the base
+/// [`TransactionType`].
+///
+/// The C type is a mask: the transaction type occupies the low bits and each
+/// flag adds one above them. Several may apply at once, which is why the review
+/// builders take a slice.
+///
+/// `Blind`, `Risky` and `NoThreat` are what make NBGL draw the warning button in
+/// the top-right of a review's first and last pages.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum OperationFlag {
+    /// The review may be skipped. Only `NbglStreamingReview` acts on it, and
+    /// `NbglStreamingReview::skip` already sets it.
+    Skippable,
+    /// The transaction cannot be decoded and is signed blind.
+    Blind,
+    /// The transaction was flagged as risky.
+    Risky,
+    /// The transaction was checked and no threat was found.
+    NoThreat,
+    /// The operation involves an Address Book entry.
+    AddressBook,
+}
+
+impl OperationFlag {
+    /// This flag's bit in the `nbgl_operationType_t` mask.
+    fn bit(self) -> nbgl_operationType_t {
+        match self {
+            OperationFlag::Skippable => SKIPPABLE_OPERATION,
+            OperationFlag::Blind => BLIND_OPERATION,
+            OperationFlag::Risky => RISKY_OPERATION,
+            OperationFlag::NoThreat => NO_THREAT_OPERATION,
+            OperationFlag::AddressBook => ADDRESS_BOOK_OPERATION,
+        }
+    }
+
+    /// Folds a slice of flags into the mask the C API expects.
+    pub(crate) fn mask(flags: &[OperationFlag]) -> nbgl_operationType_t {
+        flags.iter().fold(0, |mask, flag| mask | flag.bit())
+    }
+
+    /// The bits that make NBGL draw the review's top-right warning button.
+    fn report_bits() -> nbgl_operationType_t {
+        OperationFlag::Blind.bit() | OperationFlag::Risky.bit() | OperationFlag::NoThreat.bit()
+    }
+}
+
+/// Rejects a flag/warning combination that would crash inside NBGL.
+///
+/// `Blind`, `Risky` and `NoThreat` make NBGL draw the warning button on the
+/// review's first and last pages. Its handler reads
+/// `reviewWithWarnCtx.warning->predefinedSet` unguarded, and falls back to
+/// dereferencing `reviewDetails->title` just as unguarded, so raising that
+/// button without a warning that can fill it is a NULL dereference in C rather
+/// than an empty page.
+pub(crate) fn check_report_flags(flags: nbgl_operationType_t, warning_renders: bool) {
+    if flags & OperationFlag::report_bits() != 0 && !warning_renders {
+        panic!(
+            "OperationFlag::Blind/Risky/NoThreat need a warning that renders: \
+             set predefined() or review_details() on it."
+        );
+    }
+}
+
 impl TransactionType {
-    fn to_c_type(&self, skippable: bool) -> nbgl_operationType_t {
-        let mut tx_type = match self {
+    /// Builds the `nbgl_operationType_t` for this type, with `flags` OR'd in.
+    fn to_c_type(&self, flags: nbgl_operationType_t) -> nbgl_operationType_t {
+        let tx_type: nbgl_operationType_t = match self {
             TransactionType::Transaction => TYPE_TRANSACTION.into(),
             TransactionType::Message => TYPE_MESSAGE.into(),
             TransactionType::Operation => TYPE_OPERATION.into(),
         };
-        if skippable {
-            tx_type |= SKIPPABLE_OPERATION;
-        }
-        tx_type
+        tx_type | flags
     }
 }
 

@@ -168,4 +168,202 @@ impl<'a> NbglChoice<'a> {
     ) -> bool {
         self.show_internal(message, sub_message, confirm_text, cancel_text)
     }
+
+    /// Shows the choice flow with a details page reachable from the screen.
+    ///
+    /// Same as [`Self::show`], plus a `details` page the user can open to read
+    /// more before choosing. `details` is the same [`WarningDetails`] used by
+    /// [`NbglWarning`].
+    /// # Arguments
+    /// * `_comm` - Mutable reference to Comm.
+    /// * `message` - The main message to display in the center of the page.
+    /// * `sub_message` - An optional sub-message to display below the main message.
+    /// * `confirm_text` - The text to display on the confirmation button.
+    /// * `cancel_text` - The text to display on the cancellation button.
+    /// * `details` - The page opened to read more.
+    /// # Returns
+    /// Returns `true` if the user confirmed the choice, `false` otherwise.
+    #[cfg(feature = "io_new")]
+    #[allow(clippy::too_many_arguments)]
+    pub fn show_with_details<const N: usize>(
+        &self,
+        _comm: &mut crate::io::Comm<N>,
+        message: &str,
+        sub_message: &str,
+        confirm_text: &str,
+        cancel_text: &str,
+        details: &WarningDetails,
+    ) -> bool {
+        self.show_with_details_internal(message, sub_message, confirm_text, cancel_text, details)
+    }
+
+    /// Shows the choice flow with a details page reachable from the screen.
+    /// # Returns
+    /// Returns `true` if the user confirmed the choice, `false` otherwise.
+    #[cfg(not(feature = "io_new"))]
+    pub fn show_with_details(
+        &self,
+        message: &str,
+        sub_message: &str,
+        confirm_text: &str,
+        cancel_text: &str,
+        details: &WarningDetails,
+    ) -> bool {
+        self.show_with_details_internal(message, sub_message, confirm_text, cancel_text, details)
+    }
+
+    fn show_with_details_internal(
+        &self,
+        message: &str,
+        sub_message: &str,
+        confirm_text: &str,
+        cancel_text: &str,
+        details: &WarningDetails,
+    ) -> bool {
+        unsafe {
+            let icon: nbgl_icon_details_t = match self.glyph {
+                Some(g) => g.into(),
+                None => nbgl_icon_details_t::default(),
+            };
+            let message = CString::new(message).unwrap();
+            let sub_message = CString::new(sub_message).unwrap();
+            let confirm_text = CString::new(confirm_text).unwrap();
+            let cancel_text = CString::new(cancel_text).unwrap();
+
+            // Owns the strings and any sub-tree the details page points at.
+            let c_details = CDetails::new(details);
+            // C takes this by mutable pointer, so it needs its own storage.
+            let mut details_c = c_details.as_c_type();
+
+            self.ux_sync_init();
+            nbgl_useCaseChoiceWithDetails(
+                &icon as *const nbgl_icon_details_t,
+                opt_str_ptr(&message),
+                opt_str_ptr(&sub_message),
+                opt_str_ptr(&confirm_text),
+                opt_str_ptr(&cancel_text),
+                &mut details_c as *mut nbgl_warningDetails_t,
+                Some(choice_callback),
+            );
+            matches!(self.ux_sync_wait(false), SyncNbgl::UxSyncRetApproved)
+        }
+    }
+
+    /// Shows the choice flow with a header and a details page.
+    ///
+    /// Wraps `nbgl_useCaseAdvancedChoiceWithDetails`, which adds a header icon
+    /// and title above the centered message.
+    /// # Arguments
+    /// * `_comm` - Mutable reference to Comm.
+    /// * `header_glyph` - Icon drawn in the header, if any.
+    /// * `title` - Title drawn in the header.
+    /// * `message` - The main message to display in the center of the page.
+    /// * `sub_message` - An optional sub-message to display below the main message.
+    /// * `confirm_text` - The text to display on the confirmation button.
+    /// * `cancel_text` - The text to display on the cancellation button.
+    /// * `details` - The page opened to read more.
+    /// # Returns
+    /// Returns `true` if the user confirmed the choice, `false` otherwise.
+    #[cfg(feature = "io_new")]
+    #[allow(clippy::too_many_arguments)]
+    pub fn show_advanced_with_details<const N: usize>(
+        &self,
+        _comm: &mut crate::io::Comm<N>,
+        header_glyph: Option<&NbglGlyph>,
+        title: &str,
+        message: &str,
+        sub_message: &str,
+        confirm_text: &str,
+        cancel_text: &str,
+        details: &WarningDetails,
+    ) -> bool {
+        self.show_advanced_internal(
+            header_glyph,
+            title,
+            message,
+            sub_message,
+            confirm_text,
+            cancel_text,
+            details,
+        )
+    }
+
+    /// Shows the choice flow with a header and a details page.
+    /// # Returns
+    /// Returns `true` if the user confirmed the choice, `false` otherwise.
+    #[cfg(not(feature = "io_new"))]
+    #[allow(clippy::too_many_arguments)]
+    pub fn show_advanced_with_details(
+        &self,
+        header_glyph: Option<&NbglGlyph>,
+        title: &str,
+        message: &str,
+        sub_message: &str,
+        confirm_text: &str,
+        cancel_text: &str,
+        details: &WarningDetails,
+    ) -> bool {
+        self.show_advanced_internal(
+            header_glyph,
+            title,
+            message,
+            sub_message,
+            confirm_text,
+            cancel_text,
+            details,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn show_advanced_internal(
+        &self,
+        header_glyph: Option<&NbglGlyph>,
+        title: &str,
+        message: &str,
+        sub_message: &str,
+        confirm_text: &str,
+        cancel_text: &str,
+        details: &WarningDetails,
+    ) -> bool {
+        unsafe {
+            let center_icon: nbgl_icon_details_t = match self.glyph {
+                Some(g) => g.into(),
+                None => nbgl_icon_details_t::default(),
+            };
+            let header_icon: Option<nbgl_icon_details_t> = header_glyph.map(|g| g.into());
+            let title = CString::new(title).unwrap();
+            let message = CString::new(message).unwrap();
+            let sub_message = CString::new(sub_message).unwrap();
+            let confirm_text = CString::new(confirm_text).unwrap();
+            let cancel_text = CString::new(cancel_text).unwrap();
+
+            let c_details = CDetails::new(details);
+            let mut details_c = c_details.as_c_type();
+
+            self.ux_sync_init();
+            nbgl_useCaseAdvancedChoiceWithDetails(
+                &center_icon as *const nbgl_icon_details_t,
+                match &header_icon {
+                    Some(icon) => icon as *const nbgl_icon_details_t,
+                    None => core::ptr::null(),
+                },
+                opt_str_ptr(&title),
+                opt_str_ptr(&message),
+                opt_str_ptr(&sub_message),
+                opt_str_ptr(&confirm_text),
+                opt_str_ptr(&cancel_text),
+                &mut details_c as *mut nbgl_warningDetails_t,
+                Some(choice_callback),
+            );
+            matches!(self.ux_sync_wait(false), SyncNbgl::UxSyncRetApproved)
+        }
+    }
+}
+
+/// NULL for an empty string, matching how the other wrappers treat "unset".
+fn opt_str_ptr(s: &CString) -> *const c_char {
+    match s.is_empty() {
+        true => core::ptr::null(),
+        false => s.as_ptr() as *const c_char,
+    }
 }

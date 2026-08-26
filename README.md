@@ -46,9 +46,12 @@ docker run --rm -v "$(pwd):/app" \
   cargo ledger build stax
 
 # Run examples with Speculos (dev-tools image)
-docker run --rm -v "$(pwd):/app" \
+# Run from the crate directory: the workspace root is a virtual manifest, and
+# examples/config.toml is what wires Speculos in as the target runner.
+docker run --rm -v "$(pwd):/app" -w /app/ledger_device_sdk \
   ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest \
-  cargo run --example nbgl_home_and_settings --target stax --release
+  cargo run --example nbgl_home_and_settings --target stax --release \
+    --features io_new --config examples/config.toml
 ```
 
 ## Getting Started

@@ -2,6 +2,13 @@
 //! [nbgl_useCaseStaticReview](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L3838), [nbgl_useCaseStaticReviewLight](https://github.com/LedgerHQ/ledger-secure-sdk/blob/master/lib_nbgl/src/nbgl_use_case.c#L3894) C API binding.
 //!
 //! Used to display transaction review screens.
+//!
+//! Touchscreen only. All three C use cases wrapped here are declared inside
+//! `#ifdef HAVE_SE_TOUCH`, so they do not exist on Nano, and the module is not
+//! compiled there. [`NbglReview`] is the Nano equivalent: it draws the same
+//! intro, pairs and long-press finish, but as a single call rather than a
+//! separate `start` and `show`, so the review's content has to be known up
+//! front.
 use super::*;
 
 /// A builder to create and show an extended review flow.
@@ -14,6 +21,8 @@ pub struct NbglReviewExtended<'a> {
     longpress_text: CString,
     glyph_end: Option<&'a NbglGlyph<'a>>,
     light_end: bool,
+    /// App handler for a touched value icon.
+    on_value_icon: Option<fn(u8)>,
 }
 
 impl SyncNBGL for NbglReviewExtended<'_> {}
@@ -38,6 +47,22 @@ impl<'a> NbglReviewExtended<'a> {
             longpress_text: CString::default(),
             glyph_end: None,
             light_end: false,
+            on_value_icon: None,
+        }
+    }
+
+    /// Sets the function run when a value icon is touched.
+    ///
+    /// It receives the index of the pair whose icon was touched. Without it the
+    /// icons are drawn but report nothing.
+    ///
+    /// Only meaningful for pairs carrying [`TagValue::value_icon`].
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
+    pub fn on_value_icon(self, on_value_icon: fn(u8)) -> NbglReviewExtended<'a> {
+        NbglReviewExtended {
+            on_value_icon: Some(on_value_icon),
+            ..self
         }
     }
 
@@ -135,19 +160,13 @@ impl<'a> NbglReviewExtended<'a> {
     }
 
     /// Shows the extended review flow with the provided fields on the review pages (internal implementation).
-    fn show_internal(&self, fields: &[Field]) -> SyncNbgl {
+    fn show_internal(&self, values: &[TagValue]) -> SyncNbgl {
         unsafe {
-            let v: Vec<CField> = fields.iter().map(|f| f.into()).collect();
-            let mut tag_value_array: Vec<nbgl_contentTagValue_t> = Vec::new();
-            for field in v.iter() {
-                let val = nbgl_contentTagValue_t::from(field);
-                tag_value_array.push(val);
-            }
-            let tag_value_list = nbgl_contentTagValueList_t {
-                pairs: tag_value_array.as_ptr(),
-                nbPairs: fields.len() as u8,
-                ..Default::default()
-            };
+            // Owns the C strings and the extension structs the pairs point at;
+            // must outlive the use-case call below.
+            set_value_icon_handler(self.on_value_icon);
+            let c_values = CTagValueList::new(values);
+            let tag_value_list = c_values.as_c_list();
 
             let icon: nbgl_icon_details_t = match self.glyph_end {
                 Some(g) => g.into(),
@@ -196,12 +215,7 @@ impl<'a> NbglReviewExtended<'a> {
         _comm: &mut crate::io::Comm<N>,
         fields: &[Field],
     ) -> Result<bool, u8> {
-        let ret = self.show_internal(fields);
-        match ret {
-            SyncNbgl::UxSyncRetApproved => Ok(true),
-            SyncNbgl::UxSyncRetRejected => Ok(false),
-            _ => Err(u8::from(ret)),
-        }
+        self.show_ext(_comm, &to_tag_values(fields))
     }
 
     /// Shows the extended review flow with the provided fields on the review pages.
@@ -213,6 +227,42 @@ impl<'a> NbglReviewExtended<'a> {
     /// or another `SyncNbgl` variant in case of an error.
     #[cfg(not(feature = "io_new"))]
     pub fn show(&self, fields: &[Field]) -> SyncNbgl {
-        self.show_internal(fields)
+        self.show_internal(&to_tag_values(fields))
+    }
+
+    /// Shows the extended review flow with tag/value pairs that may carry a
+    /// [`FieldExtension`].
+    /// # Arguments
+    /// * `_comm` - Mutable reference to Comm.
+    /// * `values` - A slice of `TagValue` representing the pairs to display.
+    /// # Returns
+    /// Returns `Ok(true)` if the user accepts the review,
+    /// `Ok(false)` if the user rejects it,
+    /// or `Err(u8)` with the error code in case of an error.
+    #[cfg(feature = "io_new")]
+    pub fn show_ext<const N: usize>(
+        &self,
+        _comm: &mut crate::io::Comm<N>,
+        values: &[TagValue],
+    ) -> Result<bool, u8> {
+        let ret = self.show_internal(values);
+        match ret {
+            SyncNbgl::UxSyncRetApproved => Ok(true),
+            SyncNbgl::UxSyncRetRejected => Ok(false),
+            _ => Err(u8::from(ret)),
+        }
+    }
+
+    /// Shows the extended review flow with tag/value pairs that may carry a
+    /// [`FieldExtension`].
+    /// # Arguments
+    /// * `values` - A slice of `TagValue` representing the pairs to display.
+    /// # Returns
+    /// Returns `SyncNbgl::UxSyncRetApproved` if the user accepts the review,
+    /// `SyncNbgl::UxSyncRetRejected` if the user rejects it,
+    /// or another `SyncNbgl` variant in case of an error.
+    #[cfg(not(feature = "io_new"))]
+    pub fn show_ext(&self, values: &[TagValue]) -> SyncNbgl {
+        self.show_internal(values)
     }
 }
