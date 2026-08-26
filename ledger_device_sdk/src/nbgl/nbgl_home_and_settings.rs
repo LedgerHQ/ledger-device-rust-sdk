@@ -293,11 +293,13 @@ impl NbglHomeAndSettings {
 
     /// Show the home screen and settings page.
     /// This function will block until an APDU is received or the user quits the app.
-    /// DEPRECATED as it constraints to refresh screen for every received APDU.
-    /// Use `show_and_return` instead.
     /// # Arguments
     /// * `_comm` - Mutable reference to Comm.
     #[cfg(feature = "io_new")]
+    #[deprecated(
+        since = "1.37.0",
+        note = "blocking on an APDU forces the home screen to be refreshed for every received APDU; use `show_and_return` instead"
+    )]
     pub fn show<T: TryFrom<ApduHeader>, const N: usize>(
         &mut self,
         _comm: &mut crate::io::Comm<N>,
@@ -310,9 +312,11 @@ impl NbglHomeAndSettings {
 
     /// Show the home screen and settings page.
     /// This function will block until an APDU is received or the user quits the app.
-    /// DEPRECATED as it constraints to refresh screen for every received APDU.
-    /// Use `show_and_return` instead.
     #[cfg(not(feature = "io_new"))]
+    #[deprecated(
+        since = "1.37.0",
+        note = "blocking on an APDU forces the home screen to be refreshed for every received APDU; use `show_and_return` instead"
+    )]
     pub fn show<T: TryFrom<ApduHeader>>(&mut self) -> Event<T>
     where
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,

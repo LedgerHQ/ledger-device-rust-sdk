@@ -147,6 +147,10 @@ pub struct Comm<const N: usize = DEFAULT_BUF_SIZE> {
     pending_header: ApduHeader,
     pending_offset: usize,
     pending_length: usize,
+    /// True from the moment a command is handed to the application until the
+    /// application replies to it. This is what makes a second incoming APDU a
+    /// *double* APDU rather than the normal way of receiving work.
+    apdu_in_progress: bool,
 }
 
 impl<const N: usize> Comm<N> {
@@ -166,7 +170,21 @@ impl<const N: usize> Comm<N> {
             },
             pending_offset: 0,
             pending_length: 0,
+            apdu_in_progress: false,
         }
+    }
+
+    /// Answer `sw` to an APDU that cannot be delivered to the application, on
+    /// the transport it arrived on.
+    ///
+    /// This deliberately bypasses [`Comm::begin_response`]: it must stage
+    /// nothing into the shared buffer and must leave `apdu_type`,
+    /// `pending_apdu` and `apdu_in_progress` alone, as they belong to the
+    /// command that is still being processed.
+    pub(crate) fn reject_apdu<T: Into<Reply>>(&self, packet_type: u8, sw: T) {
+        let sw: u16 = sw.into().0;
+        let resp = sw.to_be_bytes();
+        let _ = sys_seph::io_tx(packet_type, resp.as_ref(), resp.len());
     }
 
     pub(crate) fn nbgl_register_comm(&mut self) {
@@ -252,6 +270,9 @@ impl<const N: usize> Comm<N> {
                             continue;
                         }
                     }
+                    // The command is about to be handed to the application: any
+                    // APDU arriving from now until the reply is a double APDU.
+                    self.apdu_in_progress = true;
                     return Command::new(self, header, offset, length);
                 }
                 // Explicitly convert ApduError -> StatusWords so Into<Reply> is resolved
@@ -411,6 +432,8 @@ impl<'a, const N: usize> CommandResponse<'a, N> {
         // Clear the pending APDU state after sending a reply, so the next
         // call to try_next_event will fetch a new event from io_rx.
         self.comm.pending_apdu = false;
+        // Replying completes the current command.
+        self.comm.apdu_in_progress = false;
         Ok(self.comm)
     }
 
