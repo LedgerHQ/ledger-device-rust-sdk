@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.37.0] - 2026-08-24
+
+### Added
+- `StatusWords::CmdNotAccepted` (0x6901). An APDU received while a previous
+  command is still being processed is now answered with this status word instead
+  of being queued or silently dropped. Note that adding a variant to the public
+  `StatusWords` enum breaks downstream exhaustive `match` expressions over it.
+
+### Fixed
+- `io_new`: BOLOS internal APDUs (CLA 0xB0) arriving while an NBGL screen is
+  displayed are handled inline again instead of being answered
+  `CmdNotAccepted`. That handling was gated behind the `stack_usage` feature, so
+  default builds rejected OS level requests that `next_command` answers.
+- `io_new`: a double APDU is now answered on the polling iteration that detects
+  it. It used to be answered on the next one, so a screen completing in between
+  discarded it with no response at all, leaving the host waiting.
+- `io_new`: a malformed APDU received while a screen is displayed is answered
+  `BadLen` instead of being ignored, matching `next_command` and `io_legacy`.
+- `io_new`: rejecting an APDU no longer leaves `apdu_type` overwritten with the
+  rejected APDU's transport, which made the in-flight command reply on the
+  wrong channel.
+
+### Deprecated
+- `NbglHomeAndSettings::show()` is now marked with the `#[deprecated]` attribute,
+  matching what its documentation already stated. Use `show_and_return()`
+  instead, which does not force a home screen refresh for every received APDU.
+
 ## [1.36.2] - 2026-08-18
 
 ### Changed
