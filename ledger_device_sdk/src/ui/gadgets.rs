@@ -1,14 +1,20 @@
-use crate::{
-    io::{self, ApduHeader, Comm, Event, Reply},
-    uxapp::{BOLOS_UX_OK, UxEvent},
-};
+use crate::io;
 
 use ledger_secure_sdk_sys::{
-    buttons::{ButtonEvent, ButtonEvent::*, ButtonsState, get_button_event},
+    buttons::{ButtonEvent, ButtonsState, get_button_event},
     seph,
 };
 
-use crate::ui::bitmaps::{Glyph, WARNING};
+use crate::ui::bitmaps::Glyph;
+
+// Only used by the legacy-IO gadgets (`display_pending_review`, `MultiPageMenu`)
+#[cfg(not(feature = "io_new"))]
+use crate::{
+    ui::bitmaps::WARNING,
+    uxapp::{BOLOS_UX_OK, UxEvent},
+};
+#[cfg(not(feature = "io_new"))]
+use ledger_secure_sdk_sys::buttons::ButtonEvent::*;
 
 use crate::ui::{bagls::*, fonts::OPEN_SANS};
 
@@ -52,6 +58,8 @@ pub fn clear_screen() {
 /// This method must be called by an application at the very beginning until it has been reviewed
 /// and approved by Ledger.
 ///
+/// Not available with the `io_new` feature.
+///
 /// # Arguments
 ///
 /// * `comm` - Communication manager used to get device events.
@@ -61,15 +69,16 @@ pub fn clear_screen() {
 /// Following is an application example main function calling the pending review popup at the very
 /// beginning, before doing any other application logic.
 ///
-/// ```
+/// ```ignore
 /// #[no_mangle]
 /// extern "C" fn sample_main() {
 ///     let mut comm = Comm::new();
 ///     ledger_device_sdk::ui::gadgets::display_pending_review(&mut comm);
 ///     ...
 /// }
-/// `
-pub fn display_pending_review(comm: &mut Comm) {
+/// ```
+#[cfg(not(feature = "io_new"))]
+pub fn display_pending_review(comm: &mut io::Comm) {
     clear_screen();
 
     // Add icon and text to match the C SDK equivalent.
@@ -81,7 +90,7 @@ pub fn display_pending_review(comm: &mut Comm) {
 
     // Process events until a double button press release.
     loop {
-        if let Event::Button(BothButtonsRelease) = comm.next_event::<ApduHeader>() {
+        if let io::Event::Button(BothButtonsRelease) = comm.next_event::<io::ApduHeader>() {
             break;
         }
     }
@@ -486,7 +495,9 @@ pub enum EventOrPageIndex<T> {
 }
 
 // Trick to manage pin code
+#[cfg(not(feature = "io_new"))]
 struct Temp {}
+#[cfg(not(feature = "io_new"))]
 impl TryFrom<io::ApduHeader> for Temp {
     type Error = io::StatusWords;
     fn try_from(_header: io::ApduHeader) -> Result<Self, Self::Error> {
@@ -506,16 +517,19 @@ impl<'a> MultiPageMenu<'a> {
         MultiPageMenu { comm, pages }
     }
 
-    pub fn show<T: TryFrom<ApduHeader>>(&mut self) -> EventOrPageIndex<T>
+    pub fn show<T: TryFrom<io::ApduHeader>>(&mut self) -> EventOrPageIndex<T>
     where
-        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
+        io::Reply: From<<T as TryFrom<io::ApduHeader>>::Error>,
     {
         self.show_from(0)
     }
 
-    pub fn show_from<T: TryFrom<ApduHeader>>(&mut self, page_index: usize) -> EventOrPageIndex<T>
+    pub fn show_from<T: TryFrom<io::ApduHeader>>(
+        &mut self,
+        page_index: usize,
+    ) -> EventOrPageIndex<T>
     where
-        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
+        io::Reply: From<<T as TryFrom<io::ApduHeader>>::Error>,
     {
         clear_screen();
 
