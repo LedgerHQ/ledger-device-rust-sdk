@@ -148,6 +148,7 @@ Enable `debug` feature for ARM semihosting output via `debug_print()` in [testin
 - `sys`: Re-export `ledger_secure_sdk_sys` for low-level FFI access
 - `speculos`: Enable emulator-specific code for testing
 - `debug_csdk`: Enable C SDK debug output
+- `debug_over_usb`: Send C SDK `PRINTF` and Rust log macros to a USB CDC (serial) interface on a real device (the app then runs its own IO stack; Nano S+ drops WebUSB/U2F). Mutually exclusive with `debug_csdk`
 
 ## Common Gotchas
 

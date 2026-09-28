@@ -1,8 +1,5 @@
 use core::panic::PanicInfo;
 
-#[cfg(feature = "debug")]
-use core::arch::asm;
-
 /// Stack consumption measurement utility.
 ///
 /// Implements the same paint/measure mechanism as the C SDK's
@@ -166,22 +163,13 @@ pub(crate) fn handle_stack_consumption_apdu_new<const N: usize>(
     let _ = response.send(StatusWords::Ok);
 }
 
-/// Debug 'print' function that uses ARM semihosting
+/// Debug 'print' function that uses ARM semihosting (or USB CDC with the
+/// `debug_over_usb` feature)
 /// Prints only strings with no formatting
 #[cfg(feature = "debug")]
 #[deprecated(note = "Use the logging macros from log module instead")]
 pub fn debug_print(s: &str) {
-    let p = s.as_bytes().as_ptr();
-    for i in 0..s.len() {
-        let m = unsafe { p.add(i) };
-        unsafe {
-            asm!(
-                "svc #0xab",
-                in("r1") m,
-                inout("r0") 3 => _,
-            );
-        }
-    }
+    crate::log::print(s);
 }
 #[cfg(not(feature = "debug"))]
 #[deprecated(note = "Use the logging macros from log module instead")]
