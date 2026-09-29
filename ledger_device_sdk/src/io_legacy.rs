@@ -383,21 +383,71 @@ impl Comm {
             return false;
         }
 
-        // Reject a double APDU on the raw frame, before any decoding: the
-        // in-flight command owns apdu_buffer / apdu_type / rx / tx, so the
-        // intruder must never be decoded into them. BOLOS APDUs (CLA 0xB0) and
-        // frames too short to hold a header fall through to keep their existing
-        // handling in `check_event`.
-        if self.apdu_in_progress
-            && Self::is_apdu_packet(self.io_buffer[0])
-            && status >= 5
-            && self.io_buffer[1] != 0xB0
-        {
-            self.reject_apdu(StatusWords::CmdNotAccepted);
+        // An APDU received while a command is in flight is handled directly on
+        // the received frame, whatever its CLA or length.
+        if self.apdu_in_progress && Self::is_apdu_packet(self.io_buffer[0]) {
+            self.handle_double_apdu(status as usize - 1);
             return false;
         }
 
         self.detect_apdu::<T>(status)
+    }
+
+    /// Answer an APDU of `rx` bytes, still in `io_buffer`, received while
+    /// another command is in flight.
+    ///
+    /// Only BOLOS [`BOLOS_INS_GET_VERSION`] is answered inline, as `io_new`
+    /// does, so that hosts can still identify the app while a screen is
+    /// displayed. Everything else is answered [`StatusWords::CmdNotAccepted`].
+    /// The reply goes out on the transport the APDU was received on, and the
+    /// state of the command in flight is kept as is.
+    fn handle_double_apdu(&mut self, rx: usize) {
+        let received_apdu_type = self.io_buffer[0];
+
+        if Self::is_device_locked() {
+            self.reject_apdu(StatusWords::DeviceLocked);
+            return;
+        }
+
+        if rx < 4 || !is_bolos_apdu_allowed_in_flight(self.io_buffer[1], self.io_buffer[2]) {
+            self.reject_apdu(StatusWords::CmdNotAccepted);
+            return;
+        }
+
+        // `get_data` cannot validate the length here as it works on the
+        // in-flight command's `apdu_buffer`. BOLOS APDUs only use short Lc.
+        let lc = self.io_buffer[5] as usize;
+        let length_ok = rx == 4 || (rx == 5 && lc == 0) || (lc != 0 && rx == 5 + lc);
+        if !length_ok {
+            self.reject_apdu(StatusWords::BadLen);
+            return;
+        }
+
+        // `handle_bolos_apdu` reads its request from `io_buffer` and replies
+        // through `apdu_send`, which uses the response state: reply on the
+        // received APDU's transport, then restore the command's state.
+        let saved = (self.apdu_type, self.tx, self.tx_length, self.rx_length);
+        self.apdu_type = received_apdu_type;
+        self.tx = 0;
+        self.tx_length = 0;
+        self.skip_rx_on_send = true;
+        handle_bolos_apdu(
+            self,
+            self.io_buffer[2],
+            self.io_buffer[3],
+            self.io_buffer[4],
+        );
+        (self.apdu_type, self.tx, self.tx_length, self.rx_length) = saved;
+        self.skip_rx_on_send = false;
+        self.apdu_in_progress = true;
+    }
+
+    /// True if a PIN is set and has not been validated yet.
+    fn is_device_locked() -> bool {
+        unsafe {
+            os_perso_is_pin_set() == BOLOS_TRUE.try_into().unwrap()
+                && os_global_pin_is_validated() != BOLOS_TRUE.try_into().unwrap()
+        }
     }
 
     pub fn check_event<T>(&mut self) -> Option<Event<T>>
@@ -600,13 +650,9 @@ impl Comm {
             | seph::PacketTypes::PacketTypeUsbHidApdu
             | seph::PacketTypes::PacketTypeUsbWebusbApdu
             | seph::PacketTypes::PacketTypeBleApdu => {
-                unsafe {
-                    if os_perso_is_pin_set() == BOLOS_TRUE.try_into().unwrap()
-                        && os_global_pin_is_validated() != BOLOS_TRUE.try_into().unwrap()
-                    {
-                        self.reply(StatusWords::DeviceLocked);
-                        return None;
-                    }
+                if Self::is_device_locked() {
+                    self.reply(StatusWords::DeviceLocked);
+                    return None;
                 }
                 self.apdu_buffer[0..272].copy_from_slice(&self.io_buffer[1..273]);
                 self.apdu_type = packet_type;
@@ -822,6 +868,14 @@ pub(crate) const BOLOS_INS_QUIT: u8 = 0xa7;
 pub(crate) const BOLOS_INS_SET_PKI_CERT: u8 = 0x06;
 #[cfg(feature = "stack_usage")]
 pub(crate) const BOLOS_INS_STACK_CONSUMPTION: u8 = 0x57;
+
+/// True if the APDU with this `cla` / `ins` may be answered while another
+/// command is in flight.
+///
+/// Only [`BOLOS_INS_GET_VERSION`] is.
+pub(crate) fn is_bolos_apdu_allowed_in_flight(cla: u8, ins: u8) -> bool {
+    cla == 0xB0 && ins == BOLOS_INS_GET_VERSION
+}
 
 // BOLOS APDU Handling (see https://developers.ledger.com/docs/connectivity/ledgerJS/open-close-info-on-apps)
 fn handle_bolos_apdu(com: &mut Comm, ins: u8, p1: u8, p2: u8) {

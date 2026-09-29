@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.38.0] - 2026-09-29
+
+### Changed
+- `io_new`: `NbglStreamingReview::start`, `next`, `continue_review` and
+  `finish` now take `&mut Comm` as their first argument, like every other
+  blocking NBGL widget. Data obtained from a `Command` can no longer be borrowed
+  across these calls: copy what is needed first. This is a breaking change for
+  `io_new` users.
+
+### Fixed
+- `io_legacy`: APDUs received while a command is in flight are now handled as
+  in `io_new`: BOLOS GET_VERSION is answered inline, anything else is answered
+  `CmdNotAccepted`, and the command in flight is left as is.
+- `io_legacy`, `io_new`: while a command is in flight, GET_VERSION is the only
+  BOLOS APDU answered; the others are answered `CmdNotAccepted`. They are still
+  handled as before when no command is in flight.
+
 ## [1.37.1] - 2026-09-29
 
 ### Fixed

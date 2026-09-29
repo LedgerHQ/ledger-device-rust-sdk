@@ -51,16 +51,16 @@ extern "C" fn sample_main() {
     let review: NbglStreamingReview = NbglStreamingReview::new()
         .glyph(&FERRIS)
         .tx_type(TransactionType::Transaction);
-    if !review.start("Streaming example", Some("Standard")) {
+    if !review.start(comm, "Streaming example", Some("Standard")) {
         NbglReviewStatus::new().show(comm, false);
         ledger_secure_sdk_sys::exit_app(0);
     }
     let mut success: Option<bool> = None;
     for c in fields.chunks(1) {
-        match review.next(c) {
+        match review.next(comm, c) {
             NbglStreamingReviewStatus::Next => {}
             NbglStreamingReviewStatus::Skipped => {
-                success = Some(review.finish("Sign to send token\n"));
+                success = Some(review.finish(comm, "Sign to send token\n"));
                 break;
             }
             NbglStreamingReviewStatus::Rejected => {
@@ -74,7 +74,7 @@ extern "C" fn sample_main() {
             NbglReviewStatus::new().show(comm, b);
         }
         None => {
-            let success = review.finish("Sign to send token\n");
+            let success = review.finish(comm, "Sign to send token\n");
             NbglReviewStatus::new().show(comm, success);
         }
     }
@@ -84,16 +84,16 @@ extern "C" fn sample_main() {
         .glyph(&FERRIS)
         .skippable()
         .tx_type(TransactionType::Transaction);
-    if !review.start("Streaming example", Some("Skippable")) {
+    if !review.start(comm, "Streaming example", Some("Skippable")) {
         NbglReviewStatus::new().show(comm, false);
         ledger_secure_sdk_sys::exit_app(0);
     }
     let mut success: Option<bool> = None;
     for c in fields.chunks(1) {
-        match review.next(c) {
+        match review.next(comm, c) {
             NbglStreamingReviewStatus::Next => {}
             NbglStreamingReviewStatus::Skipped => {
-                success = Some(review.finish("Sign to send token\n"));
+                success = Some(review.finish(comm, "Sign to send token\n"));
                 break;
             }
             NbglStreamingReviewStatus::Rejected => {
@@ -107,7 +107,7 @@ extern "C" fn sample_main() {
             NbglReviewStatus::new().show(comm, b);
         }
         None => {
-            let success = review.finish("Sign to send token\n");
+            let success = review.finish(comm, "Sign to send token\n");
             NbglReviewStatus::new().show(comm, success);
         }
     }
@@ -118,16 +118,16 @@ extern "C" fn sample_main() {
         .skippable()
         .blind()
         .tx_type(TransactionType::Transaction);
-    if !review.start("Streaming example", Some("Blind Signing")) {
+    if !review.start(comm, "Streaming example", Some("Blind Signing")) {
         NbglReviewStatus::new().show(comm, false);
         ledger_secure_sdk_sys::exit_app(0);
     }
     let mut success: Option<bool> = None;
     for c in fields.chunks(1) {
-        match review.next(c) {
+        match review.next(comm, c) {
             NbglStreamingReviewStatus::Next => {}
             NbglStreamingReviewStatus::Skipped => {
-                success = Some(review.finish("Sign to send token\n"));
+                success = Some(review.finish(comm, "Sign to send token\n"));
                 break;
             }
             NbglStreamingReviewStatus::Rejected => {
@@ -141,7 +141,7 @@ extern "C" fn sample_main() {
             NbglReviewStatus::new().show(comm, b);
         }
         None => {
-            let success = review.finish("Sign to send token\n");
+            let success = review.finish(comm, "Sign to send token\n");
             NbglReviewStatus::new().show(comm, success);
         }
     }
@@ -158,16 +158,16 @@ extern "C" fn sample_main() {
             Some("Report Provider"),
             Some("Provider Message"),
         );
-    if !review.start("Streaming example", Some("Blind Signing")) {
+    if !review.start(comm, "Streaming example", Some("Blind Signing")) {
         NbglReviewStatus::new().show(comm, false);
         ledger_secure_sdk_sys::exit_app(0);
     }
     let mut success: Option<bool> = None;
     for c in fields.chunks(1) {
-        match review.next(c) {
+        match review.next(comm, c) {
             NbglStreamingReviewStatus::Next => {}
             NbglStreamingReviewStatus::Skipped => {
-                success = Some(review.finish("Sign to send token\n"));
+                success = Some(review.finish(comm, "Sign to send token\n"));
                 break;
             }
             NbglStreamingReviewStatus::Rejected => {
@@ -181,7 +181,7 @@ extern "C" fn sample_main() {
             NbglReviewStatus::new().show(comm, b);
         }
         None => {
-            let success = review.finish("Sign to send token\n");
+            let success = review.finish(comm, "Sign to send token\n");
             NbglReviewStatus::new().show(comm, success);
         }
     }
