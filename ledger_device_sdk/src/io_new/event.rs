@@ -41,7 +41,18 @@ impl<const N: usize> DecodedEvent<N> {
             PacketTypes::PacketTypeRawApdu
             | PacketTypes::PacketTypeUsbHidApdu
             | PacketTypes::PacketTypeUsbWebusbApdu
-            | PacketTypes::PacketTypeBleApdu => Self::decode_apdu(comm, pt, 1, len),
+            | PacketTypes::PacketTypeBleApdu => {
+                // Reject every APDU, BOLOS ones included, while the device is
+                // locked, as `io_legacy` does. The reply goes out on the
+                // APDU's own transport and no `Comm` state is touched, so a
+                // command in flight is left undisturbed.
+                if Self::is_device_locked() {
+                    comm.reject_apdu(pt, super::StatusWords::DeviceLocked);
+                    DecodedEventType::Ignored
+                } else {
+                    Self::decode_apdu(comm, pt, 1, len)
+                }
+            }
 
             _ => DecodedEventType::Ignored,
         };
@@ -53,6 +64,14 @@ impl<const N: usize> DecodedEvent<N> {
     }
     pub fn from_type(event_type: DecodedEventType) -> Self {
         Self { event_type }
+    }
+
+    /// True if a PIN is set and has not been validated yet.
+    fn is_device_locked() -> bool {
+        unsafe {
+            os_perso_is_pin_set() == BOLOS_TRUE as u8
+                && os_global_pin_is_validated() != BOLOS_TRUE as u8
+        }
     }
 
     fn decode_seph_event(comm: &mut Comm<N>, offset: usize) -> DecodedEventType {
