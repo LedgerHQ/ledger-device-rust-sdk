@@ -7,28 +7,77 @@ use crate::ecc::{
 use crate::hash::{HashInit, sha2::Sha2_512};
 use crate::impl_curve;
 use ledger_secure_sdk_sys::*;
+use zeroize::Zeroize;
 
 impl_curve!(Ed25519, 32, 'E');
 impl_curve!(JubJub, 32, 'E');
 
+/// Where an [`Ed25519Stream`] is in its two-pass signing flow.
+#[derive(Clone, Copy, PartialEq, Eq, Default)]
+enum SignPhase {
+    #[default]
+    Uninitialized,
+    /// First message pass, the nonce is derived from.
+    NoncePass,
+    /// Second message pass, the challenge is derived from.
+    ChallengePass,
+    Complete,
+}
+
+/// Streaming PureEdDSA (RFC 8032) Ed25519 signer, for messages too long to be
+/// buffered.
+///
+/// After [`init`](Self::init), the message is streamed twice through
+/// [`sign_update`](Self::sign_update), each pass being ended by
+/// [`sign_finalize`](Self::sign_finalize): the first pass derives the nonce,
+/// the second one the challenge. Once both are done, the signature is available
+/// from [`signature`](Self::signature).
+///
+/// Both passes must carry exactly the same message: `sign_finalize` returns an
+/// error otherwise.
 pub struct Ed25519Stream {
     hash: Sha2_512,
-    pub big_r: [u8; 32],
-    pub signature: [u8; 64],
+    /// Hash of the message alone, to check that both passes match.
+    msg_hash: Sha2_512,
+    /// Digest of the first pass message.
+    msg_digest: [u8; 64],
+    phase: SignPhase,
+    big_r: [u8; 32],
+    /// Holds the nonce `r` between both passes, then the signature.
+    signature: [u8; 64],
 }
 
 impl Default for Ed25519Stream {
     fn default() -> Self {
         Ed25519Stream {
             hash: Sha2_512::default(),
+            msg_hash: Sha2_512::default(),
+            msg_digest: [0u8; 64],
+            phase: SignPhase::Uninitialized,
             big_r: [0u8; 32],
             signature: [0u8; 64],
         }
     }
 }
 
+impl Drop for Ed25519Stream {
+    fn drop(&mut self) {
+        self.signature.zeroize();
+        self.big_r.zeroize();
+        self.msg_digest.zeroize();
+    }
+}
+
+/// Constant-time equality, so that the comparison leaks nothing about the digests.
+fn ct_eq(a: &[u8; 64], b: &[u8; 64]) -> bool {
+    let diff = a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y));
+    core::hint::black_box(diff) == 0
+}
+
 impl Ed25519Stream {
+    /// Start a new signature with `key`, discarding any previous state.
     pub fn init(&mut self, key: &ECPrivateKey<32, 'E'>) -> Result<(), CxError> {
+        self.wipe();
         // Compute prefix (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 1)
         let mut temp = Secret::<64>::new();
         self.hash.reset();
@@ -39,7 +88,20 @@ impl Ed25519Stream {
         self.hash
             .update(&temp.0[32..64])
             .map_err(|_| CxError::GenericError)?;
+        self.msg_hash.reset();
+        self.phase = SignPhase::NoncePass;
         Ok(())
+    }
+
+    /// Clear all intermediate state, the nonce in particular, and require a new
+    /// [`init`](Self::init).
+    fn wipe(&mut self) {
+        self.hash = Sha2_512::default();
+        self.msg_hash = Sha2_512::default();
+        self.signature.zeroize();
+        self.big_r.zeroize();
+        self.msg_digest.zeroize();
+        self.phase = SignPhase::Uninitialized;
     }
 
     fn compute_r(&mut self, key: &ECPrivateKey<32, 'E'>) -> Result<(), CxError> {
@@ -208,16 +270,72 @@ impl Ed25519Stream {
         Ok(())
     }
 
+    /// End the current message pass.
+    ///
+    /// The first call derives the nonce from the first pass. The second one
+    /// checks that the second pass carried the same message, then computes the
+    /// signature. On any error, including a mismatch between both passes, all
+    /// state is wiped and no signature is produced.
     pub fn sign_finalize(&mut self, key: &ECPrivateKey<32, 'E'>) -> Result<(), CxError> {
-        match self.big_r.iter().all(|b| b == &0) {
-            true => self.compute_r(key),
-            false => self.compute_s(key),
+        let res = match self.phase {
+            SignPhase::NoncePass => self.end_nonce_pass(key),
+            SignPhase::ChallengePass => self.end_challenge_pass(key),
+            SignPhase::Uninitialized | SignPhase::Complete => {
+                return Err(CxError::InvalidParameter);
+            }
+        };
+        if res.is_err() {
+            self.wipe();
         }
+        res
     }
 
-    pub fn sign_update(&mut self, msg: &[u8]) -> Result<(), CxError> {
-        self.hash.update(msg).map_err(|_| CxError::GenericError)?;
+    fn end_nonce_pass(&mut self, key: &ECPrivateKey<32, 'E'>) -> Result<(), CxError> {
+        self.msg_hash
+            .finalize(&mut self.msg_digest)
+            .map_err(|_| CxError::GenericError)?;
+        self.msg_hash.reset();
+        self.compute_r(key)?;
+        self.phase = SignPhase::ChallengePass;
         Ok(())
+    }
+
+    fn end_challenge_pass(&mut self, key: &ECPrivateKey<32, 'E'>) -> Result<(), CxError> {
+        let mut digest = [0u8; 64];
+        self.msg_hash
+            .finalize(&mut digest)
+            .map_err(|_| CxError::GenericError)?;
+        if !ct_eq(&digest, &self.msg_digest) {
+            return Err(CxError::InvalidParameterValue);
+        }
+        self.compute_s(key)?;
+        self.msg_digest.zeroize();
+        self.phase = SignPhase::Complete;
+        Ok(())
+    }
+
+    /// Feed the next chunk of the message, in either pass.
+    pub fn sign_update(&mut self, msg: &[u8]) -> Result<(), CxError> {
+        if !matches!(self.phase, SignPhase::NoncePass | SignPhase::ChallengePass) {
+            return Err(CxError::InvalidParameter);
+        }
+        let res = self
+            .hash
+            .update(msg)
+            .and_then(|_| self.msg_hash.update(msg))
+            .map_err(|_| CxError::GenericError);
+        if res.is_err() {
+            self.wipe();
+        }
+        res
+    }
+
+    /// The signature, once both message passes are complete.
+    pub fn signature(&self) -> Result<&[u8; 64], CxError> {
+        match self.phase {
+            SignPhase::Complete => Ok(&self.signature),
+            _ => Err(CxError::InvalidParameter),
+        }
     }
 }
 
@@ -408,26 +526,33 @@ mod tests {
         assert_eq!(pk.verify((&s.0, s.1), TEST_HASH, CX_SHA512), true);
     }
 
+    const MSG1: &[u8] = b"test_message1";
+    const MSG2: &[u8] = b"test_message2";
+    const MSG3: &[u8] = b"test_message3";
+
+    fn stream_pass(
+        streamer: &mut Ed25519Stream,
+        sk: &ECPrivateKey<32, 'E'>,
+        chunks: &[&[u8]],
+    ) -> Result<(), CxError> {
+        for chunk in chunks {
+            streamer.sign_update(chunk)?;
+        }
+        streamer.sign_finalize(sk)
+    }
+
     #[test]
     fn eddsa_ed25519_stream_sign() {
         let sk = Ed25519::derive_from_path(&PATH0);
         let pk = sk.public_key().map_err(display_error_code)?;
-        const MSG1: &[u8] = b"test_message1";
-        const MSG2: &[u8] = b"test_message2";
-        const MSG3: &[u8] = b"test_message3";
 
         let mut streamer = Ed25519Stream::default();
         streamer.init(&sk).map_err(display_error_code)?;
-
-        streamer.sign_update(MSG1).map_err(display_error_code)?;
-        streamer.sign_update(MSG2).map_err(display_error_code)?;
-        streamer.sign_update(MSG3).map_err(display_error_code)?;
-        streamer.sign_finalize(&sk).map_err(display_error_code)?;
-
-        streamer.sign_update(MSG1).map_err(display_error_code)?;
-        streamer.sign_update(MSG2).map_err(display_error_code)?;
-        streamer.sign_update(MSG3).map_err(display_error_code)?;
-        streamer.sign_finalize(&sk).map_err(display_error_code)?;
+        stream_pass(&mut streamer, &sk, &[MSG1, MSG2, MSG3]).map_err(display_error_code)?;
+        // Chunking may differ between passes, only the bytes matter.
+        stream_pass(&mut streamer, &sk, &[MSG1, b"test_message2test_message3"])
+            .map_err(display_error_code)?;
+        let sig = *streamer.signature().map_err(display_error_code)?;
 
         let mut concatenated: [u8; 39] = [0; 39];
         // Copy the contents of each array into the concatenated array
@@ -435,12 +560,65 @@ mod tests {
         concatenated[13..26].copy_from_slice(MSG2);
         concatenated[26..39].copy_from_slice(MSG3);
         assert_eq!(
-            pk.verify(
-                (&streamer.signature, streamer.signature.len() as u32),
-                &concatenated,
-                CX_SHA512
-            ),
+            pk.verify((&sig, sig.len() as u32), &concatenated, CX_SHA512),
             true
         );
+
+        // PureEdDSA is deterministic: the stream must match the one-shot signature.
+        let (one_shot, _) = sk.sign(&concatenated).map_err(display_error_code)?;
+        assert_eq!(sig == one_shot, true);
+
+        // A new signature after `init` on the same stream is the same again.
+        streamer.init(&sk).map_err(display_error_code)?;
+        stream_pass(&mut streamer, &sk, &[&concatenated]).map_err(display_error_code)?;
+        stream_pass(&mut streamer, &sk, &[&concatenated]).map_err(display_error_code)?;
+        assert_eq!(
+            *streamer.signature().map_err(display_error_code)? == sig,
+            true
+        );
+    }
+
+    #[test]
+    fn eddsa_ed25519_stream_rejects_mismatched_passes() {
+        let sk = Ed25519::derive_from_path(&PATH0);
+        let mut streamer = Ed25519Stream::default();
+
+        // Different second pass.
+        streamer.init(&sk).map_err(display_error_code)?;
+        stream_pass(&mut streamer, &sk, &[MSG1]).map_err(display_error_code)?;
+        assert_eq!(stream_pass(&mut streamer, &sk, &[MSG2]).is_err(), true);
+        assert_eq!(streamer.signature().is_err(), true);
+
+        // Truncated second pass.
+        streamer.init(&sk).map_err(display_error_code)?;
+        stream_pass(&mut streamer, &sk, &[MSG1, MSG2]).map_err(display_error_code)?;
+        assert_eq!(stream_pass(&mut streamer, &sk, &[MSG1]).is_err(), true);
+        assert_eq!(streamer.signature().is_err(), true);
+
+        // The failed stream is wiped: nothing proceeds without a new `init`.
+        assert_eq!(streamer.sign_update(MSG1).is_err(), true);
+        assert_eq!(streamer.sign_finalize(&sk).is_err(), true);
+    }
+
+    #[test]
+    fn eddsa_ed25519_stream_rejects_out_of_order_calls() {
+        let sk = Ed25519::derive_from_path(&PATH0);
+        let mut streamer = Ed25519Stream::default();
+
+        // Nothing before `init`.
+        assert_eq!(streamer.sign_update(MSG1).is_err(), true);
+        assert_eq!(streamer.sign_finalize(&sk).is_err(), true);
+        assert_eq!(streamer.signature().is_err(), true);
+
+        // No signature after the first pass only.
+        streamer.init(&sk).map_err(display_error_code)?;
+        stream_pass(&mut streamer, &sk, &[MSG1]).map_err(display_error_code)?;
+        assert_eq!(streamer.signature().is_err(), true);
+
+        // Nothing more once complete, and the signature stays available.
+        stream_pass(&mut streamer, &sk, &[MSG1]).map_err(display_error_code)?;
+        assert_eq!(streamer.sign_update(MSG1).is_err(), true);
+        assert_eq!(streamer.sign_finalize(&sk).is_err(), true);
+        assert_eq!(streamer.signature().is_ok(), true);
     }
 }
