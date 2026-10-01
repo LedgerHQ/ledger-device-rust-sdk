@@ -179,7 +179,7 @@ static mut COMM_INITIALIZED: bool = false;
 
 /// Static storage for the application's [`Comm`], declared with
 /// [`define_comm!`](crate::define_comm) and initialized by
-/// [`nbgl::init_comm`](crate::nbgl::init_comm).
+/// [`nbgl::init_static_comm`](crate::nbgl::init_static_comm).
 #[cfg(not(feature = "io_new"))]
 pub struct CommStorage {
     inner: core::cell::UnsafeCell<core::mem::MaybeUninit<Comm>>,
@@ -226,13 +226,13 @@ impl CommStorage {
 }
 
 /// Declares a static [`CommStorage`] with the given name, to be initialized
-/// with [`nbgl::init_comm`](crate::nbgl::init_comm).
+/// with [`nbgl::init_static_comm`](crate::nbgl::init_static_comm).
 ///
 /// ```ignore
 /// ledger_device_sdk::define_comm!(COMM);
 ///
 /// fn main() {
-///     let comm = ledger_device_sdk::nbgl::init_comm(&COMM);
+///     let comm = ledger_device_sdk::nbgl::init_static_comm(&COMM);
 /// }
 /// ```
 #[cfg(not(feature = "io_new"))]

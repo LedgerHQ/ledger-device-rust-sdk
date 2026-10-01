@@ -414,60 +414,36 @@ pub(crate) fn nb_items(len: usize) -> Option<u8> {
     u8::try_from(len).ok()
 }
 
-/// What [`init_comm`] accepts: a static [`CommStorage`](crate::io::CommStorage)
-/// or, for compatibility, a `&mut Comm`.
-#[cfg(not(feature = "io_new"))]
-pub trait InitComm {
-    /// What [`init_comm`] returns.
-    type Output;
-    /// Registers the `Comm` instance with Nbgl.
-    fn register(self) -> Self::Output;
-}
-
-/// Creates the `Comm` instance in the storage and returns it.
-#[cfg(not(feature = "io_new"))]
-impl InitComm for &'static crate::io::CommStorage {
-    type Output = &'static mut crate::io::Comm;
-    fn register(self) -> Self::Output {
-        let comm = self.init(crate::io::Comm::new());
-        comm.nbgl_register_comm();
-        comm
-    }
-}
-
-/// Registers an existing `Comm` instance. Nbgl uses it until it is dropped, so
-/// it must not be moved after this call; prefer a static `CommStorage`.
-#[cfg(not(feature = "io_new"))]
-impl InitComm for &mut crate::io::Comm {
-    type Output = ();
-    fn register(self) {
-        self.nbgl_register_comm();
-    }
-}
-
 #[cfg(not(feature = "io_new"))]
 /// Registers the `Comm` instance used by Nbgl.
 ///
-/// The preferred form creates the `Comm` instance in a static storage declared
-/// with [`define_comm!`](crate::define_comm), as with `io_new`:
+/// Nbgl uses `comm` until it is dropped, so it must stay in place for as long
+/// as Nbgl is used, typically in the main function. [`init_static_comm`]
+/// guarantees this.
+pub fn init_comm(comm: &mut crate::io::Comm) {
+    comm.nbgl_register_comm();
+}
+
+#[cfg(not(feature = "io_new"))]
+/// Creates the `Comm` instance in `storage` (declared with
+/// [`define_comm!`](crate::define_comm)), registers it with Nbgl and returns
+/// it.
 ///
 /// ```ignore
 /// ledger_device_sdk::define_comm!(COMM);
 ///
 /// fn main() {
-///     let comm = ledger_device_sdk::nbgl::init_comm(&COMM);
+///     let comm = ledger_device_sdk::nbgl::init_static_comm(&COMM);
 /// }
 /// ```
 ///
-/// An existing `Comm` can also be passed as `init_comm(&mut comm)`: it must
-/// then stay in place, typically in the main function, for as long as Nbgl is
-/// used.
-///
 /// # Panics
 ///
-/// With a `CommStorage`, panics if called more than once.
-pub fn init_comm<C: InitComm>(comm: C) -> C::Output {
-    comm.register()
+/// Panics if called more than once.
+pub fn init_static_comm(storage: &'static crate::io::CommStorage) -> &'static mut crate::io::Comm {
+    let comm = storage.init(crate::io::Comm::new());
+    comm.nbgl_register_comm();
+    comm
 }
 
 #[cfg(feature = "io_new")]

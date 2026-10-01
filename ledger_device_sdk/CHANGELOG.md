@@ -8,10 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- `io_legacy`: `nbgl::init_comm` also accepts a static `CommStorage` declared
-  with `define_comm!`, as with `io_new`: `define_comm!(COMM); let comm =
-  init_comm(&COMM);`. This is the preferred form; `init_comm(&mut comm)` is still
-  accepted. The expected CLA is then set with `comm.expected_cla = Some(cla)`.
+- `io_legacy`: new `nbgl::init_static_comm`, which creates the `Comm` instance
+  in a static `CommStorage` declared with `define_comm!` and registers it with
+  Nbgl: `define_comm!(COMM); let comm = init_static_comm(&COMM);`. The expected
+  CLA is then set with `comm.expected_cla = Some(cla)`. `nbgl::init_comm` is
+  unchanged.
 - `io_legacy`: dropping the `Comm` instance registered with Nbgl unregisters it.
 - `build.rs`: when several workspace packages have a
   `[package.metadata.ledger]` section, the build fails unless
