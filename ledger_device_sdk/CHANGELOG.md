@@ -8,12 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- `io_legacy`: `nbgl::init_comm` now creates the `Comm` instance itself, in a
-  static `CommStorage` declared with `define_comm!`, as with `io_new`:
-  `define_comm!(COMM); let comm = init_comm(&COMM);`. It panics if called more
-  than once. The expected CLA, formerly set with `Comm::new().set_expected_cla(cla)`,
-  is then set with `comm.expected_cla = Some(cla)`. This is a breaking change for
-  `io_legacy` NBGL users.
+- `io_legacy`: `nbgl::init_comm` also accepts a static `CommStorage` declared
+  with `define_comm!`, as with `io_new`: `define_comm!(COMM); let comm =
+  init_comm(&COMM);`. This is the preferred form; `init_comm(&mut comm)` is still
+  accepted. The expected CLA is then set with `comm.expected_cla = Some(cla)`.
+- `io_legacy`: dropping the `Comm` instance registered with Nbgl unregisters it.
 - `build.rs`: when several workspace packages have a
   `[package.metadata.ledger]` section, the build fails unless
   `LEDGER_APP_PACKAGE` names the one being built. The app name, flags and icon

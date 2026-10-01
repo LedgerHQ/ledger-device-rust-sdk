@@ -900,6 +900,18 @@ impl Comm {
 #[allow(dead_code)]
 static mut CURRENT_COMM: *mut Comm = core::ptr::null_mut();
 
+impl Drop for Comm {
+    fn drop(&mut self) {
+        // Unregister this instance from Nbgl.
+        // SAFETY: single-threaded runtime; no concurrent access is possible.
+        unsafe {
+            if core::ptr::eq(CURRENT_COMM, self) {
+                CURRENT_COMM = core::ptr::null_mut();
+            }
+        }
+    }
+}
+
 #[allow(dead_code)]
 fn default_nbgl_next_event_ahead() -> bool {
     unsafe {
