@@ -85,8 +85,14 @@ jobs:
             echo "Building SDK with nano_nbgl and io_new features for ${{matrix.target}}"
             cargo clean
             cargo build --target ${{ matrix.target }} --features nano_nbgl,io_new
+            echo "Building SDK with app_io_stack, nano_nbgl and io_new features for ${{matrix.target}}"
+            cargo clean
+            cargo build --target ${{ matrix.target }} --features app_io_stack,nano_nbgl,io_new
           else
             echo "Building SDK for ${{matrix.target}} with io_new"
             cargo clean
             cargo build --target ${{ matrix.target }} --features io_new
+            echo "Building SDK for ${{matrix.target}} with app_io_stack and io_new"
+            cargo clean
+            cargo build --target ${{ matrix.target }} --features app_io_stack,io_new
           fi

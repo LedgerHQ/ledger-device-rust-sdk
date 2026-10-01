@@ -148,6 +148,7 @@ Enable `debug` feature for ARM semihosting output via `debug_print()` in [testin
 - `sys`: Re-export `ledger_secure_sdk_sys` for low-level FFI access
 - `speculos`: Enable emulator-specific code for testing
 - `debug_csdk`: Enable C SDK debug output
+- `app_io_stack`: Run the USB/BLE IO stack in the app instead of the OS (the C SDK's `DISABLE_OS_IO_STACK_USE`), so the app can drive interfaces such as the FIDO U2F/CTAPHID class itself
 
 ## Common Gotchas
 
