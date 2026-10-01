@@ -29,6 +29,10 @@ impl Curve25519 {
     /// # Returns
     /// Returns `Ok(())` on success, or a `CxError` if multiplication fails (e.g. invalid scalar length).
     pub fn scalar_mul(u: &mut [u8], k: &[u8]) -> Result<(), CxError> {
+        // The C routine reads and writes the first 32 bytes of `u`.
+        if u.len() < 32 {
+            return Err(CxError::InvalidParameter);
+        }
         check_cx_ok!(cx_x25519(u.as_mut_ptr(), k.as_ptr(), k.len()));
         Ok(())
     }
@@ -54,6 +58,10 @@ impl Curve448 {
     /// # Returns
     /// Returns `Ok(())` on success, or a `CxError` if multiplication fails (e.g. invalid scalar length).
     pub fn scalar_mul(u: &mut [u8], k: &[u8]) -> Result<(), CxError> {
+        // The C routine reads and writes the first 56 bytes of `u`.
+        if u.len() < 56 {
+            return Err(CxError::InvalidParameter);
+        }
         check_cx_ok!(cx_x448(u.as_mut_ptr(), k.as_ptr(), k.len()));
         Ok(())
     }

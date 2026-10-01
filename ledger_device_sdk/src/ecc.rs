@@ -315,6 +315,10 @@ pub fn bip32_derive(
         }
         _ => return Err(CxError::InvalidParameter),
     }
+    // The syscall writes a 32-byte chain code.
+    if cc.as_ref().is_some_and(|buf| buf.len() < 32) {
+        return Err(CxError::InvalidParameter);
+    }
     unsafe {
         match cc {
             Some(buf) => os_perso_derive_node_bip32(
