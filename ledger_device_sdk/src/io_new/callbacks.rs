@@ -32,8 +32,9 @@ pub(super) fn is_comm_null() -> bool {
 }
 
 // Converts the pointer back to the concrete Comm<N> type.
+// Panics if no Comm instance is registered.
 unsafe fn get_comm<const N: usize>() -> &'static mut Comm<N> {
-    unsafe { &mut *(CURRENT_COMM as *mut Comm<N>) }
+    unsafe { (CURRENT_COMM as *mut Comm<N>).as_mut() }.expect("No Comm instance registered")
 }
 
 /// Register a type-erased panic handler for the current Comm instance.

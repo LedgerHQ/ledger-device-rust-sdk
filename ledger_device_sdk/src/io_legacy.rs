@@ -912,38 +912,35 @@ impl Drop for Comm {
     }
 }
 
+/// The `Comm` instance registered with Nbgl.
+///
+/// # Panics
+///
+/// Panics if no instance is registered.
+#[allow(dead_code)]
+fn registered_comm() -> &'static mut Comm {
+    // SAFETY: CURRENT_COMM is either null or points to the registered instance,
+    // which unregisters itself when dropped. Single-threaded runtime.
+    unsafe { CURRENT_COMM.as_mut() }.expect("No Comm instance registered")
+}
+
 #[allow(dead_code)]
 fn default_nbgl_next_event_ahead() -> bool {
-    unsafe {
-        if CURRENT_COMM.is_null() {
-            panic!("No Comm instance registered");
-        }
-        (*CURRENT_COMM).next_event_ahead::<ApduHeader>()
-    }
+    registered_comm().next_event_ahead::<ApduHeader>()
 }
 
 #[allow(dead_code)]
 fn default_nbgl_fetch_apdu_header() -> Option<ApduHeader> {
-    unsafe {
-        if CURRENT_COMM.is_null() {
-            panic!("No Comm instance registered");
-        }
-        let comm = &mut *CURRENT_COMM;
-        if comm.event_pending && comm.rx_length >= 5 {
-            return Some(*comm.get_apdu_metadata());
-        }
-        None
+    let comm = registered_comm();
+    if comm.event_pending && comm.rx_length >= 5 {
+        return Some(*comm.get_apdu_metadata());
     }
+    None
 }
 
 #[allow(dead_code)]
 fn default_nbgl_reply_status(reply: Reply) {
-    unsafe {
-        if CURRENT_COMM.is_null() {
-            panic!("No Comm instance registered");
-        }
-        (*CURRENT_COMM).reply(reply);
-    }
+    registered_comm().reply(reply);
 }
 
 pub(crate) const BOLOS_INS_GET_VERSION: u8 = 0x01;
