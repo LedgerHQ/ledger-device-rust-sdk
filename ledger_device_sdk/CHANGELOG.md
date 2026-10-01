@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- `io_legacy`: `nbgl::init_comm` now creates the `Comm` instance itself, in a
+  static `CommStorage` declared with `define_comm!`, as with `io_new`:
+  `define_comm!(COMM); let comm = init_comm(&COMM);`. It panics if called more
+  than once. The expected CLA, formerly set with `Comm::new().set_expected_cla(cla)`,
+  is then set with `comm.expected_cla = Some(cla)`. This is a breaking change for
+  `io_legacy` NBGL users.
+- `build.rs`: when several workspace packages have a
+  `[package.metadata.ledger]` section, the build fails unless
+  `LEDGER_APP_PACKAGE` names the one being built. The app name, flags and icon
+  path must not contain control characters, and `flags` must be a hex string on
+  every device, Nano S Plus included.
+- Nano X: the heap now defaults to 2 KB when `mlkem` or `mldsa` is enabled. An
+  explicit `HEAP_SIZE` still takes precedence.
+- `io_new`: `Comm<N>` holds a second `N`-byte buffer, used while a command is in
+  flight.
+
+### Fixed
+- `CurvesId::generator` returns `InvalidParameter` if `gy` is shorter than
+  `gx`.
+- `Curve25519::scalar_mul` and `Curve448::scalar_mul` return
+  `InvalidParameter` if `u` is shorter than 32 and 56 bytes respectively.
+- `bip32_derive` returns `InvalidParameter` if the chain code buffer is shorter
+  than 32 bytes.
+- NBGL reviews given more than 255 fields, contents or infos are rejected
+  without being displayed.
+- `io_new`: a command's data is kept unchanged while events are processed
+  during a screen.
+
 ## [1.38.0] - 2026-09-29
 
 ### Changed
