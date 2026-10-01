@@ -504,6 +504,18 @@ mod tests {
     }
 
     #[test]
+    fn generator_rejects_short_gy() {
+        let curve = CurvesId::Secp256k1;
+        let mut gx = [0u8; 32];
+        let mut gy = [0u8; 31];
+        assert_eq!(
+            curve.generator(&mut gx, &mut gy),
+            Err(CxError::InvalidParameter)
+        );
+        assert_eq!(gx, [0u8; 32]);
+    }
+
+    #[test]
     fn secp256k1_generator_raw() {
         let curve = CurvesId::Secp256k1;
         let n = curve.size_bytes();

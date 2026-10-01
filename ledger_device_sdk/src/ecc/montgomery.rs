@@ -90,3 +90,33 @@ impl<const N: usize> ECPrivateKey<N, 'M'> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::assert_eq_err as assert_eq;
+    use crate::testing::TestType;
+    use testmacro::test_item as test;
+
+    #[test]
+    fn x25519_scalar_mul_rejects_short_u() {
+        let mut u = [9u8; 31];
+        let k = [1u8; 32];
+        assert_eq!(
+            Curve25519::scalar_mul(&mut u, &k),
+            Err(CxError::InvalidParameter)
+        );
+        assert_eq!(u, [9u8; 31]);
+    }
+
+    #[test]
+    fn x448_scalar_mul_rejects_short_u() {
+        let mut u = [5u8; 55];
+        let k = [1u8; 56];
+        assert_eq!(
+            Curve448::scalar_mul(&mut u, &k),
+            Err(CxError::InvalidParameter)
+        );
+        assert_eq!(u, [5u8; 55]);
+    }
+}

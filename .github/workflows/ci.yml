@@ -93,9 +93,7 @@ jobs:
         uses: actions/checkout@v6
       - name: ML-KEM and ML-DSA unit tests
         working-directory: ledger_device_sdk
-        env:
-          # Shrink the heap for Nano X only, other targets keep the default.
-          HEAP_SIZE: "nanox: 2048"
+        # No HEAP_SIZE: the build script picks the Nano X default for PQ crypto.
         run: |
           cargo test --target ${{ matrix.target }} --features unit_test,mlkem,mldsa --tests
 

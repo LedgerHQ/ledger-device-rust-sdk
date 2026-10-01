@@ -19,7 +19,7 @@ fn generate_install_parameters() {
         .and_then(|p| p.parent()) // Remove /target
         .expect("Could not find root directory from OUT_DIR");
 
-    println!("cargo:warning=Root directory: {}", root_dir.display());
+    println!("cargo:warning=Root directory: {:?}", root_dir);
 
     // Now run cargo metadata from the root directory
     let output = std::process::Command::new("cargo")
@@ -175,7 +175,7 @@ fn generate_install_parameters() {
         println!("cargo:warning=APP_ICON is {}", icon);
 
         let c_sdk_path = resolve_c_sdk_path(device_name);
-        println!("cargo:warning=C SDK path is {}", c_sdk_path.display());
+        println!("cargo:warning=C SDK path is {:?}", c_sdk_path);
 
         let icon_hex_string = convert_icon_to_hex(&c_sdk_path, device_name, root_dir, icon);
 
@@ -369,8 +369,8 @@ fn convert_icon_to_hex(
 ) -> String {
     let icon_hex_file = PathBuf::from(env::var("OUT_DIR").unwrap()).join("icon.hex");
     println!(
-        "cargo:warning=Output file for icon2glyph is {}",
-        icon_hex_file.display()
+        "cargo:warning=Output file for icon2glyph is {:?}",
+        icon_hex_file
     );
 
     let icon2glyph = c_sdk_path.join("lib_nbgl/tools/icon2glyph.py");
