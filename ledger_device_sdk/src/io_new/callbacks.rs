@@ -3,7 +3,7 @@
 //! This module holds the erased pointer to the current `Comm` instance and the
 //! generic callback wrappers that are registered through `nbgl_register_callbacks`.
 
-use crate::io_legacy::{ApduHeader, Reply, StatusWords};
+use crate::io_legacy::{ApduHeader, Reply, StatusWords, is_bolos_apdu_allowed_in_flight};
 
 use super::bolos::handle_bolos_apdu;
 use super::{Comm, DecodedEventType};
@@ -97,10 +97,14 @@ pub(super) fn next_event_ahead_impl<const N: usize>() -> bool {
             offset,
             length,
         } => {
-            // BOLOS internal APDUs (CLA = 0xB0) are answered inline whatever
-            // the state, the way `next_command` does, so that OS level requests
-            // keep working while a screen is displayed.
-            if header.cla == 0xB0 {
+            // BOLOS internal APDUs (CLA = 0xB0) are answered inline, the way
+            // `next_command` does, so that OS level requests keep working while
+            // a screen is displayed. While a command is in flight only
+            // GET_VERSION is: the others are handled as double APDUs below.
+            if header.cla == 0xB0
+                && (!comm.apdu_in_progress
+                    || is_bolos_apdu_allowed_in_flight(header.cla, header.ins))
+            {
                 let in_progress = comm.apdu_in_progress;
                 handle_bolos_apdu::<N>(comm, header.ins, header.p1, header.p2);
                 // The BOLOS reply must not be taken for the reply to the
