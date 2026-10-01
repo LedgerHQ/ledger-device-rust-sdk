@@ -9,10 +9,10 @@
 //! The underlying C routines use large stack-allocated workspaces. On the
 //! memory-constrained Nano X (28 KB of SRAM), the default 8 KB heap leaves too
 //! little stack: a key-generation, encapsulation, or decapsulation call can
-//! overflow the stack into the heap and corrupt it. Apps enabling `mlkem` on
-//! Nano X must therefore budget a smaller heap, for example by setting
-//! `HEAP_SIZE="nanox: 2048"` (the per-target syntax only affects Nano X and
-//! leaves the default heap on the other devices).
+//! overflow the stack into the heap and corrupt it. The heap therefore defaults
+//! to 2 KB on Nano X when this feature is enabled. An explicit `HEAP_SIZE`
+//! still takes precedence: only raise it on Nano X after measuring the stack
+//! the app needs.
 //!
 //! This module is only available when the `mlkem` Cargo feature is enabled.
 

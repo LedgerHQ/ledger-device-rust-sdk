@@ -33,31 +33,28 @@ fn generate_install_parameters() {
 
     println!("cargo:warning=Looking for ledger metadata...");
 
-    // Check if packages exists and is an array
-    if let Some(packages) = metadata["packages"].as_array() {
-        for package in packages {
-            let pkg_name = package["name"].as_str().unwrap_or("unknown");
-            println!("cargo:warning=Checking package: {}", pkg_name);
+    if let Some(package) = select_app_package(&metadata) {
+        let pkg_name = package["name"].as_str().unwrap_or("unknown");
+        let metadata_ledger = package["metadata"]["ledger"]
+            .as_object()
+            .expect("selected package has ledger metadata");
+        println!(
+            "cargo:warning=Found ledger metadata in package: {}",
+            pkg_name
+        );
 
-            // Look for the ledger metadata section
-            if let Some(metadata_ledger) = package["metadata"]["ledger"].as_object() {
-                println!(
-                    "cargo:warning=Found ledger metadata in package: {}",
-                    pkg_name
-                );
-
-                // Optional build variant (e.g. "testnet"). When selected, the table
-                // [package.metadata.ledger.variants.<name>] is overlaid on top of the base
-                // [package.metadata.ledger]: any key the variant defines wins, and everything
-                // it omits (curve, flags, …) is inherited from the base. Selecting a variant
-                // whose table is absent is a hard error — we never silently fall back to the
-                // base (mainnet) values, since that could ship a "Testnet"-labelled binary
-                // carrying mainnet derivation paths/curves (fail closed).
-                let variant = resolve_variant();
-                let overlay: Option<&serde_json::Map<String, serde_json::Value>> = match &variant {
-                    Some(name) => {
-                        println!("cargo:warning=Building variant `{}`", name);
-                        let table = metadata_ledger
+        // Optional build variant (e.g. "testnet"). When selected, the table
+        // [package.metadata.ledger.variants.<name>] is overlaid on top of the base
+        // [package.metadata.ledger]: any key the variant defines wins, and everything
+        // it omits (curve, flags, …) is inherited from the base. Selecting a variant
+        // whose table is absent is a hard error — we never silently fall back to the
+        // base (mainnet) values, since that could ship a "Testnet"-labelled binary
+        // carrying mainnet derivation paths/curves (fail closed).
+        let variant = resolve_variant();
+        let overlay: Option<&serde_json::Map<String, serde_json::Value>> = match &variant {
+            Some(name) => {
+                println!("cargo:warning=Building variant `{}`", name);
+                let table = metadata_ledger
                             .get("variants")
                             .and_then(|v| v.get(name.as_str()))
                             .and_then(|v| v.as_object())
@@ -67,94 +64,95 @@ fn generate_install_parameters() {
                                      [package.metadata.ledger.variants.{name}] is missing or is not a table"
                                 )
                             });
-                        Some(table)
-                    }
-                    None => None,
-                };
+                Some(table)
+            }
+            None => None,
+        };
 
-                // Resolve a top-level key: the variant overlay wins, else the base table.
-                let lookup = |key: &str| -> Option<&serde_json::Value> {
-                    overlay
-                        .and_then(|o| o.get(key))
-                        .or_else(|| metadata_ledger.get(key))
-                };
+        // Resolve a top-level key: the variant overlay wins, else the base table.
+        let lookup = |key: &str| -> Option<&serde_json::Value> {
+            overlay
+                .and_then(|o| o.get(key))
+                .or_else(|| metadata_ledger.get(key))
+        };
 
-                // Get device name
-                let device = env::var_os("CARGO_CFG_TARGET_OS").unwrap();
-                let device_name = device.to_str().unwrap();
-                println!("cargo:warning=Device is {}", device_name);
+        // Get device name
+        let device = env::var_os("CARGO_CFG_TARGET_OS").unwrap();
+        let device_name = device.to_str().unwrap();
+        println!("cargo:warning=Device is {}", device_name);
 
-                // Fill APP_NAME environment variable (stored in ledger.app_name section in the ELF (see app_info.rs))
-                let app_name = lookup("name")
-                    .and_then(|v| v.as_str())
-                    .expect("name not found");
-                println!("cargo:rustc-env=APP_NAME={}", app_name);
-                println!("cargo:warning=APP_NAME is {}", app_name);
+        // Fill APP_NAME environment variable (stored in ledger.app_name section in the ELF (see app_info.rs))
+        let app_name = lookup("name")
+            .and_then(|v| v.as_str())
+            .expect("name not found");
+        check_directive_value("ledger.name", app_name);
+        println!("cargo:rustc-env=APP_NAME={}", app_name);
+        println!("cargo:warning=APP_NAME is {}", app_name);
 
-                // Fill APP_FLAGS environment variable (stored in ledger.app_flags section in the ELF (see app_info.rs))
-                // APPLICATION_FLAG_BOLOS_SETTINGS, see ledger-secure-sdk/include/appflags.h.
-                // Required on these devices but not on nanosplus (Bluetooth enabling).
-                const APPLICATION_FLAG_BOLOS_SETTINGS: u32 = 0x200;
-                let flags = lookup("flags")
-                    .and_then(|v| v.as_str())
-                    .expect("flags not found");
-                let app_flags = match device_name {
-                    "nanosplus" => String::from(flags),
-                    "nanox" | "stax" | "flex" | "apex_p" => {
-                        let base = u32::from_str_radix(flags.trim_start_matches("0x"), 16)
-                            .unwrap_or_else(|_| {
-                                panic!(
-                                    "package `{pkg_name}`: ledger.flags must be a hex string like \"0x200\", got {flags:?}"
-                                )
-                            });
-                        format!("0x{:x}", base | APPLICATION_FLAG_BOLOS_SETTINGS)
-                    }
-                    other => panic!("Unsupported device target_os: {other:?}"),
-                };
+        // Fill APP_FLAGS environment variable (stored in ledger.app_flags section in the ELF (see app_info.rs))
+        // APPLICATION_FLAG_BOLOS_SETTINGS, see ledger-secure-sdk/include/appflags.h.
+        // Required on these devices but not on nanosplus (Bluetooth enabling).
+        const APPLICATION_FLAG_BOLOS_SETTINGS: u32 = 0x200;
+        let flags = lookup("flags")
+            .and_then(|v| v.as_str())
+            .expect("flags not found");
+        let base = u32::from_str_radix(flags.trim_start_matches("0x"), 16)
+                    .unwrap_or_else(|_| {
+                        panic!(
+                            "package `{pkg_name}`: ledger.flags must be a hex string like \"0x200\", got {flags:?}"
+                        )
+                    });
+        let app_flags = match device_name {
+            "nanosplus" => String::from(flags),
+            "nanox" | "stax" | "flex" | "apex_p" => {
+                format!("0x{:x}", base | APPLICATION_FLAG_BOLOS_SETTINGS)
+            }
+            other => panic!("Unsupported device target_os: {other:?}"),
+        };
 
-                println!("cargo:rustc-env=APP_FLAGS={}", app_flags);
-                println!("cargo:warning=APP_FLAGS is {}", app_flags);
+        println!("cargo:rustc-env=APP_FLAGS={}", app_flags);
+        println!("cargo:warning=APP_FLAGS is {}", app_flags);
 
-                // Generate install_params TLV blob (stored as install_parameters symbol in the ELF (see app_info.rs))
-                let app_version = package["version"].as_str().expect("version not found");
-                println!("cargo:rustc-env=APP_VERSION={}", app_version);
-                println!("cargo:warning=APP_VERSION is {}", app_version);
+        // Generate install_params TLV blob (stored as install_parameters symbol in the ELF (see app_info.rs))
+        let app_version = package["version"].as_str().expect("version not found");
+        println!("cargo:rustc-env=APP_VERSION={}", app_version);
+        println!("cargo:warning=APP_VERSION is {}", app_version);
 
-                let curves = lookup("curve")
-                    .and_then(|v| v.as_array())
-                    .expect("curves not found")
-                    .iter()
-                    .map(|v| v.as_str().unwrap().to_string())
-                    .collect::<Vec<_>>();
-                println!("cargo:warning=curves are {:x?}", curves);
+        let curves = lookup("curve")
+            .and_then(|v| v.as_array())
+            .expect("curves not found")
+            .iter()
+            .map(|v| v.as_str().unwrap().to_string())
+            .collect::<Vec<_>>();
+        println!("cargo:warning=curves are {:x?}", curves);
 
-                let paths = lookup("path")
-                    .and_then(|v| v.as_array())
-                    .expect("paths not found")
-                    .iter()
-                    .map(|v| v.as_str().unwrap().to_string())
-                    .collect::<Vec<_>>();
-                println!("cargo:warning=paths are {:x?}", paths);
+        let paths = lookup("path")
+            .and_then(|v| v.as_array())
+            .expect("paths not found")
+            .iter()
+            .map(|v| v.as_str().unwrap().to_string())
+            .collect::<Vec<_>>();
+        println!("cargo:warning=paths are {:x?}", paths);
 
-                // Handle optional path_slip21 field
-                let paths_slip21: Vec<String> = lookup("path_slip21")
-                    .and_then(|v| v.as_array())
-                    .map(|arr| {
-                        arr.iter()
-                            .filter_map(|v| v.as_str())
-                            .map(|s| s.to_string())
-                            .collect()
-                    })
-                    .unwrap_or_default();
+        // Handle optional path_slip21 field
+        let paths_slip21: Vec<String> = lookup("path_slip21")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .collect()
+            })
+            .unwrap_or_default();
 
-                if !paths_slip21.is_empty() {
-                    println!("cargo:warning=paths_slip21 are {:x?}", paths_slip21);
-                }
+        if !paths_slip21.is_empty() {
+            println!("cargo:warning=paths_slip21 are {:x?}", paths_slip21);
+        }
 
-                // Handle icon: a variant may override the per-device icon; if it does not,
-                // the base [package.metadata.ledger.<device>] icon is used (icons are
-                // cosmetic, so inheriting the base icon is acceptable).
-                let icon = overlay
+        // Handle icon: a variant may override the per-device icon; if it does not,
+        // the base [package.metadata.ledger.<device>] icon is used (icons are
+        // cosmetic, so inheriting the base icon is acceptable).
+        let icon = overlay
                     .and_then(|o| o.get(device_name))
                     .and_then(|device_metadata| device_metadata.get("icon"))
                     .and_then(|icon| icon.as_str())
@@ -173,99 +171,97 @@ fn generate_install_parameters() {
                             device = device_name
                         )
                 });
-                println!("cargo:warning=APP_ICON is {}", icon);
+        check_directive_value("ledger icon", icon);
+        println!("cargo:warning=APP_ICON is {}", icon);
 
-                let c_sdk_path = resolve_c_sdk_path(device_name);
-                println!("cargo:warning=C SDK path is {}", c_sdk_path.display());
+        let c_sdk_path = resolve_c_sdk_path(device_name);
+        println!("cargo:warning=C SDK path is {}", c_sdk_path.display());
 
-                let icon_hex_string = convert_icon_to_hex(&c_sdk_path, device_name, root_dir, icon);
+        let icon_hex_string = convert_icon_to_hex(&c_sdk_path, device_name, root_dir, icon);
 
-                // Now we have all the parameters, we can call the install_params.py script to generate the TLV blob
-                let install_params_exe = c_sdk_path.join("install_params.py");
-                let mut generate_tlv_install_params = std::process::Command::new("python3");
-                generate_tlv_install_params.arg(&install_params_exe);
-                generate_tlv_install_params.arg("--appName").arg(app_name);
-                generate_tlv_install_params
-                    .arg("--appVersion")
-                    .arg(app_version);
-                curves.iter().for_each(|p| {
-                    generate_tlv_install_params.arg("--curve").arg(p.as_str());
-                });
-                paths.iter().for_each(|p| {
-                    generate_tlv_install_params
-                        .arg("--path")
-                        .arg(p.as_str().trim_end_matches('/'));
-                });
-                paths_slip21.iter().for_each(|p| {
-                    generate_tlv_install_params
-                        .arg("--path_slip21")
-                        .arg(p.as_str());
-                });
-                generate_tlv_install_params
-                    .arg("--icon")
-                    .arg(icon_hex_string);
+        // Now we have all the parameters, we can call the install_params.py script to generate the TLV blob
+        let install_params_exe = c_sdk_path.join("install_params.py");
+        let mut generate_tlv_install_params = std::process::Command::new("python3");
+        generate_tlv_install_params.arg(&install_params_exe);
+        generate_tlv_install_params.arg("--appName").arg(app_name);
+        generate_tlv_install_params
+            .arg("--appVersion")
+            .arg(app_version);
+        curves.iter().for_each(|p| {
+            generate_tlv_install_params.arg("--curve").arg(p.as_str());
+        });
+        paths.iter().for_each(|p| {
+            generate_tlv_install_params
+                .arg("--path")
+                .arg(p.as_str().trim_end_matches('/'));
+        });
+        paths_slip21.iter().for_each(|p| {
+            generate_tlv_install_params
+                .arg("--path_slip21")
+                .arg(p.as_str());
+        });
+        generate_tlv_install_params
+            .arg("--icon")
+            .arg(icon_hex_string);
 
-                let output = generate_tlv_install_params
-                    .output()
-                    .expect("Failed to execute install_params_generator");
+        let output = generate_tlv_install_params
+            .output()
+            .expect("Failed to execute install_params_generator");
 
-                if !output.status.success() {
-                    panic!(
-                        "call to install_params.py failed: {}",
-                        std::str::from_utf8(&output.stderr).unwrap()
-                    );
-                }
-
-                let tlv_blob = format!(
-                    "[{}]",
-                    std::str::from_utf8(output.stdout.as_slice())
-                        .unwrap()
-                        .trim()
-                );
-
-                // Parse the TLV blob and create temp txt files for inclusion (see app_info.rs)
-                let bytes: Vec<u8> = tlv_blob
-                    .trim_matches(|c| c == '[' || c == ']')
-                    .split(',')
-                    .filter_map(|s| {
-                        let trimmed = s.trim();
-                        if trimmed.is_empty() {
-                            None
-                        } else {
-                            u8::from_str_radix(trimmed.trim_start_matches("0x"), 16).ok()
-                        }
-                    })
-                    .collect();
-
-                let byte_array_str = bytes
-                    .iter()
-                    .map(|b| format!("0x{:02x}", b))
-                    .collect::<Vec<_>>()
-                    .join(",");
-
-                // Write to files in OUT_DIR for inclusion
-                let out_dir = std::env::var("OUT_DIR").unwrap();
-
-                // Write the array with brackets for direct inclusion
-                std::fs::write(
-                    std::path::Path::new(&out_dir).join("install_params.txt"),
-                    format!("[{}]", byte_array_str),
-                )
-                .unwrap();
-
-                std::fs::write(
-                    std::path::Path::new(&out_dir).join("install_params_len.txt"),
-                    bytes.len().to_string(),
-                )
-                .unwrap();
-
-                println!("cargo:warning=INSTALL_PARAMS_BYTES is [{}]", byte_array_str);
-                println!("cargo:warning=INSTALL_PARAMS_LEN is {}", bytes.len());
-
-                // Exit early since we found the metadata
-                return;
-            }
+        if !output.status.success() {
+            panic!(
+                "call to install_params.py failed: {}",
+                std::str::from_utf8(&output.stderr).unwrap()
+            );
         }
+
+        let tlv_blob = format!(
+            "[{}]",
+            std::str::from_utf8(output.stdout.as_slice())
+                .unwrap()
+                .trim()
+        );
+
+        // Parse the TLV blob and create temp txt files for inclusion (see app_info.rs)
+        let bytes: Vec<u8> = tlv_blob
+            .trim_matches(|c| c == '[' || c == ']')
+            .split(',')
+            .filter_map(|s| {
+                let trimmed = s.trim();
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    u8::from_str_radix(trimmed.trim_start_matches("0x"), 16).ok()
+                }
+            })
+            .collect();
+
+        let byte_array_str = bytes
+            .iter()
+            .map(|b| format!("0x{:02x}", b))
+            .collect::<Vec<_>>()
+            .join(",");
+
+        // Write to files in OUT_DIR for inclusion
+        let out_dir = std::env::var("OUT_DIR").unwrap();
+
+        // Write the array with brackets for direct inclusion
+        std::fs::write(
+            std::path::Path::new(&out_dir).join("install_params.txt"),
+            format!("[{}]", byte_array_str),
+        )
+        .unwrap();
+
+        std::fs::write(
+            std::path::Path::new(&out_dir).join("install_params_len.txt"),
+            bytes.len().to_string(),
+        )
+        .unwrap();
+
+        println!("cargo:warning=INSTALL_PARAMS_BYTES is [{}]", byte_array_str);
+        println!("cargo:warning=INSTALL_PARAMS_LEN is {}", bytes.len());
+
+        return;
     }
 
     // If we get here, we didn't find any ledger metadata - this is OK for non-app builds
@@ -284,6 +280,65 @@ fn generate_install_parameters() {
         "0",
     )
     .unwrap();
+}
+
+/// Select the package to take Ledger install metadata from.
+///
+/// This build script runs as a dependency, so it cannot tell which package is
+/// being built: in a workspace holding several Ledger apps, the one being built
+/// must be named with `LEDGER_APP_PACKAGE`.
+fn select_app_package(metadata: &serde_json::Value) -> Option<&serde_json::Value> {
+    let candidates: Vec<&serde_json::Value> = metadata["packages"]
+        .as_array()
+        .map(|packages| {
+            packages
+                .iter()
+                .filter(|p| p["metadata"]["ledger"].is_object())
+                .collect()
+        })
+        .unwrap_or_default();
+    let name_of = |p: &serde_json::Value| p["name"].as_str().unwrap_or("unknown").to_string();
+
+    if let Ok(wanted) = env::var("LEDGER_APP_PACKAGE") {
+        let package = candidates
+            .into_iter()
+            .find(|p| p["name"].as_str() == Some(wanted.as_str()))
+            .unwrap_or_else(|| {
+                panic!(
+                    "LEDGER_APP_PACKAGE={wanted:?} does not name a package with a \
+                     [package.metadata.ledger] section"
+                )
+            });
+        println!("cargo:warning=Found ledger metadata in package: {wanted}");
+        return Some(package);
+    }
+
+    match candidates.as_slice() {
+        [] => None,
+        [package] => {
+            println!(
+                "cargo:warning=Found ledger metadata in package: {}",
+                name_of(package)
+            );
+            Some(package)
+        }
+        _ => panic!(
+            "several packages have a [package.metadata.ledger] section ({}); set \
+             LEDGER_APP_PACKAGE to the one being built",
+            candidates
+                .iter()
+                .map(|p| name_of(p))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+    }
+}
+
+/// Values printed in `cargo:` directives must be single-line text.
+fn check_directive_value(what: &str, value: &str) {
+    if value.chars().any(char::is_control) {
+        panic!("{what} must not contain control characters, got {value:?}");
+    }
 }
 
 /// Resolve the C SDK root path for the given device.
@@ -375,5 +430,6 @@ fn resolve_variant() -> Option<String> {
 
 fn main() {
     println!("cargo:rerun-if-changed=Cargo.toml");
+    println!("cargo:rerun-if-env-changed=LEDGER_APP_PACKAGE");
     generate_install_parameters();
 }
