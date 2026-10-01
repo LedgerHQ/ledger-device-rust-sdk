@@ -62,9 +62,7 @@ impl Default for Ed25519Stream {
 
 impl Drop for Ed25519Stream {
     fn drop(&mut self) {
-        self.signature.zeroize();
-        self.big_r.zeroize();
-        self.msg_digest.zeroize();
+        self.wipe();
     }
 }
 
@@ -96,8 +94,10 @@ impl Ed25519Stream {
     /// Clear all intermediate state, the nonce in particular, and require a new
     /// [`init`](Self::init).
     fn wipe(&mut self) {
-        self.hash = Sha2_512::default();
-        self.msg_hash = Sha2_512::default();
+        // `reset` clears the whole context on the C side, out of the
+        // optimizer's reach.
+        self.hash.reset();
+        self.msg_hash.reset();
         self.signature.zeroize();
         self.big_r.zeroize();
         self.msg_digest.zeroize();
@@ -236,7 +236,9 @@ impl Ed25519Stream {
             check_cx_ok!(cx_bn_mod_mul(rv, key_bn, h_scalar_bn, ed25519_order));
 
             // Destroy the private key, so it doesn't leak from with_private_key even in the bn
-            // area. temp will zeroize on drop already.
+            // area. temp will zeroize on drop already, but the hash context still
+            // holds the key and its digest.
+            self.hash.reset();
             check_cx_ok!(cx_bn_destroy(&mut key_bn));
             (rv, ed25519_order)
         };
