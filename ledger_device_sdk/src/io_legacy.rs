@@ -172,6 +172,77 @@ pub enum Event<T> {
     Ticker,
 }
 
+/// Set once a [`CommStorage`] has been initialized.
+// SAFETY: the runtime is single-threaded, so direct reads/writes are safe.
+#[cfg(not(feature = "io_new"))]
+static mut COMM_INITIALIZED: bool = false;
+
+/// Static storage for the application's [`Comm`], declared with
+/// [`define_comm!`](crate::define_comm) and initialized by
+/// [`nbgl::init_comm`](crate::nbgl::init_comm).
+#[cfg(not(feature = "io_new"))]
+pub struct CommStorage {
+    inner: core::cell::UnsafeCell<core::mem::MaybeUninit<Comm>>,
+}
+
+// SAFETY: single-threaded runtime; `inner` is only written once, guarded by
+// COMM_INITIALIZED.
+#[cfg(not(feature = "io_new"))]
+unsafe impl Sync for CommStorage {}
+
+#[cfg(not(feature = "io_new"))]
+impl CommStorage {
+    /// Creates a new uninitialized `CommStorage`, for use in a static
+    /// declaration.
+    #[allow(clippy::new_without_default)]
+    pub const fn new() -> Self {
+        Self {
+            inner: core::cell::UnsafeCell::new(core::mem::MaybeUninit::uninit()),
+        }
+    }
+
+    /// Stores `comm` and returns a static reference to it.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a `CommStorage` has already been initialized: only one `Comm`
+    /// instance can exist.
+    // A single mutable reference is ever handed out, guarded by COMM_INITIALIZED.
+    #[allow(clippy::mut_from_ref)]
+    pub fn init(&'static self, comm: Comm) -> &'static mut Comm {
+        // SAFETY: single-threaded runtime; no concurrent access is possible.
+        if unsafe { COMM_INITIALIZED } {
+            panic!("CommStorage already initialized. Only one Comm instance can exist.");
+        }
+        unsafe { COMM_INITIALIZED = true };
+
+        // SAFETY: this point is reached only once, and the storage is static.
+        unsafe {
+            let ptr = self.inner.get();
+            (*ptr).write(comm);
+            (*ptr).assume_init_mut()
+        }
+    }
+}
+
+/// Declares a static [`CommStorage`] with the given name, to be initialized
+/// with [`nbgl::init_comm`](crate::nbgl::init_comm).
+///
+/// ```ignore
+/// ledger_device_sdk::define_comm!(COMM);
+///
+/// fn main() {
+///     let comm = ledger_device_sdk::nbgl::init_comm(&COMM);
+/// }
+/// ```
+#[cfg(not(feature = "io_new"))]
+#[macro_export]
+macro_rules! define_comm {
+    ($name:ident) => {
+        static $name: $crate::io::CommStorage = $crate::io::CommStorage::new();
+    };
+}
+
 /// Manages the communication of the device: receives events such as button presses, incoming
 /// APDU requests, and provides methods to build and transmit APDU responses.
 pub struct Comm {

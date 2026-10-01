@@ -409,10 +409,24 @@ impl ToMessage for StatusType {
 }
 
 #[cfg(not(feature = "io_new"))]
-/// Initialize the global reference to the Comm instance used by Nbgl.
-/// This function should be called from the main function of the application.
-pub fn init_comm(comm: &mut crate::io::Comm) {
+/// Creates the `Comm` instance in `storage` (declared with
+/// [`define_comm!`](crate::define_comm)) and registers it with Nbgl.
+///
+/// ```ignore
+/// ledger_device_sdk::define_comm!(COMM);
+///
+/// fn main() {
+///     let comm = ledger_device_sdk::nbgl::init_comm(&COMM);
+/// }
+/// ```
+///
+/// # Panics
+///
+/// Panics if called more than once.
+pub fn init_comm(storage: &'static crate::io::CommStorage) -> &'static mut crate::io::Comm {
+    let comm = storage.init(crate::io::Comm::new());
     comm.nbgl_register_comm();
+    comm
 }
 
 #[cfg(feature = "io_new")]
