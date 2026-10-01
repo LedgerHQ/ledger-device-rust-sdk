@@ -200,6 +200,9 @@ impl NbglStreamingReview {
     }
 
     fn continue_review_internal(&self, fields: &[Field]) -> bool {
+        let Some(nb_pairs) = nb_items(fields.len()) else {
+            return false;
+        };
         unsafe {
             let v: Vec<CField> = fields
                 .iter()
@@ -223,7 +226,7 @@ impl NbglStreamingReview {
             // Create the tag_value_list with the tag_value_array.
             let tag_value_list = nbgl_contentTagValueList_t {
                 pairs: tag_value_array.as_ptr(),
-                nbPairs: fields.len() as u8,
+                nbPairs: nb_pairs,
                 ..Default::default()
             };
 
@@ -240,6 +243,9 @@ impl NbglStreamingReview {
     }
 
     fn next_internal(&self, fields: &[Field]) -> NbglStreamingReviewStatus {
+        let Some(nb_pairs) = nb_items(fields.len()) else {
+            return NbglStreamingReviewStatus::Rejected;
+        };
         unsafe {
             let v: Vec<CField> = fields
                 .iter()
@@ -263,7 +269,7 @@ impl NbglStreamingReview {
             // Create the tag_value_list with the tag_value_array.
             let tag_value_list = nbgl_contentTagValueList_t {
                 pairs: tag_value_array.as_ptr(),
-                nbPairs: fields.len() as u8,
+                nbPairs: nb_pairs,
                 ..Default::default()
             };
 

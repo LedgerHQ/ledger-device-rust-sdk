@@ -312,6 +312,8 @@ impl From<&TagValueList> for nbgl_contentTagValueList_t {
 /// fields and then approve or reject in a single content element.
 pub struct TagValueConfirm {
     tag_value_list: nbgl_contentTagValueList_t,
+    /// Whether all pairs of the source list fit in `tag_value_list`.
+    fits: bool,
     tune_id: TuneIndex,
     confirmation_text: CString,
     cancel_text: CString,
@@ -338,6 +340,7 @@ impl TagValueConfirm {
         let cancel_text_cstring = CString::new(cancel_text).unwrap();
         TagValueConfirm {
             tag_value_list: tag_value_list.into(),
+            fits: nb_items(tag_value_list.pairs.len()).is_some(),
             tune_id,
             confirmation_text: confirmation_text_cstring,
             cancel_text: cancel_text_cstring,
@@ -455,6 +458,22 @@ pub enum NbglPageContent {
     InfosList(InfosList),
 }
 
+impl NbglPageContent {
+    /// Whether every list in this content fits in the NBGL item count.
+    fn fits(&self) -> bool {
+        match self {
+            NbglPageContent::TagValueList(tvl) => nb_items(tvl.pairs.len()).is_some(),
+            NbglPageContent::TagValueConfirm(tvc) => tvc.fits,
+            NbglPageContent::InfosList(infos) => {
+                nb_items(infos.info_types_cstrings.len()).is_some()
+            }
+            NbglPageContent::CenteredInfo(_)
+            | NbglPageContent::InfoLongPress(_)
+            | NbglPageContent::InfoButton(_) => true,
+        }
+    }
+}
+
 impl From<&NbglPageContent> for nbgl_content_t {
     fn from(content: &NbglPageContent) -> nbgl_content_t {
         match content {
@@ -565,6 +584,12 @@ impl NbglGenericReview {
     }
 
     fn show_internal(&self, reject_button_str: &str) -> bool {
+        let Some(nb_contents) = nb_items(self.content_list.len()) else {
+            return false;
+        };
+        if !self.content_list.iter().all(NbglPageContent::fits) {
+            return false;
+        }
         unsafe {
             let c_content_list: Vec<nbgl_content_t> = self.to_c_content_list();
 
@@ -573,7 +598,7 @@ impl NbglGenericReview {
                 __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
                     contentsList: c_content_list.as_ptr(),
                 },
-                nbContents: self.content_list.len() as u8,
+                nbContents: nb_contents,
             };
 
             let reject_button_cstring = CString::new(reject_button_str).unwrap();

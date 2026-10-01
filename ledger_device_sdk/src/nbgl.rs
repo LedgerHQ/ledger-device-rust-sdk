@@ -408,6 +408,12 @@ impl ToMessage for StatusType {
     }
 }
 
+/// Converts a list length to the `u8` item count NBGL takes, or `None` if the
+/// list is too long for NBGL.
+pub(crate) fn nb_items(len: usize) -> Option<u8> {
+    u8::try_from(len).ok()
+}
+
 #[cfg(not(feature = "io_new"))]
 /// Creates the `Comm` instance in `storage` (declared with
 /// [`define_comm!`](crate::define_comm)) and registers it with Nbgl.
