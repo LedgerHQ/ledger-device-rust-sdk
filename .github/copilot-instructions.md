@@ -149,6 +149,7 @@ Enable `debug` feature for ARM semihosting output via `debug_print()` in [testin
 - `speculos`: Enable emulator-specific code for testing
 - `debug_csdk`: Enable C SDK debug output
 - `app_storage`: Application storage from the C SDK (`app_storage` module), size set by the `APP_STORAGE_SIZE` env var (default 480); `app_storage_settings` / `app_storage_data` set its header properties
+- `app_io_stack`: Run the USB/BLE IO stack in the app instead of the OS (the C SDK's `DISABLE_OS_IO_STACK_USE`), so the app can drive interfaces such as the FIDO U2F/CTAPHID class itself
 
 ## Common Gotchas
 
