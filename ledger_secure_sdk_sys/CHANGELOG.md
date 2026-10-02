@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `app_io_stack` feature: build without `USE_OS_IO_STACK`, so the app runs the C SDK's
+  USB/BLE IO stack itself (the C SDK's `DISABLE_OS_IO_STACK_USE`); `os_io.o` is always
+  linked in that mode instead of the weak syscall stubs
+
+### Changed
+- `exit_app` stops the app's IO stack (`os_io_stop`) before `os_sched_exit` with
+  `app_io_stack`
+
 ## [1.16.4] - 2026-08-18
 
 ### Added

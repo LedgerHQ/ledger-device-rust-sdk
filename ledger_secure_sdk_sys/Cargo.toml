@@ -24,6 +24,9 @@ mlkem = []
 mldsa = []
 mldsa_87 = ["mldsa"]
 mldsa_optimization = ["mldsa"]
+# Run the IO stack (USB classes, BLE, NFC) in the application instead of the OS, as
+# DISABLE_OS_IO_STACK_USE does for C applications: the build drops USE_OS_IO_STACK.
+app_io_stack = []
 
 [lints.rust.unexpected_cfgs]
 level = "warn"
