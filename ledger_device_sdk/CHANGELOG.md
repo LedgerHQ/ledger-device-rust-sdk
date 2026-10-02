@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `app_storage::capacity`) and its header properties by the `app_storage_settings` and
   `app_storage_data` features. `APP_STORAGE_SIZE` must not shrink between versions of an
   app. Difference from the C SDK: `read` also refuses a range past the capacity.
+- `io_new`: `Comm::next_command_or_event` waits for one event and returns either an
+  application command, handled exactly as `next_command` handles it (BOLOS APDUs and
+  unexpected classes are answered internally), or the event itself, so an application
+  can run periodic work on ticker events between commands.
 
 ### Fixed
 - `nvm`: `AtomicStorage::update` on a storage that was never updated stores the
