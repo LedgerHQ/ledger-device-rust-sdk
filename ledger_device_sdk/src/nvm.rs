@@ -467,12 +467,16 @@ mod tests {
     static mut NEVER_UPDATED: NVMData<AtomicStorage<[u8; 4]>> =
         NVMData::new(AtomicStorage::new(&[0; 4]));
 
-    // Speculos loads `.nvm_data` zeroed, so both validity flags of a storage that was never
-    // updated are clear: it reads as zeroes and takes updates instead of panicking.
+    // An application started from a zeroed `.nvm_data`, as Speculos loads it for applications,
+    // finds both validity flags of a storage it never updated clear: the storage reads as
+    // zeroes and takes updates instead of panicking. The flags are cleared here explicitly, so
+    // the test does not depend on how the test binary was loaded.
     #[test]
     fn atomic_storage_reads_and_updates_zeroed_nvm() {
         let pointer = &raw mut NEVER_UPDATED;
         let storage = unsafe { (*pointer).get_mut() };
+        storage.storage_a.invalidate();
+        storage.storage_b.invalidate();
         assert_eq!(*storage.get_ref(), [0; 4]);
         storage.update(&[1, 2, 3, 4]);
         assert_eq!(*storage.get_ref(), [1, 2, 3, 4]);
