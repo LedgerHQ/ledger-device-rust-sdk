@@ -405,7 +405,13 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
 
 /// Specific signature verification for Edwards curves, which all use EdDSA
 impl<const P: usize> ECPublicKey<P, 'E'> {
+    /// Verifies the first `signature.1` bytes of `signature.0` against `hash`.
+    ///
+    /// Returns `false` if `signature.1` exceeds the length of `signature.0`.
     pub fn verify(&self, signature: (&[u8], u32), hash: &[u8], hash_id: u8) -> bool {
+        if signature.1 as usize > signature.0.len() {
+            return false;
+        }
         unsafe {
             cx_eddsa_verify_no_throw(
                 self as *const ECPublicKey<P, 'E'> as *const cx_ecfp_256_public_key_s,
@@ -549,6 +555,16 @@ mod tests {
         let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
         let pk = sk.public_key().map_err(display_error_code)?;
         assert_eq!(pk.verify((&s.0, s.1), TEST_HASH, CX_SHA512), true);
+    }
+
+    #[test]
+    fn eddsa_verify_rejects_length_beyond_signature() {
+        let sk = Ed25519::derive_from_path(&PATH0);
+        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
+        let pk = sk.public_key().map_err(display_error_code)?;
+        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH, CX_SHA512), true);
+        assert_eq!(pk.verify((&s.0, s.1 + 1), TEST_HASH, CX_SHA512), false);
+        assert_eq!(pk.verify((&s.0, u32::MAX), TEST_HASH, CX_SHA512), false);
     }
 
     #[test]

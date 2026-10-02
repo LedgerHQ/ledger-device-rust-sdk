@@ -50,6 +50,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the stream, if given a key other than the one passed to `init`.
 - `TagValueConfirm` keeps its own copy of the `TagValueList` given to `new`,
   which no longer needs to outlive it.
+- ECDSA and EdDSA `ECPublicKey::verify` return `false` if the given signature
+  length exceeds the signature slice.
 
 ## [1.38.0] - 2026-09-29
 
