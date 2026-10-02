@@ -10,8 +10,10 @@ impl Layout {
     pub fn get_x(&self, width: usize) -> usize {
         match self {
             Layout::LeftAligned => crate::ui::PADDING,
-            Layout::Centered => (crate::ui::SCREEN_WIDTH - width) / 2,
-            Layout::RightAligned => crate::ui::SCREEN_WIDTH - crate::ui::PADDING - width,
+            Layout::Centered => crate::ui::SCREEN_WIDTH.saturating_sub(width) / 2,
+            Layout::RightAligned => crate::ui::SCREEN_WIDTH
+                .saturating_sub(crate::ui::PADDING)
+                .saturating_sub(width),
             Layout::Custom(x) => *x,
         }
     }
@@ -62,4 +64,20 @@ pub trait Draw {
     }
     fn display(&self);
     fn erase(&self);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::assert_eq_err as assert_eq;
+    use crate::testing::TestType;
+    use testmacro::test_item as test;
+
+    #[test]
+    fn get_x_keeps_wide_text_on_screen() {
+        let wide = crate::ui::SCREEN_WIDTH + 10;
+        assert_eq!(Layout::Centered.get_x(wide), 0);
+        assert_eq!(Layout::RightAligned.get_x(wide), 0);
+        assert_eq!(Layout::Centered.get_x(28), 50);
+    }
 }

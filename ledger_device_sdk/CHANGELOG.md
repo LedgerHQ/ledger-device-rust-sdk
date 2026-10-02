@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   action buttons of the contents before it no longer end the review.
 - `MultiFieldReview::show` returns `false` without displaying anything if a
   field name or value holds characters other than printable ASCII.
+- `MessageValidator::ask` returns `false` without displaying anything if a page
+  holds characters other than printable ASCII or is wider than the screen.
+- `Layout::get_x`: text wider than the screen is placed at the left edge
+  instead of off-screen.
 - Swap: the library call fails if a coin configuration, amount, derivation
   path, address or extra ID given by Exchange does not fit in its buffer,
   instead of passing on a truncated value.

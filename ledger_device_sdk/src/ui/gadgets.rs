@@ -192,7 +192,19 @@ impl<'a> MessageValidator<'a> {
         }
     }
 
+    /// Shows the pages, then the confirmation and cancel pages, and returns
+    /// `true` if the user confirms.
+    ///
+    /// Returns `false` without displaying anything if a page holds characters
+    /// other than printable ASCII, or does not fit on one line.
     pub fn ask(&self) -> bool {
+        if !self
+            .message
+            .iter()
+            .all(|m| is_displayable(m) && m.compute_width(false) <= crate::ui::SCREEN_WIDTH)
+        {
+            return false;
+        }
         clear_screen();
         let page_count = &self.message.len() + 2;
         let mut cur_page = 0;
@@ -982,5 +994,21 @@ fn display_first_page(page_opt: &Option<Page>) {
                 return;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::assert_eq_err as assert_eq;
+    use crate::testing::TestType;
+    use testmacro::test_item as test;
+
+    #[test]
+    fn message_validator_rejects_undisplayable_pages() {
+        let too_wide = ["0x0123456789abcdef0123456789abcdef0123456789abcdef"];
+        assert_eq!(MessageValidator::new(&too_wide, &[], &[]).ask(), false);
+        let not_ascii = ["Caf\u{e9}"];
+        assert_eq!(MessageValidator::new(&not_ascii, &[], &[]).ask(), false);
     }
 }
