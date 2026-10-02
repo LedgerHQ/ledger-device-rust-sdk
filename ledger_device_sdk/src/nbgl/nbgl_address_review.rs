@@ -89,6 +89,9 @@ impl<'a> NbglAddressReview<'a> {
     }
 
     fn show_internal(&self, address: &str) -> bool {
+        let Some(nb_pairs) = nb_items(self.tag_value_list.len()) else {
+            return false;
+        };
         unsafe {
             let icon: nbgl_icon_details_t = match self.glyph {
                 Some(g) => g.into(),
@@ -105,7 +108,7 @@ impl<'a> NbglAddressReview<'a> {
 
             let tag_value_list = nbgl_contentTagValueList_t {
                 pairs: tag_value_array.as_ptr(),
-                nbPairs: tag_value_array.len() as u8,
+                nbPairs: nb_pairs,
                 ..Default::default()
             };
 

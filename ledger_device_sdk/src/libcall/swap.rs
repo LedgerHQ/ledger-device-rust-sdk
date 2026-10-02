@@ -250,31 +250,37 @@ impl<T: SwapAppErrorCodeTrait> SwapError<T> {
 }
 //  --8<-- [end:error_code_api]
 
-/// Helper function to read a null-terminated C string into a fixed-size buffer
-/// Returns the buffer and the actual length read
-/// Prints a warning if truncation occurs
-fn read_c_string<const N: usize>(ptr: *const i8) -> ([u8; N], usize) {
+/// Reads a null-terminated C string into a fixed-size buffer, and returns the
+/// buffer and the string length, or `None` if the string is longer than `N`.
+fn read_c_string<const N: usize>(ptr: *const i8) -> Option<([u8; N], usize)> {
     let mut buffer = [0u8; N];
 
     if ptr.is_null() {
-        return (buffer, 0);
+        return Some((buffer, 0));
     }
 
-    let mut length = 0usize;
-    let mut c = unsafe { *ptr.add(length) };
-
-    while c != '\0' as i8 && length < N {
+    for length in 0..=N {
+        let c = unsafe { *ptr.add(length) };
+        if c == '\0' as i8 {
+            return Some((buffer, length));
+        }
+        if length == N {
+            break;
+        }
         buffer[length] = c as u8;
-        length += 1;
-        c = unsafe { *ptr.add(length) };
     }
+    crate::log::warn!("C string too long");
+    None
+}
 
-    // Check if truncation occurred
-    if c != '\0' as i8 && length == N {
-        crate::log::warn!("C string truncated");
+/// Ends the library call with a failure, for parameters that do not fit in
+/// the buffers: `result` is set to 0.
+fn reject_params<T: Default>(result: *mut T) -> ! {
+    crate::log::warn!("Swap parameters rejected");
+    unsafe {
+        *result = T::default();
+        ledger_secure_sdk_sys::os_lib_end()
     }
-
-    (buffer, length)
 }
 
 //  --8<-- [start:CheckAddressParams]
@@ -461,10 +467,20 @@ pub fn get_check_address_params<
         COIN_CONFIG_BUF_SIZE,
         ADDRESS_BUF_SIZE,
         ADDRESS_EXTRA_ID_BUF_SIZE,
-    > = Default::default();
+    > = CheckAddressParams {
+        result: unsafe {
+            &(*(libarg.__bindgen_anon_1.check_address as *mut check_address_parameters_t)).result
+                as *const i32 as *mut i32
+        },
+        ..Default::default()
+    };
+    let reject = || -> ! { reject_params(check_address_params.result) };
 
     crate::log::info!("==> GET_COIN_CONFIG_LENGTH");
     check_address_params.coin_config_len = params.coin_configuration_length as usize;
+    if check_address_params.coin_config_len > COIN_CONFIG_BUF_SIZE {
+        reject();
+    }
 
     crate::log::info!("==> GET_COIN_CONFIG");
     unsafe {
@@ -477,8 +493,10 @@ pub fn get_check_address_params<
     }
 
     crate::log::info!("==> GET_DPATH_LENGTH");
-    check_address_params.dpath_len =
-        DPATH_STAGE_SIZE.min(unsafe { *(params.address_parameters as *const u8) as usize });
+    check_address_params.dpath_len = unsafe { *(params.address_parameters as *const u8) as usize };
+    if check_address_params.dpath_len > DPATH_STAGE_SIZE {
+        reject();
+    }
 
     crate::log::info!("==> GET_DPATH");
     for i in 1..1 + check_address_params.dpath_len * 4 {
@@ -486,15 +504,13 @@ pub fn get_check_address_params<
     }
 
     crate::log::info!("==> GET_REF_ADDRESS");
-    let (address, address_len) =
-        read_c_string::<ADDRESS_BUF_SIZE>(params.address_to_check as *const i8);
+    let Some((address, address_len)) =
+        read_c_string::<ADDRESS_BUF_SIZE>(params.address_to_check as *const i8)
+    else {
+        reject();
+    };
     check_address_params.ref_address = address;
     check_address_params.ref_address_len = address_len;
-
-    check_address_params.result = unsafe {
-        &(*(libarg.__bindgen_anon_1.check_address as *mut check_address_parameters_t)).result
-            as *const i32 as *mut i32
-    };
 
     check_address_params
 }
@@ -536,10 +552,22 @@ pub fn get_printable_amount_params<
         COIN_CONFIG_BUF_SIZE,
         ADDRESS_BUF_SIZE,
         ADDRESS_EXTRA_ID_BUF_SIZE,
-    > = Default::default();
+    > = PrintableAmountParams {
+        amount_str: unsafe {
+            &(*(libarg.__bindgen_anon_1.get_printable_amount
+                as *mut get_printable_amount_parameters_t))
+                .printable_amount as *const core::ffi::c_char as *mut i8
+        },
+        ..Default::default()
+    };
+    // An empty string reports the failure.
+    let reject = || -> ! { reject_params(printable_amount_params.amount_str) };
 
     crate::log::info!("==> GET_COIN_CONFIG_LENGTH");
     printable_amount_params.coin_config_len = params.coin_configuration_length as usize;
+    if printable_amount_params.coin_config_len > COIN_CONFIG_BUF_SIZE {
+        reject();
+    }
 
     crate::log::info!("==> GET_COIN_CONFIG");
     unsafe {
@@ -555,19 +583,16 @@ pub fn get_printable_amount_params<
     printable_amount_params.is_fee = params.is_fee;
 
     crate::log::info!("==> GET_AMOUNT_LENGTH");
-    printable_amount_params.amount_len = AMOUNT_BUF_SIZE.min(params.amount_length as usize);
+    printable_amount_params.amount_len = params.amount_length as usize;
+    if printable_amount_params.amount_len > AMOUNT_BUF_SIZE {
+        reject();
+    }
 
     crate::log::info!("==> GET_AMOUNT");
     for i in 0..printable_amount_params.amount_len {
         printable_amount_params.amount[AMOUNT_BUF_SIZE - printable_amount_params.amount_len + i] =
             unsafe { *(params.amount.add(i)) };
     }
-
-    crate::log::info!("==> GET_AMOUNT_STR");
-    printable_amount_params.amount_str = unsafe {
-        &(*(libarg.__bindgen_anon_1.get_printable_amount as *mut get_printable_amount_parameters_t))
-            .printable_amount as *const core::ffi::c_char as *mut i8
-    };
 
     printable_amount_params
 }
@@ -621,10 +646,20 @@ pub fn sign_tx_params<
         COIN_CONFIG_BUF_SIZE,
         ADDRESS_BUF_SIZE,
         ADDRESS_EXTRA_ID_BUF_SIZE,
-    > = Default::default();
+    > = CreateTxParams {
+        result: unsafe {
+            &(*(libarg.__bindgen_anon_1.create_transaction as *mut create_transaction_parameters_t))
+                .result as *const u8 as *mut u8
+        },
+        ..Default::default()
+    };
+    let reject = || -> ! { reject_params(create_tx_params.result) };
 
     crate::log::info!("==> GET_COIN_CONFIG_LENGTH");
     create_tx_params.coin_config_len = params.coin_configuration_length as usize;
+    if create_tx_params.coin_config_len > COIN_CONFIG_BUF_SIZE {
+        reject();
+    }
 
     crate::log::info!("==> GET_COIN_CONFIG");
     unsafe {
@@ -635,36 +670,42 @@ pub fn sign_tx_params<
     }
 
     crate::log::info!("==> GET_AMOUNT");
-    create_tx_params.amount_len = AMOUNT_BUF_SIZE.min(params.amount_length as usize);
+    create_tx_params.amount_len = params.amount_length as usize;
+    if create_tx_params.amount_len > AMOUNT_BUF_SIZE {
+        reject();
+    }
     for i in 0..create_tx_params.amount_len {
         create_tx_params.amount[AMOUNT_BUF_SIZE - create_tx_params.amount_len + i] =
             unsafe { *(params.amount.add(i)) };
     }
 
     crate::log::info!("==> GET_FEE");
-    create_tx_params.fee_amount_len = AMOUNT_BUF_SIZE.min(params.fee_amount_length as usize);
+    create_tx_params.fee_amount_len = params.fee_amount_length as usize;
+    if create_tx_params.fee_amount_len > AMOUNT_BUF_SIZE {
+        reject();
+    }
     for i in 0..create_tx_params.fee_amount_len {
         create_tx_params.fee_amount[AMOUNT_BUF_SIZE - create_tx_params.fee_amount_len + i] =
             unsafe { *(params.fee_amount.add(i)) };
     }
 
     crate::log::info!("==> GET_DESTINATION_ADDRESS");
-    let (address, address_len) =
-        read_c_string::<ADDRESS_BUF_SIZE>(params.destination_address as *const i8);
+    let Some((address, address_len)) =
+        read_c_string::<ADDRESS_BUF_SIZE>(params.destination_address as *const i8)
+    else {
+        reject();
+    };
     create_tx_params.dest_address = address;
     create_tx_params.dest_address_len = address_len;
 
     crate::log::info!("==> GET_DESTINATION_ADDRESS_EXTRA_ID");
-    let (extra_id, extra_id_len) = read_c_string::<ADDRESS_EXTRA_ID_BUF_SIZE>(
+    let Some((extra_id, extra_id_len)) = read_c_string::<ADDRESS_EXTRA_ID_BUF_SIZE>(
         params.destination_address_extra_id as *const i8,
-    );
+    ) else {
+        reject();
+    };
     create_tx_params.dest_address_extra_id = extra_id;
     create_tx_params.dest_address_extra_id_len = extra_id_len;
-
-    create_tx_params.result = unsafe {
-        &(*(libarg.__bindgen_anon_1.create_transaction as *mut create_transaction_parameters_t))
-            .result as *const u8 as *mut u8
-    };
 
     /* Reset BSS and complete application boot */
     unsafe {

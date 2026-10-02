@@ -135,6 +135,9 @@ impl<'a> NbglAdvanceReview<'a> {
     }
 
     fn show_internal(&self, fields: &[Field]) -> SyncNbgl {
+        let Some(nb_pairs) = nb_items(fields.len()) else {
+            return SyncNbgl::UxSyncRetError;
+        };
         unsafe {
             let v: Vec<CField> = fields.iter().map(|f| f.into()).collect();
             let mut tag_value_array: Vec<nbgl_contentTagValue_t> = Vec::new();
@@ -144,7 +147,7 @@ impl<'a> NbglAdvanceReview<'a> {
             }
             let tag_value_list = nbgl_contentTagValueList_t {
                 pairs: tag_value_array.as_ptr(),
-                nbPairs: fields.len() as u8,
+                nbPairs: nb_pairs,
                 ..Default::default()
             };
 

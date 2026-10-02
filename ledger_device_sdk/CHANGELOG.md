@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- `io_legacy`: new `nbgl::init_static_comm`, which creates the `Comm` instance
+  in a static `CommStorage` declared with `define_comm!` and registers it with
+  Nbgl: `define_comm!(COMM); let comm = init_static_comm(&COMM);`. The expected
+  CLA is then set with `comm.expected_cla = Some(cla)`. `nbgl::init_comm` is
+  unchanged.
+- `io_legacy`: dropping the `Comm` instance registered with Nbgl unregisters it.
+- `build.rs`: when several workspace packages have a
+  `[package.metadata.ledger]` section, the build fails unless
+  `LEDGER_APP_PACKAGE` names the one being built. The app name, flags and icon
+  path must not contain control characters, and `flags` must be a hex string on
+  every device, Nano S Plus included.
+- Nano X: the heap is now 2 KB when `mlkem` or `mldsa` is enabled. It is the
+  default there, and a larger `HEAP_SIZE` fails the build.
+- `NbglGenericReview`: only the last content can approve the review. The
+  action buttons of the contents before it no longer end the review.
+- `MultiFieldReview::show` returns `false` without displaying anything if a
+  field name or value holds characters other than printable ASCII.
+- `MessageValidator::ask` returns `false` without displaying anything if a page
+  holds characters other than printable ASCII or is wider than the screen.
+- `Layout::get_x`: text wider than the screen is placed at the left edge
+  instead of off-screen.
+- Swap: the library call fails if a coin configuration, amount, derivation
+  path, address or extra ID given by Exchange does not fit in its buffer,
+  instead of passing on a truncated value.
+- `io_new`: `Comm<N>` holds a second `N`-byte buffer, used while a command is in
+  flight.
+
+### Fixed
+- `CurvesId::generator` returns `InvalidParameter` if `gy` is shorter than
+  `gx`.
+- `Curve25519::scalar_mul` and `Curve448::scalar_mul` return
+  `InvalidParameter` if `u` is shorter than 32 and 56 bytes respectively.
+- `bip32_derive` returns `InvalidParameter` if the chain code buffer is shorter
+  than 32 bytes.
+- NBGL reviews given more than 255 fields, contents or infos are rejected
+  without being displayed.
+- `io_new`: a command's data is kept unchanged while events are processed
+  during a screen.
+- `Ed25519Stream`: `sign_finalize` returns `InvalidParameterValue`, and wipes
+  the stream, if given a key other than the one passed to `init`.
+- `TagValueConfirm` keeps its own copy of the `TagValueList` given to `new`,
+  which no longer needs to outlive it.
+- ECDSA and EdDSA `ECPublicKey::verify` return `false` if the given signature
+  length exceeds the signature slice.
+
 ## [1.38.0] - 2026-09-29
 
 ### Changed

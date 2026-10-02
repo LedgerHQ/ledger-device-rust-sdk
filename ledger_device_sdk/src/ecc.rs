@@ -315,6 +315,10 @@ pub fn bip32_derive(
         }
         _ => return Err(CxError::InvalidParameter),
     }
+    // The syscall writes a 32-byte chain code.
+    if cc.as_ref().is_some_and(|buf| buf.len() < 32) {
+        return Err(CxError::InvalidParameter);
+    }
     unsafe {
         match cc {
             Some(buf) => os_perso_derive_node_bip32(
@@ -551,6 +555,16 @@ mod tests {
     use crate::assert_eq_err as assert_eq;
     use crate::testing::TestType;
     use testmacro::test_item as test;
+
+    #[test]
+    fn bip32_derive_rejects_short_chain_code() {
+        let path: [u32; 3] = make_bip32_path(b"m/44'/535348'/0'");
+        let mut key = [0u8; 64];
+        let mut cc = [0u8; 31];
+        let res = bip32_derive(CurvesId::Secp256k1, &path, &mut key, Some(&mut cc));
+        assert_eq!(res, Err(CxError::InvalidParameter));
+        assert_eq!(key, [0u8; 64]);
+    }
 
     #[test]
     fn test_make_bip32_path() {

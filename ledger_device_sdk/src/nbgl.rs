@@ -234,6 +234,7 @@ pub struct Field<'a> {
     pub value: &'a str,
 }
 
+#[derive(Clone)]
 struct CField {
     pub name: CString,
     pub value: CString,
@@ -408,11 +409,42 @@ impl ToMessage for StatusType {
     }
 }
 
+/// Converts a list length to the `u8` item count NBGL takes, or `None` if the
+/// list is too long for NBGL.
+pub(crate) fn nb_items(len: usize) -> Option<u8> {
+    u8::try_from(len).ok()
+}
+
 #[cfg(not(feature = "io_new"))]
-/// Initialize the global reference to the Comm instance used by Nbgl.
-/// This function should be called from the main function of the application.
+/// Registers the `Comm` instance used by Nbgl.
+///
+/// Nbgl uses `comm` until it is dropped, so it must stay in place for as long
+/// as Nbgl is used, typically in the main function. [`init_static_comm`]
+/// guarantees this.
 pub fn init_comm(comm: &mut crate::io::Comm) {
     comm.nbgl_register_comm();
+}
+
+#[cfg(not(feature = "io_new"))]
+/// Creates the `Comm` instance in `storage` (declared with
+/// [`define_comm!`](crate::define_comm)), registers it with Nbgl and returns
+/// it.
+///
+/// ```ignore
+/// ledger_device_sdk::define_comm!(COMM);
+///
+/// fn main() {
+///     let comm = ledger_device_sdk::nbgl::init_static_comm(&COMM);
+/// }
+/// ```
+///
+/// # Panics
+///
+/// Panics if called more than once.
+pub fn init_static_comm(storage: &'static crate::io::CommStorage) -> &'static mut crate::io::Comm {
+    let comm = storage.init(crate::io::Comm::new());
+    comm.nbgl_register_comm();
+    comm
 }
 
 #[cfg(feature = "io_new")]

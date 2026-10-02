@@ -99,7 +99,13 @@ impl<const N: usize> ECPrivateKey<N, 'W'> {
 
 /// Specific signature verification for Weierstrass curves, which all use ECDSA.
 impl<const P: usize> ECPublicKey<P, 'W'> {
+    /// Verifies the first `signature.1` bytes of `signature.0` against `hash`.
+    ///
+    /// Returns `false` if `signature.1` exceeds the length of `signature.0`.
     pub fn verify(&self, signature: (&[u8], u32), hash: &[u8]) -> bool {
+        if signature.1 as usize > signature.0.len() {
+            return false;
+        }
         unsafe {
             cx_ecdsa_verify_no_throw(
                 self as *const ECPublicKey<P, 'W'> as *const cx_ecfp_256_public_key_s,
@@ -261,6 +267,19 @@ mod tests {
             0x83, 0x53, 0x44, 0x3a, 0x96, 0xba, 0xed, 0x23,
         ];
         assert_eq!(pk.as_ref(), &expected);
+    }
+
+    #[test]
+    fn ecdsa_verify_rejects_length_beyond_signature() {
+        let sk = Secp256k1::derive_from_path(&PATH0);
+        let s = sk
+            .deterministic_sign(TEST_HASH)
+            .map_err(display_error_code)?;
+        let pk = sk.public_key().map_err(display_error_code)?;
+        let sig = &s.0[..s.1 as usize];
+        assert_eq!(pk.verify((sig, s.1), TEST_HASH), true);
+        assert_eq!(pk.verify((sig, s.1 + 1), TEST_HASH), false);
+        assert_eq!(pk.verify((sig, u32::MAX), TEST_HASH), false);
     }
 
     #[test]
