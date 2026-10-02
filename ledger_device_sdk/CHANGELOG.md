@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `io_new`: `Comm::next_command_or_event` waits for one event and returns either an
+  application command, handled exactly as `next_command` handles it (BOLOS APDUs and
+  unexpected classes are answered internally), or the event itself, so an application
+  can run periodic work on ticker events between commands.
+
 ## [1.38.0] - 2026-09-29
 
 ### Changed
