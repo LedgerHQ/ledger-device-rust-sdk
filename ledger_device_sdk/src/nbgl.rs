@@ -234,6 +234,7 @@ pub struct Field<'a> {
     pub value: &'a str,
 }
 
+#[derive(Clone)]
 struct CField {
     pub name: CString,
     pub value: CString,

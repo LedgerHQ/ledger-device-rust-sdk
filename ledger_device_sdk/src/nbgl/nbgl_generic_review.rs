@@ -279,6 +279,10 @@ impl TagValueList {
         wrapping: bool,
     ) -> TagValueList {
         let cfields: Vec<CField> = tvl.iter().map(|field| field.into()).collect();
+        Self::from_cfields(cfields, small_case_for_value, wrapping)
+    }
+
+    fn from_cfields(cfields: Vec<CField>, small_case_for_value: bool, wrapping: bool) -> Self {
         let pairs: Vec<nbgl_contentTagValue_t> = cfields.iter().map(|pair| pair.into()).collect();
         TagValueList {
             _cfields: cfields,
@@ -286,6 +290,15 @@ impl TagValueList {
             small_case_for_value,
             wrapping,
         }
+    }
+
+    /// A copy owning its own strings.
+    fn duplicate(&self) -> Self {
+        Self::from_cfields(
+            self._cfields.clone(),
+            self.small_case_for_value,
+            self.wrapping,
+        )
     }
 }
 
@@ -311,9 +324,9 @@ impl From<&TagValueList> for nbgl_contentTagValueList_t {
 /// action buttons (confirm / cancel) so the user can review a set of
 /// fields and then approve or reject in a single content element.
 pub struct TagValueConfirm {
-    tag_value_list: nbgl_contentTagValueList_t,
-    /// Whether all pairs of the source list fit in `tag_value_list`.
-    fits: bool,
+    /// Copy of the list given to `new`, so that its strings live as long as
+    /// this content.
+    tag_value_list: TagValueList,
     tune_id: TuneIndex,
     confirmation_text: CString,
     cancel_text: CString,
@@ -339,8 +352,7 @@ impl TagValueConfirm {
         let confirmation_text_cstring = CString::new(confirmation_text).unwrap();
         let cancel_text_cstring = CString::new(cancel_text).unwrap();
         TagValueConfirm {
-            tag_value_list: tag_value_list.into(),
-            fits: nb_items(tag_value_list.pairs.len()).is_some(),
+            tag_value_list: tag_value_list.duplicate(),
             tune_id,
             confirmation_text: confirmation_text_cstring,
             cancel_text: cancel_text_cstring,
@@ -352,7 +364,7 @@ impl TagValueConfirm {
 impl From<&TagValueConfirm> for nbgl_contentTagValueConfirm_t {
     fn from(tvc: &TagValueConfirm) -> nbgl_contentTagValueConfirm_t {
         nbgl_contentTagValueConfirm_t {
-            tagValueList: tvc.tag_value_list,
+            tagValueList: (&tvc.tag_value_list).into(),
             detailsButtonToken: (FIRST_USER_TOKEN + 2) as u8,
             tuneId: tvc.tune_id as u8,
             confirmationText: tvc.confirmation_text.as_ptr() as *const c_char,
@@ -470,7 +482,9 @@ impl NbglPageContent {
     fn fits(&self) -> bool {
         match self {
             NbglPageContent::TagValueList(tvl) => nb_items(tvl.pairs.len()).is_some(),
-            NbglPageContent::TagValueConfirm(tvc) => tvc.fits,
+            NbglPageContent::TagValueConfirm(tvc) => {
+                nb_items(tvc.tag_value_list.pairs.len()).is_some()
+            }
             NbglPageContent::InfosList(infos) => {
                 nb_items(infos.info_types_cstrings.len()).is_some()
             }
@@ -676,5 +690,43 @@ impl NbglGenericReview {
     #[cfg(not(feature = "io_new"))]
     pub fn show(&self, reject_button_str: &str) -> bool {
         self.show_internal(reject_button_str)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::assert_eq_err as assert_eq;
+    use crate::testing::TestType;
+    use core::ffi::CStr;
+    use testmacro::test_item as test;
+
+    #[test]
+    fn tag_value_confirm_outlives_its_source_list() {
+        let tvc = TagValueConfirm::new(
+            &TagValueList::new(
+                &[Field {
+                    name: "Amount",
+                    value: "42",
+                }],
+                0,
+                false,
+                false,
+            ),
+            TuneIndex::TapCasual,
+            "Approve",
+            "Reject",
+        );
+        // Reuse the heap the source list was freed from.
+        let churn: Vec<CString> = (0..8)
+            .map(|_| CString::new("XXXXXXXXXXXXXXXX").unwrap())
+            .collect();
+
+        let c_tvc: nbgl_contentTagValueConfirm_t = (&tvc).into();
+        assert_eq!(c_tvc.tagValueList.nbPairs, 1);
+        let pair = unsafe { *c_tvc.tagValueList.pairs };
+        assert_eq!(unsafe { CStr::from_ptr(pair.item) }.to_bytes(), b"Amount");
+        assert_eq!(unsafe { CStr::from_ptr(pair.value) }.to_bytes(), b"42");
+        drop(churn);
     }
 }

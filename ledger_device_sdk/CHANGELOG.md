@@ -44,6 +44,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   during a screen.
 - `Ed25519Stream`: `sign_finalize` returns `InvalidParameterValue`, and wipes
   the stream, if given a key other than the one passed to `init`.
+- `TagValueConfirm` keeps its own copy of the `TagValueList` given to `new`,
+  which no longer needs to outlive it.
 
 ## [1.38.0] - 2026-09-29
 
