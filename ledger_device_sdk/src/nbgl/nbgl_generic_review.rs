@@ -418,7 +418,14 @@ impl From<&InfosList> for nbgl_contentInfoList_t {
     }
 }
 
+/// Token of the action controls placed before the last content: they do not
+/// end the review.
+const INTERMEDIATE_ACTION_TOKEN: u32 = FIRST_USER_TOKEN + 3;
+
 unsafe extern "C" fn action_callback(token: c_int, _index: u8, _page: c_int) {
+    if token == INTERMEDIATE_ACTION_TOKEN as i32 {
+        return;
+    }
     unsafe {
         if token == FIRST_USER_TOKEN as i32 {
             G_RET = SyncNbgl::UxSyncRetApproved.into();
@@ -576,10 +583,30 @@ impl NbglGenericReview {
 
     /// Converts the Rust content list into the C representation expected by
     /// the NBGL library.
+    ///
+    /// Only the last content can approve the review: the action controls of the
+    /// others get [`INTERMEDIATE_ACTION_TOKEN`].
     fn to_c_content_list(&self) -> Vec<nbgl_content_t> {
+        let last = self.content_list.len().saturating_sub(1);
         self.content_list
             .iter()
-            .map(|content| content.into())
+            .enumerate()
+            .map(|(i, content)| {
+                let mut c_content: nbgl_content_t = content.into();
+                if i != last {
+                    let token = INTERMEDIATE_ACTION_TOKEN as u8;
+                    // The union field written is the one `type_` selects.
+                    match c_content.type_ {
+                        INFO_LONG_PRESS => c_content.content.infoLongPress.longPressToken = token,
+                        INFO_BUTTON => c_content.content.infoButton.buttonToken = token,
+                        TAG_VALUE_CONFIRM => {
+                            c_content.content.tagValueConfirm.confirmationToken = token
+                        }
+                        _ => {}
+                    }
+                }
+                c_content
+            })
             .collect()
     }
 
