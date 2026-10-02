@@ -371,6 +371,36 @@ pub enum CommandOrEvent<'a, const N: usize = DEFAULT_BUF_SIZE> {
     Event(DecodedEventType),
 }
 
+impl<const N: usize> core::fmt::Debug for CommandOrEvent<'_, N> {
+    /// A command shows its APDU header, an event its kind.
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            CommandOrEvent::Command(command) => f
+                .debug_struct("Command")
+                .field("cla", &command.header.cla)
+                .field("ins", &command.header.ins)
+                .field("p1", &command.header.p1)
+                .field("p2", &command.header.p2)
+                .finish_non_exhaustive(),
+            CommandOrEvent::Event(event) => {
+                let kind = match event {
+                    DecodedEventType::Apdu { .. } => "Apdu",
+                    DecodedEventType::ApduError(_) => "ApduError",
+                    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+                    DecodedEventType::Button(_) => "Button",
+                    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+                    DecodedEventType::Touch => "Touch",
+                    DecodedEventType::Ticker => "Ticker",
+                    DecodedEventType::Ignored => "Ignored",
+                };
+                f.debug_tuple("Event")
+                    .field(&format_args!("{kind}"))
+                    .finish()
+            }
+        }
+    }
+}
+
 pub enum ApduError {
     BadLen,
 }
