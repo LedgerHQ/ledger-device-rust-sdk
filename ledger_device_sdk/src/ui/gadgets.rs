@@ -793,6 +793,12 @@ pub struct MultiFieldReview<'a> {
     cancel_glyph: Option<&'a Glyph<'a>>,
 }
 
+/// Whether `s` only holds characters the review font can display (printable
+/// ASCII).
+fn is_displayable(s: &str) -> bool {
+    s.bytes().all(|b| (0x20..=0x7e).contains(&b))
+}
+
 // Function to concatenate multiple strings into a fixed-size array
 fn concatenate(strings: &[&str], output: &mut [u8]) {
     let mut offset = 0;
@@ -852,7 +858,18 @@ impl<'a> MultiFieldReview<'a> {
         }
     }
 
+    /// Shows the review and returns `true` if the user approves it.
+    ///
+    /// Returns `false` without displaying anything if a field name or value
+    /// holds characters other than printable ASCII.
     pub fn show(&self) -> bool {
+        if !self
+            .fields
+            .iter()
+            .all(|f| is_displayable(f.name) && is_displayable(f.value))
+        {
+            return false;
+        }
         let first_page_opt = match self.review_message.len() {
             0 => None,
             1 => Some(Page::new(
