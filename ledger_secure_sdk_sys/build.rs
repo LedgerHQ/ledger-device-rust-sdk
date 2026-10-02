@@ -642,6 +642,12 @@ impl SDKBuilder<'_> {
         };
 
         assert!(
+            !(target_os == "nanox" && pq_enabled && heap_size_value > NANOX_PQ_HEAP_SIZE),
+            "Invalid heap size specification '{raw}'; with ML-KEM/ML-DSA enabled, the heap must \
+             not exceed {NANOX_PQ_HEAP_SIZE} on nanox"
+        );
+
+        assert!(
             (2048..=max_heap_size).contains(&heap_size_value),
             "Invalid heap size specification '{raw}'; resolved value {heap_size_value} must be in [2048, {}] for target {}",
             max_heap_size,

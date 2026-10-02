@@ -107,7 +107,7 @@ to rustc, files in `$OUT_DIR`, or compiled C objects.
  │   "nanosplus:8192,…"    │  │  [2048, max_per_device] │    HEAP_SIZE: usize)
  │ default = 8192, or 2048 │  │                         │
  │   on Nano X with mlkem/ │  │                         │
- │   mldsa                 │  │                         │
+ │   mldsa (also the max)  │  │                         │
  └─────────────────────────┘  └────────────┬────────────┘
                                            │
  ┌─────────────────────────┐  ┌────────────▼────────────┐
