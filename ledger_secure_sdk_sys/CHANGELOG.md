@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `app_storage` feature: compile the C SDK's `lib_standard_app/app_storage.c` with its size
+  from the `APP_STORAGE_SIZE` environment variable (default 480) and the SETTINGS/DATA
+  header properties from the `app_storage_settings` / `app_storage_data` features, bind
+  `include/app_storage.h`, and initialize the storage at startup
+- `.storage_section` in link.ld, at the start of the app data region as in the C SDK;
+  empty without the feature
+
 ## [1.16.4] - 2026-08-18
 
 ### Added
