@@ -248,37 +248,78 @@ impl<const N: usize> Comm<N> {
         }
     }
 
+    /// Handles a decoded event the way [`Comm::next_command`] does: BOLOS APDUs, APDUs with an
+    /// unexpected class and malformed APDUs are answered here. Returns the position of an
+    /// application APDU, or gives the event back.
+    fn take_command(
+        &mut self,
+        ety: DecodedEventType,
+    ) -> Result<(ApduHeader, usize, usize), DecodedEventType> {
+        match ety {
+            DecodedEventType::Apdu {
+                header,
+                offset,
+                length,
+            } => {
+                // Handle BOLOS internal APDUs (CLA = 0xB0) internally.
+                if header.cla == 0xB0 {
+                    handle_bolos_apdu::<N>(self, header.ins, header.p1, header.p2);
+                    return Err(DecodedEventType::Ignored);
+                }
+                // If CLA filtering is enabled, automatically reject APDUs with wrong CLA.
+                if let Some(cla) = self.expected_cla {
+                    if header.cla != cla {
+                        let _ = self.begin_response().send(StatusWords::BadCla);
+                        return Err(DecodedEventType::Ignored);
+                    }
+                }
+                // The command is about to be handed to the application: any
+                // APDU arriving from now until the reply is a double APDU.
+                self.apdu_in_progress = true;
+                Ok((header, offset, length))
+            }
+            // Explicitly convert ApduError -> StatusWords so Into<Reply> is resolved
+            DecodedEventType::ApduError(e) => {
+                self.send(&[], StatusWords::from(e)).unwrap();
+                Err(DecodedEventType::Ignored)
+            }
+            other => Err(other),
+        }
+    }
+
     pub fn next_command(&mut self) -> Command<'_, N> {
         loop {
             let ety = self.next_event().into_type();
-            match ety {
-                DecodedEventType::Apdu {
-                    header,
-                    offset,
-                    length,
-                } => {
-                    // Handle BOLOS internal APDUs (CLA = 0xB0) internally
-                    // and continue looping until an application APDU arrives.
-                    if header.cla == 0xB0 {
-                        handle_bolos_apdu::<N>(self, header.ins, header.p1, header.p2);
-                        continue;
-                    }
-                    // If CLA filtering is enabled, automatically reject APDUs with wrong CLA.
-                    if let Some(cla) = self.expected_cla {
-                        if header.cla != cla {
-                            let _ = self.begin_response().send(StatusWords::BadCla);
-                            continue;
-                        }
-                    }
-                    // The command is about to be handed to the application: any
-                    // APDU arriving from now until the reply is a double APDU.
-                    self.apdu_in_progress = true;
-                    return Command::new(self, header, offset, length);
-                }
-                // Explicitly convert ApduError -> StatusWords so Into<Reply> is resolved
-                DecodedEventType::ApduError(e) => self.send(&[], StatusWords::from(e)).unwrap(),
-                _ => {}
+            if let Ok((header, offset, length)) = self.take_command(ety) {
+                return Command::new(self, header, offset, length);
             }
+        }
+    }
+
+    /// Waits for one event and returns either an application command, as [`Comm::next_command`]
+    /// would, or the event itself (a ticker, a button or touch event, or `Ignored`). BOLOS APDUs
+    /// and APDUs with an unexpected class are answered internally, as in `next_command`, and come
+    /// back as `Ignored`.
+    ///
+    /// For applications that do periodic work between commands, such as a USB class of their own
+    /// that needs a clock for timeouts.
+    ///
+    /// ```ignore
+    /// loop {
+    ///     match comm.next_command_or_event() {
+    ///         CommandOrEvent::Command(command) => handle(command),
+    ///         CommandOrEvent::Event(DecodedEventType::Ticker) => on_tick(),
+    ///         CommandOrEvent::Event(_) => {}
+    ///     }
+    /// }
+    /// ```
+    pub fn next_command_or_event(&mut self) -> CommandOrEvent<'_, N> {
+        let ety = self.try_next_event().into_type();
+        match self.take_command(ety) {
+            Ok((header, offset, length)) => {
+                CommandOrEvent::Command(Command::new(self, header, offset, length))
+            }
+            Err(event) => CommandOrEvent::Event(event),
         }
     }
 
@@ -292,6 +333,44 @@ impl<const N: usize> Comm<N> {
     /// ```
     pub fn set_expected_cla(&mut self, cla: u8) {
         self.expected_cla = Some(cla);
+    }
+}
+
+/// What [`Comm::next_command_or_event`] received.
+pub enum CommandOrEvent<'a, const N: usize = DEFAULT_BUF_SIZE> {
+    /// An application command.
+    Command(Command<'a, N>),
+    /// Any other event; APDUs answered internally come back as `Ignored`.
+    Event(DecodedEventType),
+}
+
+impl<const N: usize> core::fmt::Debug for CommandOrEvent<'_, N> {
+    /// A command shows its APDU header, an event its kind.
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            CommandOrEvent::Command(command) => f
+                .debug_struct("Command")
+                .field("cla", &command.header.cla)
+                .field("ins", &command.header.ins)
+                .field("p1", &command.header.p1)
+                .field("p2", &command.header.p2)
+                .finish_non_exhaustive(),
+            CommandOrEvent::Event(event) => {
+                let kind = match event {
+                    DecodedEventType::Apdu { .. } => "Apdu",
+                    DecodedEventType::ApduError(_) => "ApduError",
+                    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+                    DecodedEventType::Button(_) => "Button",
+                    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+                    DecodedEventType::Touch => "Touch",
+                    DecodedEventType::Ticker => "Ticker",
+                    DecodedEventType::Ignored => "Ignored",
+                };
+                f.debug_tuple("Event")
+                    .field(&format_args!("{kind}"))
+                    .finish()
+            }
+        }
     }
 }
 
