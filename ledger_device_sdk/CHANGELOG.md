@@ -19,8 +19,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `LEDGER_APP_PACKAGE` names the one being built. The app name, flags and icon
   path must not contain control characters, and `flags` must be a hex string on
   every device, Nano S Plus included.
-- Nano X: the heap now defaults to 2 KB when `mlkem` or `mldsa` is enabled. An
-  explicit `HEAP_SIZE` still takes precedence.
+- Nano X: the heap is now 2 KB when `mlkem` or `mldsa` is enabled. It is the
+  default there, and a larger `HEAP_SIZE` fails the build.
+- `NbglGenericReview`: only the last content can approve the review. The
+  action buttons of the contents before it no longer end the review.
+- `MultiFieldReview::show` returns `false` without displaying anything if a
+  field name or value holds characters other than printable ASCII.
+- Swap: the library call fails if a coin configuration, amount, derivation
+  path, address or extra ID given by Exchange does not fit in its buffer,
+  instead of passing on a truncated value.
 - `io_new`: `Comm<N>` holds a second `N`-byte buffer, used while a command is in
   flight.
 
@@ -35,6 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   without being displayed.
 - `io_new`: a command's data is kept unchanged while events are processed
   during a screen.
+- `Ed25519Stream`: `sign_finalize` returns `InvalidParameterValue`, and wipes
+  the stream, if given a key other than the one passed to `init`.
 
 ## [1.38.0] - 2026-09-29
 
