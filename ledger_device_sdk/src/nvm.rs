@@ -211,17 +211,29 @@ where
         }
     }
 
-    /// Returns which storage contains the latest data.
+    /// Returns which storage contains the latest data, or `None` when neither is valid.
     ///
     /// An interrupted update never leaves both storages invalid, so neither being valid means
     /// the storage was never updated and its section was loaded zeroed (Speculos zeroes
-    /// `.nvm_data`); it then reads as storage A, which holds zeroes too.
-    fn which(&self) -> AtomicStorageElem {
-        if self.storage_a.is_valid() || !self.storage_b.is_valid() {
-            StorageA
+    /// `.nvm_data`).
+    fn which(&self) -> Option<AtomicStorageElem> {
+        if self.storage_a.is_valid() {
+            Some(StorageA)
+        } else if self.storage_b.is_valid() {
+            Some(StorageB)
         } else {
-            StorageB
+            None
         }
+    }
+
+    /// Returns the stored value, first storing `init` if the storage was never updated (both
+    /// validity flags clear, as in the zeroed `.nvm_data` Speculos loads). Use it where
+    /// [`SingleStorage::get_ref`] would panic on such a storage.
+    pub fn get_or_init(&mut self, init: &T) -> &T {
+        if self.which().is_none() {
+            self.update(init);
+        }
+        self.get_ref()
     }
 }
 
@@ -230,24 +242,29 @@ where
     T: Copy,
 {
     /// Return reference to the stored value.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the storage was never updated: its zeroed bytes are not a valid `T` for every
+    /// type. [`AtomicStorage::get_or_init`] stores a value first instead.
     fn get_ref(&self) -> &T {
-        // `which` already chose the copy, including a never-updated storage whose flags are
-        // both clear, so the validity assertion of `SafeStorage::get_ref` does not apply.
         match self.which() {
-            StorageA => self.storage_a.value.get_ref(),
-            StorageB => self.storage_b.value.get_ref(),
+            Some(StorageA) => self.storage_a.get_ref(),
+            Some(StorageB) => self.storage_b.get_ref(),
+            None => panic!("invalidated atomic storage"),
         }
     }
 
-    /// Update the value by writing to the NVM memory.
+    /// Update the value by writing to the NVM memory. A storage that was never updated takes
+    /// the value as well.
     /// Warning: this can be vulnerable to tearing - leading to partial write.
     fn update(&mut self, value: &T) {
         match self.which() {
-            StorageA => {
+            Some(StorageA) | None => {
                 self.storage_b.update(value);
                 self.storage_a.invalidate();
             }
-            StorageB => {
+            Some(StorageB) => {
                 self.storage_a.update(value);
                 self.storage_b.invalidate();
             }
@@ -468,19 +485,32 @@ mod tests {
         NVMData::new(AtomicStorage::new(&[0; 4]));
 
     // An application started from a zeroed `.nvm_data`, as Speculos loads it for applications,
-    // finds both validity flags of a storage it never updated clear: the storage reads as
-    // zeroes and takes updates instead of panicking. The flags are cleared here explicitly, so
-    // the test does not depend on how the test binary was loaded.
+    // finds both validity flags of a storage it never updated clear: `get_or_init` stores the
+    // initial value instead of exposing the zeroed bytes, and later calls keep what was
+    // stored. The flags are cleared here explicitly, so the test does not depend on how the
+    // test binary was loaded.
     #[test]
-    fn atomic_storage_reads_and_updates_zeroed_nvm() {
+    fn atomic_storage_initializes_zeroed_nvm() {
         let pointer = &raw mut NEVER_UPDATED;
         let storage = unsafe { (*pointer).get_mut() };
         storage.storage_a.invalidate();
         storage.storage_b.invalidate();
-        assert_eq!(*storage.get_ref(), [0; 4]);
+        assert_eq!(*storage.get_or_init(&[7; 4]), [7; 4]);
+        assert_eq!(*storage.get_ref(), [7; 4]);
         storage.update(&[1, 2, 3, 4]);
-        assert_eq!(*storage.get_ref(), [1, 2, 3, 4]);
+        assert_eq!(*storage.get_or_init(&[9; 4]), [1, 2, 3, 4]);
         storage.update(&[5, 6, 7, 8]);
         assert_eq!(*storage.get_ref(), [5, 6, 7, 8]);
+    }
+
+    // A never-updated storage also takes a plain update.
+    #[test]
+    fn atomic_storage_updates_zeroed_nvm() {
+        let pointer = &raw mut NEVER_UPDATED;
+        let storage = unsafe { (*pointer).get_mut() };
+        storage.storage_a.invalidate();
+        storage.storage_b.invalidate();
+        storage.update(&[3; 4]);
+        assert_eq!(*storage.get_ref(), [3; 4]);
     }
 }
