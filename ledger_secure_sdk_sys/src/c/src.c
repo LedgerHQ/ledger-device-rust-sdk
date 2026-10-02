@@ -20,6 +20,16 @@
 extern void sample_main(int arg0);
 extern void heap_init();
 
+#ifndef USE_OS_IO_STACK
+// The app embeds its own IO stack (io/src/os_io.c). The C SDK is linked as a
+// static archive and syscalls.c provides weak os_io_* syscall stubs: if they
+// are resolved first, os_io.o is never extracted and the app silently keeps
+// using the OS IO stack. Reference a symbol only os_io.o defines to force its
+// extraction, so that its strong os_io_* definitions win.
+extern unsigned char G_io_seph_buffer[];
+__attribute__((used)) static const void *const force_os_io_link = G_io_seph_buffer;
+#endif  // !USE_OS_IO_STACK
+
 struct SectionSrc;
 struct SectionDst;
 
@@ -298,6 +308,9 @@ void c_boot_std() {
     init_io.usb.hid_u2f_settings.build_device_version_number = 0;
     init_io.usb.hid_u2f_settings.capabilities_flag = 0;
 #endif  // HAVE_IO_U2F
+#ifdef HAVE_CDCUSB
+    init_io.usb.class_mask |= USBD_LEDGER_CLASS_CDC;
+#endif  // HAVE_CDCUSB
 #endif  // !HAVE_IO_USB
 
     init_io.ble.profile_mask = 0;

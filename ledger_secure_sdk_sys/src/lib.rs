@@ -11,6 +11,12 @@ pub mod seph;
 /// Wrapper for 'os_sched_exit'
 /// Exit application with status
 pub fn exit_app(status: u8) -> ! {
+    // The app runs its own IO stack with `debug_over_usb`: stop it before
+    // handing control back to the OS.
+    #[cfg(feature = "debug_over_usb")]
+    unsafe {
+        os_io_stop();
+    }
     unsafe { os_sched_exit(status) }
 }
 

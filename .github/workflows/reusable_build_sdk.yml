@@ -85,8 +85,20 @@ jobs:
             echo "Building SDK with nano_nbgl and io_new features for ${{matrix.target}}"
             cargo clean
             cargo build --target ${{ matrix.target }} --features nano_nbgl,io_new
+            echo "Building SDK with debug_over_usb and nano_nbgl features for ${{matrix.target}}"
+            cargo clean
+            cargo build --target ${{ matrix.target }} --features debug_over_usb,nano_nbgl
+            echo "Building SDK with debug_over_usb, nano_nbgl and io_new features for ${{matrix.target}}"
+            cargo clean
+            cargo build --target ${{ matrix.target }} --features debug_over_usb,nano_nbgl,io_new
           else
             echo "Building SDK for ${{matrix.target}} with io_new"
             cargo clean
             cargo build --target ${{ matrix.target }} --features io_new
+            echo "Building SDK for ${{matrix.target}} with debug_over_usb"
+            cargo clean
+            cargo build --target ${{ matrix.target }} --features debug_over_usb
+            echo "Building SDK for ${{matrix.target}} with debug_over_usb and io_new"
+            cargo clean
+            cargo build --target ${{ matrix.target }} --features debug_over_usb,io_new
           fi
