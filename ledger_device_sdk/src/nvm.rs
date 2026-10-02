@@ -211,19 +211,16 @@ where
         }
     }
 
-    /// Returns which storage contains the latest valid data.
+    /// Returns which storage contains the latest data.
     ///
-    /// # Panics
-    ///
-    /// Panics if both storage elements are invalid (data corrupton),
-    /// although data corruption shall not be possible with tearing.
+    /// An interrupted update never leaves both storages invalid, so neither being valid means
+    /// the storage was never updated and its section was loaded zeroed (Speculos zeroes
+    /// `.nvm_data`); it then reads as storage A, which holds zeroes too.
     fn which(&self) -> AtomicStorageElem {
-        if self.storage_a.is_valid() {
+        if self.storage_a.is_valid() || !self.storage_b.is_valid() {
             StorageA
-        } else if self.storage_b.is_valid() {
-            StorageB
         } else {
-            panic!("invalidated atomic storage");
+            StorageB
         }
     }
 }
@@ -234,9 +231,11 @@ where
 {
     /// Return reference to the stored value.
     fn get_ref(&self) -> &T {
+        // `which` already chose the copy, including a never-updated storage whose flags are
+        // both clear, so the validity assertion of `SafeStorage::get_ref` does not apply.
         match self.which() {
-            StorageA => self.storage_a.get_ref(),
-            StorageB => self.storage_b.get_ref(),
+            StorageA => self.storage_a.value.get_ref(),
+            StorageB => self.storage_b.value.get_ref(),
         }
     }
 
@@ -453,5 +452,31 @@ where
                 return Some(self.container.slots[self.next_key - 1].get_ref());
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{AtomicStorage, SingleStorage};
+    use crate::NVMData;
+    use crate::assert_eq_err as assert_eq;
+    use crate::testing::TestType;
+    use testmacro::test_item as test;
+
+    #[unsafe(link_section = ".nvm_data")]
+    static mut NEVER_UPDATED: NVMData<AtomicStorage<[u8; 4]>> =
+        NVMData::new(AtomicStorage::new(&[0; 4]));
+
+    // Speculos loads `.nvm_data` zeroed, so both validity flags of a storage that was never
+    // updated are clear: it reads as zeroes and takes updates instead of panicking.
+    #[test]
+    fn atomic_storage_reads_and_updates_zeroed_nvm() {
+        let pointer = &raw mut NEVER_UPDATED;
+        let storage = unsafe { (*pointer).get_mut() };
+        assert_eq!(*storage.get_ref(), [0; 4]);
+        storage.update(&[1, 2, 3, 4]);
+        assert_eq!(*storage.get_ref(), [1, 2, 3, 4]);
+        storage.update(&[5, 6, 7, 8]);
+        assert_eq!(*storage.get_ref(), [5, 6, 7, 8]);
     }
 }
