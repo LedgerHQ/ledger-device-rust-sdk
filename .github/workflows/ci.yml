@@ -105,13 +105,15 @@ jobs:
     strategy:
       matrix:
         target: ["nanox", "nanosplus", "stax", "flex", "apex_p"]
+        # Each property feature on its own, so a lost or swapped header bit fails a run.
+        features: ["app_storage", "app_storage_settings", "app_storage_data"]
     steps:
       - name: Clone
         uses: actions/checkout@v6
       - name: Application storage unit tests
         working-directory: ledger_device_sdk
         run: |
-          cargo test --target ${{ matrix.target }} --features unit_test,app_storage --tests
+          cargo test --target ${{ matrix.target }} --features unit_test,${{ matrix.features }} --tests
 
   build-apps:
     name: Build all Rust apps
