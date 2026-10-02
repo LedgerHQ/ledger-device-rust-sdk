@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   secrets calls it at start to finish an erase a power loss interrupted. Only
   byte arrays settle: a write cut short is still a valid byte array, and the
   comparison covers every stored byte.
+- `app_storage` feature and module: the C SDK's application storage (a versioned,
+  CRC-checked area at the start of the app data, meant to be kept by the OS across app
+  updates), with its size set by the `APP_STORAGE_SIZE` environment variable and its
+  header properties by the `app_storage_settings` and `app_storage_data` features.
 
 ### Fixed
 - `nvm`: `AtomicStorage::update` on a storage that was never updated stores the

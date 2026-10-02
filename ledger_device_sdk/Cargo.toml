@@ -44,6 +44,10 @@ mlkem = [ "ledger_secure_sdk_sys/mlkem" ]
 mldsa = [ "ledger_secure_sdk_sys/mldsa" ]
 mldsa_87 = [ "mldsa", "ledger_secure_sdk_sys/mldsa_87" ]
 mldsa_optimization = [ "mldsa", "ledger_secure_sdk_sys/mldsa_optimization" ]
+# Application storage kept by the OS across app updates, see the `app_storage` module.
+app_storage = [ "ledger_secure_sdk_sys/app_storage" ]
+app_storage_settings = [ "app_storage", "ledger_secure_sdk_sys/app_storage_settings" ]
+app_storage_data = [ "app_storage", "ledger_secure_sdk_sys/app_storage_data" ]
 
 # Build a network/app variant. When enabled, build.rs overlays the
 # [package.metadata.ledger.variants.x] table onto the base

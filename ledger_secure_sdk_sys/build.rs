@@ -276,6 +276,9 @@ impl SDKBuilder<'_> {
                 defines.push(("HAVE_UX_FLOW".into(), None));
             }
         }
+        if env::var_os("CARGO_FEATURE_APP_STORAGE").is_some() {
+            defines.extend(app_storage_defines());
+        }
 
         let cflags = read_lines(&spec.cflags_file());
 
@@ -424,6 +427,9 @@ impl SDKBuilder<'_> {
             if s.0 == "HAVE_IO_U2F" {
                 configure_lib_u2f(&mut command, &self.device.c_sdk);
             }
+            if s.0 == "HAVE_APP_STORAGE" {
+                configure_lib_app_storage(&mut command, &self.device.c_sdk);
+            }
         }
 
         // Configure PQC algorithms (compiled app-side)
@@ -525,6 +531,15 @@ impl SDKBuilder<'_> {
         // SDK headers to bind against
         for header in headers.iter().map(|p| p.to_str().unwrap()) {
             bindings = bindings.header(header);
+        }
+        if env::var_os("CARGO_FEATURE_APP_STORAGE").is_some() {
+            bindings = bindings.header(
+                self.device
+                    .c_sdk
+                    .join("include/app_storage.h")
+                    .to_str()
+                    .unwrap(),
+            );
         }
 
         // BAGL or NBGL bindings
@@ -690,6 +705,7 @@ fn main() {
         "FLEX_SDK",
         "APEX_P_SDK",
         "HEAP_SIZE",
+        "APP_STORAGE_SIZE",
         "LEDGER_SDK_EXTRA_DEFINES",
         "LEDGER_SDK_EXTRA_CFLAGS",
         "CC",
@@ -721,6 +737,47 @@ fn main() {
 // --------------------------------------------------
 // Helper functions
 // --------------------------------------------------
+
+/// Defines of the `app_storage` feature, mirroring ENABLE_APP_STORAGE in the C SDK's
+/// Makefile.standard_app: the storage size comes from APP_STORAGE_SIZE (default 480, one
+/// 512-byte flash page minus room for the system header), the header properties from the
+/// `app_storage_settings` / `app_storage_data` features.
+fn app_storage_defines() -> Vec<(String, Option<String>)> {
+    const DEFAULT_APP_STORAGE_SIZE: u32 = 480;
+    let size = match env::var("APP_STORAGE_SIZE") {
+        Ok(raw) => match raw.trim().parse::<u32>() {
+            Ok(size) if size > 0 => size,
+            _ => panic!("APP_STORAGE_SIZE must be a positive number of bytes, got {raw:?}"),
+        },
+        Err(env::VarError::NotPresent) => DEFAULT_APP_STORAGE_SIZE,
+        Err(e) => panic!("APP_STORAGE_SIZE is not valid unicode: {e}"),
+    };
+    let property = |feature: &str| {
+        if env::var_os(feature).is_some() {
+            "1"
+        } else {
+            "0"
+        }
+    };
+    vec![
+        ("HAVE_APP_STORAGE".into(), None),
+        ("APP_STORAGE_SIZE".into(), Some(size.to_string())),
+        (
+            "HAVE_APP_STORAGE_PROP_SETTINGS".into(),
+            Some(property("CARGO_FEATURE_APP_STORAGE_SETTINGS").into()),
+        ),
+        (
+            "HAVE_APP_STORAGE_PROP_DATA".into(),
+            Some(property("CARGO_FEATURE_APP_STORAGE_DATA").into()),
+        ),
+    ]
+}
+
+fn configure_lib_app_storage(command: &mut cc::Build, c_sdk: &Path) {
+    command
+        .file(c_sdk.join("lib_standard_app/app_storage.c"))
+        .include(c_sdk.join("lib_standard_app"));
+}
 
 fn configure_lib_u2f(command: &mut cc::Build, c_sdk: &Path) {
     command.file(c_sdk.join("lib_u2f/src/u2f_transport.c"));

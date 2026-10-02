@@ -97,6 +97,22 @@ jobs:
         run: |
           cargo test --target ${{ matrix.target }} --features unit_test,mlkem,mldsa --tests
 
+  test-app-storage:
+    name: Run application storage unit tests
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
+    strategy:
+      matrix:
+        target: ["nanox", "nanosplus", "stax", "flex", "apex_p"]
+    steps:
+      - name: Clone
+        uses: actions/checkout@v6
+      - name: Application storage unit tests
+        working-directory: ledger_device_sdk
+        run: |
+          cargo test --target ${{ matrix.target }} --features unit_test,app_storage --tests
+
   build-apps:
     name: Build all Rust apps
     if: github.event_name != 'workflow_dispatch'
