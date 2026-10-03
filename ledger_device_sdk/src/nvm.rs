@@ -211,6 +211,39 @@ where
         }
     }
 
+    /// Makes the storage that is not current hold the current value, so the value the last
+    /// update replaced leaves no trace in NVM; writes only when the two differ.
+    ///
+    /// An update writes the other storage and then invalidates the current one, whose bytes
+    /// stay. Writing twice clears them, but a power loss between the two writes leaves them for
+    /// good, so an application storing secrets calls this at start to finish such a write.
+    /// A storage that was never updated is left as it is.
+    pub fn settle(&mut self) {
+        let (current, other) = if self.storage_a.is_valid() {
+            (&self.storage_a, &self.storage_b)
+        } else if self.storage_b.is_valid() {
+            (&self.storage_b, &self.storage_a)
+        } else {
+            return;
+        };
+        let size = core::mem::size_of::<T>();
+        // SAFETY: both point to a `T`, read as its `size` bytes; `T: Copy` holds no pointer to
+        // follow, and the bytes are only compared.
+        let (current_bytes, other_bytes) = unsafe {
+            (
+                core::slice::from_raw_parts(current.value.get_ref() as *const T as *const u8, size),
+                core::slice::from_raw_parts(other.value.get_ref() as *const T as *const u8, size),
+            )
+        };
+        if current_bytes == other_bytes {
+            return;
+        }
+        // Writing the current value again lands it in the other storage, which becomes current;
+        // the one invalidated holds the same value.
+        let value = *current.value.get_ref();
+        self.update(&value);
+    }
+
     /// Returns which storage contains the latest valid data.
     ///
     /// # Panics
@@ -453,5 +486,39 @@ where
                 return Some(self.container.slots[self.next_key - 1].get_ref());
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{AtomicStorage, SingleStorage};
+    use crate::NVMData;
+    use crate::assert_eq_err as assert_eq;
+    use crate::testing::TestType;
+    use testmacro::test_item as test;
+
+    #[unsafe(link_section = ".nvm_data")]
+    static mut SETTLED: NVMData<AtomicStorage<[u8; 4]>> = NVMData::new(AtomicStorage::new(&[0; 4]));
+
+    // An update leaves the replaced value in the storage it invalidates; settling overwrites it
+    // with the current value, keeps the current value readable, and writes nothing once both
+    // storages agree.
+    #[test]
+    fn atomic_storage_settle_overwrites_the_replaced_value() {
+        let pointer = &raw mut SETTLED;
+        let storage = unsafe { (*pointer).get_mut() };
+        storage.update(&[1; 4]);
+        storage.update(&[2; 4]);
+        let replaced = [
+            *storage.storage_a.value.get_ref(),
+            *storage.storage_b.value.get_ref(),
+        ];
+        assert_eq!(replaced.contains(&[1; 4]), true);
+        storage.settle();
+        assert_eq!(*storage.storage_a.value.get_ref(), [2; 4]);
+        assert_eq!(*storage.storage_b.value.get_ref(), [2; 4]);
+        assert_eq!(*storage.get_ref(), [2; 4]);
+        storage.settle();
+        assert_eq!(*storage.get_ref(), [2; 4]);
     }
 }
