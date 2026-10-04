@@ -11,8 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `nvm`: `AtomicStorage::get_or_init` returns the stored value, first storing
   the given one if the storage was never updated (both validity flags clear, as
   in the zeroed `.nvm_data` Speculos loads), where `get_ref` panics.
-- `nvm`: `AtomicStorage::settle` makes the storage that is not current hold the
-  current value, writing only when the two differ, so the value the last update
+- `nvm`: `AtomicStorage::settle` (for `T: PartialEq`) makes the storage that is
+  not current hold the current value, writing only when the two differ, so the value the last update
   replaced leaves no trace in NVM. An application storing secrets calls it at
   start to finish an erase a power loss interrupted.
 

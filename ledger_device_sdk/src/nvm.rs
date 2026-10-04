@@ -218,7 +218,16 @@ where
     /// stay. Writing twice clears them, but a power loss between the two writes leaves them for
     /// good, so an application storing secrets calls this at start to finish such a write.
     /// A storage that was never updated is left as it is.
-    pub fn settle(&mut self) {
+    ///
+    /// The two values are compared with `PartialEq`, not as bytes: a `T: Copy` may have padding,
+    /// whose bytes are uninitialized and cannot be read. The comparison decides whether the
+    /// other storage still holds anything of the replaced value, so it must look at the whole
+    /// value, as a derived `PartialEq` does; one that ignores a field leaves that field's old
+    /// bytes in place.
+    pub fn settle(&mut self)
+    where
+        T: PartialEq,
+    {
         let (current, other) = if self.storage_a.is_valid() {
             (&self.storage_a, &self.storage_b)
         } else if self.storage_b.is_valid() {
@@ -226,16 +235,7 @@ where
         } else {
             return;
         };
-        let size = core::mem::size_of::<T>();
-        // SAFETY: both point to a `T`, read as its `size` bytes; `T: Copy` holds no pointer to
-        // follow, and the bytes are only compared.
-        let (current_bytes, other_bytes) = unsafe {
-            (
-                core::slice::from_raw_parts(current.value.get_ref() as *const T as *const u8, size),
-                core::slice::from_raw_parts(other.value.get_ref() as *const T as *const u8, size),
-            )
-        };
-        if current_bytes == other_bytes {
+        if current.value.get_ref() == other.value.get_ref() {
             return;
         }
         // Writing the current value again lands it in the other storage, which becomes current;
