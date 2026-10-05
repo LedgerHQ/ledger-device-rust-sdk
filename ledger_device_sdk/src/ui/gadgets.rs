@@ -195,8 +195,9 @@ impl<'a> MessageValidator<'a> {
     /// Shows the pages, then the confirmation and cancel pages, and returns
     /// `true` if the user confirms.
     ///
-    /// Returns `false` without displaying anything if a page holds characters
-    /// other than printable ASCII, or does not fit on one line.
+    /// Returns `false` without displaying anything if a page holds a character
+    /// the font has no glyph for (outside 0x20 to 0x7F), or does not fit on one
+    /// line.
     pub fn ask(&self) -> bool {
         if !self
             .message
@@ -805,10 +806,11 @@ pub struct MultiFieldReview<'a> {
     cancel_glyph: Option<&'a Glyph<'a>>,
 }
 
-/// Whether `s` only holds characters the review font can display (printable
-/// ASCII).
+/// Whether `s` only holds characters the review font has a glyph for (0x20
+/// to 0x7F, the last one being drawn as a square).
 fn is_displayable(s: &str) -> bool {
-    s.bytes().all(|b| (0x20..=0x7e).contains(&b))
+    s.bytes()
+        .all(|b| b >= 0x20 && usize::from(b - 0x20) < OPEN_SANS[0].dims.len())
 }
 
 // Function to concatenate multiple strings into a fixed-size array
@@ -873,7 +875,7 @@ impl<'a> MultiFieldReview<'a> {
     /// Shows the review and returns `true` if the user approves it.
     ///
     /// Returns `false` without displaying anything if a field name or value
-    /// holds characters other than printable ASCII.
+    /// holds a character the font has no glyph for (outside 0x20 to 0x7F).
     pub fn show(&self) -> bool {
         if !self
             .fields
@@ -1010,5 +1012,16 @@ mod tests {
         assert_eq!(MessageValidator::new(&too_wide, &[], &[]).ask(), false);
         let not_ascii = ["Caf\u{e9}"];
         assert_eq!(MessageValidator::new(&not_ascii, &[], &[]).ask(), false);
+        let control = ["a\nb"];
+        assert_eq!(MessageValidator::new(&control, &[], &[]).ask(), false);
+    }
+
+    #[test]
+    fn displayable_matches_font_glyphs() {
+        assert_eq!(is_displayable(" ~"), true);
+        // 0x7F has a glyph (a square), used as a placeholder by some apps.
+        assert_eq!(is_displayable("\u{7f}"), true);
+        assert_eq!(is_displayable("\n"), false);
+        assert_eq!(is_displayable("\u{e9}"), false);
     }
 }

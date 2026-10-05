@@ -24,9 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `NbglGenericReview`: only the last content can approve the review. The
   action buttons of the contents before it no longer end the review.
 - `MultiFieldReview::show` returns `false` without displaying anything if a
-  field name or value holds characters other than printable ASCII.
+  field name or value holds a character the font has no glyph for (outside
+  0x20 to 0x7F).
 - `MessageValidator::ask` returns `false` without displaying anything if a page
-  holds characters other than printable ASCII or is wider than the screen.
+  holds a character the font has no glyph for (outside 0x20 to 0x7F) or is
+  wider than the screen.
 - `Layout::get_x`: text wider than the screen is placed at the left edge
   instead of off-screen.
 - Swap: the library call fails if a coin configuration, amount, derivation
