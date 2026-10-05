@@ -54,6 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   which no longer needs to outlive it.
 - ECDSA and EdDSA `ECPublicKey::verify` return `false` if the given signature
   length exceeds the signature slice.
+- `Ed25519Stream` computes the signature nonce point with the randomized scalar
+  multiplication, as the C SDK EdDSA signer does.
 
 ## [1.38.0] - 2026-09-29
 

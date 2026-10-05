@@ -154,8 +154,9 @@ impl Ed25519Stream {
             ));
             check_cx_ok!(cx_ecdomain_generator_bn(CX_CURVE_Ed25519, &mut ed_p));
 
-            // Multiply r by generator, store in ed_p
-            check_cx_ok!(cx_ecpoint_scalarmul_bn(&mut ed_p, r));
+            // Multiply r by generator, store in ed_p. r is secret: use the
+            // randomized multiplication, as the C SDK EdDSA signer does.
+            check_cx_ok!(cx_ecpoint_rnd_scalarmul_bn(&mut ed_p, r));
 
             // and copy/compress it to ctx.big_r
             let mut sign = 0;
