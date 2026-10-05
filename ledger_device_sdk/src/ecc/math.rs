@@ -396,13 +396,18 @@ impl CurvesId {
     }
 
     /// Retrieve the generator point as raw bytes (`Gx`, `Gy`).
-    /// Both buffers must have the same length (the field-element size).
+    /// Both buffers should have the field-element size; `gy` must be at least as
+    /// long as `gx`.
     /// # Arguments
     /// * `gx` - The buffer to receive the x-coordinate of the generator
     /// * `gy` - The buffer to receive the y-coordinate of the generator
     /// # Returns
     /// Returns `Ok(())` on success, or a `CxError` if the retrieval fails.
     pub fn generator(&self, gx: &mut [u8], gy: &mut [u8]) -> Result<(), CxError> {
+        // The syscall writes `gx.len()` bytes to both buffers.
+        if gy.len() < gx.len() {
+            return Err(CxError::InvalidParameter);
+        }
         check_cx_ok!(cx_ecdomain_generator(
             u8::from(*self),
             gx.as_mut_ptr(),
@@ -496,6 +501,18 @@ mod tests {
             .map_err(err)?;
         // secp256k1 order starts with 0xFF..
         assert_eq!(buf[0], 0xFF);
+    }
+
+    #[test]
+    fn generator_rejects_short_gy() {
+        let curve = CurvesId::Secp256k1;
+        let mut gx = [0u8; 32];
+        let mut gy = [0u8; 31];
+        assert_eq!(
+            curve.generator(&mut gx, &mut gy),
+            Err(CxError::InvalidParameter)
+        );
+        assert_eq!(gx, [0u8; 32]);
     }
 
     #[test]

@@ -172,6 +172,77 @@ pub enum Event<T> {
     Ticker,
 }
 
+/// Set once a [`CommStorage`] has been initialized.
+// SAFETY: the runtime is single-threaded, so direct reads/writes are safe.
+#[cfg(not(feature = "io_new"))]
+static mut COMM_INITIALIZED: bool = false;
+
+/// Static storage for the application's [`Comm`], declared with
+/// [`define_comm!`](crate::define_comm) and initialized by
+/// [`nbgl::init_static_comm`](crate::nbgl::init_static_comm).
+#[cfg(not(feature = "io_new"))]
+pub struct CommStorage {
+    inner: core::cell::UnsafeCell<core::mem::MaybeUninit<Comm>>,
+}
+
+// SAFETY: single-threaded runtime; `inner` is only written once, guarded by
+// COMM_INITIALIZED.
+#[cfg(not(feature = "io_new"))]
+unsafe impl Sync for CommStorage {}
+
+#[cfg(not(feature = "io_new"))]
+impl CommStorage {
+    /// Creates a new uninitialized `CommStorage`, for use in a static
+    /// declaration.
+    #[allow(clippy::new_without_default)]
+    pub const fn new() -> Self {
+        Self {
+            inner: core::cell::UnsafeCell::new(core::mem::MaybeUninit::uninit()),
+        }
+    }
+
+    /// Stores `comm` and returns a static reference to it.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a `CommStorage` has already been initialized: only one `Comm`
+    /// instance can exist.
+    // A single mutable reference is ever handed out, guarded by COMM_INITIALIZED.
+    #[allow(clippy::mut_from_ref)]
+    pub fn init(&'static self, comm: Comm) -> &'static mut Comm {
+        // SAFETY: single-threaded runtime; no concurrent access is possible.
+        if unsafe { COMM_INITIALIZED } {
+            panic!("CommStorage already initialized. Only one Comm instance can exist.");
+        }
+        unsafe { COMM_INITIALIZED = true };
+
+        // SAFETY: this point is reached only once, and the storage is static.
+        unsafe {
+            let ptr = self.inner.get();
+            (*ptr).write(comm);
+            (*ptr).assume_init_mut()
+        }
+    }
+}
+
+/// Declares a static [`CommStorage`] with the given name, to be initialized
+/// with [`nbgl::init_static_comm`](crate::nbgl::init_static_comm).
+///
+/// ```ignore
+/// ledger_device_sdk::define_comm!(COMM);
+///
+/// fn main() {
+///     let comm = ledger_device_sdk::nbgl::init_static_comm(&COMM);
+/// }
+/// ```
+#[cfg(not(feature = "io_new"))]
+#[macro_export]
+macro_rules! define_comm {
+    ($name:ident) => {
+        static $name: $crate::io::CommStorage = $crate::io::CommStorage::new();
+    };
+}
+
 /// Manages the communication of the device: receives events such as button presses, incoming
 /// APDU requests, and provides methods to build and transmit APDU responses.
 pub struct Comm {
@@ -829,38 +900,47 @@ impl Comm {
 #[allow(dead_code)]
 static mut CURRENT_COMM: *mut Comm = core::ptr::null_mut();
 
+impl Drop for Comm {
+    fn drop(&mut self) {
+        // Unregister this instance from Nbgl.
+        // SAFETY: single-threaded runtime; no concurrent access is possible.
+        unsafe {
+            if core::ptr::eq(CURRENT_COMM, self) {
+                CURRENT_COMM = core::ptr::null_mut();
+            }
+        }
+    }
+}
+
+/// The `Comm` instance registered with Nbgl.
+///
+/// # Panics
+///
+/// Panics if no instance is registered.
+#[allow(dead_code)]
+fn registered_comm() -> &'static mut Comm {
+    // SAFETY: CURRENT_COMM is either null or points to the registered instance,
+    // which unregisters itself when dropped. Single-threaded runtime.
+    unsafe { CURRENT_COMM.as_mut() }.expect("No Comm instance registered")
+}
+
 #[allow(dead_code)]
 fn default_nbgl_next_event_ahead() -> bool {
-    unsafe {
-        if CURRENT_COMM.is_null() {
-            panic!("No Comm instance registered");
-        }
-        (*CURRENT_COMM).next_event_ahead::<ApduHeader>()
-    }
+    registered_comm().next_event_ahead::<ApduHeader>()
 }
 
 #[allow(dead_code)]
 fn default_nbgl_fetch_apdu_header() -> Option<ApduHeader> {
-    unsafe {
-        if CURRENT_COMM.is_null() {
-            panic!("No Comm instance registered");
-        }
-        let comm = &mut *CURRENT_COMM;
-        if comm.event_pending && comm.rx_length >= 5 {
-            return Some(*comm.get_apdu_metadata());
-        }
-        None
+    let comm = registered_comm();
+    if comm.event_pending && comm.rx_length >= 5 {
+        return Some(*comm.get_apdu_metadata());
     }
+    None
 }
 
 #[allow(dead_code)]
 fn default_nbgl_reply_status(reply: Reply) {
-    unsafe {
-        if CURRENT_COMM.is_null() {
-            panic!("No Comm instance registered");
-        }
-        (*CURRENT_COMM).reply(reply);
-    }
+    registered_comm().reply(reply);
 }
 
 pub(crate) const BOLOS_INS_GET_VERSION: u8 = 0x01;

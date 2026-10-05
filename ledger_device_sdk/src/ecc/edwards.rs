@@ -4,7 +4,10 @@ use crate::ecc::{
     ChainCode, CurvesId, CxError, ECPrivateKey, ECPublicKey, HDKeyDeriveMode, Secret, SeedDerive,
     bip32_derive,
 };
-use crate::hash::{HashInit, sha2::Sha2_512};
+use crate::hash::{
+    HashInit,
+    sha2::{Sha2_256, Sha2_512},
+};
 use crate::impl_curve;
 use ledger_secure_sdk_sys::*;
 use zeroize::Zeroize;
@@ -33,10 +36,13 @@ enum SignPhase {
 /// the second one the challenge. Once both are done, the signature is available
 /// from [`signature`](Self::signature).
 ///
-/// Both passes must carry exactly the same message: `sign_finalize` returns an
-/// error otherwise.
+/// Both passes must carry exactly the same message, and both
+/// `sign_finalize` calls must be given the key passed to `init`:
+/// `sign_finalize` returns an error otherwise.
 pub struct Ed25519Stream {
     hash: Sha2_512,
+    /// Fingerprint of the key given to `init`.
+    key_id: [u8; 32],
     /// Hash of the message alone, to check that both passes match.
     msg_hash: Sha2_512,
     /// Digest of the first pass message.
@@ -51,6 +57,7 @@ impl Default for Ed25519Stream {
     fn default() -> Self {
         Ed25519Stream {
             hash: Sha2_512::default(),
+            key_id: [0u8; 32],
             msg_hash: Sha2_512::default(),
             msg_digest: [0u8; 64],
             phase: SignPhase::Uninitialized,
@@ -67,15 +74,30 @@ impl Drop for Ed25519Stream {
 }
 
 /// Constant-time equality, so that the comparison leaks nothing about the digests.
-fn ct_eq(a: &[u8; 64], b: &[u8; 64]) -> bool {
+fn ct_eq<const N: usize>(a: &[u8; N], b: &[u8; N]) -> bool {
     let diff = a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y));
     core::hint::black_box(diff) == 0
+}
+
+/// One-way fingerprint of `key`, identifying it without holding it.
+fn key_id(key: &ECPrivateKey<32, 'E'>) -> Result<[u8; 32], CxError> {
+    let mut id = [0u8; 32];
+    let mut hash = Sha2_256::new();
+    let res = hash
+        .update(b"Ed25519Stream key id")
+        .and_then(|_| hash.update(&key.key[..]))
+        .and_then(|_| hash.finalize(&mut id))
+        .map_err(|_| CxError::GenericError);
+    // Clear the key bytes left in the context.
+    hash.reset();
+    res.map(|_| id)
 }
 
 impl Ed25519Stream {
     /// Start a new signature with `key`, discarding any previous state.
     pub fn init(&mut self, key: &ECPrivateKey<32, 'E'>) -> Result<(), CxError> {
         self.wipe();
+        self.key_id = key_id(key)?;
         // Compute prefix (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 1)
         let mut temp = Secret::<64>::new();
         self.hash.reset();
@@ -98,6 +120,7 @@ impl Ed25519Stream {
         // optimizer's reach.
         self.hash.reset();
         self.msg_hash.reset();
+        self.key_id.zeroize();
         self.signature.zeroize();
         self.big_r.zeroize();
         self.msg_digest.zeroize();
@@ -131,8 +154,9 @@ impl Ed25519Stream {
             ));
             check_cx_ok!(cx_ecdomain_generator_bn(CX_CURVE_Ed25519, &mut ed_p));
 
-            // Multiply r by generator, store in ed_p
-            check_cx_ok!(cx_ecpoint_scalarmul_bn(&mut ed_p, r));
+            // Multiply r by generator, store in ed_p. r is secret: use the
+            // randomized multiplication, as the C SDK EdDSA signer does.
+            check_cx_ok!(cx_ecpoint_rnd_scalarmul_bn(&mut ed_p, r));
 
             // and copy/compress it to ctx.big_r
             let mut sign = 0;
@@ -274,22 +298,31 @@ impl Ed25519Stream {
 
     /// End the current message pass.
     ///
-    /// The first call derives the nonce from the first pass. The second one
-    /// checks that the second pass carried the same message, then computes the
-    /// signature. On any error, including a mismatch between both passes, all
-    /// state is wiped and no signature is produced.
+    /// `key` must be the key given to [`init`](Self::init). The first call
+    /// derives the nonce from the first pass. The second one checks that the
+    /// second pass carried the same message, then computes the signature. On
+    /// any error, including a different key or a mismatch between both passes,
+    /// all state is wiped and no signature is produced.
     pub fn sign_finalize(&mut self, key: &ECPrivateKey<32, 'E'>) -> Result<(), CxError> {
-        let res = match self.phase {
+        if !matches!(self.phase, SignPhase::NoncePass | SignPhase::ChallengePass) {
+            return Err(CxError::InvalidParameter);
+        }
+        let res = self.check_key(key).and_then(|_| match self.phase {
             SignPhase::NoncePass => self.end_nonce_pass(key),
-            SignPhase::ChallengePass => self.end_challenge_pass(key),
-            SignPhase::Uninitialized | SignPhase::Complete => {
-                return Err(CxError::InvalidParameter);
-            }
-        };
+            _ => self.end_challenge_pass(key),
+        });
         if res.is_err() {
             self.wipe();
         }
         res
+    }
+
+    fn check_key(&self, key: &ECPrivateKey<32, 'E'>) -> Result<(), CxError> {
+        if ct_eq(&key_id(key)?, &self.key_id) {
+            Ok(())
+        } else {
+            Err(CxError::InvalidParameterValue)
+        }
     }
 
     fn end_nonce_pass(&mut self, key: &ECPrivateKey<32, 'E'>) -> Result<(), CxError> {
@@ -373,7 +406,13 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
 
 /// Specific signature verification for Edwards curves, which all use EdDSA
 impl<const P: usize> ECPublicKey<P, 'E'> {
+    /// Verifies the first `signature.1` bytes of `signature.0` against `hash`.
+    ///
+    /// Returns `false` if `signature.1` exceeds the length of `signature.0`.
     pub fn verify(&self, signature: (&[u8], u32), hash: &[u8], hash_id: u8) -> bool {
+        if signature.1 as usize > signature.0.len() {
+            return false;
+        }
         unsafe {
             cx_eddsa_verify_no_throw(
                 self as *const ECPublicKey<P, 'E'> as *const cx_ecfp_256_public_key_s,
@@ -520,6 +559,16 @@ mod tests {
     }
 
     #[test]
+    fn eddsa_verify_rejects_length_beyond_signature() {
+        let sk = Ed25519::derive_from_path(&PATH0);
+        let s = sk.sign(TEST_HASH).map_err(display_error_code)?;
+        let pk = sk.public_key().map_err(display_error_code)?;
+        assert_eq!(pk.verify((&s.0, s.1), TEST_HASH, CX_SHA512), true);
+        assert_eq!(pk.verify((&s.0, s.1 + 1), TEST_HASH, CX_SHA512), false);
+        assert_eq!(pk.verify((&s.0, u32::MAX), TEST_HASH, CX_SHA512), false);
+    }
+
+    #[test]
     fn eddsa_ed25519_slip10() {
         let path: [u32; 5] = make_bip32_path(b"m/44'/535348'/0'/0'/1'");
         let sk = Ed25519::derive_from_path_slip10(&path);
@@ -600,6 +649,32 @@ mod tests {
         // The failed stream is wiped: nothing proceeds without a new `init`.
         assert_eq!(streamer.sign_update(MSG1).is_err(), true);
         assert_eq!(streamer.sign_finalize(&sk).is_err(), true);
+    }
+
+    #[test]
+    fn eddsa_ed25519_stream_rejects_other_key() {
+        let sk = Ed25519::derive_from_path(&PATH0);
+        let path1: [u32; 5] = make_bip32_path(b"m/44'/535348'/0'/0/1");
+        let other = Ed25519::derive_from_path(&path1);
+        let mut streamer = Ed25519Stream::default();
+
+        // Other key at the end of the first pass.
+        streamer.init(&sk).map_err(display_error_code)?;
+        assert_eq!(
+            stream_pass(&mut streamer, &other, &[MSG1]),
+            Err(CxError::InvalidParameterValue)
+        );
+        assert_eq!(streamer.sign_update(MSG1).is_err(), true);
+
+        // Other key at the end of the second pass.
+        streamer.init(&sk).map_err(display_error_code)?;
+        stream_pass(&mut streamer, &sk, &[MSG1]).map_err(display_error_code)?;
+        assert_eq!(
+            stream_pass(&mut streamer, &other, &[MSG1]),
+            Err(CxError::InvalidParameterValue)
+        );
+        assert_eq!(streamer.signature().is_err(), true);
+        assert_eq!(streamer.sign_update(MSG1).is_err(), true);
     }
 
     #[test]

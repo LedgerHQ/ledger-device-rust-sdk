@@ -105,7 +105,9 @@ to rustc, files in `$OUT_DIR`, or compiled C objects.
  │ HEAP_SIZE env var       │  │ 7. generate_heap_size() │  $OUT_DIR/heap_size.rs
  │   "8192" or             │─▶│  parse & clamp to       │   (pub const
  │   "nanosplus:8192,…"    │  │  [2048, max_per_device] │    HEAP_SIZE: usize)
- │ default = 8192          │  │                         │
+ │ default = 8192, or 2048 │  │                         │
+ │   on Nano X with mlkem/ │  │                         │
+ │   mldsa (also the max)  │  │                         │
  └─────────────────────────┘  └────────────┬────────────┘
                                            │
  ┌─────────────────────────┐  ┌────────────▼────────────┐
