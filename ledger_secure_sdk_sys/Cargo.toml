@@ -1,6 +1,6 @@
 [package]
 name = "ledger_secure_sdk_sys"
-version = "1.16.4"
+version = "1.16.5"
 authors = ["Ledger"]
 edition = "2024"
 license.workspace = true
