@@ -193,15 +193,18 @@ The [`examples/`](examples/) directory contains various demonstrations. Build an
 ```bash
 # Touchscreen devices (Stax, Flex, Apex P)
 cargo run --example nbgl_home_and_settings --target stax --release \
-  --config examples/config.toml
+  --features io_new --config examples/config.toml
 
 # Nano devices (S+, X) - requires nano_nbgl feature for NBGL UI
 cargo run --example nbgl_home_and_settings --target nanosplus --release \
-  --features nano_nbgl --config examples/config.toml
+  --features nano_nbgl,io_new --config examples/config.toml
 
 # View all available examples
 ls examples/*.rs
 ```
+
+**Note**: every example except `tlv_generic` declares `required-features = ["io_new"]`, so `--features io_new` is mandatory. Without it cargo refuses to build the target:
+`error: target ... requires the features: io_new`.
 
 **Note**: Running examples requires Speculos emulator. The `config.toml` automatically invokes Speculos as the target runner.
 
