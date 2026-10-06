@@ -7,8 +7,8 @@
 //! statics is not.
 //!
 //! The storage is initialized when the application starts: an uninitialized or corrupted
-//! storage gets a fresh, empty header. Its capacity is set at build time by the
-//! `APP_STORAGE_SIZE` environment variable (480 bytes by default).
+//! storage gets a fresh, empty header. Its capacity, [`capacity`], is set at build time by
+//! the `APP_STORAGE_SIZE` environment variable (480 bytes by default).
 //!
 //! This module is only available with the `app_storage` Cargo feature. The
 //! `app_storage_settings` and `app_storage_data` features set the matching
@@ -119,6 +119,12 @@ pub fn write(data: &[u8], offset: u32) -> Result<(), AppStorageError> {
     check(status, len)
 }
 
+/// Capacity of the storage in bytes, set at build time by `APP_STORAGE_SIZE`: a write must
+/// end at or below it.
+pub const fn capacity() -> u32 {
+    sys::APP_STORAGE_SIZE
+}
+
 /// Number of bytes written so far: the end of the furthest range ever written.
 pub fn size() -> u32 {
     // SAFETY: reads the header of the storage initialized at application start.
@@ -159,8 +165,7 @@ pub fn reset() {
     unsafe { sys::app_storage_reset() }
 }
 
-// The tests share one storage, so each starts from `reset()`. They assume the default
-// capacity of 480 bytes (APP_STORAGE_SIZE unset).
+// The tests share one storage, so each starts from `reset()`.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -168,7 +173,15 @@ mod tests {
     use crate::testing::TestType;
     use testmacro::test_item as test;
 
-    const CAPACITY: u32 = 480;
+    // The capacity follows APP_STORAGE_SIZE, 480 bytes when it is unset.
+    #[test]
+    fn test_app_storage_capacity_follows_build_size() {
+        let expected = match option_env!("APP_STORAGE_SIZE") {
+            Some(size) => size.trim().parse().unwrap_or(0),
+            None => 480,
+        };
+        assert_eq!(capacity(), expected);
+    }
 
     // A fresh storage holds nothing: reading reports the range as never written.
     #[test]
@@ -201,9 +214,9 @@ mod tests {
     #[test]
     fn test_app_storage_capacity_bound() {
         reset();
-        assert_eq!(write(&[0xaa], CAPACITY - 1), Ok(()));
-        assert_eq!(size(), CAPACITY);
-        assert_eq!(write(&[0xaa], CAPACITY), Err(AppStorageError::Overflow));
+        assert_eq!(write(&[0xaa], capacity() - 1), Ok(()));
+        assert_eq!(size(), capacity());
+        assert_eq!(write(&[0xaa], capacity()), Err(AppStorageError::Overflow));
     }
 
     // A range whose end does not fit in u32 is rejected, not wrapped.

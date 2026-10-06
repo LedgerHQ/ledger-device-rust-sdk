@@ -277,7 +277,18 @@ impl SDKBuilder<'_> {
             }
         }
         if env::var_os("CARGO_FEATURE_APP_STORAGE").is_some() {
-            defines.extend(app_storage_defines());
+            let size = app_storage_size();
+            defines.extend(app_storage_defines(size));
+            // The capacity the C side is compiled with, for the Rust side to report.
+            let out_dir = env::var("OUT_DIR").unwrap();
+            fs::write(
+                Path::new(&out_dir).join("app_storage_size.rs"),
+                format!(
+                    "/// Capacity of the application storage in bytes, set by `APP_STORAGE_SIZE` \
+                     at build time.\npub const APP_STORAGE_SIZE: u32 = {size};"
+                ),
+            )
+            .expect("Unable to write file");
         }
 
         let cflags = read_lines(&spec.cflags_file());
@@ -738,20 +749,24 @@ fn main() {
 // Helper functions
 // --------------------------------------------------
 
-/// Defines of the `app_storage` feature, mirroring ENABLE_APP_STORAGE in the C SDK's
-/// Makefile.standard_app: the storage size comes from APP_STORAGE_SIZE (default 480, one
-/// 512-byte flash page minus room for the system header), the header properties from the
-/// `app_storage_settings` / `app_storage_data` features.
-fn app_storage_defines() -> Vec<(String, Option<String>)> {
+/// Capacity of the application storage in bytes, mirroring ENABLE_APP_STORAGE in the C SDK's
+/// Makefile.standard_app: APP_STORAGE_SIZE, by default 480 (one 512-byte flash page minus
+/// room for the system header).
+fn app_storage_size() -> u32 {
     const DEFAULT_APP_STORAGE_SIZE: u32 = 480;
-    let size = match env::var("APP_STORAGE_SIZE") {
+    match env::var("APP_STORAGE_SIZE") {
         Ok(raw) => match raw.trim().parse::<u32>() {
             Ok(size) if size > 0 => size,
             _ => panic!("APP_STORAGE_SIZE must be a positive number of bytes, got {raw:?}"),
         },
         Err(env::VarError::NotPresent) => DEFAULT_APP_STORAGE_SIZE,
         Err(e) => panic!("APP_STORAGE_SIZE is not valid unicode: {e}"),
-    };
+    }
+}
+
+/// Defines of the `app_storage` feature for a storage of `size` bytes, the header properties
+/// from the `app_storage_settings` / `app_storage_data` features.
+fn app_storage_defines(size: u32) -> Vec<(String, Option<String>)> {
     let property = |feature: &str| {
         if env::var_os(feature).is_some() {
             "1"

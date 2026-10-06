@@ -107,12 +107,23 @@ jobs:
         target: ["nanox", "nanosplus", "stax", "flex", "apex_p"]
         # Each property feature on its own, so a lost or swapped header bit fails a run.
         features: ["app_storage", "app_storage_settings", "app_storage_data"]
+        # The default capacity, and a custom APP_STORAGE_SIZE to check that it reaches the
+        # C side and the bounds.
+        size: ["default", "1024"]
+        exclude:
+          - features: "app_storage_settings"
+            size: "1024"
+          - features: "app_storage_data"
+            size: "1024"
     steps:
       - name: Clone
         uses: actions/checkout@v6
       - name: Application storage unit tests
         working-directory: ledger_device_sdk
         run: |
+          if [ "${{ matrix.size }}" != "default" ]; then
+            export APP_STORAGE_SIZE=${{ matrix.size }}
+          fi
           cargo test --target ${{ matrix.target }} --features unit_test,${{ matrix.features }} --tests
 
   build-apps:
