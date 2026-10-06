@@ -172,13 +172,13 @@ impl<'a> NbglAddressReview<'a> {
 
     /// Shows the address review flow.
     /// # Arguments
-    /// * `_comm` - Mutable reference to Comm.
+    /// * `comm` - Mutable reference to Comm.
     /// * `address` - The address to review.
     /// # Returns
     /// Returns true if the user approved the address, false otherwise.
     #[cfg(feature = "io_new")]
-    pub fn show<const N: usize>(&self, _comm: &mut crate::io::Comm<N>, address: &str) -> bool {
-        self.show_internal(address)
+    pub fn show<const N: usize>(&self, comm: &mut crate::io::Comm<N>, address: &str) -> bool {
+        comm.lend_to_nbgl(|| self.show_internal(address))
     }
 
     /// Shows the address review flow.

@@ -157,8 +157,8 @@ impl NbglKeypad {
     /// Returns `true` if the entered PIN matches the expected PIN,
     /// otherwise returns `false`.
     #[cfg(feature = "io_new")]
-    pub fn ask<const N: usize>(self, _comm: &mut crate::io::Comm<N>, pin: &[u8]) -> bool {
-        self.ask_internal(pin) == SyncNbgl::UxSyncRetPinValidated
+    pub fn ask<const N: usize>(self, comm: &mut crate::io::Comm<N>, pin: &[u8]) -> bool {
+        comm.lend_to_nbgl(|| self.ask_internal(pin)) == SyncNbgl::UxSyncRetPinValidated
     }
 
     /// Shows the keypad and waits for user input.

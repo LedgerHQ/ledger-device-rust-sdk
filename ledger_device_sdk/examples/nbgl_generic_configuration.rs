@@ -58,7 +58,7 @@ extern "C" fn sample_main() {
         .add_content(NbglPageContent::InfosList(InfosList::new(&fields)));
 
     // Returns once the user leaves through the header.
-    config.show();
+    config.show(comm);
 
     NbglStatus::new()
         .text("Configuration closed")

@@ -547,7 +547,7 @@ impl NbglHomeAndSettings {
     /// Show the home screen and settings page.
     /// This function will block until an APDU is received or the user quits the app.
     /// # Arguments
-    /// * `_comm` - Mutable reference to Comm.
+    /// * `comm` - Mutable reference to Comm.
     #[cfg(feature = "io_new")]
     #[deprecated(
         since = "1.37.0",
@@ -555,12 +555,12 @@ impl NbglHomeAndSettings {
     )]
     pub fn show<T: TryFrom<ApduHeader>, const N: usize>(
         &mut self,
-        _comm: &mut crate::io::Comm<N>,
+        comm: &mut crate::io::Comm<N>,
     ) -> Event<T>
     where
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
-        self.show_internal()
+        comm.lend_to_nbgl(|| self.show_internal())
     }
 
     /// Show the home screen and settings page.

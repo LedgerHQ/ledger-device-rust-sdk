@@ -216,8 +216,8 @@ impl NbglGenericSettings {
     /// Returns `Ok(())` once the user exits the settings screen,
     /// or `Err(u8)` with the error code in case of an error.
     #[cfg(feature = "io_new")]
-    pub fn show<const N: usize>(&mut self, _comm: &mut crate::io::Comm<N>) -> Result<(), u8> {
-        let ret = self.show_internal();
+    pub fn show<const N: usize>(&mut self, comm: &mut crate::io::Comm<N>) -> Result<(), u8> {
+        let ret = comm.lend_to_nbgl(|| self.show_internal());
         match ret {
             SyncNbgl::UxSyncRetQuitted => Ok(()),
             _ => Err(u8::from(ret)),

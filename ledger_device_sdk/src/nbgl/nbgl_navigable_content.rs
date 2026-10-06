@@ -9,17 +9,21 @@
 //!
 //! ```no_run
 //! # use ledger_device_sdk::nbgl::{ChoicesList, NbglNavigableContent, NbglPageContent};
+//! # fn f(comm: &mut ledger_device_sdk::io::Comm) {
 //! let mut content = NbglNavigableContent::new()
 //!     .title("Network")
 //!     .add_page(NbglPageContent::ChoicesList(ChoicesList::new(
 //!         &["Mainnet", "Testnet"],
 //!         0,
 //!     )));
-//! content.show();
+//! content.show(comm);
+//! # }
 //! ```
 //!
 //! Unlike a review, the flow has no confirm step: it ends when the user leaves
-//! through the header.
+//! through the header. With the `io_new` feature, `show` borrows the `Comm`,
+//! like the other NBGL flows, since it receives events while it is displayed;
+//! without it, `show` takes no argument.
 
 use super::*;
 use core::sync::atomic::{AtomicPtr, Ordering};
@@ -259,11 +263,7 @@ impl NbglNavigableContent {
         self
     }
 
-    /// Shows the flow, returning when the user leaves through the header.
-    ///
-    /// # Panics
-    /// Panics if no page was added, since NBGL would have nothing to draw.
-    pub fn show(&mut self) {
+    fn show_internal(&mut self) {
         if self.pages.is_empty() {
             panic!("No page added.");
         }
@@ -294,5 +294,25 @@ impl NbglNavigableContent {
         }
 
         NAV_REF.store(core::ptr::null_mut(), Ordering::Relaxed);
+    }
+
+    /// Shows the flow, returning when the user leaves through the header.
+    /// # Arguments
+    /// * `comm` - Mutable reference to Comm.
+    ///
+    /// # Panics
+    /// Panics if no page was added, since NBGL would have nothing to draw.
+    #[cfg(feature = "io_new")]
+    pub fn show<const N: usize>(&mut self, comm: &mut crate::io::Comm<N>) {
+        comm.lend_to_nbgl(|| self.show_internal())
+    }
+
+    /// Shows the flow, returning when the user leaves through the header.
+    ///
+    /// # Panics
+    /// Panics if no page was added, since NBGL would have nothing to draw.
+    #[cfg(not(feature = "io_new"))]
+    pub fn show(&mut self) {
+        self.show_internal()
     }
 }

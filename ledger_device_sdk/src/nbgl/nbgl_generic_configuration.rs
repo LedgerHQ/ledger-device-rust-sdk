@@ -10,6 +10,7 @@
 //!
 //! ```no_run
 //! # use ledger_device_sdk::nbgl::{ChoicesList, NbglGenericConfiguration, NbglPageContent, SwitchesList};
+//! # fn f(comm: &mut ledger_device_sdk::io::Comm) {
 //! let mut config = NbglGenericConfiguration::new()
 //!     .title("Configuration")
 //!     .add_content(NbglPageContent::SwitchesList(SwitchesList::new(&[
@@ -19,7 +20,8 @@
 //!         &["Slow", "Fast"],
 //!         0,
 //!     )));
-//! config.show();
+//! config.show(comm);
+//! # }
 //! ```
 //!
 //! Unlike a review there is nothing to approve: the flow ends when the user
@@ -97,15 +99,7 @@ impl NbglGenericConfiguration {
         self
     }
 
-    /// Shows the configuration screen, returning when the user leaves through
-    /// the header.
-    ///
-    /// Returns at once, without displaying anything, if there are more than
-    /// 255 contents or a content list holds more than 255 items.
-    ///
-    /// # Panics
-    /// Panics if no content was added, since NBGL would have nothing to draw.
-    pub fn show(&mut self) {
+    fn show_internal(&mut self) {
         if self.content_list.is_empty() {
             panic!("No content added.");
         }
@@ -150,5 +144,33 @@ impl NbglGenericConfiguration {
             );
             self.ux_sync_wait(false);
         }
+    }
+
+    /// Shows the configuration screen, returning when the user leaves through
+    /// the header.
+    ///
+    /// Returns at once, without displaying anything, if there are more than
+    /// 255 contents or a content list holds more than 255 items.
+    /// # Arguments
+    /// * `comm` - Mutable reference to Comm.
+    ///
+    /// # Panics
+    /// Panics if no content was added, since NBGL would have nothing to draw.
+    #[cfg(feature = "io_new")]
+    pub fn show<const N: usize>(&mut self, comm: &mut crate::io::Comm<N>) {
+        comm.lend_to_nbgl(|| self.show_internal())
+    }
+
+    /// Shows the configuration screen, returning when the user leaves through
+    /// the header.
+    ///
+    /// Returns at once, without displaying anything, if there are more than
+    /// 255 contents or a content list holds more than 255 items.
+    ///
+    /// # Panics
+    /// Panics if no content was added, since NBGL would have nothing to draw.
+    #[cfg(not(feature = "io_new"))]
+    pub fn show(&mut self) {
+        self.show_internal()
     }
 }
