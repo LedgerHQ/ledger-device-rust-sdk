@@ -247,6 +247,37 @@ where
     }
 }
 
+impl<const N: usize> AtomicStorage<[u8; N]> {
+    /// Makes the storage that is not current hold the current bytes, so the value the last
+    /// update replaced leaves no trace in NVM; writes only when the two differ.
+    ///
+    /// An update writes the other storage and then invalidates the current one, whose bytes
+    /// stay. Writing twice clears them, but a power loss between the two writes leaves them for
+    /// good, so an application storing secrets calls this at start to finish such a write.
+    /// A storage that was never updated is left as it is.
+    ///
+    /// Only byte arrays settle: the other storage may hold a write a power loss cut short, which
+    /// is still a valid `[u8; N]` but not necessarily a valid value of another type, and the
+    /// comparison must cover every stored byte, padding and unused enum payload included, to
+    /// tell whether anything of the replaced value is left.
+    pub fn settle(&mut self) {
+        let (current, other) = if self.storage_a.is_valid() {
+            (&self.storage_a, &self.storage_b)
+        } else if self.storage_b.is_valid() {
+            (&self.storage_b, &self.storage_a)
+        } else {
+            return;
+        };
+        if current.value.get_ref() == other.value.get_ref() {
+            return;
+        }
+        // Writing the current value again lands it in the other storage, which becomes current;
+        // the one invalidated holds the same bytes.
+        let value = *current.value.get_ref();
+        self.update(&value);
+    }
+}
+
 impl<T> SingleStorage<T> for AtomicStorage<T>
 where
     T: Copy,
@@ -547,5 +578,51 @@ mod tests {
         assert_eq!(collection.add(&7).is_ok(), true);
         assert_eq!(collection.len(), 1);
         assert_eq!(collection.get(0), Some(&7));
+    }
+
+    #[unsafe(link_section = ".nvm_data")]
+    static mut SETTLED: NVMData<AtomicStorage<[u8; 4]>> = NVMData::new(AtomicStorage::new(&[0; 4]));
+
+    // An update leaves the replaced value in the storage it invalidates; settling overwrites it
+    // with the current value, keeps the current value readable, and writes nothing once both
+    // storages agree.
+    #[test]
+    fn atomic_storage_settle_overwrites_the_replaced_value() {
+        let pointer = &raw mut SETTLED;
+        let storage = unsafe { (*pointer).get_mut() };
+        storage.update(&[1; 4]);
+        storage.update(&[2; 4]);
+        let replaced = [
+            *storage.storage_a.value.get_ref(),
+            *storage.storage_b.value.get_ref(),
+        ];
+        assert_eq!(replaced.contains(&[1; 4]), true);
+        storage.settle();
+        assert_eq!(*storage.storage_a.value.get_ref(), [2; 4]);
+        assert_eq!(*storage.storage_b.value.get_ref(), [2; 4]);
+        assert_eq!(*storage.get_ref(), [2; 4]);
+        storage.settle();
+        assert_eq!(*storage.get_ref(), [2; 4]);
+    }
+
+    // A power loss in the middle of a write leaves the other storage with part of the new
+    // bytes and part of the replaced ones; settling still finds them different and overwrites
+    // every byte.
+    #[test]
+    fn atomic_storage_settle_finishes_a_torn_write() {
+        let pointer = &raw mut SETTLED;
+        let storage = unsafe { (*pointer).get_mut() };
+        storage.update(&[3; 4]);
+        storage.update(&[4; 4]);
+        let other = if storage.storage_a.is_valid() {
+            &mut storage.storage_b
+        } else {
+            &mut storage.storage_a
+        };
+        other.value.update(&[4, 4, 3, 3]);
+        storage.settle();
+        assert_eq!(*storage.storage_a.value.get_ref(), [4; 4]);
+        assert_eq!(*storage.storage_b.value.get_ref(), [4; 4]);
+        assert_eq!(*storage.get_ref(), [4; 4]);
     }
 }
