@@ -588,9 +588,24 @@ impl SDKBuilder<'_> {
         //  1. A single integer (e.g. "8192")
         //  2. A comma-separated list of target:value pairs (e.g. "nanosplus: 8192, stax: 12288")
         //     where target matches CARGO_CFG_TARGET_OS.
-        // If not specified, or if the current target isn't present, default to DEFAULT_HEAP_SIZE.
+        // If not specified, or if the current target isn't present, default to default_heap_size.
         const DEFAULT_HEAP_SIZE: u32 = 8192;
-        let raw = env::var("HEAP_SIZE").unwrap_or_else(|_| DEFAULT_HEAP_SIZE.to_string());
+        // The ML-KEM and ML-DSA C routines need more stack than the default heap
+        // leaves on Nano X.
+        const NANOX_PQ_HEAP_SIZE: u32 = 2048;
+        let pq_enabled = env::var_os("CARGO_FEATURE_MLKEM").is_some()
+            || env::var_os("CARGO_FEATURE_MLDSA").is_some();
+        let default_heap_size = || {
+            if target_os == "nanox" && pq_enabled {
+                println!(
+                    "cargo:warning=ML-KEM/ML-DSA enabled on Nano X: heap size defaults to {NANOX_PQ_HEAP_SIZE}"
+                );
+                NANOX_PQ_HEAP_SIZE
+            } else {
+                DEFAULT_HEAP_SIZE
+            }
+        };
+        let raw = env::var("HEAP_SIZE").unwrap_or_else(|_| default_heap_size().to_string());
         let trimmed = raw.trim();
 
         let heap_size_value: u32 = match trimmed.parse::<u32>() {
@@ -611,7 +626,7 @@ impl SDKBuilder<'_> {
                         break;
                     }
                 }
-                selected.unwrap_or(DEFAULT_HEAP_SIZE)
+                selected.unwrap_or_else(default_heap_size)
             }
         };
 
@@ -625,6 +640,12 @@ impl SDKBuilder<'_> {
             "apex_p" => 36 * 1024,
             _ => panic!("Unknown target OS '{target_os}'"),
         };
+
+        assert!(
+            !(target_os == "nanox" && pq_enabled && heap_size_value > NANOX_PQ_HEAP_SIZE),
+            "Invalid heap size specification '{raw}'; with ML-KEM/ML-DSA enabled, the heap must \
+             not exceed {NANOX_PQ_HEAP_SIZE} on nanox"
+        );
 
         assert!(
             (2048..=max_heap_size).contains(&heap_size_value),

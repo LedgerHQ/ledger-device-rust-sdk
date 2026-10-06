@@ -32,8 +32,9 @@ pub(super) fn is_comm_null() -> bool {
 }
 
 // Converts the pointer back to the concrete Comm<N> type.
+// Panics if no Comm instance is registered.
 unsafe fn get_comm<const N: usize>() -> &'static mut Comm<N> {
-    unsafe { &mut *(CURRENT_COMM as *mut Comm<N>) }
+    unsafe { (CURRENT_COMM as *mut Comm<N>).as_mut() }.expect("No Comm instance registered")
 }
 
 /// Register a type-erased panic handler for the current Comm instance.
@@ -74,7 +75,20 @@ fn panic_reply_impl<const N: usize>(reply: Reply) {
 /// processing a command (an incoming APDU is then a double APDU).
 pub(super) fn next_event_ahead_impl<const N: usize>() -> bool {
     let comm = unsafe { get_comm::<N>() };
+    if !comm.apdu_in_progress {
+        return next_event_ahead_inner(comm);
+    }
+    // Events are received, and BOLOS APDUs answered, in `buf`, which holds the
+    // data of the command in flight: park that data in the meantime. Events
+    // received in flight are fully handled here (nothing is left pending), so
+    // the command data can be put back afterwards.
+    core::mem::swap(&mut comm.buf, &mut comm.parked);
+    let ret = next_event_ahead_inner(comm);
+    core::mem::swap(&mut comm.buf, &mut comm.parked);
+    ret
+}
 
+fn next_event_ahead_inner<const N: usize>(comm: &mut Comm<N>) -> bool {
     // Decoding an APDU overwrites `apdu_type` with the transport it arrived on.
     // Anything handled or rejected below is not the command the application is
     // working on, so its transport is restored before returning; otherwise the
