@@ -52,14 +52,14 @@ impl NbglStatus {
 
     /// Shows the status page with the provided text.
     /// # Arguments
-    /// * `_comm` - Mutable reference to Comm.
+    /// * `comm` - Mutable reference to Comm.
     /// * `success` - If `true`, shows a success status; otherwise, shows a failure status.
     /// # Returns
     /// This function does not return any value.
     /// The status page is displayed for 3 seconds before automatically disappearing.
     #[cfg(feature = "io_new")]
-    pub fn show<const N: usize>(&self, _comm: &mut crate::io::Comm<N>, success: bool) {
-        self.show_internal(success)
+    pub fn show<const N: usize>(&self, comm: &mut crate::io::Comm<N>, success: bool) {
+        comm.lend_to_nbgl(|| self.show_internal(success))
     }
 
     /// Shows the status page with the provided text.

@@ -1,6 +1,6 @@
 [package]
 name = "ledger_device_sdk"
-version = "1.39.0"
+version = "1.41.0"
 authors = ["Ledger"]
 edition = "2024"
 license.workspace = true
@@ -23,7 +23,7 @@ rand_core = { version = "0.6.3", default-features = false }
 zeroize = { version = "1.6.0", default-features = false }
 numtoa = "0.2.4"
 const-zero = "0.1.1"
-ledger_secure_sdk_sys = { path = "../ledger_secure_sdk_sys", version = "1.16.5" }
+ledger_secure_sdk_sys = { path = "../ledger_secure_sdk_sys", version = "1.17.0" }
 
 [features]
 debug = ["log_error"]
@@ -44,6 +44,10 @@ mlkem = [ "ledger_secure_sdk_sys/mlkem" ]
 mldsa = [ "ledger_secure_sdk_sys/mldsa" ]
 mldsa_87 = [ "mldsa", "ledger_secure_sdk_sys/mldsa_87" ]
 mldsa_optimization = [ "mldsa", "ledger_secure_sdk_sys/mldsa_optimization" ]
+# Application storage kept by the OS across app updates, see the `app_storage` module.
+app_storage = [ "ledger_secure_sdk_sys/app_storage" ]
+app_storage_settings = [ "app_storage", "ledger_secure_sdk_sys/app_storage_settings" ]
+app_storage_data = [ "app_storage", "ledger_secure_sdk_sys/app_storage_data" ]
 
 # Build a network/app variant. When enabled, build.rs overlays the
 # [package.metadata.ledger.variants.x] table onto the base
@@ -93,6 +97,11 @@ doc-scrape-examples = true
 required-features = ["io_new"]
 
 [[example]]
+name = "nbgl_generic_configuration"
+doc-scrape-examples = true
+required-features = ["io_new"]
+
+[[example]]
 name = "nbgl_generic_review"
 doc-scrape-examples = true
 required-features = ["io_new"]
@@ -113,6 +122,11 @@ doc-scrape-examples = true
 required-features = ["io_new"]
 
 [[example]]
+name = "nbgl_navigable_content"
+doc-scrape-examples = true
+required-features = ["io_new"]
+
+[[example]]
 name = "nbgl_review"
 doc-scrape-examples = true
 required-features = ["io_new"]
@@ -129,6 +143,16 @@ required-features = ["io_new"]
 
 [[example]]
 name = "nbgl_streaming_review"
+doc-scrape-examples = true
+required-features = ["io_new"]
+
+[[example]]
+name = "nbgl_tag_value_alias"
+doc-scrape-examples = true
+required-features = ["io_new"]
+
+[[example]]
+name = "nbgl_warning"
 doc-scrape-examples = true
 required-features = ["io_new"]
 

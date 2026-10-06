@@ -11,7 +11,11 @@ pub struct NbglAddressReview<'a> {
     glyph: Option<&'a NbglGlyph<'a>>,
     review_title: CString,
     review_subtitle: CString,
-    tag_value_list: Vec<CField>,
+    /// Owns the C strings and extension structs for the pairs; `None` until
+    /// one of the `set_tag_value_list` methods is called.
+    tag_value_list: Option<CTagValueList>,
+    /// App handler for a touched value icon.
+    on_value_icon: Option<fn(u8)>,
 }
 
 impl SyncNBGL for NbglAddressReview<'_> {}
@@ -29,9 +33,26 @@ impl<'a> NbglAddressReview<'a> {
             review_title: CString::default(),
             review_subtitle: CString::default(),
             glyph: None,
-            tag_value_list: Vec::default(),
+            tag_value_list: None,
+            on_value_icon: None,
         }
     }
+
+    /// Sets the function run when a value icon is touched.
+    ///
+    /// It receives the index of the pair whose icon was touched. Without it the
+    /// icons are drawn but report nothing.
+    ///
+    /// Only meaningful for pairs carrying [`TagValue::value_icon`].
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
+    pub fn on_value_icon(self, on_value_icon: fn(u8)) -> NbglAddressReview<'a> {
+        NbglAddressReview {
+            on_value_icon: Some(on_value_icon),
+            ..self
+        }
+    }
+
     /// Sets the icon to display in the center of the page.
     /// # Arguments
     /// * `glyph` - The icon to display in the center of the page.
@@ -81,18 +102,34 @@ impl<'a> NbglAddressReview<'a> {
     /// * `tag_value_list` - A slice of `Field` representing the tag/value pairs to display.
     /// # Returns
     /// Returns the builder itself to allow method chaining.
-    pub fn set_tag_value_list(self, tag_value_list: &'a [Field<'a>]) -> NbglAddressReview<'a> {
+    pub fn set_tag_value_list(self, tag_value_list: &[Field]) -> NbglAddressReview<'a> {
         NbglAddressReview {
-            tag_value_list: tag_value_list.iter().map(|f| f.into()).collect(),
+            tag_value_list: Some(CTagValueList::from_fields(tag_value_list)),
+            ..self
+        }
+    }
+
+    /// Sets the list of tag/value pairs to display in the address review flow,
+    /// allowing each pair to carry a [`FieldExtension`].
+    /// # Arguments
+    /// * `values` - A slice of `TagValue` representing the tag/value pairs to display.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
+    pub fn set_tag_value_list_ext(self, values: &[TagValue]) -> NbglAddressReview<'a> {
+        NbglAddressReview {
+            tag_value_list: Some(CTagValueList::new(values)),
             ..self
         }
     }
 
     fn show_internal(&self, address: &str) -> bool {
-        let Some(nb_pairs) = nb_items(self.tag_value_list.len()) else {
+        let nb_pairs = self.tag_value_list.as_ref().map_or(0, |l| l.nb_pairs());
+        if nb_items(nb_pairs).is_none() {
             return false;
-        };
+        }
         unsafe {
+            set_value_icon_handler(self.on_value_icon);
+
             let icon: nbgl_icon_details_t = match self.glyph {
                 Some(g) => g.into(),
                 None => nbgl_icon_details_t::default(),
@@ -100,16 +137,9 @@ impl<'a> NbglAddressReview<'a> {
 
             let address = CString::new(address).unwrap();
 
-            let mut tag_value_array: Vec<nbgl_contentTagValue_t> = Vec::new();
-            for field in self.tag_value_list.iter() {
-                let val: nbgl_contentTagValue_t = field.into();
-                tag_value_array.push(val);
-            }
-
-            let tag_value_list = nbgl_contentTagValueList_t {
-                pairs: tag_value_array.as_ptr(),
-                nbPairs: nb_pairs,
-                ..Default::default()
+            let tag_value_list = match &self.tag_value_list {
+                Some(list) => list.as_c_list(),
+                None => nbgl_contentTagValueList_t::default(),
             };
 
             self.ux_sync_init();
@@ -142,13 +172,13 @@ impl<'a> NbglAddressReview<'a> {
 
     /// Shows the address review flow.
     /// # Arguments
-    /// * `_comm` - Mutable reference to Comm.
+    /// * `comm` - Mutable reference to Comm.
     /// * `address` - The address to review.
     /// # Returns
     /// Returns true if the user approved the address, false otherwise.
     #[cfg(feature = "io_new")]
-    pub fn show<const N: usize>(&self, _comm: &mut crate::io::Comm<N>, address: &str) -> bool {
-        self.show_internal(address)
+    pub fn show<const N: usize>(&self, comm: &mut crate::io::Comm<N>, address: &str) -> bool {
+        comm.lend_to_nbgl(|| self.show_internal(address))
     }
 
     /// Shows the address review flow.

@@ -2,10 +2,12 @@
 #![no_main]
 
 use include_gif::include_gif;
-use ledger_device_sdk::nbgl::{NbglGlyph, NbglHomeAndSettings, init_comm};
+use ledger_device_sdk::nbgl::{
+    HomeAction, NbglConfirm, NbglGlyph, NbglHomeAndSettings, NbglStatus, init_comm,
+};
 // use ledger_device_sdk::nvm::*;
 // use ledger_device_sdk::NVMData;
-use ledger_device_sdk::io::{ApduHeader, StatusWords};
+use ledger_device_sdk::io::{ApduHeader, Comm, DEFAULT_BUF_SIZE, StatusWords};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 ledger_device_sdk::define_comm!(COMM);
@@ -84,6 +86,54 @@ mod settings {
     }
 }
 
+/// The action button's callback is a plain `fn()` with no user data, and
+/// `init_comm` may only be called once, so the `Comm` obtained in `sample_main`
+/// is parked here for the callback to borrow.
+static mut COMM_REF: Option<&'static mut Comm<DEFAULT_BUF_SIZE>> = None;
+
+/// Points at the home screen builder owned by `sample_main`, so the action
+/// callback can draw it again.
+///
+/// Store only a reference handle in `.bss` and avoid raw-pointer dereference
+/// in the callback.
+static mut HOME_REF: Option<&'static mut NbglHomeAndSettings> = None;
+
+/// Runs when the home screen's action button is touched.
+///
+/// Draws a confirmation modal over the home screen. Being a modal it needs
+/// something underneath, which is why it is raised from here rather than from
+/// the top of `sample_main`: dismissing it through the footer simply reveals the
+/// home screen again, and reports nothing back.
+fn on_action() {
+    NbglConfirm::new()
+        .message("Delete this account?")
+        .sub_message("This cannot be undone.")
+        .texts("Delete", "Cancel")
+        .show_and_return(on_confirm);
+}
+
+/// Runs when the confirmation modal's button is touched.
+///
+/// There is no counterpart for the footer: `nbgl_useCaseConfirm` reports only
+/// confirmation, and dismissal needs no handling here because the home screen is
+/// already drawn behind the modal.
+fn on_confirm() {
+    let comm = unsafe {
+        #[allow(static_mut_refs)]
+        COMM_REF.as_mut().unwrap()
+    };
+    NbglStatus::new().text("Account deleted").show(comm, true);
+
+    // `show` returns once the status page times out after 3s. Nothing is drawn
+    // at that point, so put the home screen back.
+    unsafe {
+        #[allow(static_mut_refs)]
+        if let Some(home) = HOME_REF.as_mut() {
+            home.show_and_return();
+        }
+    }
+}
+
 #[unsafe(no_mangle)]
 extern "C" fn sample_main() {
     let comm = init_comm(&COMM);
@@ -102,14 +152,34 @@ extern "C" fn sample_main() {
     let mut settings: settings::Settings = Default::default();
 
     // Display the home screen.
+    // `info_list` takes an arbitrary number of (type, content) pairs; the
+    // shorter `.infos(app_name, version, author)` covers the usual
+    // Version/Developer pair.
+    let action = HomeAction::new("Delete account", on_action).icon(&FERRIS);
+
     let mut home = NbglHomeAndSettings::new()
         .glyph(&FERRIS)
         .settings(settings.get_mut(), &settings_strings)
-        .infos(
-            "Example App",
-            env!("CARGO_PKG_VERSION"),
-            env!("CARGO_PKG_AUTHORS"),
-        );
+        .app_name("Example App")
+        .info_list(&[
+            ("Version", env!("CARGO_PKG_VERSION")),
+            ("Developer", env!("CARGO_PKG_AUTHORS")),
+            ("Copyright", "(c) 2026 Ledger"),
+        ])
+        .action(&action);
+
+    // Both statics must be populated before the home screen goes up, since the
+    // action button can be touched as soon as it does. `home` outlives them:
+    // `sample_main` never returns.
+    let comm = unsafe {
+        COMM_REF = Some(comm);
+        // `home` lives until the app exits, so its borrow is extended to
+        // 'static through a raw pointer. Going via the pointer here keeps the
+        // callback itself free of raw-pointer dereferences.
+        HOME_REF = Some(&mut *(&raw mut home));
+        #[allow(static_mut_refs)]
+        COMM_REF.as_mut().unwrap()
+    };
 
     home.show_and_return();
 

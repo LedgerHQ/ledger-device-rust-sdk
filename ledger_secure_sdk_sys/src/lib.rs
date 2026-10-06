@@ -85,3 +85,6 @@ mod bindings {
 pub use bindings::*;
 
 include!(concat!(env!("OUT_DIR"), "/heap_size.rs"));
+
+#[cfg(feature = "app_storage")]
+include!(concat!(env!("OUT_DIR"), "/app_storage_size.rs"));

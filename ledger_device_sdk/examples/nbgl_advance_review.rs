@@ -3,7 +3,8 @@
 
 use include_gif::include_gif;
 use ledger_device_sdk::nbgl::{
-    Field, NbglAdvanceReview, NbglGlyph, NbglReviewStatus, StatusType, TransactionType, init_comm,
+    Field, NbglAdvanceReview, NbglGlyph, NbglReviewStatus, OperationFlag, StatusType, TipBox,
+    TransactionType, init_comm,
 };
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
@@ -43,6 +44,11 @@ extern "C" fn sample_main() {
         .review_title("Review Title")
         .review_subtitle("Review Subtitle")
         .finish_title("Finish Title")
+        // `Risky` is what makes NBGL draw the warning button in the top-right
+        // of the review's first and last pages. Without it the warning is only
+        // reachable from the intro page. It needs a warning able to fill that
+        // button, which `warning_details` provides.
+        .operation_flags(&[OperationFlag::Risky])
         .warning_details(
             Some("DApp Provider"),
             Some("https://report.url"),
@@ -62,6 +68,41 @@ extern "C" fn sample_main() {
             NbglReviewStatus::new()
                 .status_type(StatusType::Transaction)
                 .show(comm, false);
+        }
+        _ => {}
+    }
+
+    // The same review with a tip box under the title, and deliberately no
+    // warning: NBGL substitutes its own tip box text whenever a warning raises
+    // one, so a custom tip box is only visible without those warnings.
+    let tip_infos = [
+        Field {
+            name: "Why is this blind?",
+            value: "The app has no descriptor for this contract.",
+        },
+        Field {
+            name: "Contract",
+            value: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        },
+    ];
+    let tip_box = TipBox::new("Why can't this be decoded?", &tip_infos)
+        .icon(&FERRIS)
+        .modal_title("About this transaction");
+
+    let advance_review = NbglAdvanceReview::new(TransactionType::Transaction)
+        .glyph(&FERRIS)
+        .review_title("Review Title")
+        .review_subtitle("With a tip box")
+        .finish_title("Finish Title")
+        .tip_box(&tip_box);
+
+    let success = advance_review.show(comm, &my_fields);
+
+    match success {
+        Ok(approved) => {
+            NbglReviewStatus::new()
+                .status_type(StatusType::Transaction)
+                .show(comm, approved);
         }
         _ => {}
     }

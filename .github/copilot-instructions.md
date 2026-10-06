@@ -148,6 +148,7 @@ Enable `debug` feature for ARM semihosting output via `debug_print()` in [testin
 - `sys`: Re-export `ledger_secure_sdk_sys` for low-level FFI access
 - `speculos`: Enable emulator-specific code for testing
 - `debug_csdk`: Enable C SDK debug output
+- `app_storage`: Application storage from the C SDK (`app_storage` module), size set by the `APP_STORAGE_SIZE` env var (default 480); `app_storage_settings` / `app_storage_data` set its header properties
 
 ## Common Gotchas
 
