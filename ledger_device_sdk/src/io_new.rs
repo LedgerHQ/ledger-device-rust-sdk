@@ -136,8 +136,6 @@ pub enum CommError {
 
 pub struct Comm<const N: usize = DEFAULT_BUF_SIZE> {
     buf: [u8; N],
-    /// Holds the command in flight while a screen polls events into `buf`.
-    parked: [u8; N],
     expected_cla: Option<u8>,
 
     apdu_type: u8,
@@ -159,7 +157,6 @@ impl<const N: usize> Comm<N> {
     pub fn new() -> Self {
         Self {
             buf: [0; N],
-            parked: [0; N],
             expected_cla: None,
             apdu_type: PacketTypes::PacketTypeNone as u8,
             #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
