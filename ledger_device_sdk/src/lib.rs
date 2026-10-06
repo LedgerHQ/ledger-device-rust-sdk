@@ -10,6 +10,8 @@
 #![feature(const_trait_impl)]
 
 mod app_info;
+#[cfg(feature = "app_storage")]
+pub mod app_storage;
 pub mod bn;
 pub mod ecc;
 pub mod hash;

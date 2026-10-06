@@ -44,6 +44,15 @@ SECTIONS
     _nvram_data = .;
   } > FLASH :flash0
 
+  /* Application storage (`app_storage` feature) opens the app data region, as in the C SDK's
+     target/common.ld. It holds no pointers, so no relocation touches it. Empty, and so
+     absent, without the feature. */
+  .storage_section : ALIGN(PAGE_SIZE)
+  {
+    *(.storage_section)
+    . = ALIGN(PAGE_SIZE);
+  } > FLASH :flash0
+
   /* Immutable globals, read only during app running proper, but
      relocations are needed. (So not read-only completely.) */
   .rodata : ALIGN(PAGE_SIZE)
