@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `nvm`: `AtomicStorage::get_or_init` returns the stored value, first storing
+  the given one if the storage was never updated (both validity flags clear, as
+  in the zeroed `.nvm_data` Speculos loads), where `get_ref` panics.
+
+### Fixed
+- `nvm`: `AtomicStorage::update` on a storage that was never updated stores the
+  value instead of panicking with "invalidated atomic storage". An interrupted
+  update of a storage holding a value never clears both flags, so this state
+  means the storage holds no value yet: it was never updated, or its first
+  update was interrupted, and the next update stores the value again.
+- `nvm`: a `Collection` that was never updated is empty, as `Collection::new`
+  declares it, instead of panicking on its first read or `add`.
+
 ## [1.40.0] - 2026-10-05
 
 ### Added

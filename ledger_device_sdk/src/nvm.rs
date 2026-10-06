@@ -211,20 +211,39 @@ where
         }
     }
 
-    /// Returns which storage contains the latest valid data.
+    /// Returns which storage contains the latest data, or `None` when neither is valid.
     ///
-    /// # Panics
-    ///
-    /// Panics if both storage elements are invalid (data corrupton),
-    /// although data corruption shall not be possible with tearing.
-    fn which(&self) -> AtomicStorageElem {
+    /// An update validates the storage it writes before it invalidates the other one, so an
+    /// interrupted update of a storage holding a value never leaves both invalid. Neither being
+    /// valid means the storage holds no value yet: its section was loaded zeroed (Speculos
+    /// zeroes `.nvm_data`), or its first update was interrupted before the written storage was
+    /// validated, and the next update stores the value again.
+    fn which(&self) -> Option<AtomicStorageElem> {
         if self.storage_a.is_valid() {
-            StorageA
+            Some(StorageA)
         } else if self.storage_b.is_valid() {
-            StorageB
+            Some(StorageB)
         } else {
-            panic!("invalidated atomic storage");
+            None
         }
+    }
+
+    /// The stored value, or `None` when the storage holds no value yet (see [`Self::which`]).
+    fn stored(&self) -> Option<&T> {
+        match self.which()? {
+            StorageA => Some(self.storage_a.get_ref()),
+            StorageB => Some(self.storage_b.get_ref()),
+        }
+    }
+
+    /// Returns the stored value, first storing `init` if the storage was never updated (both
+    /// validity flags clear, as in the zeroed `.nvm_data` Speculos loads). Use it where
+    /// [`SingleStorage::get_ref`] would panic on such a storage.
+    pub fn get_or_init(&mut self, init: &T) -> &T {
+        if self.which().is_none() {
+            self.update(init);
+        }
+        self.get_ref()
     }
 }
 
@@ -233,22 +252,25 @@ where
     T: Copy,
 {
     /// Return reference to the stored value.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the storage was never updated: its zeroed bytes are not a valid `T` for every
+    /// type. [`AtomicStorage::get_or_init`] stores a value first instead.
     fn get_ref(&self) -> &T {
-        match self.which() {
-            StorageA => self.storage_a.get_ref(),
-            StorageB => self.storage_b.get_ref(),
-        }
+        self.stored().expect("invalidated atomic storage")
     }
 
-    /// Update the value by writing to the NVM memory.
+    /// Update the value by writing to the NVM memory. A storage that was never updated takes
+    /// the value as well.
     /// Warning: this can be vulnerable to tearing - leading to partial write.
     fn update(&mut self, value: &T) {
         match self.which() {
-            StorageA => {
+            Some(StorageA) | None => {
                 self.storage_b.update(value);
                 self.storage_a.invalidate();
             }
-            StorageB => {
+            Some(StorageB) => {
                 self.storage_a.update(value);
                 self.storage_b.invalidate();
             }
@@ -283,13 +305,21 @@ where
         }
     }
 
+    /// The allocation flags, or `None` when they hold no value yet: the collection was never
+    /// updated (its zeroed `.nvm_data`, as Speculos loads it) and is empty, which is what
+    /// [`Collection::new`] stores.
+    fn allocation(&self) -> Option<&[u8; N]> {
+        self.flags.stored()
+    }
+
     /// Finds and returns a reference to a free slot, or returns None if
     /// all slots are allocated.
     fn find_free_slot(&self) -> Option<usize> {
-        self.flags
-            .get_ref()
-            .iter()
-            .position(|&e| e != STORAGE_VALID)
+        match self.allocation() {
+            Some(flags) => flags.iter().position(|&e| e != STORAGE_VALID),
+            None if N > 0 => Some(0),
+            None => None,
+        }
     }
 
     /// Adds an item in the collection. Returns an error if there is not free
@@ -299,7 +329,7 @@ where
         match self.find_free_slot() {
             Some(i) => {
                 self.slots[i].update(value);
-                let mut new_flags = *self.flags.get_ref();
+                let mut new_flags = self.allocation().copied().unwrap_or([0; N]);
                 new_flags[i] = STORAGE_VALID;
                 self.flags.update(&new_flags);
                 Ok(())
@@ -314,16 +344,12 @@ where
     ///
     /// Returns an error if the `key` is out of range.
     fn is_allocated(&self, key: usize) -> Result<bool, KeyOutOfRange> {
-        match self.flags.get_ref().get(key) {
-            Some(&byte) => {
-                if byte == STORAGE_VALID {
-                    Ok(true)
-                } else {
-                    Ok(false)
-                }
-            }
-            None => Err(KeyOutOfRange),
+        if key >= N {
+            return Err(KeyOutOfRange);
         }
+        Ok(self
+            .allocation()
+            .is_some_and(|flags| flags[key] == STORAGE_VALID))
     }
 
     /// Returns the number of allocated slots.
@@ -333,7 +359,8 @@ where
 
     /// Returns true if collection is empty
     pub fn is_empty(&self) -> bool {
-        !self.flags.get_ref().contains(&STORAGE_VALID)
+        self.allocation()
+            .is_none_or(|flags| !flags.contains(&STORAGE_VALID))
     }
 
     /// Returns the maximum number of items the collection can store.
@@ -349,11 +376,12 @@ where
 
     /// Counts the number of allocated slots up until `len`.
     fn count_allocated(&self, len: usize) -> usize {
-        self.flags
-            .get_ref()
-            .iter()
-            .take(len)
-            .fold(0, |acc, &byte| acc + (byte == STORAGE_VALID) as u32) as usize
+        self.allocation().map_or(0, |flags| {
+            flags
+                .iter()
+                .take(len)
+                .fold(0, |acc, &byte| acc + (byte == STORAGE_VALID) as u32) as usize
+        })
     }
 
     /// Returns the `key` of an item in the internal storage, given the `index`
@@ -453,5 +481,71 @@ where
                 return Some(self.container.slots[self.next_key - 1].get_ref());
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{AtomicStorage, Collection, SingleStorage};
+    use crate::NVMData;
+    use crate::assert_eq_err as assert_eq;
+    use crate::testing::TestType;
+    use testmacro::test_item as test;
+
+    #[unsafe(link_section = ".nvm_data")]
+    static mut NEVER_UPDATED: NVMData<AtomicStorage<[u8; 4]>> =
+        NVMData::new(AtomicStorage::new(&[0; 4]));
+
+    // An application started from a zeroed `.nvm_data`, as Speculos loads it for applications,
+    // finds both validity flags of a storage it never updated clear: `get_or_init` stores the
+    // initial value instead of exposing the zeroed bytes, and later calls keep what was
+    // stored. The flags are cleared here explicitly, so the test does not depend on how the
+    // test binary was loaded.
+    #[test]
+    fn atomic_storage_initializes_zeroed_nvm() {
+        let pointer = &raw mut NEVER_UPDATED;
+        let storage = unsafe { (*pointer).get_mut() };
+        storage.storage_a.invalidate();
+        storage.storage_b.invalidate();
+        assert_eq!(*storage.get_or_init(&[7; 4]), [7; 4]);
+        assert_eq!(*storage.get_ref(), [7; 4]);
+        storage.update(&[1, 2, 3, 4]);
+        assert_eq!(*storage.get_or_init(&[9; 4]), [1, 2, 3, 4]);
+        storage.update(&[5, 6, 7, 8]);
+        assert_eq!(*storage.get_ref(), [5, 6, 7, 8]);
+    }
+
+    // A never-updated storage also takes a plain update.
+    #[test]
+    fn atomic_storage_updates_zeroed_nvm() {
+        let pointer = &raw mut NEVER_UPDATED;
+        let storage = unsafe { (*pointer).get_mut() };
+        storage.storage_a.invalidate();
+        storage.storage_b.invalidate();
+        storage.update(&[3; 4]);
+        assert_eq!(*storage.get_ref(), [3; 4]);
+    }
+
+    #[unsafe(link_section = ".nvm_data")]
+    static mut NEVER_UPDATED_COLLECTION: NVMData<Collection<u32, 4>> =
+        NVMData::new(Collection::new(0));
+
+    // A collection whose allocation flags were never updated, as in the zeroed `.nvm_data`
+    // Speculos loads, is empty, which is what `Collection::new` stores: it is read and added
+    // to without panicking, and no `clear` is needed first.
+    #[test]
+    fn collection_with_zeroed_flags_is_empty() {
+        let pointer = &raw mut NEVER_UPDATED_COLLECTION;
+        let collection = unsafe { (*pointer).get_mut() };
+        collection.flags.storage_a.invalidate();
+        collection.flags.storage_b.invalidate();
+        assert_eq!(collection.len(), 0);
+        assert_eq!(collection.is_empty(), true);
+        assert_eq!(collection.remaining(), 4);
+        assert_eq!(collection.get(0), None);
+        assert_eq!((&*collection).into_iter().next(), None);
+        assert_eq!(collection.add(&7).is_ok(), true);
+        assert_eq!(collection.len(), 1);
+        assert_eq!(collection.get(0), Some(&7));
     }
 }
