@@ -15,8 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - `nvm`: `AtomicStorage::update` on a storage that was never updated stores the
   value instead of panicking with "invalidated atomic storage". An interrupted
-  update never clears both flags, so this state only means the storage was
-  never updated.
+  update of a storage holding a value never clears both flags, so this state
+  means the storage holds no value yet: it was never updated, or its first
+  update was interrupted, and the next update stores the value again.
+- `nvm`: a `Collection` that was never updated is empty, as `Collection::new`
+  declares it, instead of panicking on its first read or `add`.
 
 ## [1.40.0] - 2026-10-05
 
