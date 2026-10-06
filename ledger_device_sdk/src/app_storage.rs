@@ -8,7 +8,23 @@
 //!
 //! The storage is initialized when the application starts: an uninitialized or corrupted
 //! storage gets a fresh, empty header. Its capacity, [`capacity`], is set at build time by
-//! the `APP_STORAGE_SIZE` environment variable (480 bytes by default).
+//! the `APP_STORAGE_SIZE` environment variable (480 bytes by default). The storage outlives
+//! the version that wrote it, so `APP_STORAGE_SIZE` must not shrink from one version of an
+//! application to the next.
+//!
+//! # Security
+//!
+//! The CRC detects accidental corruption, not tampering, and the content is stored
+//! unencrypted: do not keep secrets here. The content may have been written by an older
+//! version of the application, so check [`data_version`] before trusting its format.
+//!
+//! # Differences from the C SDK
+//!
+//! - [`read`] also refuses a range that ends beyond [`capacity`]; the C SDK checks it only
+//!   against the data size in the header.
+//! - The storage is initialized for a standalone start and for Exchange's
+//!   `SIGN_TRANSACTION`, as `common_app_init()` does, but before the coin application copies
+//!   the transaction parameters rather than after.
 //!
 //! This module is only available with the `app_storage` Cargo feature. The
 //! `app_storage_settings` and `app_storage_data` features set the matching
@@ -86,15 +102,25 @@ fn check(status: i32, len: u32) -> Result<(), AppStorageError> {
 ///
 /// # Errors
 ///
-/// [`AppStorageError::NoDataAvailable`] when the range ends beyond what was written so far,
+/// [`AppStorageError::Overflow`] when the range ends beyond the storage capacity,
+/// [`AppStorageError::NoDataAvailable`] when it ends beyond what was written so far,
 /// [`AppStorageError::InvalidArgument`] when it cannot be expressed.
 pub fn read(buf: &mut [u8], offset: u32) -> Result<(), AppStorageError> {
     if buf.is_empty() {
         return Ok(());
     }
     let len = u32::try_from(buf.len()).map_err(|_| AppStorageError::InvalidArgument)?;
-    // SAFETY: `buf` is valid for `len` writable bytes; the C side checks the range against
-    // the written data size before copying.
+    // The C side checks the range only against the data size in the header, which comes from
+    // flash; the capacity is checked here as well, so a size beyond it (a storage kept from a
+    // version built with a larger `APP_STORAGE_SIZE`) cannot make the copy leave the data area.
+    let end = offset
+        .checked_add(len)
+        .ok_or(AppStorageError::InvalidArgument)?;
+    if end > capacity() {
+        return Err(AppStorageError::Overflow);
+    }
+    // SAFETY: `buf` is valid for `len` writable bytes, and the range ends within the capacity;
+    // the C side checks it against the written data size before copying.
     let status = unsafe { sys::app_storage_read(buf.as_mut_ptr().cast(), len, offset) };
     check(status, len)
 }
@@ -217,6 +243,23 @@ mod tests {
         assert_eq!(write(&[0xaa], capacity() - 1), Ok(()));
         assert_eq!(size(), capacity());
         assert_eq!(write(&[0xaa], capacity()), Err(AppStorageError::Overflow));
+    }
+
+    // A read past the capacity is refused whatever size the header claims: the size comes from
+    // flash, so a storage kept from a version with a larger capacity cannot make a read leave
+    // the data area.
+    #[test]
+    fn test_app_storage_read_stops_at_capacity() {
+        reset();
+        assert_eq!(write(&[0xaa], capacity() - 1), Ok(()));
+        let mut buf = [0u8; 2];
+        assert_eq!(
+            read(&mut buf, capacity() - 1),
+            Err(AppStorageError::Overflow)
+        );
+        let mut last = [0u8; 1];
+        assert_eq!(read(&mut last, capacity() - 1), Ok(()));
+        assert_eq!(last, [0xaa]);
     }
 
     // A range whose end does not fit in u32 is rejected, not wrapped.

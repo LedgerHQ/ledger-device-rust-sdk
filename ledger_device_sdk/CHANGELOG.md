@@ -21,7 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   CRC-checked area at the start of the app data, meant to be kept by the OS across app
   updates), with its size set by the `APP_STORAGE_SIZE` environment variable (reported by
   `app_storage::capacity`) and its header properties by the `app_storage_settings` and
-  `app_storage_data` features.
+  `app_storage_data` features. `APP_STORAGE_SIZE` must not shrink between versions of an
+  app. Difference from the C SDK: `read` also refuses a range past the capacity.
 
 ### Fixed
 - `nvm`: `AtomicStorage::update` on a storage that was never updated stores the
