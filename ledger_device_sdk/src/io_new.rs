@@ -19,9 +19,10 @@ use ledger_secure_sdk_sys::seph as sys_seph;
 /// Default buffer size for `Comm` when no custom size is specified.
 pub const DEFAULT_BUF_SIZE: usize = 273;
 
-/// Global flag ensuring only one `CommStorage` instance is ever initialized.
+/// Set once a `Comm` has been created. It is never reset, so that the only
+/// `Comm` that can ever exist is the one registered with NBGL by [`init_comm`].
 // SAFETY: the runtime is single-threaded, so direct reads/writes are safe.
-static mut COMM_INITIALIZED: bool = false;
+static mut COMM_CREATED: bool = false;
 
 /// Static storage container for a `Comm<N>` instance.
 ///
@@ -42,9 +43,9 @@ pub struct CommStorage<const N: usize = DEFAULT_BUF_SIZE> {
     inner: UnsafeCell<MaybeUninit<Comm<N>>>,
 }
 
-// SAFETY: single-threaded runtime; initialization is guarded by the global
-// COMM_INITIALIZED Cell, which ensures write access to `inner` happens
-// exactly once.
+// SAFETY: single-threaded runtime; `inner` is only written by `init`, which
+// consumes a `Comm`. As at most one `Comm` is ever created (see
+// COMM_CREATED), write access to `inner` happens at most once.
 unsafe impl<const N: usize> Sync for CommStorage<N> {}
 
 impl<const N: usize> CommStorage<N> {
@@ -59,26 +60,19 @@ impl<const N: usize> CommStorage<N> {
 
     /// Initializes the storage with a `Comm<N>` instance and returns a static reference.
     ///
-    /// # Panics
-    ///
-    /// Panics if called more than once (the storage can only be initialized once).
+    /// This can happen only once in total, across all `CommStorage` instances:
+    /// it consumes the only `Comm` that [`Comm::new`] lets the application
+    /// create.
     ///
     /// # Safety
     ///
     /// This method must be called on a static `CommStorage` instance to ensure
     /// the returned reference has a `'static` lifetime.
     pub fn init(&'static self, comm: Comm<N>) -> &'static mut Comm<N> {
-        // Check the global flag to guarantee at most one CommStorage is ever
-        // initialized, even if multiple statics are declared.
-        // SAFETY: single-threaded runtime; no concurrent access is possible.
-        if unsafe { COMM_INITIALIZED } {
-            panic!("CommStorage already initialized. Only one Comm instance can exist.");
-        }
-        unsafe { COMM_INITIALIZED = true };
-
-        // SAFETY: We set COMM_INITIALIZED to true above; since the runtime is
-        // single-threaded, this branch runs exactly once. The storage is
-        // static, so the returned reference is valid for 'static.
+        // SAFETY: `comm` is the only `Comm` that can ever exist (see
+        // COMM_CREATED), so this point is reached at most once, and no other
+        // reference to `inner` exists. The storage is static, so the returned
+        // reference is valid for 'static.
         unsafe {
             let ptr = self.inner.get();
             (*ptr).write(comm);
@@ -154,7 +148,21 @@ pub struct Comm<const N: usize = DEFAULT_BUF_SIZE> {
 }
 
 impl<const N: usize> Comm<N> {
+    /// Creates the application's `Comm`. Applications normally get it through
+    /// [`init_comm`] instead, which also registers it with NBGL.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a `Comm` has already been created: only one instance can ever
+    /// exist, which is what makes holding a `&mut Comm` proof that nothing else
+    /// is using the communication buffer.
     pub fn new() -> Self {
+        // SAFETY: single-threaded runtime; no concurrent access is possible.
+        if unsafe { COMM_CREATED } {
+            panic!("Comm already created. Only one Comm instance can exist.");
+        }
+        unsafe { COMM_CREATED = true };
+
         Self {
             buf: [0; N],
             expected_cla: None,
@@ -440,16 +448,6 @@ impl<'a, const N: usize> CommandResponse<'a, N> {
     /// Clear staged bytes length.
     pub fn clear(&mut self) {
         self.len = 0;
-    }
-}
-
-impl<const N: usize> Drop for Comm<N> {
-    fn drop(&mut self) {
-        callbacks::clear_comm();
-        callbacks::clear_panic_handler();
-        // Allow a new CommStorage to be initialized after this one is dropped.
-        // SAFETY: single-threaded runtime; no concurrent access is possible.
-        unsafe { COMM_INITIALIZED = false };
     }
 }
 

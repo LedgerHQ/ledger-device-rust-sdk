@@ -20,12 +20,6 @@ pub(super) fn set_comm<const N: usize>(comm: &mut Comm<N>) {
     }
 }
 
-pub(super) fn clear_comm() {
-    unsafe {
-        CURRENT_COMM = core::ptr::null_mut();
-    }
-}
-
 #[allow(dead_code)]
 pub(super) fn is_comm_null() -> bool {
     unsafe { CURRENT_COMM.is_null() }
@@ -41,12 +35,6 @@ unsafe fn get_comm<const N: usize>() -> &'static mut Comm<N> {
 pub fn register_panic_handler<const N: usize>() {
     unsafe {
         PANIC_REPLY_FN = Some(panic_reply_impl::<N>);
-    }
-}
-
-pub(super) fn clear_panic_handler() {
-    unsafe {
-        PANIC_REPLY_FN = None;
     }
 }
 

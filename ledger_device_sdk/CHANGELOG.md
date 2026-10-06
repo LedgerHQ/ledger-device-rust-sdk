@@ -196,6 +196,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   neither `nbgl_layoutQRCode_t` nor the union member.
 - updating ref to ledger_secure_sdk_sys to 1.16.6
 
+### Fixed
+- `io_new`: `Comm::new` panics if a `Comm` was already created, and `Comm` no
+  longer implements `Drop`.
+
 ## [1.39.0] - 2026-10-05
 
 ### Changed
