@@ -131,7 +131,7 @@ impl<'a> NbglChoice<'a> {
 
     /// Shows the choice flow.
     /// # Arguments
-    /// * `_comm` - Mutable reference to Comm.
+    /// * `comm` - Mutable reference to Comm.
     /// * `message` - The main message to display in the center of the page.
     /// * `sub_message` - An optional sub-message to display below the main message.
     /// * `confirm_text` - The text to display on the confirmation button.
@@ -141,13 +141,13 @@ impl<'a> NbglChoice<'a> {
     #[cfg(feature = "io_new")]
     pub fn show<const N: usize>(
         &self,
-        _comm: &mut crate::io::Comm<N>,
+        comm: &mut crate::io::Comm<N>,
         message: &str,
         sub_message: &str,
         confirm_text: &str,
         cancel_text: &str,
     ) -> bool {
-        self.show_internal(message, sub_message, confirm_text, cancel_text)
+        comm.lend_to_nbgl(|| self.show_internal(message, sub_message, confirm_text, cancel_text))
     }
 
     /// Shows the choice flow.
@@ -175,7 +175,7 @@ impl<'a> NbglChoice<'a> {
     /// more before choosing. `details` is the same [`WarningDetails`] used by
     /// [`NbglWarning`].
     /// # Arguments
-    /// * `_comm` - Mutable reference to Comm.
+    /// * `comm` - Mutable reference to Comm.
     /// * `message` - The main message to display in the center of the page.
     /// * `sub_message` - An optional sub-message to display below the main message.
     /// * `confirm_text` - The text to display on the confirmation button.
@@ -187,14 +187,22 @@ impl<'a> NbglChoice<'a> {
     #[allow(clippy::too_many_arguments)]
     pub fn show_with_details<const N: usize>(
         &self,
-        _comm: &mut crate::io::Comm<N>,
+        comm: &mut crate::io::Comm<N>,
         message: &str,
         sub_message: &str,
         confirm_text: &str,
         cancel_text: &str,
         details: &WarningDetails,
     ) -> bool {
-        self.show_with_details_internal(message, sub_message, confirm_text, cancel_text, details)
+        comm.lend_to_nbgl(|| {
+            self.show_with_details_internal(
+                message,
+                sub_message,
+                confirm_text,
+                cancel_text,
+                details,
+            )
+        })
     }
 
     /// Shows the choice flow with a details page reachable from the screen.
@@ -254,7 +262,7 @@ impl<'a> NbglChoice<'a> {
     /// Wraps `nbgl_useCaseAdvancedChoiceWithDetails`, which adds a header icon
     /// and title above the centered message.
     /// # Arguments
-    /// * `_comm` - Mutable reference to Comm.
+    /// * `comm` - Mutable reference to Comm.
     /// * `header_glyph` - Icon drawn in the header, if any.
     /// * `title` - Title drawn in the header.
     /// * `message` - The main message to display in the center of the page.
@@ -268,7 +276,7 @@ impl<'a> NbglChoice<'a> {
     #[allow(clippy::too_many_arguments)]
     pub fn show_advanced_with_details<const N: usize>(
         &self,
-        _comm: &mut crate::io::Comm<N>,
+        comm: &mut crate::io::Comm<N>,
         header_glyph: Option<&NbglGlyph>,
         title: &str,
         message: &str,
@@ -277,15 +285,17 @@ impl<'a> NbglChoice<'a> {
         cancel_text: &str,
         details: &WarningDetails,
     ) -> bool {
-        self.show_advanced_internal(
-            header_glyph,
-            title,
-            message,
-            sub_message,
-            confirm_text,
-            cancel_text,
-            details,
-        )
+        comm.lend_to_nbgl(|| {
+            self.show_advanced_internal(
+                header_glyph,
+                title,
+                message,
+                sub_message,
+                confirm_text,
+                cancel_text,
+                details,
+            )
+        })
     }
 
     /// Shows the choice flow with a header and a details page.

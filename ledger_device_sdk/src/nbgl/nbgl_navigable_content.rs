@@ -298,13 +298,13 @@ impl NbglNavigableContent {
 
     /// Shows the flow, returning when the user leaves through the header.
     /// # Arguments
-    /// * `_comm` - Mutable reference to Comm.
+    /// * `comm` - Mutable reference to Comm.
     ///
     /// # Panics
     /// Panics if no page was added, since NBGL would have nothing to draw.
     #[cfg(feature = "io_new")]
-    pub fn show<const N: usize>(&mut self, _comm: &mut crate::io::Comm<N>) {
-        self.show_internal()
+    pub fn show<const N: usize>(&mut self, comm: &mut crate::io::Comm<N>) {
+        comm.lend_to_nbgl(|| self.show_internal())
     }
 
     /// Shows the flow, returning when the user leaves through the header.

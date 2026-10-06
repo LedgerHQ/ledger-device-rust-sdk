@@ -205,6 +205,25 @@ impl<const N: usize> Comm<N> {
         );
     }
 
+    /// Lends this `Comm` to the NBGL callbacks while `f` displays a flow.
+    ///
+    /// The callbacks reach the `Comm` only through this loan. Since it takes
+    /// `&mut self`, the borrow checker guarantees that nothing else uses the
+    /// `Comm`, and in particular that nobody still reads the data of the
+    /// command in flight, while the callbacks receive events into its buffer.
+    #[cfg(any(
+        target_os = "stax",
+        target_os = "flex",
+        target_os = "apex_p",
+        feature = "nano_nbgl"
+    ))]
+    pub(crate) fn lend_to_nbgl<R>(&mut self, f: impl FnOnce() -> R) -> R {
+        let prev = callbacks::lend::<N>(self);
+        let ret = f();
+        callbacks::end_loan(prev);
+        ret
+    }
+
     /// Receive into the internal buffer. Returns a read-only guard.
     fn recv(&mut self, check_se_event: bool) -> Result<Rx<'_, N>, CommError> {
         let result = sys_seph::io_rx(&mut self.buf, check_se_event);

@@ -250,7 +250,7 @@ impl<'a> NbglAdvanceReview<'a> {
 
     /// Shows the advanced review flow.
     /// # Arguments
-    /// * `_comm` - Mutable reference to Comm.
+    /// * `comm` - Mutable reference to Comm.
     /// * `fields` - A slice of `Field` representing the tag/value pairs to display.
     /// # Returns
     /// Returns `Ok(true)` if the user accepts the review,
@@ -259,10 +259,10 @@ impl<'a> NbglAdvanceReview<'a> {
     #[cfg(feature = "io_new")]
     pub fn show<const N: usize>(
         &self,
-        _comm: &mut crate::io::Comm<N>,
+        comm: &mut crate::io::Comm<N>,
         fields: &[Field],
     ) -> Result<bool, u8> {
-        self.show_ext(_comm, &to_tag_values(fields))
+        self.show_ext(comm, &to_tag_values(fields))
     }
 
     /// Shows the advanced review flow.
@@ -278,7 +278,7 @@ impl<'a> NbglAdvanceReview<'a> {
     /// Shows the advanced review flow with tag/value pairs that may carry a
     /// [`FieldExtension`].
     /// # Arguments
-    /// * `_comm` - Mutable reference to Comm.
+    /// * `comm` - Mutable reference to Comm.
     /// * `values` - A slice of `TagValue` representing the pairs to display.
     /// # Returns
     /// Returns `Ok(true)` if the user accepts the review,
@@ -287,10 +287,10 @@ impl<'a> NbglAdvanceReview<'a> {
     #[cfg(feature = "io_new")]
     pub fn show_ext<const N: usize>(
         &self,
-        _comm: &mut crate::io::Comm<N>,
+        comm: &mut crate::io::Comm<N>,
         values: &[TagValue],
     ) -> Result<bool, u8> {
-        let ret = self.show_internal(values);
+        let ret = comm.lend_to_nbgl(|| self.show_internal(values));
         match ret {
             SyncNbgl::UxSyncRetApproved => Ok(true),
             SyncNbgl::UxSyncRetRejected => Ok(false),

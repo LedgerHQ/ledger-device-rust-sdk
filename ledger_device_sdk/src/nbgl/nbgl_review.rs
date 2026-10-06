@@ -209,13 +209,13 @@ impl<'a> NbglReview<'a> {
 
     /// Shows the review flow with the provided fields on the review pages.
     /// # Arguments
-    /// * `_comm` - Mutable reference to Comm.
+    /// * `comm` - Mutable reference to Comm.
     /// * `fields` - A slice of `Field` representing the tag/value pairs to display.
     /// # Returns
     /// Returns `true` if the user approved the transaction, `false` otherwise.
     #[cfg(feature = "io_new")]
-    pub fn show<const N: usize>(&self, _comm: &mut crate::io::Comm<N>, fields: &[Field]) -> bool {
-        self.show_internal(&to_tag_values(fields))
+    pub fn show<const N: usize>(&self, comm: &mut crate::io::Comm<N>, fields: &[Field]) -> bool {
+        comm.lend_to_nbgl(|| self.show_internal(&to_tag_values(fields)))
     }
 
     /// Shows the review flow with the provided fields on the review pages.
@@ -232,17 +232,17 @@ impl<'a> NbglReview<'a> {
     /// [`FieldExtension`], letting a value be expanded into a QR code, an ENS
     /// or address book entry, or a nested list.
     /// # Arguments
-    /// * `_comm` - Mutable reference to Comm.
+    /// * `comm` - Mutable reference to Comm.
     /// * `values` - A slice of `TagValue` representing the pairs to display.
     /// # Returns
     /// Returns `true` if the user approved the transaction, `false` otherwise.
     #[cfg(feature = "io_new")]
     pub fn show_ext<const N: usize>(
         &self,
-        _comm: &mut crate::io::Comm<N>,
+        comm: &mut crate::io::Comm<N>,
         values: &[TagValue],
     ) -> bool {
-        self.show_internal(values)
+        comm.lend_to_nbgl(|| self.show_internal(values))
     }
 
     /// Shows the review flow with tag/value pairs that may carry a

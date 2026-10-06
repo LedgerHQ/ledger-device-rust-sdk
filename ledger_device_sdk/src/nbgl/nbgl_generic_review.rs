@@ -985,16 +985,16 @@ impl NbglGenericReview {
     ///
     /// # Arguments
     ///
-    /// * `_comm` - Mutable reference to Comm.
+    /// * `comm` - Mutable reference to Comm.
     /// * `reject_button_str` — Text for the reject/cancel button displayed
     ///   at the end of the review flow (e.g. `"Reject transaction"`).
     #[cfg(feature = "io_new")]
     pub fn show<const N: usize>(
         &self,
-        _comm: &mut crate::io::Comm<N>,
+        comm: &mut crate::io::Comm<N>,
         reject_button_str: &str,
     ) -> bool {
-        self.show_internal(reject_button_str)
+        comm.lend_to_nbgl(|| self.show_internal(reject_button_str))
     }
 
     /// Displays the review to the user and blocks until a decision is made.

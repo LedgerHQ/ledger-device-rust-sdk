@@ -315,7 +315,7 @@ impl NbglStreamingReview {
 
     /// Starts the streaming review flow.
     /// # Arguments
-    /// * `_comm` - Mutable reference to Comm.
+    /// * `comm` - Mutable reference to Comm.
     /// * `title` - The title to display at the top of the first page.
     /// * `subtitle` - An optional subtitle to display below the title on the first page.
     /// # Returns
@@ -323,11 +323,11 @@ impl NbglStreamingReview {
     #[cfg(feature = "io_new")]
     pub fn start<const N: usize>(
         &self,
-        _comm: &mut crate::io::Comm<N>,
+        comm: &mut crate::io::Comm<N>,
         title: &str,
         subtitle: Option<&str>,
     ) -> bool {
-        self.start_internal(title, subtitle)
+        comm.lend_to_nbgl(|| self.start_internal(title, subtitle))
     }
 
     /// Starts the streaming review flow.
@@ -345,10 +345,10 @@ impl NbglStreamingReview {
     #[deprecated(note = "use next instead")]
     pub fn continue_review<const N: usize>(
         &self,
-        _comm: &mut crate::io::Comm<N>,
+        comm: &mut crate::io::Comm<N>,
         fields: &[Field],
     ) -> bool {
-        self.continue_review_internal(fields)
+        comm.lend_to_nbgl(|| self.continue_review_internal(fields))
     }
 
     #[cfg(not(feature = "io_new"))]
@@ -359,7 +359,7 @@ impl NbglStreamingReview {
 
     /// Proceeds to the next page in the streaming review flow with the provided fields.
     /// # Arguments
-    /// * `_comm` - Mutable reference to Comm.
+    /// * `comm` - Mutable reference to Comm.
     /// * `fields` - A slice of `Field` representing the tag/value pairs to display on the next page.
     /// # Returns
     /// Returns an `NbglStreamingReviewStatus` indicating whether the user proceeded to the next
@@ -367,16 +367,16 @@ impl NbglStreamingReview {
     #[cfg(feature = "io_new")]
     pub fn next<const N: usize>(
         &self,
-        _comm: &mut crate::io::Comm<N>,
+        comm: &mut crate::io::Comm<N>,
         fields: &[Field],
     ) -> NbglStreamingReviewStatus {
-        self.next_internal(&to_tag_values(fields))
+        comm.lend_to_nbgl(|| self.next_internal(&to_tag_values(fields)))
     }
 
     /// Proceeds to the next page in the streaming review flow with tag/value
     /// pairs that may carry a [`FieldExtension`].
     /// # Arguments
-    /// * `_comm` - Mutable reference to Comm.
+    /// * `comm` - Mutable reference to Comm.
     /// * `values` - A slice of `TagValue` representing the pairs to display on the next page.
     /// # Returns
     /// Returns an `NbglStreamingReviewStatus` indicating whether the user proceeded to the next
@@ -384,10 +384,10 @@ impl NbglStreamingReview {
     #[cfg(feature = "io_new")]
     pub fn next_ext<const N: usize>(
         &self,
-        _comm: &mut crate::io::Comm<N>,
+        comm: &mut crate::io::Comm<N>,
         values: &[TagValue],
     ) -> NbglStreamingReviewStatus {
-        self.next_internal(values)
+        comm.lend_to_nbgl(|| self.next_internal(values))
     }
 
     /// Proceeds to the next page in the streaming review flow with the provided fields.
@@ -415,17 +415,17 @@ impl NbglStreamingReview {
 
     /// Finishes the streaming review flow by displaying the final confirmation page.
     /// # Arguments
-    /// * `_comm` - Mutable reference to Comm.
+    /// * `comm` - Mutable reference to Comm.
     /// * `finish_title` - The title to display on the final confirmation page.
     /// # Returns
     /// Returns `true` if the user approved the transaction, `false` otherwise.
     #[cfg(feature = "io_new")]
     pub fn finish<const N: usize>(
         &self,
-        _comm: &mut crate::io::Comm<N>,
+        comm: &mut crate::io::Comm<N>,
         finish_title: &str,
     ) -> bool {
-        self.finish_internal(finish_title)
+        comm.lend_to_nbgl(|| self.finish_internal(finish_title))
     }
 
     /// Finishes the streaming review flow by displaying the final confirmation page.

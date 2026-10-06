@@ -140,8 +140,8 @@ impl<'a> NbglReviewExtended<'a> {
     /// `Ok(false)` if the user rejects it,
     /// or `Err(u8)` with the error code in case of an error.
     #[cfg(feature = "io_new")]
-    pub fn start<const N: usize>(&self, _comm: &mut crate::io::Comm<N>) -> Result<bool, u8> {
-        let ret = self.start_internal();
+    pub fn start<const N: usize>(&self, comm: &mut crate::io::Comm<N>) -> Result<bool, u8> {
+        let ret = comm.lend_to_nbgl(|| self.start_internal());
         match ret {
             SyncNbgl::UxSyncRetContinue => Ok(true),
             SyncNbgl::UxSyncRetRejected => Ok(false),
@@ -206,7 +206,7 @@ impl<'a> NbglReviewExtended<'a> {
 
     /// Shows the extended review flow with the provided fields on the review pages.
     /// # Arguments
-    /// * `_comm` - Mutable reference to Comm.
+    /// * `comm` - Mutable reference to Comm.
     /// * `fields` - A slice of `Field` representing the tag/value pairs to display.
     /// # Returns
     /// Returns `Ok(true)` if the user accepts the review,
@@ -215,10 +215,10 @@ impl<'a> NbglReviewExtended<'a> {
     #[cfg(feature = "io_new")]
     pub fn show<const N: usize>(
         &self,
-        _comm: &mut crate::io::Comm<N>,
+        comm: &mut crate::io::Comm<N>,
         fields: &[Field],
     ) -> Result<bool, u8> {
-        self.show_ext(_comm, &to_tag_values(fields))
+        self.show_ext(comm, &to_tag_values(fields))
     }
 
     /// Shows the extended review flow with the provided fields on the review pages.
@@ -236,7 +236,7 @@ impl<'a> NbglReviewExtended<'a> {
     /// Shows the extended review flow with tag/value pairs that may carry a
     /// [`FieldExtension`].
     /// # Arguments
-    /// * `_comm` - Mutable reference to Comm.
+    /// * `comm` - Mutable reference to Comm.
     /// * `values` - A slice of `TagValue` representing the pairs to display.
     /// # Returns
     /// Returns `Ok(true)` if the user accepts the review,
@@ -245,10 +245,10 @@ impl<'a> NbglReviewExtended<'a> {
     #[cfg(feature = "io_new")]
     pub fn show_ext<const N: usize>(
         &self,
-        _comm: &mut crate::io::Comm<N>,
+        comm: &mut crate::io::Comm<N>,
         values: &[TagValue],
     ) -> Result<bool, u8> {
-        let ret = self.show_internal(values);
+        let ret = comm.lend_to_nbgl(|| self.show_internal(values));
         match ret {
             SyncNbgl::UxSyncRetApproved => Ok(true),
             SyncNbgl::UxSyncRetRejected => Ok(false),
