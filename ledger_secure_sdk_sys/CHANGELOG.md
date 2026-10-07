@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   transaction parameters are copied rather than after
 - `.storage_section` in link.ld, at the start of the app data region as in the C SDK;
   empty without the feature
+- `app_io_stack` feature: build without `USE_OS_IO_STACK`, so the app runs the C SDK's
+  USB/BLE IO stack itself (the C SDK's `DISABLE_OS_IO_STACK_USE`); `os_io.o` is always
+  linked in that mode instead of the weak syscall stubs
+
+### Changed
+- `exit_app` stops the app's IO stack (`os_io_stop`) before `os_sched_exit` with
+  `app_io_stack`
 
 ## [1.16.6] - 2026-10-05
 
