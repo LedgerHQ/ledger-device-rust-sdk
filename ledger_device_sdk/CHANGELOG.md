@@ -12,6 +12,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the OS one (the C SDK's `DISABLE_OS_IO_STACK_USE`), for apps that drive an interface
   such as U2F/CTAPHID themselves. `exit_app` stops that stack before leaving.
 
+### Changed
+- `io_new`: breaking rewrite of `Comm::next_event` and `io::Event`. It now
+  returns after every OS event, as a `Command` (BOLOS APDUs, unexpected CLAs and
+  malformed APDUs are handled internally, as in `Comm::next_command`), a UI
+  event (`Button`, `Touch`, `Ticker`) or `Internal` (any events already managed by the SDK). Until a command is replied
+  to, other APDUs are answered `CmdNotAccepted` (BOLOS ones too, except
+  GET_VERSION), so every command must be replied to. Unified APDU processing, that was handled in different ways when an NBGL screen was on or not. Removed: `Comm::try_next_event`, `DecodedEvent`,
+  `DecodedEventType`, `Command::new`, `CommandResponse::new` (use
+  `Comm::next_event`, `Comm::next_command`, `Command::into_response`,
+  `Comm::begin_response`) and the deprecated `NbglHomeAndSettings::show` (use
+  `show_and_return`, then `Comm::next_command`).
+
 ## [1.41.0] - 2026-10-06
 
 ### Added
