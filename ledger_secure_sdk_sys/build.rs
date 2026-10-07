@@ -265,13 +265,6 @@ impl SDKBuilder<'_> {
         // between BAGL and NBGL based on the `nano_nbgl` feature; touchscreen
         // devices encode the choice directly in their .defines file.
         let mut defines = header2define(spec.defines_file().to_str().unwrap());
-        // `app_io_stack`: without USE_OS_IO_STACK, io/src/os_io.c defines os_io_init/rx/tx in
-        // the application and the USB/BLE/NFC stacks it links run there, instead of the weak
-        // syscall stubs of src/syscalls.c reaching the OS stack. Same as the C SDK's
-        // DISABLE_OS_IO_STACK_USE (Makefile.standard_app).
-        if env::var_os("CARGO_FEATURE_APP_IO_STACK").is_some() {
-            defines.retain(|(name, _)| name != "USE_OS_IO_STACK");
-        }
         let nano_nbgl = env::var_os("CARGO_FEATURE_NANO_NBGL").is_some();
         if spec.is_nano() {
             if nano_nbgl {
