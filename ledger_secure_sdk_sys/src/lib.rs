@@ -11,12 +11,6 @@ pub mod seph;
 /// Wrapper for 'os_sched_exit'
 /// Exit application with status
 pub fn exit_app(status: u8) -> ! {
-    // With `app_io_stack` the app runs its own IO stack: stop it before
-    // handing control back to the OS.
-    #[cfg(feature = "app_io_stack")]
-    unsafe {
-        os_io_stop();
-    }
     unsafe { os_sched_exit(status) }
 }
 

@@ -23,9 +23,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `app_storage::capacity`) and its header properties by the `app_storage_settings` and
   `app_storage_data` features. `APP_STORAGE_SIZE` must not shrink between versions of an
   app. Difference from the C SDK: `read` also refuses a range past the capacity.
-- `app_io_stack` feature: the app runs the C SDK's USB/BLE IO stack itself instead of
-  the OS one (the C SDK's `DISABLE_OS_IO_STACK_USE`), for apps that drive an interface
-  such as U2F/CTAPHID themselves. `exit_app` stops that stack before leaving.
 
 ### Fixed
 - `nvm`: `AtomicStorage::update` on a storage that was never updated stores the

@@ -35,16 +35,6 @@ static bool app_storage_starts(int arg0) {
 extern void sample_main(int arg0);
 extern void heap_init();
 
-#ifndef USE_OS_IO_STACK
-// The app embeds its own IO stack (io/src/os_io.c). The C SDK is linked as a
-// static archive and syscalls.c provides weak os_io_* syscall stubs: if they
-// are resolved first, os_io.o is never extracted and the app silently keeps
-// using the OS IO stack. Reference a symbol only os_io.o defines to force its
-// extraction, so that its strong os_io_* definitions win.
-extern unsigned char G_io_seph_buffer[];
-__attribute__((used)) static const void *const force_os_io_link = G_io_seph_buffer;
-#endif  // !USE_OS_IO_STACK
-
 struct SectionSrc;
 struct SectionDst;
 
