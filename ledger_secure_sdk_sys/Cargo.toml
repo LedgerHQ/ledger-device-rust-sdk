@@ -31,6 +31,9 @@ app_storage = []
 # Mark the storage as holding settings / application data (header properties).
 app_storage_settings = ["app_storage"]
 app_storage_data = ["app_storage"]
+# Run the IO stack (USB classes, BLE, NFC) in the application instead of the OS, as
+# DISABLE_OS_IO_STACK_USE does for C applications: the build drops USE_OS_IO_STACK.
+app_io_stack = []
 
 [lints.rust.unexpected_cfgs]
 level = "warn"
