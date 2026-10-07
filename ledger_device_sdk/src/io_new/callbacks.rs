@@ -19,7 +19,7 @@
 use crate::io_legacy::{ApduHeader, Reply, StatusWords, is_bolos_apdu_allowed_in_flight};
 
 use super::bolos::handle_bolos_apdu;
-use super::{Comm, DecodedEventType};
+use super::{Comm, RawEvent};
 
 // Erased pointer to the Comm instance (generic parameter erased), set once by
 // `init_comm`. Only the panic reply falls back to it, as a panic can happen
@@ -142,8 +142,8 @@ pub(super) fn next_event_ahead_impl<const N: usize>() -> bool {
         return false;
     }
 
-    match comm.next_event().into_type() {
-        DecodedEventType::Apdu {
+    match comm.recv_event() {
+        RawEvent::Apdu {
             header,
             offset,
             length,
@@ -181,7 +181,7 @@ pub(super) fn next_event_ahead_impl<const N: usize>() -> bool {
         }
         // Answer malformed APDUs instead of leaving the host without a status
         // word, as `next_command` does outside of screens.
-        DecodedEventType::ApduError(e) => {
+        RawEvent::ApduError(e) => {
             let intruder_apdu_type = comm.apdu_type;
             comm.reject_apdu(intruder_apdu_type, StatusWords::from(e));
             comm.apdu_type = in_flight_apdu_type;

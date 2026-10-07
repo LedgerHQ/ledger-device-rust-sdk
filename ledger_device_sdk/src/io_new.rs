@@ -4,13 +4,13 @@ use core::mem::MaybeUninit;
 use crate::seph::PacketTypes;
 
 mod event;
-pub use event::{DecodedEvent, DecodedEventType};
+use event::RawEvent;
 
 mod bolos;
 pub(crate) mod callbacks;
 use bolos::handle_bolos_apdu;
 
-pub use crate::io_legacy::{ApduHeader, Event, Reply, StatusWords};
+pub use crate::io_legacy::{ApduHeader, Reply, StatusWords};
 
 use crate::io_callbacks::nbgl_register_callbacks;
 
@@ -120,7 +120,24 @@ macro_rules! define_comm {
 }
 
 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-use ledger_secure_sdk_sys::buttons::ButtonsState;
+use ledger_secure_sdk_sys::buttons::{ButtonEvent, ButtonsState};
+
+/// An event returned by [`Comm::next_event`].
+pub enum Event<'a, const N: usize = DEFAULT_BUF_SIZE> {
+    /// An APDU command for the application, to be answered before the next
+    /// one can be received.
+    Command(Command<'a, N>),
+    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    Button(ButtonEvent),
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    Touch,
+    Ticker,
+    /// An event the SDK handled entirely, such as a USB or BLE event, or an
+    /// APDU it answered itself. There is nothing to do, but the application
+    /// gets a chance to run, for instance to process data that callbacks of an
+    /// application-side IO stack received during the event.
+    Internal,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CommError {
@@ -247,64 +264,104 @@ impl<const N: usize> Comm<N> {
         Ok(())
     }
 
-    pub fn try_next_event(&mut self) -> DecodedEvent<N> {
-        // If there's a pending APDU from a callback (e.g., nbgl_next_event_ahead),
-        // return it instead of calling recv() which would return 0.
+    /// Receive and decode the next event, without applying any APDU policy.
+    ///
+    /// An APDU left pending by the NBGL callbacks is returned first, as it is
+    /// still in the buffer.
+    pub(crate) fn recv_event(&mut self) -> RawEvent {
         if self.pending_apdu {
             self.pending_apdu = false;
-            return DecodedEvent::from_type(DecodedEventType::Apdu {
+            return RawEvent::Apdu {
                 header: self.pending_header,
                 offset: self.pending_offset,
                 length: self.pending_length,
-            });
+            };
         }
         self.recv(true).unwrap().decode_event()
     }
 
-    pub fn next_event(&mut self) -> DecodedEvent<N> {
-        // Iteratively get and decode events until one is not Ignored
-        // This was a bit tricky as the borrow checker doesn't like the straightforward implementation.
-        // The helpers into_type() and from_type() help to avoid lifetime issues.
-        loop {
-            let ety = self.try_next_event().into_type();
-
-            if !matches!(ety, DecodedEventType::Ignored) {
-                // Re-borrow here to build the return value.
-                return DecodedEvent::from_type(ety);
+    /// Receive the next event, answering on the spot the APDUs that are not for
+    /// the application, which then come out as [`RawEvent::Ignored`].
+    fn recv_filtered_event(&mut self) -> RawEvent {
+        match self.recv_event() {
+            // Handle BOLOS internal APDUs (CLA = 0xB0) internally.
+            RawEvent::Apdu { header, .. } if header.cla == 0xB0 => {
+                handle_bolos_apdu::<N>(self, header.ins, header.p1, header.p2);
+                RawEvent::Ignored
             }
+            // If CLA filtering is enabled, automatically reject APDUs with wrong CLA.
+            RawEvent::Apdu { header, .. }
+                if self.expected_cla.is_some_and(|cla| header.cla != cla) =>
+            {
+                let _ = self.begin_response().send(StatusWords::BadCla);
+                RawEvent::Ignored
+            }
+            // Explicitly convert ApduError -> StatusWords so Into<Reply> is resolved
+            RawEvent::ApduError(e) => {
+                self.send(&[], StatusWords::from(e)).unwrap();
+                RawEvent::Ignored
+            }
+            event => event,
         }
     }
 
+    /// Hand the APDU at `offset` in the buffer to the application.
+    fn hand_over(&mut self, header: ApduHeader, offset: usize, length: usize) -> Command<'_, N> {
+        // Any APDU arriving from now until the reply is a double APDU.
+        self.apdu_in_progress = true;
+        Command::new(self, header, offset, length)
+    }
+
+    /// Wait for the next event from the OS, and return it as seen by the
+    /// application: a command, a UI event, or [`Event::Internal`].
+    ///
+    /// BOLOS APDUs, APDUs with an unexpected CLA (see
+    /// [`Comm::set_expected_cla`]) and malformed APDUs are answered internally.
+    ///
+    /// As it returns for every event, an application can do periodic work on
+    /// [`Event::Ticker`] between commands:
+    ///
+    /// ```ignore
+    /// loop {
+    ///     match comm.next_event() {
+    ///         Event::Command(command) => handle(command),
+    ///         Event::Ticker => on_tick(),
+    ///         _ => {}
+    ///     }
+    /// }
+    /// ```
+    pub fn next_event(&mut self) -> Event<'_, N> {
+        match self.recv_filtered_event() {
+            RawEvent::Apdu {
+                header,
+                offset,
+                length,
+            } => Event::Command(self.hand_over(header, offset, length)),
+            #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+            RawEvent::Button(button) => Event::Button(button),
+            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+            RawEvent::Touch => Event::Touch,
+            RawEvent::Ticker => Event::Ticker,
+            RawEvent::ApduError(_) | RawEvent::Ignored => Event::Internal,
+        }
+    }
+
+    /// Wait for the next command for the application, skipping all other
+    /// events.
+    ///
+    /// APDUs are filtered as in [`Comm::next_event`].
     pub fn next_command(&mut self) -> Command<'_, N> {
+        // This loop works on `RawEvent` rather than on `next_event`: the
+        // `Command` borrows the `Comm`, and a borrow returned from one
+        // iteration would still be held by the next.
         loop {
-            let ety = self.next_event().into_type();
-            match ety {
-                DecodedEventType::Apdu {
-                    header,
-                    offset,
-                    length,
-                } => {
-                    // Handle BOLOS internal APDUs (CLA = 0xB0) internally
-                    // and continue looping until an application APDU arrives.
-                    if header.cla == 0xB0 {
-                        handle_bolos_apdu::<N>(self, header.ins, header.p1, header.p2);
-                        continue;
-                    }
-                    // If CLA filtering is enabled, automatically reject APDUs with wrong CLA.
-                    if let Some(cla) = self.expected_cla {
-                        if header.cla != cla {
-                            let _ = self.begin_response().send(StatusWords::BadCla);
-                            continue;
-                        }
-                    }
-                    // The command is about to be handed to the application: any
-                    // APDU arriving from now until the reply is a double APDU.
-                    self.apdu_in_progress = true;
-                    return Command::new(self, header, offset, length);
-                }
-                // Explicitly convert ApduError -> StatusWords so Into<Reply> is resolved
-                DecodedEventType::ApduError(e) => self.send(&[], StatusWords::from(e)).unwrap(),
-                _ => {}
+            if let RawEvent::Apdu {
+                header,
+                offset,
+                length,
+            } = self.recv_filtered_event()
+            {
+                return self.hand_over(header, offset, length);
             }
         }
     }
@@ -342,7 +399,12 @@ pub struct Command<'a, const N: usize = DEFAULT_BUF_SIZE> {
 }
 
 impl<'a, const N: usize> Command<'a, N> {
-    pub fn new(comm: &'a mut Comm<N>, header: ApduHeader, offset: usize, length: usize) -> Self {
+    pub(crate) fn new(
+        comm: &'a mut Comm<N>,
+        header: ApduHeader,
+        offset: usize,
+        length: usize,
+    ) -> Self {
         Self {
             comm,
             header,
@@ -399,8 +461,8 @@ impl<'a, const N: usize> Rx<'a, N> {
     }
 
     /// Decode into a higher-level event. No replies are sent, but UX-related and other OS interactions are dealt with.
-    pub fn decode_event(self) -> DecodedEvent<N> {
-        DecodedEvent::new(self.comm, self.len)
+    pub fn decode_event(self) -> RawEvent {
+        RawEvent::decode(self.comm, self.len)
     }
 }
 
@@ -411,10 +473,6 @@ pub struct CommandResponse<'a, const N: usize = DEFAULT_BUF_SIZE> {
 }
 
 impl<'a, const N: usize> CommandResponse<'a, N> {
-    pub fn new(comm: &'a mut Comm<N>) -> Self {
-        Self { comm, len: 0 }
-    }
-
     /// Current staged length.
     pub fn len(&self) -> usize {
         self.len
