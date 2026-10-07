@@ -25,7 +25,11 @@ pub(crate) enum RawEvent {
         offset: usize,
         length: usize,
     },
-    ApduError(ApduError),
+    ApduError {
+        /// `None` if the APDU is too short to hold a header.
+        header: Option<ApduHeader>,
+        error: ApduError,
+    },
     #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
     Button(ButtonEvent),
     #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
@@ -203,7 +207,10 @@ impl RawEvent {
         let apdu_buffer = &comm.buf[offset..];
 
         if io_len < 5 {
-            return RawEvent::ApduError(BadLen);
+            return RawEvent::ApduError {
+                header: None,
+                error: BadLen,
+            };
         }
 
         let rx_len = io_len - 1;
@@ -224,20 +231,27 @@ impl RawEvent {
                 // Non-conforming zero-data APDU (TODO: per the standard, this should actually be read as a 256-byte long APDU; but that's likely to break things as lots)
                 Self::new_apdu(header, 4, 0)
             }
-            (0, 6) => RawEvent::ApduError(BadLen),
+            (0, 6) => Self::bad_len(header),
             (0, _) => {
                 let len = u16::from_be_bytes([apdu_buffer[5], apdu_buffer[6]]) as usize;
                 if rx_len != len + 7 {
-                    return RawEvent::ApduError(BadLen);
+                    return Self::bad_len(header);
                 }
                 Self::new_apdu(header, 1 + 7, len)
             }
             (len, _) => {
                 if rx_len != len as usize + 5 {
-                    return RawEvent::ApduError(BadLen);
+                    return Self::bad_len(header);
                 }
                 Self::new_apdu(header, 1 + 5, len as usize)
             }
+        }
+    }
+
+    fn bad_len(header: ApduHeader) -> Self {
+        Self::ApduError {
+            header: Some(header),
+            error: ApduError::BadLen,
         }
     }
 

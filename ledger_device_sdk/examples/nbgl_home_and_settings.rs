@@ -184,6 +184,7 @@ extern "C" fn sample_main() {
     home.show_and_return();
 
     loop {
-        let _ins = comm.next_command();
+        // Commands must be answered: this example does not implement any.
+        let _ = comm.next_command().reply(&[], StatusWords::Unknown);
     }
 }

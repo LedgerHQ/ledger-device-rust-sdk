@@ -10,6 +10,7 @@ mod bolos;
 pub(crate) mod callbacks;
 use bolos::handle_bolos_apdu;
 
+use crate::io_legacy::is_bolos_apdu_allowed_in_flight;
 pub use crate::io_legacy::{ApduHeader, Reply, StatusWords};
 
 use crate::io_callbacks::nbgl_register_callbacks;
@@ -282,27 +283,62 @@ impl<const N: usize> Comm<N> {
 
     /// Receive the next event, answering on the spot the APDUs that are not for
     /// the application, which then come out as [`RawEvent::Ignored`].
-    fn recv_filtered_event(&mut self) -> RawEvent {
-        match self.recv_event() {
-            // Handle BOLOS internal APDUs (CLA = 0xB0) internally.
-            RawEvent::Apdu { header, .. } if header.cla == 0xB0 => {
+    ///
+    /// The same policies apply whether an NBGL screen is displayed or not:
+    /// - BOLOS APDUs (CLA = 0xB0) are handled internally, but while a command
+    ///   is in flight only GET_VERSION is.
+    /// - Any other APDU arriving while a command is in flight is a double
+    ///   APDU, answered [`StatusWords::CmdNotAccepted`].
+    /// - APDUs with an unexpected CLA (see [`Comm::set_expected_cla`]) are
+    ///   answered [`StatusWords::BadCla`].
+    /// - Malformed APDUs are answered with the matching status word, unless a
+    ///   command is in flight: they are then double APDUs as well, except for
+    ///   the BOLOS APDUs that are handled in flight.
+    ///
+    /// Answering an APDU leaves the state of the command in flight, if any,
+    /// undisturbed.
+    pub(crate) fn recv_filtered_event(&mut self) -> RawEvent {
+        // Decoding an APDU overwrites `apdu_type` with the transport it arrived
+        // on. Anything answered below is not the command in flight, so its
+        // transport is restored before returning; otherwise the in-flight
+        // command's response would go out on the intruder's channel.
+        let in_flight_apdu_type = self.apdu_type;
+        let in_progress = self.apdu_in_progress;
+
+        let sw: Reply = match self.recv_event() {
+            RawEvent::Apdu { header, .. }
+                if header.cla == 0xB0
+                    && (!in_progress
+                        || is_bolos_apdu_allowed_in_flight(header.cla, header.ins)) =>
+            {
                 handle_bolos_apdu::<N>(self, header.ins, header.p1, header.p2);
-                RawEvent::Ignored
+                // The BOLOS reply must not be taken for the reply to the
+                // command in flight.
+                self.apdu_in_progress = in_progress;
+                self.apdu_type = in_flight_apdu_type;
+                return RawEvent::Ignored;
             }
-            // If CLA filtering is enabled, automatically reject APDUs with wrong CLA.
+            // Answered on the spot: while a screen is displayed, deferring to
+            // the next poll loses it entirely if the screen completes in
+            // between.
+            RawEvent::Apdu { .. } if in_progress => StatusWords::CmdNotAccepted.into(),
             RawEvent::Apdu { header, .. }
                 if self.expected_cla.is_some_and(|cla| header.cla != cla) =>
             {
-                let _ = self.begin_response().send(StatusWords::BadCla);
-                RawEvent::Ignored
+                StatusWords::BadCla.into()
             }
-            // Explicitly convert ApduError -> StatusWords so Into<Reply> is resolved
-            RawEvent::ApduError(e) => {
-                self.send(&[], StatusWords::from(e)).unwrap();
-                RawEvent::Ignored
+            RawEvent::ApduError { header, .. }
+                if in_progress
+                    && !header.is_some_and(|h| is_bolos_apdu_allowed_in_flight(h.cla, h.ins)) =>
+            {
+                StatusWords::CmdNotAccepted.into()
             }
-            event => event,
-        }
+            RawEvent::ApduError { error, .. } => StatusWords::from(error).into(),
+            event => return event,
+        };
+        self.reject_apdu(self.apdu_type, sw);
+        self.apdu_type = in_flight_apdu_type;
+        RawEvent::Ignored
     }
 
     /// Hand the APDU at `offset` in the buffer to the application.
@@ -316,7 +352,9 @@ impl<const N: usize> Comm<N> {
     /// application: a command, a UI event, or [`Event::Internal`].
     ///
     /// BOLOS APDUs, APDUs with an unexpected CLA (see
-    /// [`Comm::set_expected_cla`]) and malformed APDUs are answered internally.
+    /// [`Comm::set_expected_cla`]) and malformed APDUs are answered internally,
+    /// and so are the APDUs that arrive before the previous command has been
+    /// replied to: these are rejected as double APDUs.
     ///
     /// As it returns for every event, an application can do periodic work on
     /// [`Event::Ticker`] between commands:
@@ -342,7 +380,7 @@ impl<const N: usize> Comm<N> {
             #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
             RawEvent::Touch => Event::Touch,
             RawEvent::Ticker => Event::Ticker,
-            RawEvent::ApduError(_) | RawEvent::Ignored => Event::Internal,
+            RawEvent::ApduError { .. } | RawEvent::Ignored => Event::Internal,
         }
     }
 

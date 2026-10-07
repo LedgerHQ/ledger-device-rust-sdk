@@ -16,9 +16,8 @@
 //! the `Comm` only through that loan, and panic if there is none, so a flow
 //! that forgot to borrow the `Comm` fails loudly instead of aliasing it.
 
-use crate::io_legacy::{ApduHeader, Reply, StatusWords, is_bolos_apdu_allowed_in_flight};
+use crate::io_legacy::{ApduHeader, Reply, StatusWords};
 
-use super::bolos::handle_bolos_apdu;
 use super::{Comm, RawEvent};
 
 // Erased pointer to the Comm instance (generic parameter erased), set once by
@@ -126,66 +125,31 @@ fn panic_reply_impl<const N: usize>(reply: Reply) {
 pub(super) fn next_event_ahead_impl<const N: usize>() -> bool {
     let comm = unsafe { get_lent_comm::<N>() };
 
-    // Decoding an APDU overwrites `apdu_type` with the transport it arrived on.
-    // Anything handled or rejected below is not the command the application is
-    // working on, so its transport is restored before returning; otherwise the
-    // in-flight command's response would go out on the intruder's channel.
-    let in_flight_apdu_type = comm.apdu_type;
-
     // An APDU detected on an earlier iteration that nobody consumed means the
     // displayed screen does not exit on APDU. Answer it, so that polling — and
     // therefore the screen itself — keeps running. No command can be in flight
-    // here, as one would have been rejected on the spot below.
+    // here, as one would have been rejected on the spot below, so `apdu_type`
+    // is still the transport of the pending APDU.
     if comm.pending_apdu {
         comm.pending_apdu = false;
-        comm.reject_apdu(in_flight_apdu_type, StatusWords::CmdNotAccepted);
+        comm.reject_apdu(comm.apdu_type, StatusWords::CmdNotAccepted);
         return false;
     }
 
-    match comm.recv_event() {
+    // APDUs that are not for the application are answered under the same
+    // policies as outside of screens, so that OS level requests keep working
+    // and double APDUs are rejected while a screen is displayed.
+    match comm.recv_filtered_event() {
         RawEvent::Apdu {
             header,
             offset,
             length,
         } => {
-            // BOLOS internal APDUs (CLA = 0xB0) are answered inline, the way
-            // `next_command` does, so that OS level requests keep working while
-            // a screen is displayed. While a command is in flight only
-            // GET_VERSION is: the others are handled as double APDUs below.
-            if header.cla == 0xB0
-                && (!comm.apdu_in_progress
-                    || is_bolos_apdu_allowed_in_flight(header.cla, header.ins))
-            {
-                let in_progress = comm.apdu_in_progress;
-                handle_bolos_apdu::<N>(comm, header.ins, header.p1, header.p2);
-                // The BOLOS reply must not be taken for the reply to the
-                // command the application is still processing.
-                comm.apdu_in_progress = in_progress;
-                comm.apdu_type = in_flight_apdu_type;
-                return false;
-            }
-            // An APDU arriving while a command is still being processed is a
-            // double APDU. Answer it on this very iteration: deferring to the
-            // next one loses it entirely if the screen completes in between.
-            if comm.apdu_in_progress {
-                let intruder_apdu_type = comm.apdu_type;
-                comm.reject_apdu(intruder_apdu_type, StatusWords::CmdNotAccepted);
-                comm.apdu_type = in_flight_apdu_type;
-                return false;
-            }
             comm.pending_apdu = true;
             comm.pending_header = header;
             comm.pending_offset = offset;
             comm.pending_length = length;
             true
-        }
-        // Answer malformed APDUs instead of leaving the host without a status
-        // word, as `next_command` does outside of screens.
-        RawEvent::ApduError(e) => {
-            let intruder_apdu_type = comm.apdu_type;
-            comm.reject_apdu(intruder_apdu_type, StatusWords::from(e));
-            comm.apdu_type = in_flight_apdu_type;
-            false
         }
         _ => false,
     }
