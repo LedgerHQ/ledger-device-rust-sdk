@@ -267,11 +267,6 @@ mod tests {
         assert_eq!(write(&[0xaa], capacity()), Err(AppStorageError::Overflow));
     }
 
-    unsafe extern "C" {
-        /// The storage itself (`lib_standard_app/app_storage.c`).
-        static app_storage_real: u8;
-    }
-
     // Data changed behind the CRC is a corruption: the initialization resets the storage and
     // reports the loss, which a first start, with nothing lost, does not.
     #[test]
@@ -281,11 +276,15 @@ mod tests {
         // The data follows the CRC and the header (`app_storage_t`).
         let data_offset =
             core::mem::size_of::<u32>() + core::mem::size_of::<sys::app_storage_header_t>();
-        // SAFETY: the storage holds at least `data_offset + 1` bytes; its link address is
-        // translated to where the application runs, as the C side reads it through PIC(), and
-        // nvm_write is the only way to write it.
+        // SAFETY: the storage (`app_storage_real`, lib_standard_app/app_storage.c) holds at least
+        // `data_offset + 1` bytes, and nvm_write is the only way to write it. It is addressed as
+        // the C side addresses it: its link address through PIC(). A Rust reference to the
+        // symbol is position-relative instead, which Speculos maps to another copy of the
+        // application, where the C side would never see the write.
         unsafe {
-            let storage = sys::pic((&raw const app_storage_real).cast_mut().cast()).cast::<u8>();
+            let link: *mut core::ffi::c_void;
+            core::arch::asm!("ldr {0}, =app_storage_real", out(reg) link);
+            let storage = sys::pic(link).cast::<u8>();
             let byte = 9u8;
             sys::nvm_write(
                 storage.add(data_offset).cast(),
