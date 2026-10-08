@@ -94,3 +94,11 @@ include!(concat!(env!("OUT_DIR"), "/heap_size.rs"));
 
 #[cfg(feature = "app_storage")]
 include!(concat!(env!("OUT_DIR"), "/app_storage_size.rs"));
+
+#[cfg(feature = "app_storage")]
+unsafe extern "C" {
+    /// Initializes the application storage: writes a fresh header on a first start, or resets a
+    /// corrupted storage and calls `app_storage_corrupted_callback()`
+    /// (`lib_standard_app/app_storage_internal.h`, not in the generated bindings).
+    pub fn app_storage_init() -> i32;
+}

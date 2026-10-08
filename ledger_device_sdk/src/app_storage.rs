@@ -6,8 +6,11 @@
 //! storage the OS is meant to keep across application updates; data kept in `.nvm_data`
 //! statics is not.
 //!
-//! The storage is initialized when the application starts: an uninitialized or corrupted
-//! storage gets a fresh, empty header. Its capacity, [`capacity`], is set at build time by
+//! The storage is initialized when the application starts, and for Exchange's
+//! `SIGN_TRANSACTION` once the transaction parameters are copied, as the C SDK's
+//! `common_app_init()` does: an uninitialized or corrupted storage gets a fresh, empty header,
+//! and [`was_reset_on_boot`] tells a corrupted one, whose data is lost, from a first start.
+//! Its capacity, [`capacity`], is set at build time by
 //! the `APP_STORAGE_SIZE` environment variable (480 bytes by default). The storage outlives
 //! the version that wrote it, so `APP_STORAGE_SIZE` must not shrink from one version of an
 //! application to the next.
@@ -18,13 +21,10 @@
 //! unencrypted: do not keep secrets here. The content may have been written by an older
 //! version of the application, so check [`data_version`] before trusting its format.
 //!
-//! # Differences from the C SDK
+//! # Difference from the C SDK
 //!
-//! - [`read`] also refuses a range that ends beyond [`capacity`]; the C SDK checks it only
-//!   against the data size in the header.
-//! - The storage is initialized for a standalone start and for Exchange's
-//!   `SIGN_TRANSACTION`, as `common_app_init()` does, but before the coin application copies
-//!   the transaction parameters rather than after.
+//! [`read`] also refuses a range that ends beyond [`capacity`]; the C SDK checks it only
+//! against the data size in the header.
 //!
 //! This module is only available with the `app_storage` Cargo feature. The
 //! `app_storage_settings` and `app_storage_data` features set the matching
@@ -45,7 +45,29 @@
 //! app_storage::increment_data_version();
 //! ```
 
+use core::sync::atomic::{AtomicBool, Ordering};
+
 use ledger_secure_sdk_sys as sys;
+
+/// Set when the storage initialization found the storage corrupted and reset it.
+static RESET_ON_BOOT: AtomicBool = AtomicBool::new(false);
+
+/// Overrides the C SDK's weak hook (`lib_standard_app/app_storage.c`), which the storage
+/// initialization calls when it resets a corrupted storage.
+#[unsafe(no_mangle)]
+extern "C" fn app_storage_corrupted_callback() {
+    RESET_ON_BOOT.store(true, Ordering::Relaxed);
+}
+
+/// Whether the application found its storage corrupted when it started and reset it to an
+/// empty one: the data it held is lost, and the application may offer to restore it. False on
+/// a first start, when there was nothing to lose, and when the storage was intact.
+///
+/// Needs a C SDK whose storage initialization calls `app_storage_corrupted_callback()`
+/// (LedgerHQ/ledger-secure-sdk#1744); with an older one this is always false.
+pub fn was_reset_on_boot() -> bool {
+    RESET_ON_BOOT.load(Ordering::Relaxed)
+}
 
 /// Error returned by the storage functions.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -243,6 +265,42 @@ mod tests {
         assert_eq!(write(&[0xaa], capacity() - 1), Ok(()));
         assert_eq!(size(), capacity());
         assert_eq!(write(&[0xaa], capacity()), Err(AppStorageError::Overflow));
+    }
+
+    // Data changed behind the CRC is a corruption: the initialization resets the storage and
+    // reports the loss, which a first start, with nothing lost, does not.
+    #[test]
+    fn test_app_storage_corruption_is_reported() {
+        reset();
+        assert_eq!(write(&[1, 2, 3], 0), Ok(()));
+        // The data follows the CRC and the header (`app_storage_t`).
+        let data_offset =
+            core::mem::size_of::<u32>() + core::mem::size_of::<sys::app_storage_header_t>();
+        // SAFETY: the storage (`app_storage_real`, lib_standard_app/app_storage.c) holds at least
+        // `data_offset + 1` bytes, and nvm_write is the only way to write it. It is addressed as
+        // the C side addresses it: its link address through PIC(). A Rust reference to the
+        // symbol is position-relative instead, which Speculos maps to another copy of the
+        // application, where the C side would never see the write.
+        unsafe {
+            let link: *mut core::ffi::c_void;
+            core::arch::asm!("ldr {0}, =app_storage_real", out(reg) link);
+            let storage = sys::pic(link).cast::<u8>();
+            let byte = 9u8;
+            sys::nvm_write(
+                storage.add(data_offset).cast(),
+                (&raw const byte).cast_mut().cast(),
+                1,
+            );
+        }
+        let mut first = [0u8; 1];
+        assert_eq!(read(&mut first, 0), Ok(()));
+        assert_eq!(first, [9]);
+        assert_eq!(was_reset_on_boot(), false);
+        // SAFETY: the storage was initialized at start; initializing it again is idempotent.
+        let status = unsafe { sys::app_storage_init() };
+        assert_eq!(status, sys::APP_STORAGE_ERR_CORRUPTED);
+        assert_eq!(was_reset_on_boot(), true);
+        assert_eq!(size(), 0);
     }
 
     // A read past the capacity is refused whatever size the header claims: the size comes from
