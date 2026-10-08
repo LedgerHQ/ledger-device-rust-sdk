@@ -14,24 +14,44 @@ use crate::seph::ItcUxEvent;
 
 use ledger_secure_sdk_sys::*;
 
-// TODO: we might not need to split DecodedEvent from DecodedEventType. Simplify.
-pub struct DecodedEvent<const N: usize> {
-    event_type: DecodedEventType,
+/// An event as decoded from the `Comm` buffer, before the APDU policies of
+/// [`Comm::next_event`] and [`Comm::next_command`] are applied.
+///
+/// It holds no borrow of the `Comm`, so that the receive loops can keep
+/// calling into the `Comm` until they find an event worth returning.
+pub(crate) enum RawEvent {
+    Apdu {
+        header: ApduHeader,
+        offset: usize,
+        length: usize,
+    },
+    ApduError {
+        /// `None` if the APDU is too short to hold a header.
+        header: Option<ApduHeader>,
+        error: ApduError,
+    },
+    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    Button(ButtonEvent),
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    Touch,
+    Ticker,
+    // Events for which no additional handling is required after decoding it
+    Ignored,
 }
 
-impl<const N: usize> DecodedEvent<N> {
-    pub fn new(comm: &mut Comm<N>, len: usize) -> Self {
+impl RawEvent {
+    /// Decode the `len` bytes received into the `Comm` buffer. No replies are
+    /// sent, but UX-related and other OS interactions are dealt with.
+    pub(crate) fn decode<const N: usize>(comm: &mut Comm<N>, len: usize) -> Self {
         // If no data was received, return Ignored to avoid reading stale buffer data
         if len == 0 {
-            return Self {
-                event_type: DecodedEventType::Ignored,
-            };
+            return RawEvent::Ignored;
         }
 
         let pt = comm.buf[0];
         use crate::seph::PacketTypes;
 
-        let event_type = match PacketTypes::from(pt) {
+        match PacketTypes::from(pt) {
             PacketTypes::PacketTypeSeph | PacketTypes::PacketTypeSeEvent => {
                 // Copy out SEPH payload (like original) or reinterpret in place.
                 // Optimization: we can borrow slice without copying because io_buffer stores
@@ -48,22 +68,14 @@ impl<const N: usize> DecodedEvent<N> {
                 // command in flight is left undisturbed.
                 if Self::is_device_locked() {
                     comm.reject_apdu(pt, super::StatusWords::DeviceLocked);
-                    DecodedEventType::Ignored
+                    RawEvent::Ignored
                 } else {
                     Self::decode_apdu(comm, pt, 1, len)
                 }
             }
 
-            _ => DecodedEventType::Ignored,
-        };
-        Self { event_type }
-    }
-
-    pub fn into_type(self) -> DecodedEventType {
-        self.event_type
-    }
-    pub fn from_type(event_type: DecodedEventType) -> Self {
-        Self { event_type }
+            _ => RawEvent::Ignored,
+        }
     }
 
     /// True if a PIN is set and has not been validated yet.
@@ -74,7 +86,7 @@ impl<const N: usize> DecodedEvent<N> {
         }
     }
 
-    fn decode_seph_event(comm: &mut Comm<N>, offset: usize) -> DecodedEventType {
+    fn decode_seph_event<const N: usize>(comm: &mut Comm<N>, offset: usize) -> Self {
         use crate::seph::Events;
         let seph_buffer = &comm.buf[offset..];
         let tag = seph_buffer[0];
@@ -88,16 +100,16 @@ impl<const N: usize> DecodedEvent<N> {
                 }
                 let button_info = seph_buffer[3] >> 1;
                 if let Some(btn_evt) = get_button_event(&mut comm.buttons, button_info) {
-                    return DecodedEventType::Button(btn_evt);
+                    return RawEvent::Button(btn_evt);
                 }
-                DecodedEventType::Ignored
+                RawEvent::Ignored
             }
 
             // SCREEN TOUCH EVENT
             #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
             Events::ScreenTouchEvent => unsafe {
                 ux_process_finger_event(seph_buffer.as_ptr() as *mut u8); // the cast to mutable can be removed on more recent SDKs
-                return DecodedEventType::Touch;
+                return RawEvent::Touch;
             },
 
             // TICKER EVENT
@@ -111,7 +123,7 @@ impl<const N: usize> DecodedEvent<N> {
                 unsafe {
                     ux_process_ticker_event();
                 }
-                DecodedEventType::Ticker
+                RawEvent::Ticker
             }
 
             // ITC EVENT
@@ -160,7 +172,7 @@ impl<const N: usize> DecodedEvent<N> {
                     }
                     _ => {}
                 }
-                DecodedEventType::Ignored
+                RawEvent::Ignored
             }
             // DEFAULT EVENT
             _ => {
@@ -177,17 +189,17 @@ impl<const N: usize> DecodedEvent<N> {
                 if !cfg!(feature = "nano_nbgl") {
                     crate::uxapp::UxEvent::Event.request();
                 }
-                DecodedEventType::Ignored
+                RawEvent::Ignored
             }
         }
     }
 
-    fn decode_apdu(
+    fn decode_apdu<const N: usize>(
         comm: &mut Comm<N>,
         packet_type: u8,
         offset: usize,
         io_len: usize,
-    ) -> DecodedEventType {
+    ) -> Self {
         use ApduError::*;
 
         comm.apdu_type = packet_type;
@@ -195,7 +207,10 @@ impl<const N: usize> DecodedEvent<N> {
         let apdu_buffer = &comm.buf[offset..];
 
         if io_len < 5 {
-            return DecodedEventType::ApduError(BadLen);
+            return RawEvent::ApduError {
+                header: None,
+                error: BadLen,
+            };
         }
 
         let rx_len = io_len - 1;
@@ -207,51 +222,39 @@ impl<const N: usize> DecodedEvent<N> {
             p2: apdu_buffer[3],
         };
         if rx_len == 4 {
-            return DecodedEventType::new_apdu(header, 4, 0);
+            return Self::new_apdu(header, 4, 0);
         }
         let first_len_byte = apdu_buffer[4];
 
         match (first_len_byte, rx_len) {
             (0, 5) => {
                 // Non-conforming zero-data APDU (TODO: per the standard, this should actually be read as a 256-byte long APDU; but that's likely to break things as lots)
-                DecodedEventType::new_apdu(header, 4, 0)
+                Self::new_apdu(header, 4, 0)
             }
-            (0, 6) => DecodedEventType::ApduError(BadLen),
+            (0, 6) => Self::bad_len(header),
             (0, _) => {
                 let len = u16::from_be_bytes([apdu_buffer[5], apdu_buffer[6]]) as usize;
                 if rx_len != len + 7 {
-                    return DecodedEventType::ApduError(BadLen);
+                    return Self::bad_len(header);
                 }
-                DecodedEventType::new_apdu(header, 1 + 7, len)
+                Self::new_apdu(header, 1 + 7, len)
             }
             (len, _) => {
                 if rx_len != len as usize + 5 {
-                    return DecodedEventType::ApduError(BadLen);
+                    return Self::bad_len(header);
                 }
-                DecodedEventType::new_apdu(header, 1 + 5, len as usize)
+                Self::new_apdu(header, 1 + 5, len as usize)
             }
         }
     }
-}
 
-/// High-level decoded event (no side effects).
-pub enum DecodedEventType {
-    Apdu {
-        header: ApduHeader,
-        offset: usize,
-        length: usize,
-    },
-    ApduError(ApduError),
-    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-    Button(ButtonEvent),
-    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
-    Touch,
-    Ticker,
-    // Events for which no additional handling is required after decoding it
-    Ignored,
-}
+    fn bad_len(header: ApduHeader) -> Self {
+        Self::ApduError {
+            header: Some(header),
+            error: ApduError::BadLen,
+        }
+    }
 
-impl DecodedEventType {
     fn new_apdu(header: ApduHeader, offset: usize, length: usize) -> Self {
         Self::Apdu {
             header,
