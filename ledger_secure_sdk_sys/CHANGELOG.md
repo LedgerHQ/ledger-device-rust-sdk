@@ -11,8 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `app_io_stack` feature: build without `USE_OS_IO_STACK`, so the app runs the C SDK's
   USB/BLE IO stack itself (the C SDK's `DISABLE_OS_IO_STACK_USE`); `os_io.o` is always
   linked in that mode instead of the weak syscall stubs
+- `app_storage_init` is declared for the Rust side, which initializes the storage for
+  Exchange's `SIGN_TRANSACTION`
 
 ### Changed
+- `app_storage`: `c_main` initializes the storage for a standalone start only; for
+  `SIGN_TRANSACTION` it is initialized after BSS is reset, so the corruption hook writes
+  into the application's own memory and not into Exchange's
 - `exit_app` stops the app's IO stack (`os_io_stop`) before `os_sched_exit` with
   `app_io_stack`
 

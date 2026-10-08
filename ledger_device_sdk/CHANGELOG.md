@@ -11,8 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `app_io_stack` feature: the app runs the C SDK's USB/BLE IO stack itself instead of
   the OS one (the C SDK's `DISABLE_OS_IO_STACK_USE`), for apps that drive an interface
   such as U2F/CTAPHID themselves. `exit_app` stops that stack before leaving.
+- `app_storage::was_reset_on_boot`: whether the storage initialization found the
+  storage corrupted and reset it, so an app can tell lost data from a first start.
+  Needs a C SDK whose initialization calls `app_storage_corrupted_callback()`.
 
 ### Changed
+- `app_storage`: for Exchange's `SIGN_TRANSACTION` the storage is initialized in
+  `sign_tx_params`, once the transaction parameters are copied and BSS is reset,
+  as the C SDK's `common_app_init()` does.
 - `io_new`: breaking rewrite of `Comm::next_event` and `io::Event`. It now
   returns after every OS event, as a `Command` (BOLOS APDUs, unexpected CLAs and
   malformed APDUs are handled internally, as in `Comm::next_command`), a UI
