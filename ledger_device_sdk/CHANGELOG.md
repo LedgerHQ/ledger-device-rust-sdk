@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Comm::next_event`, `Comm::next_command`, `Command::into_response`,
   `Comm::begin_response`) and the deprecated `NbglHomeAndSettings::show` (use
   `show_and_return`, then `Comm::next_command`).
+- `debug_over_usb` feature: C SDK `PRINTF` and the Rust log macros go to a USB CDC
+  (serial) interface on a real device. It enables `app_io_stack`, since only an app-side
+  IO stack exposes that interface; on Nano S+ it drops WebUSB and U2F to fit the CDC
+  interfaces. Mutually exclusive with `debug_csdk`.
 
 ## [1.41.0] - 2026-10-06
 

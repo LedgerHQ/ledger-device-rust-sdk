@@ -38,6 +38,10 @@ speculos = ["unit_test"]
 heap = [ "ledger_secure_sdk_sys/heap" ]
 nano_nbgl = [ "ledger_secure_sdk_sys/nano_nbgl" ]
 debug_csdk = [ "ledger_secure_sdk_sys/debug_csdk" ]
+# Route C SDK PRINTF and Rust log macros to a USB CDC (serial) interface on a
+# real device. The app then runs its own USB/BLE stack instead of the OS one
+# (`app_io_stack`). Mutually exclusive with `debug_csdk`.
+debug_over_usb = [ "debug", "app_io_stack", "ledger_secure_sdk_sys/debug_over_usb" ]
 io_new = []  # switch to new 'io' module
 # Run the IO stack in the application instead of the OS (see ledger_secure_sdk_sys).
 app_io_stack = [ "ledger_secure_sdk_sys/app_io_stack" ]

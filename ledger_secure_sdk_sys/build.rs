@@ -298,6 +298,24 @@ impl SDKBuilder<'_> {
             .expect("Unable to write file");
         }
 
+        // Mirror the DEBUG_OVER_USB logic of the C SDK's Makefile.standard_app:
+        // PRINTF goes to a USB CDC interface, which the OS IO stack does not
+        // expose, so the app must run its own IO stack: the feature enables
+        // `app_io_stack`, which drops USE_OS_IO_STACK above.
+        if env::var_os("CARGO_FEATURE_DEBUG_OVER_USB").is_some() {
+            if env::var_os("CARGO_FEATURE_DEBUG_CSDK").is_some() {
+                panic!("Features `debug_csdk` and `debug_over_usb` are mutually exclusive");
+            }
+            if spec.name == DeviceName::NanoSPlus {
+                // Only 4 USB interfaces: keep HID + CDC (control & data).
+                defines.retain(|(d, _)| d != "HAVE_WEBUSB" && d != "HAVE_IO_U2F");
+            }
+            defines.push(("HAVE_PRINTF".into(), None));
+            defines.push(("PRINTF".into(), Some("mcu_usb_printf".into())));
+            defines.push(("HAVE_PRINTF_CDC".into(), None));
+            defines.push(("HAVE_CDCUSB".into(), None));
+        }
+
         let cflags = read_lines(&spec.cflags_file());
 
         let is_nbgl = !spec.is_nano() || nano_nbgl;

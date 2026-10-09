@@ -85,19 +85,21 @@
 //!   with no runtime overhead.
 //! - **ARM semihosting**: Debug output uses SVC (supervisor call) instruction 0xAB for
 //!   character-by-character printing.
+//! - **USB CDC**: With the `debug_over_usb` feature, output is sent instead to a USB
+//!   serial (CDC) interface exposed by the app, so logs can be read on a real device.
 //! - **No heap allocation**: All formatting is done on the stack.
 //! - **Macro re-exports**: Macros are available both at crate root (`ledger_device_sdk::info!()`)
 //!   and in this module (`ledger_device_sdk::log::info!()`).
 
 use core::fmt::Write;
 
-#[cfg(feature = "debug")]
+#[cfg(all(feature = "debug", not(feature = "debug_over_usb")))]
 use core::arch::asm;
 
 /// Debug 'print' function that uses ARM semihosting
 /// Prints only strings with no formatting
-#[cfg(feature = "debug")]
-fn print(s: &str) {
+#[cfg(all(feature = "debug", not(feature = "debug_over_usb")))]
+pub(crate) fn print(s: &str) {
     let p = s.as_bytes().as_ptr();
     for i in 0..s.len() {
         let m = unsafe { p.add(i) };
@@ -108,6 +110,20 @@ fn print(s: &str) {
                 inout("r0") 3 => _,
             );
         }
+    }
+}
+
+#[cfg(feature = "debug_over_usb")]
+unsafe extern "C" {
+    fn os_io_seph_cmd_printf(s: *const u8, len: u16);
+}
+
+/// Debug 'print' function that sends the string over the USB CDC interface
+/// Prints only strings with no formatting
+#[cfg(feature = "debug_over_usb")]
+pub(crate) fn print(s: &str) {
+    for chunk in s.as_bytes().chunks(64) {
+        unsafe { os_io_seph_cmd_printf(chunk.as_ptr(), chunk.len() as u16) };
     }
 }
 

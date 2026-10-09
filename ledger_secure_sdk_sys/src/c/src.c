@@ -323,6 +323,9 @@ void c_boot_std() {
     init_io.usb.hid_u2f_settings.build_device_version_number = 0;
     init_io.usb.hid_u2f_settings.capabilities_flag = 0;
 #endif  // HAVE_IO_U2F
+#ifdef HAVE_CDCUSB
+    init_io.usb.class_mask |= USBD_LEDGER_CLASS_CDC;
+#endif  // HAVE_CDCUSB
 #endif  // !HAVE_IO_USB
 
     init_io.ble.profile_mask = 0;
