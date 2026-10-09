@@ -823,6 +823,26 @@ impl Comm {
         }
     }
 
+    /// Appends the status word to whichever response buffer `apdu_send` will
+    /// transmit.
+    ///
+    /// The two response paths of this module are selected by `tx`: a caller that
+    /// filled `apdu_buffer` sets `tx`, and one that filled `io_buffer` sets
+    /// `tx_length`. `apdu_send` honours that split, so the status word has to be
+    /// written into the buffer the same test will pick - writing it into
+    /// `io_buffer` unconditionally left it in a buffer that was never sent.
+    fn append_status_word(&mut self, sw: u16) {
+        if self.tx != 0 {
+            self.apdu_buffer[self.tx] = (sw >> 8) as u8;
+            self.apdu_buffer[self.tx + 1] = sw as u8;
+            self.tx += 2;
+        } else {
+            self.io_buffer[self.tx_length] = (sw >> 8) as u8;
+            self.io_buffer[self.tx_length + 1] = sw as u8;
+            self.tx_length += 2;
+        }
+    }
+
     /// Set the Status Word of the response to the previous Command event, and
     /// transmit the response.
     ///
@@ -832,11 +852,8 @@ impl Comm {
     ///   StatusWords, a SyscallError, or any type which can be converted to a
     ///   Reply.
     pub fn reply<T: Into<Reply>>(&mut self, reply: T) {
-        let sw = reply.into().0;
         // Append status word
-        self.io_buffer[self.tx_length] = (sw >> 8) as u8;
-        self.io_buffer[self.tx_length + 1] = sw as u8;
-        self.tx_length += 2;
+        self.append_status_word(reply.into().0);
         // Transmit the response
         self.apdu_send();
     }
@@ -1053,5 +1070,43 @@ mod test {
         assert_eq!(m.ins, 0);
         assert_eq!(m.p1, 0);
         assert_eq!(m.p2, 0);
+    }
+
+    /// A caller that filled `apdu_buffer` and set `tx` must get its status word
+    /// in `apdu_buffer`, because that is the buffer `apdu_send` transmits when
+    /// `tx` is non-zero. Writing it to `io_buffer` instead dropped the status
+    /// word from every such response that carried data.
+    #[test]
+    fn status_word_follows_apdu_buffer() {
+        let mut c = Comm::new();
+        c.apdu_buffer[0] = 0xde;
+        c.apdu_buffer[1] = 0xad;
+        c.tx = 2;
+
+        c.append_status_word(StatusWords::Ok as u16);
+
+        assert_eq!(c.tx, 4);
+        assert_eq!(c.apdu_buffer[2], 0x90);
+        assert_eq!(c.apdu_buffer[3], 0x00);
+        // The unused buffer must be left alone.
+        assert_eq!(c.tx_length, 0);
+        assert_eq!(c.io_buffer[0], 0);
+        assert_eq!(c.io_buffer[1], 0);
+    }
+
+    /// The `io_buffer` path is selected when `tx` is zero, and keeps working.
+    #[test]
+    fn status_word_follows_io_buffer() {
+        let mut c = Comm::new();
+        c.io_buffer[0] = 0xde;
+        c.io_buffer[1] = 0xad;
+        c.tx_length = 2;
+
+        c.append_status_word(StatusWords::Ok as u16);
+
+        assert_eq!(c.tx_length, 4);
+        assert_eq!(c.io_buffer[2], 0x90);
+        assert_eq!(c.io_buffer[3], 0x00);
+        assert_eq!(c.tx, 0);
     }
 }
