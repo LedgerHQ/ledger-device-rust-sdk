@@ -28,6 +28,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   IO stack exposes that interface; on Nano S+ it drops WebUSB and U2F to fit the CDC
   interfaces. Mutually exclusive with `debug_csdk`.
 
+### Fixed
+- `io_legacy`: `Comm::reply` appends the status word to the buffer that is actually
+  transmitted. `apdu_send` sends `apdu_buffer` when `tx` is set and `io_buffer`
+  otherwise, but the status word was always written to `io_buffer`, so a caller
+  using the `apdu_buffer`/`tx` pair sent its response data with no status word at
+  all and the host read the last two data bytes as one.
+
 ## [1.41.0] - 2026-10-06
 
 ### Added
