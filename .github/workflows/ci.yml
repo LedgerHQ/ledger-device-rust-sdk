@@ -53,15 +53,20 @@ jobs:
     name: Build SDK
     if: github.event_name != 'workflow_dispatch'
     uses: ./.github/workflows/reusable_build_sdk.yml
+    secrets: inherit
     with:
+      rust_sdk_repo: ${{ github.repository }}
       rust_sdk_branch: ${{ github.ref }}
 
   build_manual:
     name: Build SDK (manual)
     if: github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/reusable_build_sdk.yml
+    secrets: inherit
     with:
+      rust_sdk_repo: ${{ github.repository }}
       rust_sdk_branch: ${{ inputs.rust_sdk_branch }}
+      c_sdk_repo: ${{ vars.C_SDK_REPO || 'LedgerHQ/ledger-secure-sdk' }}
       c_sdk_branch: ${{ inputs.c_sdk_branch }}
 
   test:
@@ -137,13 +142,20 @@ jobs:
     name: Build all Rust apps
     if: github.event_name != 'workflow_dispatch'
     uses: ./.github/workflows/reusable_build_all_apps.yml
+    secrets: inherit
     with:
+      rust_sdk_repo: ${{ github.repository }}
       rust_sdk_branch: ${{ github.ref }}
+      app_repo_suffix: ${{ vars.APP_REPO_SUFFIX }}
 
   build-apps_manual:
     name: Build all Rust apps (manual)
     if: github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/reusable_build_all_apps.yml
+    secrets: inherit
     with:
+      rust_sdk_repo: ${{ github.repository }}
       rust_sdk_branch: ${{ inputs.rust_sdk_branch }}
+      c_sdk_repo: ${{ vars.C_SDK_REPO || 'LedgerHQ/ledger-secure-sdk' }}
       c_sdk_branch: ${{ inputs.c_sdk_branch }}
+      app_repo_suffix: ${{ vars.APP_REPO_SUFFIX }}
