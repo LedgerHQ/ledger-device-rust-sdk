@@ -46,7 +46,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  C_SDK_URL: 'https://github.com/${{ inputs.c_sdk_repo }}.git'
 
 jobs:
   build:
@@ -64,13 +63,21 @@ jobs:
         with:
           repository: ${{ inputs.rust_sdk_repo }}
           ref: ${{ inputs.rust_sdk_branch }}
+          token: ${{ secrets.CI_BOT_TOKEN || github.token }}
+
+      - name: Clone C SDK
+        if: ${{ inputs.c_sdk_branch != '' }}
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ inputs.c_sdk_repo }}
+          ref: ${{ inputs.c_sdk_branch }}
+          path: c_sdk
 
       - name: Setup C SDK
         if: ${{ inputs.c_sdk_branch != '' }}
         run: |
-          git clone $C_SDK_URL --branch ${{ inputs.c_sdk_branch }} --single-branch /tmp/c_sdk
-          echo "LEDGER_SDK_PATH=/tmp/c_sdk" >> $GITHUB_ENV
-          echo "Using C SDK from $C_SDK_URL branch ${{ inputs.c_sdk_branch }}"
+          echo "LEDGER_SDK_PATH=$GITHUB_WORKSPACE/c_sdk" >> "$GITHUB_ENV"
+          echo "Using C SDK from ${{ inputs.c_sdk_repo }} branch ${{ inputs.c_sdk_branch }}"
 
       - name: Cargo build
         working-directory: ledger_device_sdk
