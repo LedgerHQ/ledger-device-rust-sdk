@@ -140,6 +140,7 @@ jobs:
               with:
                 repository: ${{ inputs.c_sdk_repo }}
                 ref: ${{ inputs.c_sdk_branch }}
+                token: ${{ secrets.CI_BOT_TOKEN || github.token }}
                 path: c_sdk
 
             - name: Build
