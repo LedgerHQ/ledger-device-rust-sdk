@@ -30,7 +30,7 @@ jobs:
       - name: Get all rust apps
         id: get_rust_apps
         run: |
-          python .github/workflows/get_rust_apps.py ${{ secrets.GITHUB_TOKEN }}
+          python .github/workflows/get_rust_apps.py "${{ vars.APP_REPO_SUFFIX && secrets.CI_BOT_TOKEN || secrets.GITHUB_TOKEN }}" "${{ vars.APP_REPO_SUFFIX }}"
           echo "rust_apps=$(cat rust_apps.json)" >> $GITHUB_OUTPUT
 
   build:
@@ -67,6 +67,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: LedgerHQ/${{ matrix.app-name }}
+          token: ${{ vars.APP_REPO_SUFFIX && secrets.CI_BOT_TOKEN || github.token }}
           submodules: true
 
       - name: Override rust-toolchain.toml to use latest nightly
@@ -78,9 +79,11 @@ jobs:
 
       - name: Use bump-preparation Rust SDK
         if: ${{ env.RUST_SDK_REF != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           echo "Building apps against Rust SDK ref '$RUST_SDK_REF'"
-          git clone https://github.com/LedgerHQ/ledger-device-rust-sdk /tmp/rust-sdk
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}" /tmp/rust-sdk
           git -C /tmp/rust-sdk checkout "$RUST_SDK_REF"
           build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
           manifest="$build_directory/Cargo.toml"
