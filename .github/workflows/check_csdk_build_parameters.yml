@@ -1,6 +1,7 @@
 name: Build C Boilerplate application and check if C SDK build parameters are still correct
 permissions:
   contents: read
+  packages: read
 
 on:
   pull_request:
@@ -12,8 +13,7 @@ on:
 jobs:
   check_csdk_build_parameters:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
+    container: ${{ vars.APP_BUILDER_REGISTRY && fromJSON(format('{{"image":"{0}/ledger-app-builder:latest","credentials":{{"username":"{1}","password":"{2}"}}}}', vars.APP_BUILDER_REGISTRY, github.actor, github.token)) || 'ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest' }}
     strategy:
       matrix:
         target: ["nanox", "nanosplus", "stax", "flex", "apex_p"]

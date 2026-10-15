@@ -57,7 +57,7 @@ jobs:
           uses: actions/checkout@v6
           with:
             repository: ${{ inputs.rust_sdk_repo }}
-            ref: 'master'
+            ref: ${{ inputs.rust_sdk_branch || 'master' }}
             token: ${{ secrets.CI_BOT_TOKEN || github.token }}
         - name: Set up Python
           uses: actions/setup-python@v6
@@ -90,8 +90,7 @@ jobs:
               device: ["nanos+", "nanox", "stax", "flex", "apex_p"]
               include: ${{ fromJSON(needs.retrieve-rust-apps.outputs.rust_apps) }}
         runs-on: ubuntu-latest
-        container:
-            image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
+        container: ${{ vars.APP_BUILDER_REGISTRY && fromJSON(format('{{"image":"{0}/ledger-app-builder:latest","credentials":{{"username":"{1}","password":"{2}"}}}}', vars.APP_BUILDER_REGISTRY, github.actor, github.token)) || 'ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest' }}
         steps:
             - name: Install ledgered
               run: pip install ledgered --break-system-packages

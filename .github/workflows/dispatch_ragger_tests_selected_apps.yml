@@ -82,8 +82,7 @@ jobs:
     name: Build ${{ matrix.entry.app }} (${{ matrix.entry.device }})
     needs: prepare
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
+    container: ${{ vars.APP_BUILDER_REGISTRY && fromJSON(format('{{"image":"{0}/ledger-app-builder:latest","credentials":{{"username":"{1}","password":"{2}"}}}}', vars.APP_BUILDER_REGISTRY, github.actor, github.token)) || 'ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest' }}
     strategy:
       fail-fast: false
       matrix:
