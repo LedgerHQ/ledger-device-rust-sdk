@@ -1,0 +1,34 @@
+name: Sync public mirror
+
+on:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: sync-public-mirror
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    name: "Push to public mirror"
+    env:
+      PUBLIC_REPO: LedgerHQ/ledger-device-rust-sdk
+    steps:
+    - name: Clone repository
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+        persist-credentials: false
+
+    - name: Push to public mirror
+      env:
+        TOKEN: ${{ secrets.PUBLIC_MIRROR_TOKEN }}
+      run: |
+        git push "https://x-access-token:${TOKEN}@github.com/${PUBLIC_REPO}.git" \
+          "refs/remotes/origin/develop:refs/heads/develop" \
+          "refs/remotes/origin/master:refs/heads/master" \
+          "refs/tags/*:refs/tags/*"

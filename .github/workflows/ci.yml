@@ -23,8 +23,7 @@ jobs:
   clippy:
     name: Run static analysis
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
+    container: ${{ vars.APP_BUILDER_REGISTRY && fromJSON(format('{{"image":"{0}/ledger-app-dev-tools:latest","credentials":{{"username":"{1}","password":"{2}"}}}}', vars.APP_BUILDER_REGISTRY, github.actor, github.token)) || 'ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest' }}
     strategy:
       matrix:
         target: ["nanox", "nanosplus", "stax", "flex", "apex_p"]
@@ -40,8 +39,7 @@ jobs:
   format:
     name: Check code formatting
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
+    container: ${{ vars.APP_BUILDER_REGISTRY && fromJSON(format('{{"image":"{0}/ledger-app-dev-tools:latest","credentials":{{"username":"{1}","password":"{2}"}}}}', vars.APP_BUILDER_REGISTRY, github.actor, github.token)) || 'ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest' }}
     steps:
       - name: Clone
         uses: actions/checkout@v6
@@ -53,22 +51,26 @@ jobs:
     name: Build SDK
     if: github.event_name != 'workflow_dispatch'
     uses: ./.github/workflows/reusable_build_sdk.yml
+    secrets: inherit
     with:
+      rust_sdk_repo: ${{ github.repository }}
       rust_sdk_branch: ${{ github.ref }}
 
   build_manual:
     name: Build SDK (manual)
     if: github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/reusable_build_sdk.yml
+    secrets: inherit
     with:
+      rust_sdk_repo: ${{ github.repository }}
       rust_sdk_branch: ${{ inputs.rust_sdk_branch }}
+      c_sdk_repo: ${{ vars.C_SDK_REPO || 'LedgerHQ/ledger-secure-sdk' }}
       c_sdk_branch: ${{ inputs.c_sdk_branch }}
 
   test:
     name: Run unit and integration tests
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
+    container: ${{ vars.APP_BUILDER_REGISTRY && fromJSON(format('{{"image":"{0}/ledger-app-dev-tools:latest","credentials":{{"username":"{1}","password":"{2}"}}}}', vars.APP_BUILDER_REGISTRY, github.actor, github.token)) || 'ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest' }}
     strategy:
       matrix:
         target: ["nanox", "nanosplus", "stax", "flex", "apex_p"]
@@ -83,8 +85,7 @@ jobs:
   test-pqc:
     name: Run ML-KEM and ML-DSA unit tests
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
+    container: ${{ vars.APP_BUILDER_REGISTRY && fromJSON(format('{{"image":"{0}/ledger-app-dev-tools:latest","credentials":{{"username":"{1}","password":"{2}"}}}}', vars.APP_BUILDER_REGISTRY, github.actor, github.token)) || 'ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest' }}
     strategy:
       matrix:
         target: ["nanox", "nanosplus", "stax", "flex", "apex_p"]
@@ -100,8 +101,7 @@ jobs:
   test-app-storage:
     name: Run application storage unit tests
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
+    container: ${{ vars.APP_BUILDER_REGISTRY && fromJSON(format('{{"image":"{0}/ledger-app-dev-tools:latest","credentials":{{"username":"{1}","password":"{2}"}}}}', vars.APP_BUILDER_REGISTRY, github.actor, github.token)) || 'ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest' }}
     strategy:
       matrix:
         target: ["nanox", "nanosplus", "stax", "flex", "apex_p"]
@@ -137,13 +137,20 @@ jobs:
     name: Build all Rust apps
     if: github.event_name != 'workflow_dispatch'
     uses: ./.github/workflows/reusable_build_all_apps.yml
+    secrets: inherit
     with:
+      rust_sdk_repo: ${{ github.repository }}
       rust_sdk_branch: ${{ github.ref }}
+      app_repo_suffix: ${{ vars.APP_REPO_SUFFIX }}
 
   build-apps_manual:
     name: Build all Rust apps (manual)
     if: github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/reusable_build_all_apps.yml
+    secrets: inherit
     with:
+      rust_sdk_repo: ${{ github.repository }}
       rust_sdk_branch: ${{ inputs.rust_sdk_branch }}
+      c_sdk_repo: ${{ vars.C_SDK_REPO || 'LedgerHQ/ledger-secure-sdk' }}
       c_sdk_branch: ${{ inputs.c_sdk_branch }}
+      app_repo_suffix: ${{ vars.APP_REPO_SUFFIX }}

@@ -15,6 +15,14 @@ on:
           required: false
           default: ''
           type: string
+        rust_sdk_repo:
+          required: false
+          default: 'LedgerHQ/ledger-device-rust-sdk'
+          type: string
+        app_repo_suffix:
+          required: false
+          default: ''
+          type: string
     workflow_dispatch:
       inputs:
         c_sdk_repo:
@@ -29,11 +37,16 @@ on:
           required: false
           default: '' 
           type: string
+        rust_sdk_repo:
+          required: false
+          default: 'LedgerHQ/ledger-device-rust-sdk'
+          type: string
+        app_repo_suffix:
+          required: false
+          default: ''
+          type: string
 
-env:
-  C_SDK_URL: 'https://github.com/${{ inputs.c_sdk_repo }}.git'
-
-jobs:      
+jobs:
     retrieve-rust-apps:
       name: Retrieve Rust Apps
       runs-on: ubuntu-latest
@@ -43,8 +56,9 @@ jobs:
         - name: Checkout repository
           uses: actions/checkout@v6
           with:
-            repository: LedgerHQ/ledger-device-rust-sdk
-            ref: 'master'
+            repository: ${{ inputs.rust_sdk_repo }}
+            ref: ${{ inputs.rust_sdk_branch || 'master' }}
+            token: ${{ secrets.CI_BOT_TOKEN || github.token }}
         - name: Set up Python
           uses: actions/setup-python@v6
           with:
@@ -54,7 +68,7 @@ jobs:
         - name: Get all rust apps
           id: get_rust_apps
           run: |
-            python .github/workflows/get_rust_apps.py ${{ secrets.GITHUB_TOKEN }}
+            python .github/workflows/get_rust_apps.py "${{ inputs.app_repo_suffix && secrets.CI_BOT_TOKEN || secrets.GITHUB_TOKEN }}" "${{ inputs.app_repo_suffix }}"
             echo "rust_apps=$(cat rust_apps.json)" >> $GITHUB_OUTPUT
 
     display-rust-apps:
@@ -76,8 +90,7 @@ jobs:
               device: ["nanos+", "nanox", "stax", "flex", "apex_p"]
               include: ${{ fromJSON(needs.retrieve-rust-apps.outputs.rust_apps) }}
         runs-on: ubuntu-latest
-        container:
-            image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
+        container: ${{ vars.APP_BUILDER_REGISTRY && fromJSON(format('{{"image":"{0}/ledger-app-builder:latest","credentials":{{"username":"{1}","password":"{2}"}}}}', vars.APP_BUILDER_REGISTRY, github.actor, github.token)) || 'ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest' }}
         steps:
             - name: Install ledgered
               run: pip install ledgered --break-system-packages
@@ -86,12 +99,14 @@ jobs:
               uses: actions/checkout@v6
               with:
                 path: sdk
-                repository: LedgerHQ/ledger-device-rust-sdk
+                repository: ${{ inputs.rust_sdk_repo }}
                 ref: ${{ inputs.rust_sdk_branch }}
+                token: ${{ secrets.CI_BOT_TOKEN || github.token }}
             - name: Clone App
               uses: actions/checkout@v6
               with:
                 repository: LedgerHQ/${{ matrix.app-name }}
+                token: ${{ inputs.app_repo_suffix && secrets.CI_BOT_TOKEN || github.token }}
                 submodules: true
                 path: ${{ matrix.app-name }}
             - name: Patch Cargo.toml
@@ -118,12 +133,19 @@ jobs:
                 echo "Cargo.toml:"
                 cat $cargo_toml_path
 
+            - name: Clone C SDK
+              if: ${{ inputs.c_sdk_branch != '' }}
+              uses: actions/checkout@v6
+              with:
+                repository: ${{ inputs.c_sdk_repo }}
+                ref: ${{ inputs.c_sdk_branch }}
+                token: ${{ secrets.CI_BOT_TOKEN || github.token }}
+                path: c_sdk
+
             - name: Build
               shell: bash
               run: |
-                # Clone C SDK if provided
                 if [ -n "${{ inputs.c_sdk_branch }}" ]; then
-                    git clone $C_SDK_URL --branch ${{ inputs.c_sdk_branch }} --single-branch c_sdk
                     echo "setting LEDGER_SDK_PATH to $(realpath c_sdk)"
                     export LEDGER_SDK_PATH=$(realpath c_sdk)
 
