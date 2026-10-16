@@ -37,8 +37,7 @@ jobs:
     name: Build ${{ matrix.app-name }} (${{ matrix.device }})
     needs: retrieve-rust-apps
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
+    container: ${{ vars.APP_BUILDER_REGISTRY && fromJSON(format('{{"image":"{0}/ledger-app-dev-tools:latest","credentials":{{"username":"{1}","password":"{2}"}}}}', vars.APP_BUILDER_REGISTRY, github.actor, github.token)) || 'ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest' }}
     env:
       # While a nightly bump is in preparation, build every app against the SDK
       # prep branch (see NIGHTLY.md §3). When neither the dispatch input nor the
