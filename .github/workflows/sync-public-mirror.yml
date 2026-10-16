@@ -15,9 +15,19 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     name: "Push to public mirror"
+    if: vars.APP_REPO_SUFFIX != '' && endsWith(github.repository, vars.APP_REPO_SUFFIX)
     env:
       PUBLIC_REPO: LedgerHQ/ledger-device-rust-sdk
     steps:
+    - name: Generate token
+      id: app
+      uses: actions/create-github-app-token@v2
+      with:
+        app-id: ${{ vars.SDK_MIRROR_APP_ID }}
+        private-key: ${{ secrets.SDK_MIRROR_APP_PRIVATE_KEY }}
+        owner: LedgerHQ
+        repositories: ledger-device-rust-sdk
+
     - name: Clone repository
       uses: actions/checkout@v6
       with:
@@ -26,9 +36,9 @@ jobs:
 
     - name: Push to public mirror
       env:
-        TOKEN: ${{ secrets.PUBLIC_MIRROR_TOKEN }}
+        TOKEN: ${{ steps.app.outputs.token }}
       run: |
-        git push "https://x-access-token:${TOKEN}@github.com/${PUBLIC_REPO}.git" \
+        git push --atomic "https://x-access-token:${TOKEN}@github.com/${PUBLIC_REPO}.git" \
           "refs/remotes/origin/develop:refs/heads/develop" \
           "refs/remotes/origin/master:refs/heads/master" \
           "refs/tags/*:refs/tags/*"
