@@ -1,3 +1,4 @@
+#[cfg(not(feature = "io_new"))]
 use crate::io;
 
 use ledger_secure_sdk_sys::{
@@ -502,6 +503,7 @@ impl<'a> Page<'a> {
     }
 }
 
+#[cfg(not(feature = "io_new"))]
 pub enum EventOrPageIndex<T> {
     Event(io::Event<T>),
     Index(usize),

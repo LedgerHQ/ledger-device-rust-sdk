@@ -265,6 +265,13 @@ impl SDKBuilder<'_> {
         // between BAGL and NBGL based on the `nano_nbgl` feature; touchscreen
         // devices encode the choice directly in their .defines file.
         let mut defines = header2define(spec.defines_file().to_str().unwrap());
+        // `app_io_stack`: without USE_OS_IO_STACK, io/src/os_io.c defines os_io_init/rx/tx in
+        // the application and the USB/BLE/NFC stacks it links run there, instead of the weak
+        // syscall stubs of src/syscalls.c reaching the OS stack. Same as the C SDK's
+        // DISABLE_OS_IO_STACK_USE (Makefile.standard_app).
+        if env::var_os("CARGO_FEATURE_APP_IO_STACK").is_some() {
+            defines.retain(|(name, _)| name != "USE_OS_IO_STACK");
+        }
         let nano_nbgl = env::var_os("CARGO_FEATURE_NANO_NBGL").is_some();
         if spec.is_nano() {
             if nano_nbgl {
@@ -289,6 +296,24 @@ impl SDKBuilder<'_> {
                 ),
             )
             .expect("Unable to write file");
+        }
+
+        // Mirror the DEBUG_OVER_USB logic of the C SDK's Makefile.standard_app:
+        // PRINTF goes to a USB CDC interface, which the OS IO stack does not
+        // expose, so the app must run its own IO stack: the feature enables
+        // `app_io_stack`, which drops USE_OS_IO_STACK above.
+        if env::var_os("CARGO_FEATURE_DEBUG_OVER_USB").is_some() {
+            if env::var_os("CARGO_FEATURE_DEBUG_CSDK").is_some() {
+                panic!("Features `debug_csdk` and `debug_over_usb` are mutually exclusive");
+            }
+            if spec.name == DeviceName::NanoSPlus {
+                // Only 4 USB interfaces: keep HID + CDC (control & data).
+                defines.retain(|(d, _)| d != "HAVE_WEBUSB" && d != "HAVE_IO_U2F");
+            }
+            defines.push(("HAVE_PRINTF".into(), None));
+            defines.push(("PRINTF".into(), Some("mcu_usb_printf".into())));
+            defines.push(("HAVE_PRINTF_CDC".into(), None));
+            defines.push(("HAVE_CDCUSB".into(), None));
         }
 
         let cflags = read_lines(&spec.cflags_file());

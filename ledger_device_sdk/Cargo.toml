@@ -1,6 +1,6 @@
 [package]
 name = "ledger_device_sdk"
-version = "1.41.0"
+version = "1.42.0"
 authors = ["Ledger"]
 edition = "2024"
 license.workspace = true
@@ -23,7 +23,7 @@ rand_core = { version = "0.6.3", default-features = false }
 zeroize = { version = "1.6.0", default-features = false }
 numtoa = "0.2.4"
 const-zero = "0.1.1"
-ledger_secure_sdk_sys = { path = "../ledger_secure_sdk_sys", version = "1.17.0" }
+ledger_secure_sdk_sys = { path = "../ledger_secure_sdk_sys", version = "1.18.0" }
 
 [features]
 debug = ["log_error"]
@@ -38,7 +38,13 @@ speculos = ["unit_test"]
 heap = [ "ledger_secure_sdk_sys/heap" ]
 nano_nbgl = [ "ledger_secure_sdk_sys/nano_nbgl" ]
 debug_csdk = [ "ledger_secure_sdk_sys/debug_csdk" ]
+# Route C SDK PRINTF and Rust log macros to a USB CDC (serial) interface on a
+# real device. The app then runs its own USB/BLE stack instead of the OS one
+# (`app_io_stack`). Mutually exclusive with `debug_csdk`.
+debug_over_usb = [ "debug", "app_io_stack", "ledger_secure_sdk_sys/debug_over_usb" ]
 io_new = []  # switch to new 'io' module
+# Run the IO stack in the application instead of the OS (see ledger_secure_sdk_sys).
+app_io_stack = [ "ledger_secure_sdk_sys/app_io_stack" ]
 stack_usage = []
 mlkem = [ "ledger_secure_sdk_sys/mlkem" ]
 mldsa = [ "ledger_secure_sdk_sys/mldsa" ]

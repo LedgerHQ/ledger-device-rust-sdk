@@ -4,7 +4,9 @@
 //! from dashboard) with automatic support of setting display.
 //! It enables to use an action button
 use super::*;
+#[cfg(not(feature = "io_new"))]
 use crate::io::{Reply, StatusWords};
+#[cfg(not(feature = "io_new"))]
 use crate::io_callbacks::{nbgl_fetch_apdu_header, nbgl_reply_status};
 use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 
@@ -494,6 +496,7 @@ impl NbglHomeAndSettings {
     }
 
     /// Show the home screen and settings page (internal implementation).
+    #[cfg(not(feature = "io_new"))]
     fn show_internal<T: TryFrom<ApduHeader>>(&mut self) -> Event<T>
     where
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
@@ -542,25 +545,6 @@ impl NbglHomeAndSettings {
                 }
             }
         }
-    }
-
-    /// Show the home screen and settings page.
-    /// This function will block until an APDU is received or the user quits the app.
-    /// # Arguments
-    /// * `comm` - Mutable reference to Comm.
-    #[cfg(feature = "io_new")]
-    #[deprecated(
-        since = "1.37.0",
-        note = "blocking on an APDU forces the home screen to be refreshed for every received APDU; use `show_and_return` instead"
-    )]
-    pub fn show<T: TryFrom<ApduHeader>, const N: usize>(
-        &mut self,
-        comm: &mut crate::io::Comm<N>,
-    ) -> Event<T>
-    where
-        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
-    {
-        comm.lend_to_nbgl(|| self.show_internal())
     }
 
     /// Show the home screen and settings page.

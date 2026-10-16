@@ -4,6 +4,7 @@
 //! It includes functions and structures to create and manage UI elements,
 //! handle user interactions, and display information on Ledger devices.
 
+#[cfg(not(feature = "io_new"))]
 use crate::io::{ApduHeader, Event};
 use crate::io_callbacks::nbgl_next_event_ahead;
 use crate::nvm::*;
