@@ -43,8 +43,13 @@ unsafe extern "C" fn confirm_callback() {
     }
 }
 
+/// The modal currently displayed, whose texts NBGL points to.
+///
+/// Only replaced once the next one has been handed to C.
+static mut DISPLAYED: Option<NbglConfirm> = None;
+
 /// A builder to create and show a confirmation modal.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct NbglConfirm {
     message: CString,
     sub_message: CString,
@@ -94,28 +99,36 @@ impl NbglConfirm {
     ///
     /// `on_confirm` runs inside NBGL's event dispatch, so it should return
     /// promptly.
+    ///
+    /// The SDK keeps its own copy of the texts while the modal is displayed,
+    /// so the builder may be dropped afterwards.
     pub fn show_and_return(&self, on_confirm: fn()) {
+        // C keeps pointers to the strings' heap buffers, which stay put when
+        // `shown` is moved into `DISPLAYED` below.
+        let shown = self.clone();
         unsafe {
             CONFIRM_CALLBACK = Some(on_confirm);
             nbgl_useCaseConfirm(
-                match self.message.is_empty() {
+                match shown.message.is_empty() {
                     true => core::ptr::null(),
-                    false => self.message.as_ptr() as *const c_char,
+                    false => shown.message.as_ptr() as *const c_char,
                 },
-                match self.sub_message.is_empty() {
+                match shown.sub_message.is_empty() {
                     true => core::ptr::null(),
-                    false => self.sub_message.as_ptr() as *const c_char,
+                    false => shown.sub_message.as_ptr() as *const c_char,
                 },
-                match self.confirm_text.is_empty() {
+                match shown.confirm_text.is_empty() {
                     true => core::ptr::null(),
-                    false => self.confirm_text.as_ptr() as *const c_char,
+                    false => shown.confirm_text.as_ptr() as *const c_char,
                 },
-                match self.cancel_text.is_empty() {
+                match shown.cancel_text.is_empty() {
                     true => core::ptr::null(),
-                    false => self.cancel_text.as_ptr() as *const c_char,
+                    false => shown.cancel_text.as_ptr() as *const c_char,
                 },
                 Some(confirm_callback),
             );
+            // C now points into `shown`, so the previous copy can be released.
+            DISPLAYED = Some(shown);
         }
     }
 }
