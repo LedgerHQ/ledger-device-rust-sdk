@@ -245,6 +245,8 @@ struct Displayed {
     info_list: nbgl_contentInfoList_t,
     icon: nbgl_icon_details_t,
     action: Option<CHomeAction>,
+    /// Descriptor handed to C, pointing into `action`.
+    home_action: Option<nbgl_homeAction_t>,
 }
 
 /// The home screen currently displayed.
@@ -434,7 +436,6 @@ impl NbglHomeAndSettings {
     fn draw(&self, quit: nbgl_callback_t) {
         let mut shown = Box::new(Displayed::new(self));
         shown.prepare();
-        let action = shown.action_c_type();
 
         unsafe {
             // Bindings the displayed switches and action button act on.
@@ -452,10 +453,7 @@ impl NbglHomeAndSettings {
                 self.start_page_index(),
                 shown.settings_ptr(),
                 shown.info_list_ptr(),
-                match &action {
-                    Some(action) => action as *const nbgl_homeAction_t,
-                    None => core::ptr::null(),
-                },
+                shown.home_action_ptr(),
                 quit,
             );
             // C now points into `shown`, so the previous copy can be released.
@@ -540,6 +538,7 @@ impl Displayed {
             info_list: nbgl_contentInfoList_t::default(),
             icon: home.icon,
             action: home.action.clone(),
+            home_action: None,
         }
     }
 
@@ -607,6 +606,9 @@ impl Displayed {
                 },
                 nbContents: 1,
             };
+
+            // Nano NBGL keeps a pointer to this descriptor rather than a copy.
+            self.home_action = self.action.as_ref().map(|a| a.as_c_type());
         }
     }
 
@@ -635,9 +637,11 @@ impl Displayed {
         }
     }
 
-    /// The action button struct, materialised so the call sites have something
-    /// with a stable address to point at.
-    fn action_c_type(&self) -> Option<nbgl_homeAction_t> {
-        self.action.as_ref().map(|a| a.as_c_type())
+    /// Pointer to the action button descriptor, or NULL when none was set.
+    fn home_action_ptr(&self) -> *const nbgl_homeAction_t {
+        match self.home_action {
+            None => core::ptr::null(),
+            Some(ref action) => action as *const nbgl_homeAction_t,
+        }
     }
 }
