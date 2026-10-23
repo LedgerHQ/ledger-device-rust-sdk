@@ -135,8 +135,10 @@ impl HomeActionStyle {
 
 /// An action button on the home screen, mapped to `nbgl_homeAction_t`.
 ///
-/// `callback` runs from NBGL's event dispatch when the button is touched; what
-/// it does is entirely up to the app.
+/// `callback` runs from NBGL's event dispatch when the button is touched,
+/// while `Comm` is still handling that event: it must not use `Comm` nor block
+/// on another screen. Record what is due and act on it once
+/// `Comm::next_event` has returned (see the `nbgl_home_and_settings` example).
 pub struct HomeAction<'a> {
     text: &'a str,
     icon: Option<&'a NbglGlyph<'a>>,

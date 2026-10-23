@@ -110,8 +110,10 @@ impl NbglConfirm {
     /// footer runs nothing: the C API reports only confirmation, so an app that
     /// needs to know about dismissal has to infer it from what happens next.
     ///
-    /// `on_confirm` runs inside NBGL's event dispatch, so it should return
-    /// promptly.
+    /// `on_confirm` runs inside NBGL's event dispatch, while `Comm` is still
+    /// handling the touch: it must not use `Comm` nor block on another screen.
+    /// Record what is due and act on it once `Comm::next_event` has returned
+    /// (see the `nbgl_home_and_settings` example).
     ///
     /// The SDK keeps its own reference to the texts while the modal is displayed,
     /// so the builder may be dropped afterwards.

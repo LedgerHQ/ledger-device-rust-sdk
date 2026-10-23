@@ -9,7 +9,8 @@ use ledger_device_sdk::nbgl::NbglConfirm;
 use ledger_device_sdk::nbgl::{HomeAction, NbglGlyph, NbglHomeAndSettings, NbglStatus, init_comm};
 // use ledger_device_sdk::nvm::*;
 // use ledger_device_sdk::NVMData;
-use ledger_device_sdk::io::{ApduHeader, Comm, DEFAULT_BUF_SIZE, StatusWords};
+use core::sync::atomic::{AtomicBool, Ordering};
+use ledger_device_sdk::io::{ApduHeader, Comm, DEFAULT_BUF_SIZE, Event, StatusWords};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 ledger_device_sdk::define_comm!(COMM);
@@ -88,35 +89,13 @@ mod settings {
     }
 }
 
-/// The action button's callback is a plain `fn()` with no user data, and
-/// `init_comm` may only be called once, so the `Comm` obtained in `sample_main`
-/// is parked here for the callback to borrow.
-static mut COMM_REF: Option<&'static mut Comm<DEFAULT_BUF_SIZE>> = None;
-
-/// Points at the home screen builder owned by `sample_main`, so the action
-/// callback can draw it again.
+/// Set by the action's callbacks, cleared by the main loop once it has run
+/// the follow-up.
 ///
-/// Store only a reference handle in `.bss` and avoid raw-pointer dereference
-/// in the callback.
-static mut HOME_REF: Option<&'static mut NbglHomeAndSettings> = None;
-
-/// The `Comm` parked by `sample_main`.
-fn comm() -> &'static mut Comm<DEFAULT_BUF_SIZE> {
-    unsafe {
-        #[allow(static_mut_refs)]
-        COMM_REF.as_mut().unwrap()
-    }
-}
-
-/// Draws the home screen again.
-fn show_home() {
-    unsafe {
-        #[allow(static_mut_refs)]
-        if let Some(home) = HOME_REF.as_mut() {
-            home.show_and_return();
-        }
-    }
-}
+/// NBGL calls them while `Comm` is decoding a button or touch event, so they
+/// must not use `Comm` themselves, nor block. They only record what is due,
+/// and the main loop acts on it once that event has been handled.
+static PENDING: AtomicBool = AtomicBool::new(false);
 
 /// Runs when the home screen's action button is touched.
 ///
@@ -140,21 +119,32 @@ fn on_action() {
 /// already drawn behind the modal.
 #[cfg(not(any(target_os = "nanosplus", target_os = "nanox")))]
 fn on_confirm() {
-    NbglStatus::new().text("Account deleted").show(comm(), true);
+    PENDING.store(true, Ordering::Relaxed);
+}
+
+/// Shows that the account was deleted, then the home screen again.
+#[cfg(not(any(target_os = "nanosplus", target_os = "nanox")))]
+fn run_pending(comm: &mut Comm<DEFAULT_BUF_SIZE>, home: &mut NbglHomeAndSettings) {
+    NbglStatus::new().text("Account deleted").show(comm, true);
 
     // `show` returns once the status page times out after 3s. Nothing is drawn
     // at that point, so put the home screen back.
-    show_home();
+    home.show_and_return();
 }
 
 /// Runs when the home screen's action is selected.
+#[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+fn on_action() {
+    PENDING.store(true, Ordering::Relaxed);
+}
+
+/// Asks whether to delete the account, then shows the home screen again.
 ///
 /// Nano has no modal: a confirmation replaces the home screen and its state,
 /// and reports nothing when dismissed. A choice is used instead, which reports
 /// both outcomes, and the home screen is drawn again whatever the answer.
 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-fn on_action() {
-    let comm = comm();
+fn run_pending(comm: &mut Comm<DEFAULT_BUF_SIZE>, home: &mut NbglHomeAndSettings) {
     if NbglChoice::new().show(
         comm,
         "Delete this account?",
@@ -164,7 +154,7 @@ fn on_action() {
     ) {
         NbglStatus::new().text("Account deleted").show(comm, true);
     }
-    show_home();
+    home.show_and_return();
 }
 
 #[unsafe(no_mangle)]
@@ -201,23 +191,18 @@ extern "C" fn sample_main() {
         ])
         .action(&action);
 
-    // Both statics must be populated before the home screen goes up, since the
-    // action button can be touched as soon as it does. `home` outlives them:
-    // `sample_main` never returns.
-    let comm = unsafe {
-        COMM_REF = Some(comm);
-        // `home` lives until the app exits, so its borrow is extended to
-        // 'static through a raw pointer. Going via the pointer here keeps the
-        // callback itself free of raw-pointer dereferences.
-        HOME_REF = Some(&mut *(&raw mut home));
-        #[allow(static_mut_refs)]
-        COMM_REF.as_mut().unwrap()
-    };
-
     home.show_and_return();
 
     loop {
         // Commands must be answered: this example does not implement any.
-        let _ = comm.next_command().reply(&[], StatusWords::Unknown);
+        if let Event::Command(cmd) = comm.next_event() {
+            let _ = cmd.reply(&[], StatusWords::Unknown);
+        }
+
+        // The event that set it has been handled, so `Comm` is free again.
+        if PENDING.load(Ordering::Relaxed) {
+            PENDING.store(false, Ordering::Relaxed);
+            run_pending(comm, &mut home);
+        }
     }
 }
