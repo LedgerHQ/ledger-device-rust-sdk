@@ -29,6 +29,8 @@
 //! ```
 
 use super::*;
+use alloc::rc::Rc;
+use core::ffi::CStr;
 
 /// App function to run when the confirmation button is touched.
 ///
@@ -49,12 +51,15 @@ unsafe extern "C" fn confirm_callback() {
 static mut DISPLAYED: Option<NbglConfirm> = None;
 
 /// A builder to create and show a confirmation modal.
+///
+/// Its strings are reference-counted so that displaying it shares them rather
+/// than copying them. Setters always replace them, never mutate them.
 #[derive(Default, Clone)]
 pub struct NbglConfirm {
-    message: CString,
-    sub_message: CString,
-    confirm_text: CString,
-    cancel_text: CString,
+    message: Rc<CStr>,
+    sub_message: Rc<CStr>,
+    confirm_text: Rc<CStr>,
+    cancel_text: Rc<CStr>,
 }
 
 impl NbglConfirm {
@@ -66,7 +71,7 @@ impl NbglConfirm {
     /// Sets the main message, shown in large case.
     pub fn message(self, message: &str) -> NbglConfirm {
         NbglConfirm {
-            message: CString::new(message).unwrap(),
+            message: CString::new(message).unwrap().into(),
             ..self
         }
     }
@@ -74,7 +79,7 @@ impl NbglConfirm {
     /// Sets the secondary message, shown under the main one.
     pub fn sub_message(self, sub_message: &str) -> NbglConfirm {
         NbglConfirm {
-            sub_message: CString::new(sub_message).unwrap(),
+            sub_message: CString::new(sub_message).unwrap().into(),
             ..self
         }
     }
@@ -85,8 +90,8 @@ impl NbglConfirm {
     /// * `cancel_text` - Label of the footer that dismisses.
     pub fn texts(self, confirm_text: &str, cancel_text: &str) -> NbglConfirm {
         NbglConfirm {
-            confirm_text: CString::new(confirm_text).unwrap(),
-            cancel_text: CString::new(cancel_text).unwrap(),
+            confirm_text: CString::new(confirm_text).unwrap().into(),
+            cancel_text: CString::new(cancel_text).unwrap().into(),
             ..self
         }
     }
@@ -100,11 +105,11 @@ impl NbglConfirm {
     /// `on_confirm` runs inside NBGL's event dispatch, so it should return
     /// promptly.
     ///
-    /// The SDK keeps its own copy of the texts while the modal is displayed,
+    /// The SDK keeps its own reference to the texts while the modal is displayed,
     /// so the builder may be dropped afterwards.
     pub fn show_and_return(&self, on_confirm: fn()) {
-        // C keeps pointers to the strings' heap buffers, which stay put when
-        // `shown` is moved into `DISPLAYED` below.
+        // Shares the strings, whose heap buffers C points to; they stay put
+        // when `shown` is moved into `DISPLAYED` below.
         let shown = self.clone();
         unsafe {
             CONFIRM_CALLBACK = Some(on_confirm);

@@ -9,6 +9,8 @@ use crate::io::{Reply, StatusWords};
 #[cfg(not(feature = "io_new"))]
 use crate::io_callbacks::{nbgl_fetch_apdu_header, nbgl_reply_status};
 use alloc::boxed::Box;
+use alloc::rc::Rc;
+use core::ffi::CStr;
 use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 
 /// The number of settings the examples store in NVM.
@@ -172,7 +174,7 @@ impl<'a> HomeAction<'a> {
 /// function [`ACTION_CALLBACK`] is set to when it is drawn.
 #[derive(Clone)]
 struct CHomeAction {
-    text: CString,
+    text: Rc<CStr>,
     icon: Option<nbgl_icon_details_t>,
     style: nbgl_homeActionStyle_t,
     callback: fn(),
@@ -181,7 +183,7 @@ struct CHomeAction {
 impl CHomeAction {
     fn new(action: &HomeAction) -> CHomeAction {
         CHomeAction {
-            text: CString::new(action.text).unwrap(),
+            text: CString::new(action.text).unwrap().into(),
             icon: action.icon.map(|g| g.into()),
             style: action.style.to_c_type(),
             callback: action.callback,
@@ -202,12 +204,15 @@ impl CHomeAction {
 }
 
 /// A builder to create and show a home and settings page.
+///
+/// Its strings are reference-counted so that displaying it shares them rather
+/// than copying them. Setters always replace them, never mutate them.
 pub struct NbglHomeAndSettings {
-    app_name: CString,
-    tag_line: Option<CString>,
-    info_types: Vec<CString>,
-    info_contents: Vec<CString>,
-    setting_contents: Vec<[CString; 2]>,
+    app_name: Rc<CStr>,
+    tag_line: Option<Rc<CStr>>,
+    info_types: Rc<[CString]>,
+    info_contents: Rc<[CString]>,
+    setting_contents: Rc<[[CString; 2]]>,
     nb_settings: u8,
     /// NVM storage the settings are bound to, if any.
     nvm: Option<NvmBinding>,
@@ -221,15 +226,16 @@ pub struct NbglHomeAndSettings {
 ///
 /// NBGL keeps those pointers for as long as the home screen is displayed, so
 /// the SDK draws from its own copy of the builder rather than from the
-/// builder itself. It is boxed so the C structures keep their address.
+/// builder itself. The strings are shared with the builder; the C structures
+/// are built here, boxed so they keep their address.
 struct Displayed {
-    app_name: CString,
-    tag_line: Option<CString>,
-    info_types: Vec<CString>,
-    info_contents: Vec<CString>,
+    app_name: Rc<CStr>,
+    tag_line: Option<Rc<CStr>>,
+    info_types: Rc<[CString]>,
+    info_contents: Rc<[CString]>,
     info_types_ptr: Vec<*const c_char>,
     info_contents_ptr: Vec<*const c_char>,
-    setting_contents: Vec<[CString; 2]>,
+    setting_contents: Rc<[[CString; 2]]>,
     /// Switch descriptors handed to C; owned here so their number is not capped.
     switches: Vec<nbgl_contentSwitch_t>,
     nb_settings: u8,
@@ -264,11 +270,11 @@ impl NbglHomeAndSettings {
     /// Returns a new instance of `NbglHomeAndSettings`.
     pub fn new() -> NbglHomeAndSettings {
         NbglHomeAndSettings {
-            app_name: CString::new("").unwrap(),
+            app_name: CString::default().into(),
             tag_line: None,
-            info_types: Vec::default(),
-            info_contents: Vec::default(),
-            setting_contents: Vec::default(),
+            info_types: Rc::default(),
+            info_contents: Rc::default(),
+            setting_contents: Rc::default(),
             nb_settings: 0,
             nvm: None,
             icon: nbgl_icon_details_t::default(),
@@ -308,7 +314,7 @@ impl NbglHomeAndSettings {
     /// Returns the builder itself to allow method chaining.
     pub fn app_name(self, app_name: &str) -> NbglHomeAndSettings {
         NbglHomeAndSettings {
-            app_name: CString::new(app_name).unwrap(),
+            app_name: CString::new(app_name).unwrap().into(),
             ..self
         }
     }
@@ -360,7 +366,7 @@ impl NbglHomeAndSettings {
     /// Returns the builder itself to allow method chaining.
     pub fn tagline(self, tagline: &str) -> NbglHomeAndSettings {
         NbglHomeAndSettings {
-            tag_line: Some(CString::new(tagline).unwrap()),
+            tag_line: Some(CString::new(tagline).unwrap().into()),
             ..self
         }
     }
@@ -393,7 +399,7 @@ impl NbglHomeAndSettings {
             },
         };
 
-        let v: Vec<[CString; 2]> = settings_strings
+        let v: Rc<[[CString; 2]]> = settings_strings
             .iter()
             .map(|s| [CString::new(s[0]).unwrap(), CString::new(s[1]).unwrap()])
             .collect();
