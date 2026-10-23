@@ -2,9 +2,11 @@
 #![no_main]
 
 use include_gif::include_gif;
-use ledger_device_sdk::nbgl::{
-    HomeAction, NbglConfirm, NbglGlyph, NbglHomeAndSettings, NbglStatus, init_comm,
-};
+#[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+use ledger_device_sdk::nbgl::NbglChoice;
+#[cfg(not(any(target_os = "nanosplus", target_os = "nanox")))]
+use ledger_device_sdk::nbgl::NbglConfirm;
+use ledger_device_sdk::nbgl::{HomeAction, NbglGlyph, NbglHomeAndSettings, NbglStatus, init_comm};
 // use ledger_device_sdk::nvm::*;
 // use ledger_device_sdk::NVMData;
 use ledger_device_sdk::io::{ApduHeader, Comm, DEFAULT_BUF_SIZE, StatusWords};
@@ -98,12 +100,31 @@ static mut COMM_REF: Option<&'static mut Comm<DEFAULT_BUF_SIZE>> = None;
 /// in the callback.
 static mut HOME_REF: Option<&'static mut NbglHomeAndSettings> = None;
 
+/// The `Comm` parked by `sample_main`.
+fn comm() -> &'static mut Comm<DEFAULT_BUF_SIZE> {
+    unsafe {
+        #[allow(static_mut_refs)]
+        COMM_REF.as_mut().unwrap()
+    }
+}
+
+/// Draws the home screen again.
+fn show_home() {
+    unsafe {
+        #[allow(static_mut_refs)]
+        if let Some(home) = HOME_REF.as_mut() {
+            home.show_and_return();
+        }
+    }
+}
+
 /// Runs when the home screen's action button is touched.
 ///
 /// Draws a confirmation modal over the home screen. Being a modal it needs
 /// something underneath, which is why it is raised from here rather than from
 /// the top of `sample_main`: dismissing it through the footer simply reveals the
 /// home screen again, and reports nothing back.
+#[cfg(not(any(target_os = "nanosplus", target_os = "nanox")))]
 fn on_action() {
     NbglConfirm::new()
         .message("Delete this account?")
@@ -117,21 +138,33 @@ fn on_action() {
 /// There is no counterpart for the footer: `nbgl_useCaseConfirm` reports only
 /// confirmation, and dismissal needs no handling here because the home screen is
 /// already drawn behind the modal.
+#[cfg(not(any(target_os = "nanosplus", target_os = "nanox")))]
 fn on_confirm() {
-    let comm = unsafe {
-        #[allow(static_mut_refs)]
-        COMM_REF.as_mut().unwrap()
-    };
-    NbglStatus::new().text("Account deleted").show(comm, true);
+    NbglStatus::new().text("Account deleted").show(comm(), true);
 
     // `show` returns once the status page times out after 3s. Nothing is drawn
     // at that point, so put the home screen back.
-    unsafe {
-        #[allow(static_mut_refs)]
-        if let Some(home) = HOME_REF.as_mut() {
-            home.show_and_return();
-        }
+    show_home();
+}
+
+/// Runs when the home screen's action is selected.
+///
+/// Nano has no modal: a confirmation replaces the home screen and its state,
+/// and reports nothing when dismissed. A choice is used instead, which reports
+/// both outcomes, and the home screen is drawn again whatever the answer.
+#[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+fn on_action() {
+    let comm = comm();
+    if NbglChoice::new().show(
+        comm,
+        "Delete this account?",
+        "This cannot be undone.",
+        "Delete",
+        "Cancel",
+    ) {
+        NbglStatus::new().text("Account deleted").show(comm, true);
     }
+    show_home();
 }
 
 #[unsafe(no_mangle)]

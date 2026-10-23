@@ -12,6 +12,14 @@
 //!   user decided" — hence [`NbglConfirm::show_and_return`] does not block and
 //!   only tells you about confirmation.
 //!
+//! # On Nano
+//!
+//! Nano NBGL has no modal layer. The confirmation replaces the state of the
+//! screen it is drawn over: dismissing it repaints that screen, but the screen
+//! no longer works, and the app is not told. Use [`NbglChoice`] there instead,
+//! which reports both outcomes, and draw the previous screen again afterwards
+//! (see the `nbgl_home_and_settings` example).
+//!
 //! To ask for confirmation as part of accepting or rejecting a review, use
 //! [`NbglChoice::ask_confirmation`] instead, which handles both outcomes.
 //!
@@ -107,6 +115,8 @@ impl NbglConfirm {
     ///
     /// The SDK keeps its own reference to the texts while the modal is displayed,
     /// so the builder may be dropped afterwards.
+    ///
+    /// On Nano it is not a modal; see the [module documentation](self).
     pub fn show_and_return(&self, on_confirm: fn()) {
         // Shares the strings, whose heap buffers C points to; they stay put
         // when `shown` is moved into `DISPLAYED` below.
