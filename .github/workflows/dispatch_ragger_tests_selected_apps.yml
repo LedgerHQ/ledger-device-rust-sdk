@@ -72,8 +72,9 @@ jobs:
         env:
           APP_LIST: ${{ inputs.apps }}
           DEVICES: ${{ inputs.devices }}
+          REPO_TOKEN: ${{ vars.APP_REPO_SUFFIX && secrets.CI_BOT_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
-          python .github/workflows/get_apps_test_matrix.py "${{ secrets.GITHUB_TOKEN }}"
+          python .github/workflows/get_apps_test_matrix.py "$REPO_TOKEN"
           echo "build_matrix=$(cat build_matrix.json)" >> "$GITHUB_OUTPUT"
           echo "apps_matrix=$(cat apps_matrix.json)" >> "$GITHUB_OUTPUT"
           echo "run_for_devices=$(cat run_for_devices.json)" >> "$GITHUB_OUTPUT"
@@ -94,7 +95,7 @@ jobs:
       - name: Clone Rust SDK branch
         uses: actions/checkout@v6
         with:
-          repository: LedgerHQ/ledger-device-rust-sdk
+          repository: ${{ github.repository }}
           ref: ${{ inputs.rust_sdk_branch }}
           path: sdk
 
@@ -104,6 +105,7 @@ jobs:
           repository: LedgerHQ/${{ matrix.entry.app }}
           ref: ${{ matrix.entry.ref }}
           submodules: recursive
+          token: ${{ vars.APP_REPO_SUFFIX && secrets.CI_BOT_TOKEN || github.token }}
           path: app
 
       - name: Override ledger_device_sdk with the SDK branch checkout
@@ -141,15 +143,26 @@ jobs:
           echo "Resulting [patch.crates-io] section:"
           grep -n -A3 '\[patch\.crates-io\]' "$manifest" || true
 
+      - name: Clone C SDK branch
+        if: ${{ inputs.c_sdk_branch != '' }}
+        uses: actions/checkout@v6
+        with:
+          repository: LedgerHQ/${{ vars.APP_REPO_SUFFIX && 'ledger-secure-sdk-dev' || 'ledger-secure-sdk' }}
+          ref: ${{ inputs.c_sdk_branch }}
+          token: ${{ vars.APP_REPO_SUFFIX && secrets.CI_BOT_TOKEN || github.token }}
+          path: c_sdk
+
       - name: Build app against the SDK branch
         id: build
         working-directory: app
         shell: bash
+        env:
+          C_SDK_BRANCH: ${{ inputs.c_sdk_branch }}
+          APP_NAME: ${{ matrix.entry.app }}
+          TARGET: ${{ matrix.entry.target }}
         run: |
           # Optionally build against a specific C SDK branch.
-          if [ -n "${{ inputs.c_sdk_branch }}" ]; then
-            git clone https://github.com/LedgerHQ/ledger-secure-sdk \
-              --branch "${{ inputs.c_sdk_branch }}" --single-branch "$GITHUB_WORKSPACE/c_sdk"
+          if [ -n "$C_SDK_BRANCH" ]; then
             export LEDGER_SDK_PATH="$GITHUB_WORKSPACE/c_sdk"
             echo "Using C SDK from $LEDGER_SDK_PATH"
           else
@@ -160,21 +173,25 @@ jobs:
           cd "$build_directory"
           # Re-pin to the patched (branch) SDK in the lockfile, then build.
           cargo update ledger_device_sdk
-          echo "Building ${{ matrix.entry.app }} for ${{ matrix.entry.target }}"
-          cargo ledger build "${{ matrix.entry.target }}"
+          echo "Building $APP_NAME for $TARGET"
+          cargo ledger build "$TARGET"
           binary_path=$(cargo metadata --no-deps --format-version 1 | jq -r '.target_directory')
           echo "binary_path=${binary_path}" >> "$GITHUB_OUTPUT"
 
       - name: Prune intermediate build artifacts before upload
+        env:
+          BINARY_PATH: ${{ steps.build.outputs.binary_path }}
         run: |
           # Keep only target/<device>/release/<elf>, matching the layout the
           # Ragger reusable workflow expects when it downloads the artifact into
           # the cargo target directory.
-          find "${{ steps.build.outputs.binary_path }}" -mindepth 3 -maxdepth 3 -type d -exec rm -rf {} +
-          rm -rf "${{ steps.build.outputs.binary_path }}/release"
+          find "$BINARY_PATH" -mindepth 3 -maxdepth 3 -type d -exec rm -rf {} +
+          rm -rf "$BINARY_PATH/release"
 
       - name: Display built binaries
-        run: ls -1 "${{ steps.build.outputs.binary_path }}"
+        env:
+          BINARY_PATH: ${{ steps.build.outputs.binary_path }}
+        run: ls -1 "$BINARY_PATH"
 
       - name: Upload app binary
         uses: actions/upload-artifact@v6
@@ -216,4 +233,5 @@ jobs:
       download_app_binaries_artifact: ${{ matrix.app.artifact }}
       run_for_devices: ${{ needs.prepare.outputs.run_for_devices }}
       test_dir: ${{ inputs.test_dir }}
-    secrets: inherit
+    secrets:
+      token: ${{ vars.APP_REPO_SUFFIX && secrets.CI_BOT_TOKEN || github.token }}
