@@ -12,6 +12,14 @@
 //!   user decided" — hence [`NbglConfirm::show_and_return`] does not block and
 //!   only tells you about confirmation.
 //!
+//! # On Nano
+//!
+//! Nano NBGL has no modal layer. The confirmation replaces the state of the
+//! screen it is drawn over: dismissing it repaints that screen, but the screen
+//! no longer works, and the app is not told. Use [`NbglChoice`] there instead,
+//! which reports both outcomes, and draw the previous screen again afterwards
+//! (see the `nbgl_home_and_settings` example).
+//!
 //! To ask for confirmation as part of accepting or rejecting a review, use
 //! [`NbglChoice::ask_confirmation`] instead, which handles both outcomes.
 //!
@@ -29,6 +37,8 @@
 //! ```
 
 use super::*;
+use alloc::rc::Rc;
+use core::ffi::CStr;
 
 /// App function to run when the confirmation button is touched.
 ///
@@ -43,13 +53,21 @@ unsafe extern "C" fn confirm_callback() {
     }
 }
 
+/// The modal currently displayed, whose texts NBGL points to.
+///
+/// Only replaced once the next one has been handed to C.
+static mut DISPLAYED: Option<NbglConfirm> = None;
+
 /// A builder to create and show a confirmation modal.
-#[derive(Default)]
+///
+/// Its strings are reference-counted so that displaying it shares them rather
+/// than copying them. Setters always replace them, never mutate them.
+#[derive(Default, Clone)]
 pub struct NbglConfirm {
-    message: CString,
-    sub_message: CString,
-    confirm_text: CString,
-    cancel_text: CString,
+    message: Rc<CStr>,
+    sub_message: Rc<CStr>,
+    confirm_text: Rc<CStr>,
+    cancel_text: Rc<CStr>,
 }
 
 impl NbglConfirm {
@@ -61,7 +79,7 @@ impl NbglConfirm {
     /// Sets the main message, shown in large case.
     pub fn message(self, message: &str) -> NbglConfirm {
         NbglConfirm {
-            message: CString::new(message).unwrap(),
+            message: CString::new(message).unwrap().into(),
             ..self
         }
     }
@@ -69,7 +87,7 @@ impl NbglConfirm {
     /// Sets the secondary message, shown under the main one.
     pub fn sub_message(self, sub_message: &str) -> NbglConfirm {
         NbglConfirm {
-            sub_message: CString::new(sub_message).unwrap(),
+            sub_message: CString::new(sub_message).unwrap().into(),
             ..self
         }
     }
@@ -80,8 +98,8 @@ impl NbglConfirm {
     /// * `cancel_text` - Label of the footer that dismisses.
     pub fn texts(self, confirm_text: &str, cancel_text: &str) -> NbglConfirm {
         NbglConfirm {
-            confirm_text: CString::new(confirm_text).unwrap(),
-            cancel_text: CString::new(cancel_text).unwrap(),
+            confirm_text: CString::new(confirm_text).unwrap().into(),
+            cancel_text: CString::new(cancel_text).unwrap().into(),
             ..self
         }
     }
@@ -92,30 +110,42 @@ impl NbglConfirm {
     /// footer runs nothing: the C API reports only confirmation, so an app that
     /// needs to know about dismissal has to infer it from what happens next.
     ///
-    /// `on_confirm` runs inside NBGL's event dispatch, so it should return
-    /// promptly.
+    /// `on_confirm` runs inside NBGL's event dispatch, while `Comm` is still
+    /// handling the touch: it must not use `Comm` nor block on another screen.
+    /// Record what is due and act on it once `Comm::next_event` has returned
+    /// (see the `nbgl_home_and_settings` example).
+    ///
+    /// The SDK keeps its own reference to the texts while the modal is displayed,
+    /// so the builder may be dropped afterwards.
+    ///
+    /// On Nano it is not a modal; see the [module documentation](self).
     pub fn show_and_return(&self, on_confirm: fn()) {
+        // Shares the strings, whose heap buffers C points to; they stay put
+        // when `shown` is moved into `DISPLAYED` below.
+        let shown = self.clone();
         unsafe {
             CONFIRM_CALLBACK = Some(on_confirm);
             nbgl_useCaseConfirm(
-                match self.message.is_empty() {
+                match shown.message.is_empty() {
                     true => core::ptr::null(),
-                    false => self.message.as_ptr() as *const c_char,
+                    false => shown.message.as_ptr() as *const c_char,
                 },
-                match self.sub_message.is_empty() {
+                match shown.sub_message.is_empty() {
                     true => core::ptr::null(),
-                    false => self.sub_message.as_ptr() as *const c_char,
+                    false => shown.sub_message.as_ptr() as *const c_char,
                 },
-                match self.confirm_text.is_empty() {
+                match shown.confirm_text.is_empty() {
                     true => core::ptr::null(),
-                    false => self.confirm_text.as_ptr() as *const c_char,
+                    false => shown.confirm_text.as_ptr() as *const c_char,
                 },
-                match self.cancel_text.is_empty() {
+                match shown.cancel_text.is_empty() {
                     true => core::ptr::null(),
-                    false => self.cancel_text.as_ptr() as *const c_char,
+                    false => shown.cancel_text.as_ptr() as *const c_char,
                 },
                 Some(confirm_callback),
             );
+            // C now points into `shown`, so the previous copy can be released.
+            DISPLAYED = Some(shown);
         }
     }
 }
