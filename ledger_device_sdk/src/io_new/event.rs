@@ -222,16 +222,31 @@ impl RawEvent {
             p2: apdu_buffer[3],
         };
         if rx_len == 4 {
+            #[cfg(feature = "aptos_apdu")]
+            return Self::bad_len(header);
+            #[cfg(not(feature = "aptos_apdu"))]
             return Self::new_apdu(header, 4, 0);
         }
         let first_len_byte = apdu_buffer[4];
 
         match (first_len_byte, rx_len) {
             (0, 5) => {
-                // Non-conforming zero-data APDU (TODO: per the standard, this should actually be read as a 256-byte long APDU; but that's likely to break things as lots)
-                Self::new_apdu(header, 4, 0)
+                #[cfg(feature = "aptos_apdu")]
+                {
+                    // Aptos requires an explicit zero Lc for empty APDUs.
+                    Self::new_apdu(header, 1 + 5, 0)
+                }
+                #[cfg(not(feature = "aptos_apdu"))]
+                {
+                    // Preserve the default SDK's zero-data APDU framing.
+                    Self::new_apdu(header, 4, 0)
+                }
             }
+            #[cfg(feature = "aptos_apdu")]
+            (0, _) => Self::bad_len(header),
+            #[cfg(not(feature = "aptos_apdu"))]
             (0, 6) => Self::bad_len(header),
+            #[cfg(not(feature = "aptos_apdu"))]
             (0, _) => {
                 let len = u16::from_be_bytes([apdu_buffer[5], apdu_buffer[6]]) as usize;
                 if rx_len != len + 7 {

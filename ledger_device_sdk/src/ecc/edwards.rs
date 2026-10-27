@@ -447,6 +447,32 @@ impl SeedDerive for Ed25519 {
 
 /// Support SLIP10 derivation for Ed25519
 impl Ed25519 {
+    /// Derive an Ed25519 SLIP-10 private key and its chain code from a BIP32 path.
+    /// The temporary seed is cleared when it goes out of scope; the returned
+    /// private key is cleared by `ECPrivateKey`'s `Drop` implementation.
+    pub fn derive_from_path_slip10_with_chaincode(
+        path: &[u32],
+    ) -> (ECPrivateKey<32, 'E'>, ChainCode) {
+        let mut tmp = Secret::<64>::new();
+        let mut cc = ChainCode::default();
+        unsafe {
+            os_perso_derive_node_with_seed_key(
+                HDW_ED25519_SLIP10,
+                CurvesId::Ed25519 as u8,
+                path.as_ptr(),
+                path.len() as u32,
+                tmp.as_mut().as_mut_ptr(),
+                cc.value.as_mut_ptr(),
+                core::ptr::null_mut(),
+                0,
+            );
+        }
+        let mut sk = ECPrivateKey::new(CurvesId::Ed25519);
+        let keylen = sk.key.len();
+        sk.key.copy_from_slice(&tmp.as_ref()[..keylen]);
+        (sk, cc)
+    }
+
     pub fn derive_from_path_slip10(path: &[u32]) -> ECPrivateKey<32, 'E'> {
         let mut tmp = Secret::<64>::new();
         unsafe {

@@ -26,6 +26,9 @@ const-zero = "0.1.1"
 ledger_secure_sdk_sys = { path = "../ledger_secure_sdk_sys", version = "1.18.0" }
 
 [features]
+# Enforce Aptos's short APDU framing and invalid-length status without changing
+# default IO behavior for other applications.
+aptos_apdu = []
 debug = ["log_error"]
 log_error = []
 log_warn = ["log_error"]

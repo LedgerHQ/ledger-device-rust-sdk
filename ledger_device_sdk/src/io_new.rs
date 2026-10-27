@@ -333,7 +333,7 @@ impl<const N: usize> Comm<N> {
             {
                 StatusWords::CmdNotAccepted.into()
             }
-            RawEvent::ApduError { error, .. } => StatusWords::from(error).into(),
+            RawEvent::ApduError { error, .. } => Reply::from(error),
             event => return event,
         };
         self.reject_apdu(self.apdu_type, sw);
@@ -421,10 +421,20 @@ pub enum ApduError {
     BadLen,
 }
 
-impl From<ApduError> for StatusWords {
+#[cfg(not(feature = "aptos_apdu"))]
+impl From<ApduError> for Reply {
     fn from(e: ApduError) -> Self {
         match e {
-            ApduError::BadLen => StatusWords::BadLen,
+            ApduError::BadLen => StatusWords::BadLen.into(),
+        }
+    }
+}
+
+#[cfg(feature = "aptos_apdu")]
+impl From<ApduError> for Reply {
+    fn from(e: ApduError) -> Self {
+        match e {
+            ApduError::BadLen => Reply(0x6A87),
         }
     }
 }
