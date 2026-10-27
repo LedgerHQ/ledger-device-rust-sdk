@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.42.3] - 2026-10-27
+
+### Fixed
+- `NbglAddressReview`: pass a NULL tag/value list to `nbgl_useCaseAddressReview`
+  when no extra pairs are set, instead of a zeroed list. Since C SDK v27.1.3
+  (ledger-secure-sdk 335976a), NBGL rejects a list with neither `pairs` nor
+  `callback`, so the review was refused without being displayed and the
+  app returned the reject status word (0x6985).
+
 ## [1.42.2] - 2026-10-27
 
 ### Fixed
