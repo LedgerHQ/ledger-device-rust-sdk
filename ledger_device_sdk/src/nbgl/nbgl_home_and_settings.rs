@@ -8,6 +8,9 @@ use super::*;
 use crate::io::{Reply, StatusWords};
 #[cfg(not(feature = "io_new"))]
 use crate::io_callbacks::{nbgl_fetch_apdu_header, nbgl_reply_status};
+use alloc::boxed::Box;
+use alloc::rc::Rc;
+use core::ffi::CStr;
 use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 
 /// The number of settings the examples store in NVM.
@@ -33,6 +36,14 @@ pub(crate) struct NvmOps {
 }
 
 static mut NVM_OPS: Option<NvmOps> = None;
+
+/// The NVM storage a builder's settings are bound to, published to
+/// [`NVM_PTR`] and [`NVM_OPS`] only when that builder is drawn.
+#[derive(Copy, Clone)]
+struct NvmBinding {
+    ptr: *mut (),
+    ops: NvmOps,
+}
 
 pub(crate) unsafe fn nvm_read<const N: usize>(ptr: *mut (), idx: usize) -> u8 {
     let data = unsafe { &*(ptr as *const AtomicStorage<[u8; N]>) };
@@ -124,8 +135,10 @@ impl HomeActionStyle {
 
 /// An action button on the home screen, mapped to `nbgl_homeAction_t`.
 ///
-/// `callback` runs from NBGL's event dispatch when the button is touched; what
-/// it does is entirely up to the app.
+/// `callback` runs from NBGL's event dispatch when the button is touched,
+/// while `Comm` is still handling that event: it must not use `Comm` nor block
+/// on another screen. Record what is due and act on it once
+/// `Comm::next_event` has returned (see the `nbgl_home_and_settings` example).
 pub struct HomeAction<'a> {
     text: &'a str,
     icon: Option<&'a NbglGlyph<'a>>,
@@ -159,22 +172,23 @@ impl<'a> HomeAction<'a> {
     }
 }
 
-/// Owns the C string and icon behind an `nbgl_homeAction_t`.
+/// Owns the C string and icon behind an `nbgl_homeAction_t`, and the app
+/// function [`ACTION_CALLBACK`] is set to when it is drawn.
+#[derive(Clone)]
 struct CHomeAction {
-    text: CString,
+    text: Rc<CStr>,
     icon: Option<nbgl_icon_details_t>,
     style: nbgl_homeActionStyle_t,
+    callback: fn(),
 }
 
 impl CHomeAction {
     fn new(action: &HomeAction) -> CHomeAction {
-        unsafe {
-            ACTION_CALLBACK = Some(action.callback);
-        }
         CHomeAction {
-            text: CString::new(action.text).unwrap(),
+            text: CString::new(action.text).unwrap().into(),
             icon: action.icon.map(|g| g.into()),
             style: action.style.to_c_type(),
+            callback: action.callback,
         }
     }
 
@@ -192,25 +206,55 @@ impl CHomeAction {
 }
 
 /// A builder to create and show a home and settings page.
+///
+/// Its strings are reference-counted so that displaying it shares them rather
+/// than copying them. Setters always replace them, never mutate them.
 pub struct NbglHomeAndSettings {
-    app_name: CString,
-    tag_line: Option<CString>,
-    info_types: Vec<CString>,
-    info_contents: Vec<CString>,
-    info_types_ptr: Vec<*const c_char>,
-    info_contents_ptr: Vec<*const c_char>,
-    setting_contents: Vec<[CString; 2]>,
-    /// Switch descriptors handed to C; owned here so their number is not capped.
-    switches: Vec<nbgl_contentSwitch_t>,
+    app_name: Rc<CStr>,
+    tag_line: Option<Rc<CStr>>,
+    info_types: Rc<[CString]>,
+    info_contents: Rc<[CString]>,
+    setting_contents: Rc<[[CString; 2]]>,
     nb_settings: u8,
-    content: nbgl_content_t,
-    generic_contents: nbgl_genericContents_t,
-    info_list: nbgl_contentInfoList_t,
+    /// NVM storage the settings are bound to, if any.
+    nvm: Option<NvmBinding>,
     icon: nbgl_icon_details_t,
     start_page: PageIndex,
     /// Owns the C string and icon behind the action button.
     action: Option<CHomeAction>,
 }
+
+/// The data `nbgl_useCaseHomeAndSettings` is pointed at.
+///
+/// NBGL keeps those pointers for as long as the home screen is displayed, so
+/// the SDK draws from its own copy of the builder rather than from the
+/// builder itself. The strings are shared with the builder; the C structures
+/// are built here, boxed so they keep their address.
+struct Displayed {
+    app_name: Rc<CStr>,
+    tag_line: Option<Rc<CStr>>,
+    info_types: Rc<[CString]>,
+    info_contents: Rc<[CString]>,
+    info_types_ptr: Vec<*const c_char>,
+    info_contents_ptr: Vec<*const c_char>,
+    setting_contents: Rc<[[CString; 2]]>,
+    /// Switch descriptors handed to C; owned here so their number is not capped.
+    switches: Vec<nbgl_contentSwitch_t>,
+    nb_settings: u8,
+    nvm: Option<NvmBinding>,
+    content: nbgl_content_t,
+    generic_contents: nbgl_genericContents_t,
+    info_list: nbgl_contentInfoList_t,
+    icon: nbgl_icon_details_t,
+    action: Option<CHomeAction>,
+    /// Descriptor handed to C, pointing into `action`.
+    home_action: Option<nbgl_homeAction_t>,
+}
+
+/// The home screen currently displayed.
+///
+/// Only replaced once the next one has been handed to C.
+static mut DISPLAYED: Option<Box<Displayed>> = None;
 
 impl SyncNBGL for NbglHomeAndSettings {}
 
@@ -230,18 +274,13 @@ impl NbglHomeAndSettings {
     /// Returns a new instance of `NbglHomeAndSettings`.
     pub fn new() -> NbglHomeAndSettings {
         NbglHomeAndSettings {
-            app_name: CString::new("").unwrap(),
+            app_name: CString::default().into(),
             tag_line: None,
-            info_types: Vec::default(),
-            info_contents: Vec::default(),
-            info_types_ptr: Vec::default(),
-            info_contents_ptr: Vec::default(),
-            setting_contents: Vec::default(),
-            switches: Vec::default(),
+            info_types: Rc::default(),
+            info_contents: Rc::default(),
+            setting_contents: Rc::default(),
             nb_settings: 0,
-            content: nbgl_content_t::default(),
-            generic_contents: nbgl_genericContents_t::default(),
-            info_list: nbgl_contentInfoList_t::default(),
+            nvm: None,
             icon: nbgl_icon_details_t::default(),
             start_page: PageIndex::Home,
             action: None,
@@ -279,7 +318,7 @@ impl NbglHomeAndSettings {
     /// Returns the builder itself to allow method chaining.
     pub fn app_name(self, app_name: &str) -> NbglHomeAndSettings {
         NbglHomeAndSettings {
-            app_name: CString::new(app_name).unwrap(),
+            app_name: CString::new(app_name).unwrap().into(),
             ..self
         }
     }
@@ -331,7 +370,7 @@ impl NbglHomeAndSettings {
     /// Returns the builder itself to allow method chaining.
     pub fn tagline(self, tagline: &str) -> NbglHomeAndSettings {
         NbglHomeAndSettings {
-            tag_line: Some(CString::new(tagline).unwrap()),
+            tag_line: Some(CString::new(tagline).unwrap().into()),
             ..self
         }
     }
@@ -354,20 +393,17 @@ impl NbglHomeAndSettings {
             panic!("More settings than the NVM array has bytes.");
         }
 
-        NVM_PTR.store(
-            nvm_data as *mut AtomicStorage<[u8; N]> as *mut (),
-            Ordering::Relaxed,
-        );
         // Records reads and writes instantiated for this N, the length being
-        // invisible to the statics above.
-        unsafe {
-            NVM_OPS = Some(NvmOps {
+        // invisible to the statics they are published to.
+        let nvm = NvmBinding {
+            ptr: nvm_data as *mut AtomicStorage<[u8; N]> as *mut (),
+            ops: NvmOps {
                 read: nvm_read::<N>,
                 toggle: nvm_toggle::<N>,
-            });
-        }
+            },
+        };
 
-        let v: Vec<[CString; 2]> = settings_strings
+        let v: Rc<[[CString; 2]]> = settings_strings
             .iter()
             .map(|s| [CString::new(s[0]).unwrap(), CString::new(s[1]).unwrap()])
             .collect();
@@ -375,6 +411,7 @@ impl NbglHomeAndSettings {
         NbglHomeAndSettings {
             nb_settings: settings_strings.len() as u8,
             setting_contents: v,
+            nvm: Some(nvm),
             ..self
         }
     }
@@ -388,12 +425,131 @@ impl NbglHomeAndSettings {
         self.start_page = page;
     }
 
+    /// Index of the page to start on.
+    fn start_page_index(&self) -> u8 {
+        match self.start_page {
+            PageIndex::Home => INIT_HOME_PAGE as u8,
+            PageIndex::Settings(idx) => idx,
+        }
+    }
+
+    /// Draws the home screen from an SDK-owned copy of the builder, which then
+    /// replaces the previously displayed one.
+    fn draw(&self, quit: nbgl_callback_t) {
+        let mut shown = Box::new(Displayed::new(self));
+        shown.prepare();
+
+        unsafe {
+            // Bindings the displayed switches and action button act on.
+            NVM_PTR.store(
+                shown.nvm.map_or(core::ptr::null_mut(), |nvm| nvm.ptr),
+                Ordering::Relaxed,
+            );
+            NVM_OPS = shown.nvm.map(|nvm| nvm.ops);
+            ACTION_CALLBACK = shown.action.as_ref().map(|a| a.callback);
+
+            nbgl_useCaseHomeAndSettings(
+                shown.app_name.as_ptr() as *const c_char,
+                &shown.icon as *const nbgl_icon_details_t,
+                shown.tagline_ptr(),
+                self.start_page_index(),
+                shown.settings_ptr(),
+                shown.info_list_ptr(),
+                shown.home_action_ptr(),
+                quit,
+            );
+            // C now points into `shown`, so the previous copy can be released.
+            DISPLAYED = Some(shown);
+        }
+    }
+
+    /// Show the home screen and settings page (internal implementation).
+    #[cfg(not(feature = "io_new"))]
+    fn show_internal<T: TryFrom<ApduHeader>>(&mut self) -> Event<T>
+    where
+        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
+    {
+        loop {
+            self.ux_sync_init();
+            self.draw(Some(quit_callback));
+            match self.ux_sync_wait(true) {
+                SyncNbgl::UxSyncRetApduReceived => {
+                    if let Some(hdr) = nbgl_fetch_apdu_header() {
+                        // Reconstruct minimal Event::Command using APDU header only.
+                        // The generic parameter T: TryFrom<ApduHeader> will parse header.
+                        match T::try_from(hdr) {
+                            Ok(ins) => {
+                                return Event::Command(ins);
+                            }
+                            _ => {
+                                // In case of parse error we emulate a BadIns reply.
+                                nbgl_reply_status(Reply(StatusWords::BadIns as u16));
+                            }
+                        }
+                    }
+                }
+                SyncNbgl::UxSyncRetQuitted => {
+                    exit_app(0);
+                }
+                _ => {
+                    panic!("Unexpected return value from ux_sync_homeAndSettings");
+                }
+            }
+        }
+    }
+
+    /// Show the home screen and settings page.
+    /// This function will block until an APDU is received or the user quits the app.
+    #[cfg(not(feature = "io_new"))]
+    #[deprecated(
+        since = "1.37.0",
+        note = "blocking on an APDU forces the home screen to be refreshed for every received APDU; use `show_and_return` instead"
+    )]
+    pub fn show<T: TryFrom<ApduHeader>>(&mut self) -> Event<T>
+    where
+        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
+    {
+        self.show_internal()
+    }
+
+    /// Show the home screen and settings page.
+    /// This function returns immediately after the screen is displayed.
+    ///
+    /// The SDK keeps its own copy of what is displayed, so the builder may be
+    /// dropped or modified afterwards.
+    pub fn show_and_return(&mut self) {
+        self.draw(Some(quit_cb));
+    }
+}
+
+impl Displayed {
+    fn new(home: &NbglHomeAndSettings) -> Displayed {
+        Displayed {
+            app_name: home.app_name.clone(),
+            tag_line: home.tag_line.clone(),
+            info_types: home.info_types.clone(),
+            info_contents: home.info_contents.clone(),
+            info_types_ptr: Vec::default(),
+            info_contents_ptr: Vec::default(),
+            setting_contents: home.setting_contents.clone(),
+            switches: Vec::default(),
+            nb_settings: home.nb_settings,
+            nvm: home.nvm,
+            content: nbgl_content_t::default(),
+            generic_contents: nbgl_genericContents_t::default(),
+            info_list: nbgl_contentInfoList_t::default(),
+            icon: home.icon,
+            action: home.action.clone(),
+            home_action: None,
+        }
+    }
+
     // `tuneId` is touchscreen-only, so the struct update below is needed on
     // Nano and redundant elsewhere.
     #[allow(clippy::needless_update)]
-    /// Builds the C structures handed over to `nbgl_useCaseHomeAndSettings` from
-    /// the builder state. The C API only borrows them, so they are kept alive in
-    /// `self` and refreshed before every call.
+    /// Builds the C structures handed over to `nbgl_useCaseHomeAndSettings`.
+    /// They point into `self`, so this must run once `self` is at its final
+    /// address.
     fn prepare(&mut self) {
         unsafe {
             self.info_types_ptr = self.info_types.iter().map(|s| s.as_ptr()).collect();
@@ -408,15 +564,14 @@ impl NbglHomeAndSettings {
                 withExtensions: false,
             };
 
-            let nvm = NVM_PTR.load(Ordering::Relaxed);
             self.switches = self
                 .setting_contents
                 .iter()
                 .enumerate()
                 .map(|(i, setting)| {
-                    let state = match (nvm.is_null(), NVM_OPS) {
-                        (false, Some(ops)) => (ops.read)(nvm, i),
-                        _ => OFF_STATE,
+                    let state = match self.nvm {
+                        Some(nvm) => (nvm.ops.read)(nvm.ptr, i),
+                        None => OFF_STATE,
                     };
                     nbgl_contentSwitch_t {
                         text: setting[0].as_ptr(),
@@ -453,6 +608,9 @@ impl NbglHomeAndSettings {
                 },
                 nbContents: 1,
             };
+
+            // Nano NBGL keeps a pointer to this descriptor rather than a copy.
+            self.home_action = self.action.as_ref().map(|a| a.as_c_type());
         }
     }
 
@@ -481,106 +639,11 @@ impl NbglHomeAndSettings {
         }
     }
 
-    /// The action button struct, materialised so the call sites have something
-    /// with a stable address to point at.
-    fn action_c_type(&self) -> Option<nbgl_homeAction_t> {
-        self.action.as_ref().map(|a| a.as_c_type())
-    }
-
-    /// Index of the page to start on.
-    fn start_page_index(&self) -> u8 {
-        match self.start_page {
-            PageIndex::Home => INIT_HOME_PAGE as u8,
-            PageIndex::Settings(idx) => idx,
-        }
-    }
-
-    /// Show the home screen and settings page (internal implementation).
-    #[cfg(not(feature = "io_new"))]
-    fn show_internal<T: TryFrom<ApduHeader>>(&mut self) -> Event<T>
-    where
-        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
-    {
-        unsafe {
-            loop {
-                self.prepare();
-                let action = self.action_c_type();
-
-                self.ux_sync_init();
-                nbgl_useCaseHomeAndSettings(
-                    self.app_name.as_ptr() as *const c_char,
-                    &self.icon as *const nbgl_icon_details_t,
-                    self.tagline_ptr(),
-                    self.start_page_index(),
-                    self.settings_ptr(),
-                    self.info_list_ptr(),
-                    match &action {
-                        Some(action) => action as *const nbgl_homeAction_t,
-                        None => core::ptr::null(),
-                    },
-                    Some(quit_callback),
-                );
-                match self.ux_sync_wait(true) {
-                    SyncNbgl::UxSyncRetApduReceived => {
-                        if let Some(hdr) = nbgl_fetch_apdu_header() {
-                            // Reconstruct minimal Event::Command using APDU header only.
-                            // The generic parameter T: TryFrom<ApduHeader> will parse header.
-                            match T::try_from(hdr) {
-                                Ok(ins) => {
-                                    return Event::Command(ins);
-                                }
-                                _ => {
-                                    // In case of parse error we emulate a BadIns reply.
-                                    nbgl_reply_status(Reply(StatusWords::BadIns as u16));
-                                }
-                            }
-                        }
-                    }
-                    SyncNbgl::UxSyncRetQuitted => {
-                        exit_app(0);
-                    }
-                    _ => {
-                        panic!("Unexpected return value from ux_sync_homeAndSettings");
-                    }
-                }
-            }
-        }
-    }
-
-    /// Show the home screen and settings page.
-    /// This function will block until an APDU is received or the user quits the app.
-    #[cfg(not(feature = "io_new"))]
-    #[deprecated(
-        since = "1.37.0",
-        note = "blocking on an APDU forces the home screen to be refreshed for every received APDU; use `show_and_return` instead"
-    )]
-    pub fn show<T: TryFrom<ApduHeader>>(&mut self) -> Event<T>
-    where
-        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
-    {
-        self.show_internal()
-    }
-
-    /// Show the home screen and settings page.
-    /// This function returns immediately after the screen is displayed.
-    pub fn show_and_return(&mut self) {
-        self.prepare();
-        let action = self.action_c_type();
-
-        unsafe {
-            nbgl_useCaseHomeAndSettings(
-                self.app_name.as_ptr() as *const c_char,
-                &self.icon as *const nbgl_icon_details_t,
-                self.tagline_ptr(),
-                self.start_page_index(),
-                self.settings_ptr(),
-                self.info_list_ptr(),
-                match &action {
-                    Some(action) => action as *const nbgl_homeAction_t,
-                    None => core::ptr::null(),
-                },
-                Some(quit_cb),
-            );
+    /// Pointer to the action button descriptor, or NULL when none was set.
+    fn home_action_ptr(&self) -> *const nbgl_homeAction_t {
+        match self.home_action {
+            None => core::ptr::null(),
+            Some(ref action) => action as *const nbgl_homeAction_t,
         }
     }
 }
