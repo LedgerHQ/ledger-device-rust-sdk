@@ -137,15 +137,18 @@ impl<'a> NbglAddressReview<'a> {
 
             let address = CString::new(address).unwrap();
 
-            let tag_value_list = match &self.tag_value_list {
-                Some(list) => list.as_c_list(),
-                None => nbgl_contentTagValueList_t::default(),
+            // Pass NULL when there are no extra pairs: the C SDK rejects a list
+            // with neither `pairs` nor `callback` set, even if it is empty.
+            let tag_value_list = self.tag_value_list.as_ref().map(|list| list.as_c_list());
+            let tag_value_list_ptr = match &tag_value_list {
+                Some(list) => list as *const nbgl_contentTagValueList_t,
+                None => core::ptr::null(),
             };
 
             self.ux_sync_init();
             nbgl_useCaseAddressReview(
                 address.as_ptr(),
-                &tag_value_list as *const nbgl_contentTagValueList_t,
+                tag_value_list_ptr,
                 &icon as *const nbgl_icon_details_t,
                 match self.review_title.is_empty() {
                     true => core::ptr::null(),
