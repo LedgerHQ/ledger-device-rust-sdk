@@ -40,9 +40,9 @@ static mut NVM_OPS: Option<NvmOps> = None;
 /// The NVM storage a builder's settings are bound to, published to
 /// [`NVM_PTR`] and [`NVM_OPS`] only when that builder is drawn.
 #[derive(Copy, Clone)]
-struct NvmBinding {
-    ptr: *mut (),
-    ops: NvmOps,
+pub(crate) struct NvmBinding {
+    pub(crate) ptr: *mut (),
+    pub(crate) ops: NvmOps,
 }
 
 pub(crate) unsafe fn nvm_read<const N: usize>(ptr: *mut (), idx: usize) -> u8 {
