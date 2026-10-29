@@ -161,14 +161,14 @@ impl<'a> NbglReviewExtended<'a> {
 
     /// Shows the extended review flow with the provided fields on the review pages (internal implementation).
     fn show_internal(&self, values: &[TagValue]) -> SyncNbgl {
-        if nb_items(values.len()).is_none() {
+        // Owns the C strings and the extension structs the pairs point at;
+        // must outlive the use-case call below.
+        let c_values = CTagValueList::new(values);
+        if !c_values.fits() {
             return SyncNbgl::UxSyncRetError;
         }
         unsafe {
-            // Owns the C strings and the extension structs the pairs point at;
-            // must outlive the use-case call below.
             set_value_icon_handler(self.on_value_icon);
-            let c_values = CTagValueList::new(values);
             let tag_value_list = c_values.as_c_list();
 
             let icon: nbgl_icon_details_t = match self.glyph_end {

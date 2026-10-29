@@ -439,13 +439,17 @@ impl InfosList {
     }
 }
 
+/// Panic message of the content conversions in this module, which only run on content
+/// that [`NbglPageContent::fits`] accepted.
+const TOO_LONG: &str = "List too long for NBGL.";
+
 #[allow(clippy::needless_update)]
 impl From<&InfosList> for nbgl_contentInfoList_t {
     fn from(infos_list: &InfosList) -> nbgl_contentInfoList_t {
         nbgl_contentInfoList_t {
             infoTypes: infos_list.info_types_ptr.as_ptr(),
             infoContents: infos_list.info_contents_ptr.as_ptr(),
-            nbInfos: infos_list.info_types_cstrings.len() as u8,
+            nbInfos: nb_items(infos_list.info_types_cstrings.len()).expect(TOO_LONG),
             ..Default::default()
         }
     }
@@ -533,7 +537,7 @@ impl From<&SwitchesList> for nbgl_contentSwitchesList_t {
     fn from(list: &SwitchesList) -> nbgl_contentSwitchesList_t {
         nbgl_contentSwitchesList_t {
             switches: list.switches.as_ptr(),
-            nbSwitches: list.switches.len() as u8,
+            nbSwitches: nb_items(list.switches.len()).expect(TOO_LONG),
         }
     }
 }
@@ -570,7 +574,7 @@ impl From<&ChoicesList> for nbgl_contentRadioChoice_t {
             __bindgen_anon_1: nbgl_contentRadioChoice_t__bindgen_ty_1 {
                 names: list.names_ptr.as_ptr(),
             },
-            nbChoices: list.names_ptr.len() as u8,
+            nbChoices: nb_items(list.names_ptr.len()).expect(TOO_LONG),
             initChoice: list.init_choice,
             token: FIRST_USER_TOKEN as u8,
             ..Default::default()
@@ -611,7 +615,7 @@ impl From<&BarsList> for nbgl_contentBarsList_t {
         nbgl_contentBarsList_t {
             barTexts: list.texts_ptr.as_ptr(),
             tokens: list.tokens.as_ptr(),
-            nbBars: list.texts_ptr.len() as u8,
+            nbBars: nb_items(list.texts_ptr.len()).expect(TOO_LONG),
             ..Default::default()
         }
     }
@@ -729,10 +733,8 @@ impl NbglPageContent {
     /// Whether every list in this content fits in the NBGL item count.
     pub(crate) fn fits(&self) -> bool {
         match self {
-            NbglPageContent::TagValueList(tvl) => nb_items(tvl.values.nb_pairs()).is_some(),
-            NbglPageContent::TagValueConfirm(tvc) => {
-                nb_items(tvc.tag_value_list.values.nb_pairs()).is_some()
-            }
+            NbglPageContent::TagValueList(tvl) => tvl.values.fits(),
+            NbglPageContent::TagValueConfirm(tvc) => tvc.tag_value_list.values.fits(),
             NbglPageContent::InfosList(infos) => {
                 nb_items(infos.info_types_cstrings.len()).is_some()
             }

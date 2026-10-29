@@ -308,10 +308,12 @@ impl CInfoList {
 
         // Read the buffer addresses before moving the vectors into the box:
         // moving a Vec leaves its heap allocation in place, so these stay valid.
+        // A list too long for NBGL gets no count at all; `fits` reports it, and
+        // `as_c_type` refuses to hand it out.
         let list = nbgl_contentInfoList_t {
             infoTypes: types_ptr.as_ptr(),
             infoContents: contents_ptr.as_ptr(),
-            nbInfos: types_ptr.len() as u8,
+            nbInfos: nb_items(types_ptr.len()).unwrap_or(0),
             ..Default::default()
         };
 
@@ -344,8 +346,16 @@ impl CInfoList {
         })
     }
 
+    /// Whether the list fits in the `u8` count NBGL takes.
+    pub(crate) fn fits(&self) -> bool {
+        nb_items(self._types.len()).is_some()
+    }
+
     /// The `nbgl_contentInfoList_t` borrowing this list's buffers.
+    ///
+    /// Panics if the list does not [fit](Self::fits).
     pub(crate) fn as_c_type(&self) -> nbgl_contentInfoList_t {
+        assert!(self.fits(), "Info list too long for NBGL.");
         self.list
     }
 }
@@ -362,9 +372,11 @@ impl CNestedTagValueList {
         let cfields: Vec<CField> = fields.iter().map(|f| f.into()).collect();
         let pairs: Vec<nbgl_contentTagValue_t> = cfields.iter().map(|f| f.into()).collect();
 
+        // Same as `CInfoList`: no count for a list too long for NBGL, which
+        // `fits` reports.
         let list = nbgl_contentTagValueList_t {
             pairs: pairs.as_ptr(),
-            nbPairs: pairs.len() as u8,
+            nbPairs: nb_items(pairs.len()).unwrap_or(0),
             ..Default::default()
         };
 
@@ -388,6 +400,11 @@ impl CNestedTagValueList {
             _pairs: pairs,
             list,
         })
+    }
+
+    /// Whether the list fits in the `u8` count NBGL takes.
+    fn fits(&self) -> bool {
+        nb_items(self._pairs.len()).is_some()
     }
 }
 
@@ -448,6 +465,13 @@ impl CFieldExtension {
             nested_pairs: self.nested_pairs.as_ref().map(|n| n.duplicate()),
             alias_type: self.alias_type,
         }
+    }
+
+    /// Whether the nested list this extension expands into, if any, fits in
+    /// the `u8` count NBGL takes.
+    fn fits(&self) -> bool {
+        self.nested_infos.as_ref().is_none_or(|l| l.fits())
+            && self.nested_pairs.as_ref().is_none_or(|l| l.fits())
     }
 
     fn to_c_type(&self) -> nbgl_contentValueExt_t {
@@ -635,13 +659,23 @@ impl CTagValueList {
         self.pairs.as_ptr()
     }
 
-    /// Number of pairs, for the `nb_items` check callers do before display.
-    pub(crate) fn nb_pairs(&self) -> usize {
-        self.pairs.len()
+    /// Whether the list, and every nested list its pairs expand into, fits in
+    /// the `u8` count NBGL takes.
+    ///
+    /// Callers check this before opening any screen, and reject the flow when
+    /// it does not hold.
+    pub(crate) fn fits(&self) -> bool {
+        nb_items(self.pairs.len()).is_some() && self._cexts.iter().all(CFieldExtension::fits)
     }
 
+    /// The pair count for the C struct.
+    ///
+    /// Panics if the list does not [fit](Self::fits).
     pub(crate) fn len(&self) -> u8 {
-        self.pairs.len() as u8
+        match nb_items(self.pairs.len()) {
+            Some(nb_pairs) if self.fits() => nb_pairs,
+            _ => panic!("Tag/value list too long for NBGL."),
+        }
     }
 
     /// A `nbgl_contentTagValueList_t` borrowing this list's pairs.
@@ -660,5 +694,50 @@ impl CTagValueList {
             actionCallback: action,
             ..Default::default()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::assert_eq_err as assert_eq;
+    use crate::testing::TestType;
+    use testmacro::test_item as test;
+
+    // A list of more than 255 items does not fit in the default heap, so the
+    // boundary is tested on the conversion every builder uses.
+    #[test]
+    fn nb_items_rejects_counts_nbgl_cannot_hold() {
+        assert_eq!(nb_items(0), Some(0));
+        assert_eq!(nb_items(255), Some(255));
+        assert_eq!(nb_items(256), None);
+        assert_eq!(nb_items(257), None);
+    }
+
+    #[test]
+    fn tag_value_list_counts_every_pair() {
+        let infos = [Field {
+            name: "Contract",
+            value: "0xA0b8",
+        }];
+        let values = [
+            TagValue::from(&Field {
+                name: "Amount",
+                value: "42",
+            }),
+            TagValue {
+                extension: Some(FieldExtension::info_list(&infos)),
+                ..TagValue::from(&Field {
+                    name: "To",
+                    value: "Token",
+                })
+            },
+        ];
+        let list = CTagValueList::new(&values);
+        assert_eq!(list.fits(), true);
+        assert_eq!(list.as_c_list().nbPairs, 2);
+
+        let nested = unsafe { *list._exts[0].__bindgen_anon_1.infolist };
+        assert_eq!(nested.nbInfos, 1);
     }
 }

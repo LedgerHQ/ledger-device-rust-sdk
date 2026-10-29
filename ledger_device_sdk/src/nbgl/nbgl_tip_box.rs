@@ -76,6 +76,11 @@ impl CTipBox {
         }
     }
 
+    /// Whether the modal's info list fits in the `u8` count NBGL takes.
+    pub(crate) fn fits(&self) -> bool {
+        self.infos.fits()
+    }
+
     pub(crate) fn as_c_type(&self) -> nbgl_tipBox_t {
         nbgl_tipBox_t {
             text: self.text.as_ptr(),

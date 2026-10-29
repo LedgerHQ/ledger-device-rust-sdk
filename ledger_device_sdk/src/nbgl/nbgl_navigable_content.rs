@@ -272,6 +272,13 @@ impl NbglNavigableContent {
         if self.pages.iter().any(|p| !is_supported(&p.content)) {
             panic!("Content type not supported in a navigable flow on this device.");
         }
+        // Likewise for more pages or list items than NBGL's `u8` counts hold.
+        let Some(nb_pages) = nb_items(self.pages.len()) else {
+            panic!("Too many pages for NBGL.");
+        };
+        if !self.pages.iter().all(|p| p.content.fits()) {
+            panic!("List too long for NBGL.");
+        }
 
         // The callbacks reach the pages through this pointer, so it has to be
         // set before NBGL can ask for the first page.
@@ -285,7 +292,7 @@ impl NbglNavigableContent {
                     false => self.title.as_ptr() as *const c_char,
                 },
                 self.init_page,
-                self.pages.len() as u8,
+                nb_pages,
                 Some(quit_callback),
                 Some(navigation_callback),
                 Some(controls_callback),
