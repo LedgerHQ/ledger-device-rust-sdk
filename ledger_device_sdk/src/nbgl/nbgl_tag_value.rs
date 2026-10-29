@@ -408,6 +408,30 @@ impl CNestedTagValueList {
     }
 }
 
+impl FieldExtension<'_> {
+    /// Whether the nested list this extension expands into, if any, fits in
+    /// the `u8` count NBGL takes.
+    fn fits(&self) -> bool {
+        match self.nested {
+            Some(NestedContent::InfoList(list)) | Some(NestedContent::TagValueList(list)) => {
+                nb_items(list.len()).is_some()
+            }
+            None => true,
+        }
+    }
+}
+
+/// Whether `values`, and every nested list their extensions expand into, fit
+/// in the `u8` count NBGL takes.
+///
+/// Only reads lengths, so callers can reject a list before building its C copy.
+pub(crate) fn tag_values_fit(values: &[TagValue]) -> bool {
+    nb_items(values.len()).is_some()
+        && values
+            .iter()
+            .all(|v| v.extension.as_ref().is_none_or(FieldExtension::fits))
+}
+
 /// Owned C strings backing one `nbgl_contentValueExt_t`.
 struct CFieldExtension {
     full_value: CString,
@@ -712,6 +736,29 @@ mod tests {
         assert_eq!(nb_items(255), Some(255));
         assert_eq!(nb_items(256), None);
         assert_eq!(nb_items(257), None);
+    }
+
+    // `tag_values_fit` only reads lengths, so a nested list one item too long
+    // can live in flash rather than in the heap.
+    const ROW: Field = Field {
+        name: "Type",
+        value: "Content",
+    };
+    static ROWS: [Field; 256] = [ROW; 256];
+
+    #[test]
+    fn tag_values_fit_checks_nested_lists() {
+        let fits = [TagValue {
+            extension: Some(FieldExtension::info_list(&ROWS[..255])),
+            ..TagValue::from(&ROW)
+        }];
+        assert_eq!(tag_values_fit(&fits), true);
+
+        let too_long = [TagValue {
+            extension: Some(FieldExtension::tag_value_list(&ROWS)),
+            ..TagValue::from(&ROW)
+        }];
+        assert_eq!(tag_values_fit(&too_long), false);
     }
 
     #[test]

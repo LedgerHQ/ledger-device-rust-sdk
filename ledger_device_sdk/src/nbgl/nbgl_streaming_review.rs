@@ -249,12 +249,12 @@ impl NbglStreamingReview {
     }
 
     fn continue_review_internal(&self, fields: &[Field]) -> bool {
-        // Owns the C strings the pairs point at; must outlive the call below.
-        let c_values = CTagValueList::from_fields(fields);
-        if !c_values.fits() {
+        if nb_items(fields.len()).is_none() {
             return false;
         }
         unsafe {
+            // Owns the C strings the pairs point at; must outlive the call below.
+            let c_values = CTagValueList::from_fields(fields);
             let tag_value_list = c_values.as_c_list();
 
             self.ux_sync_init();
@@ -270,14 +270,14 @@ impl NbglStreamingReview {
     }
 
     fn next_internal(&self, values: &[TagValue]) -> NbglStreamingReviewStatus {
-        // Owns the C strings and the extension structs the pairs point at;
-        // must outlive the use-case call below.
-        let c_values = CTagValueList::new(values);
-        if !c_values.fits() {
+        if !tag_values_fit(values) {
             return NbglStreamingReviewStatus::Rejected;
         }
         unsafe {
+            // Owns the C strings and the extension structs the pairs point at;
+            // must outlive the use-case call below.
             set_value_icon_handler(self.on_value_icon);
+            let c_values = CTagValueList::new(values);
             let tag_value_list = c_values.as_c_list();
 
             self.ux_sync_init();
