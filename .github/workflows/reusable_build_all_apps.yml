@@ -23,6 +23,9 @@ on:
           required: false
           default: ''
           type: string
+      secrets:
+        CI_BOT_TOKEN:
+          required: false
     workflow_dispatch:
       inputs:
         c_sdk_repo:
@@ -46,6 +49,10 @@ on:
           default: ''
           type: string
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
     retrieve-rust-apps:
       name: Retrieve Rust Apps
@@ -59,6 +66,7 @@ jobs:
             repository: ${{ inputs.rust_sdk_repo }}
             ref: ${{ inputs.rust_sdk_branch || 'master' }}
             token: ${{ secrets.CI_BOT_TOKEN || github.token }}
+            persist-credentials: false
         - name: Set up Python
           uses: actions/setup-python@v6
           with:
@@ -102,6 +110,7 @@ jobs:
                 repository: ${{ inputs.rust_sdk_repo }}
                 ref: ${{ inputs.rust_sdk_branch }}
                 token: ${{ secrets.CI_BOT_TOKEN || github.token }}
+                persist-credentials: false
             - name: Clone App
               uses: actions/checkout@v6
               with:
@@ -109,6 +118,7 @@ jobs:
                 token: ${{ inputs.app_repo_suffix && secrets.CI_BOT_TOKEN || github.token }}
                 submodules: true
                 path: ${{ matrix.app-name }}
+                persist-credentials: false
             - name: Patch Cargo.toml
               continue-on-error: false
               if: ${{ inputs.rust_sdk_branch != '' }}
@@ -141,6 +151,7 @@ jobs:
                 ref: ${{ inputs.c_sdk_branch }}
                 token: ${{ secrets.CI_BOT_TOKEN || github.token }}
                 path: c_sdk
+                persist-credentials: false
 
             - name: Build
               shell: bash

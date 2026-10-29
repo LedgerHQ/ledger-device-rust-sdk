@@ -54,6 +54,8 @@ jobs:
   prepare:
     name: Build test matrix
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       build_matrix: ${{ steps.matrix.outputs.build_matrix }}
       apps_matrix: ${{ steps.matrix.outputs.apps_matrix }}
@@ -61,6 +63,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
@@ -83,6 +87,9 @@ jobs:
     name: Build ${{ matrix.entry.app }} (${{ matrix.entry.device }})
     needs: prepare
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     container: ${{ vars.APP_BUILDER_REGISTRY && fromJSON(format('{{"image":"{0}/ledger-app-builder:latest","credentials":{{"username":"{1}","password":"{2}"}}}}', vars.APP_BUILDER_REGISTRY, github.actor, github.token)) || 'ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest' }}
     strategy:
       fail-fast: false
@@ -98,6 +105,7 @@ jobs:
           repository: ${{ github.repository }}
           ref: ${{ inputs.rust_sdk_branch }}
           path: sdk
+          persist-credentials: false
 
       - name: Clone app
         uses: actions/checkout@v6
@@ -107,6 +115,7 @@ jobs:
           submodules: recursive
           token: ${{ vars.APP_REPO_SUFFIX && secrets.CI_BOT_TOKEN || github.token }}
           path: app
+          persist-credentials: false
 
       - name: Override ledger_device_sdk with the SDK branch checkout
         working-directory: app
@@ -151,6 +160,7 @@ jobs:
           ref: ${{ inputs.c_sdk_branch }}
           token: ${{ vars.APP_REPO_SUFFIX && secrets.CI_BOT_TOKEN || github.token }}
           path: c_sdk
+          persist-credentials: false
 
       - name: Build app against the SDK branch
         id: build
