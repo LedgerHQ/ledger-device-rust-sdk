@@ -4,9 +4,81 @@
 //! thanks to a button and a footer at the bottom of the page.
 use super::*;
 
+const DEFAULT_CONFIRM_MESSAGE: &str = "Do you confirm this action?";
+const DEFAULT_CONFIRM_SUBMESSAGE: &str = "This action is irreversible.";
+const DEFAULT_CONFIRM_OK_TEXT: &str = "Confirm";
+const DEFAULT_CONFIRM_KO_TEXT: &str = "Cancel";
+
+const ACCEPT_IDX: usize = 0;
+const REJECT_IDX: usize = 1;
+
+struct ConfirmationStrings {
+    message: CString,
+    submessage: CString,
+    ok_text: CString,
+    ko_text: CString,
+}
+
+type Confirmations = [Option<ConfirmationStrings>; 2];
+
+// Confirmations of the choice being shown, null when none is.
+static mut G_CONFIRMATIONS: *const Confirmations = core::ptr::null();
+
+/// Hands a choice's confirmations to its callback until dropped.
+struct ActiveConfirmations;
+
+impl ActiveConfirmations {
+    fn set(confirmations: &Confirmations) -> Self {
+        unsafe {
+            G_CONFIRMATIONS = confirmations;
+        }
+        ActiveConfirmations
+    }
+}
+
+impl Drop for ActiveConfirmations {
+    fn drop(&mut self) {
+        unsafe {
+            G_CONFIRMATIONS = core::ptr::null();
+        }
+    }
+}
+
+unsafe extern "C" fn choice_confirm_callback(confirm: bool) {
+    unsafe {
+        let idx = if confirm { ACCEPT_IDX } else { REJECT_IDX };
+        let Some(screen) = G_CONFIRMATIONS.as_ref().and_then(|c| c[idx].as_ref()) else {
+            // No confirmation for this answer: it stands as is.
+            choice_callback(confirm);
+            return;
+        };
+        let callback: unsafe extern "C" fn() = if confirm {
+            accept_confirmed_callback
+        } else {
+            reject_confirmed_callback
+        };
+        nbgl_useCaseConfirm(
+            screen.message.as_ptr() as *const c_char,
+            screen.submessage.as_ptr() as *const c_char,
+            screen.ok_text.as_ptr() as *const c_char,
+            screen.ko_text.as_ptr() as *const c_char,
+            Some(callback),
+        );
+    }
+}
+
+unsafe extern "C" fn accept_confirmed_callback() {
+    unsafe { choice_callback(true) }
+}
+
+unsafe extern "C" fn reject_confirmed_callback() {
+    unsafe { choice_callback(false) }
+}
+
 /// A builder to create and show a choice flow.
 pub struct NbglChoice<'a> {
     glyph: Option<&'a NbglGlyph<'a>>,
+    confirmations: Confirmations,
 }
 
 impl SyncNBGL for NbglChoice<'_> {}
@@ -20,7 +92,10 @@ impl<'a> Default for NbglChoice<'a> {
 impl<'a> NbglChoice<'a> {
     /// Creates a new choice flow builder.
     pub fn new() -> NbglChoice<'a> {
-        NbglChoice { glyph: None }
+        NbglChoice {
+            glyph: None,
+            confirmations: [None, None],
+        }
     }
 
     /// Sets the icon to display in the center of the page.
@@ -29,10 +104,15 @@ impl<'a> NbglChoice<'a> {
     /// # Returns
     /// Returns the builder itself to allow method chaining.
     pub fn glyph(self, glyph: &'a NbglGlyph) -> NbglChoice<'a> {
-        NbglChoice { glyph: Some(glyph) }
+        NbglChoice {
+            glyph: Some(glyph),
+            ..self
+        }
     }
 
     /// Configures the confirmation dialog to be shown when the user accepts or rejects the choice.
+    ///
+    /// The dialog belongs to this choice: it is shown only by this builder's `show*` methods.
     /// # Arguments
     /// * `message` - The main message to display in the confirmation dialog. If `None`, a default message is used.
     /// * `submessage` - An optional sub-message to display below the main message. If `None`, a default sub-message is used.
@@ -43,45 +123,22 @@ impl<'a> NbglChoice<'a> {
     /// # Returns
     /// Returns the builder itself to allow method chaining.
     pub fn ask_confirmation(
-        self,
+        mut self,
         message: Option<&str>,
         submessage: Option<&str>,
         ok_text: Option<&str>,
         ko_text: Option<&str>,
         if_accept: bool,
     ) -> NbglChoice<'a> {
-        let mut screen = ConfirmationStrings::default();
-        match message {
-            Some(m) => screen.message = CString::new(m).unwrap(),
-            None => screen.message = CString::new(DEFAULT_CONFIRM_MESSAGE).unwrap(),
-        }
-        match submessage {
-            Some(sm) => screen.submessage = CString::new(sm).unwrap(),
-            None => screen.submessage = CString::new(DEFAULT_CONFIRM_SUBMESSAGE).unwrap(),
-        }
-        match ok_text {
-            Some(ot) => screen.ok_text = CString::new(ot).unwrap(),
-            None => screen.ok_text = CString::new(DEFAULT_CONFIRM_OK_TEXT).unwrap(),
-        }
-        match ko_text {
-            Some(kt) => screen.ko_text = CString::new(kt).unwrap(),
-            None => screen.ko_text = CString::new(DEFAULT_CONFIRM_KO_TEXT).unwrap(),
-        }
-        if if_accept {
-            #[allow(static_mut_refs)]
-            unsafe {
-                G_CONFIRM_ASK_WHEN_TRUE = true;
-                G_CONFIRM_SCREEN[G_CONFIRM_SCREEN_WHEN_TRUE_IDX] = Some(screen);
-            }
-            self
-        } else {
-            #[allow(static_mut_refs)]
-            unsafe {
-                G_CONFIRM_ASK_WHEN_FALSE = true;
-                G_CONFIRM_SCREEN[G_CONFIRM_SCREEN_WHEN_FALSE_IDX] = Some(screen);
-            }
-            self
-        }
+        let screen = ConfirmationStrings {
+            message: CString::new(message.unwrap_or(DEFAULT_CONFIRM_MESSAGE)).unwrap(),
+            submessage: CString::new(submessage.unwrap_or(DEFAULT_CONFIRM_SUBMESSAGE)).unwrap(),
+            ok_text: CString::new(ok_text.unwrap_or(DEFAULT_CONFIRM_OK_TEXT)).unwrap(),
+            ko_text: CString::new(ko_text.unwrap_or(DEFAULT_CONFIRM_KO_TEXT)).unwrap(),
+        };
+        let idx = if if_accept { ACCEPT_IDX } else { REJECT_IDX };
+        self.confirmations[idx] = Some(screen);
+        self
     }
 
     fn show_internal(
@@ -101,6 +158,7 @@ impl<'a> NbglChoice<'a> {
             let confirm_text = CString::new(confirm_text).unwrap();
             let cancel_text = CString::new(cancel_text).unwrap();
 
+            let _confirmations = ActiveConfirmations::set(&self.confirmations);
             self.ux_sync_init();
             nbgl_useCaseChoice(
                 &icon as *const nbgl_icon_details_t,
@@ -120,7 +178,7 @@ impl<'a> NbglChoice<'a> {
                     true => core::ptr::null(),
                     false => cancel_text.as_ptr() as *const c_char,
                 },
-                Some(choice_callback),
+                Some(choice_confirm_callback),
             );
             let sync_ret = self.ux_sync_wait(false);
 
@@ -243,6 +301,7 @@ impl<'a> NbglChoice<'a> {
             // C takes this by mutable pointer, so it needs its own storage.
             let mut details_c = c_details.as_c_type();
 
+            let _confirmations = ActiveConfirmations::set(&self.confirmations);
             self.ux_sync_init();
             nbgl_useCaseChoiceWithDetails(
                 &icon as *const nbgl_icon_details_t,
@@ -251,7 +310,7 @@ impl<'a> NbglChoice<'a> {
                 opt_str_ptr(&confirm_text),
                 opt_str_ptr(&cancel_text),
                 &mut details_c as *mut nbgl_warningDetails_t,
-                Some(choice_callback),
+                Some(choice_confirm_callback),
             );
             matches!(self.ux_sync_wait(false), SyncNbgl::UxSyncRetApproved)
         }
@@ -350,6 +409,7 @@ impl<'a> NbglChoice<'a> {
             let c_details = CDetails::new(details);
             let mut details_c = c_details.as_c_type();
 
+            let _confirmations = ActiveConfirmations::set(&self.confirmations);
             self.ux_sync_init();
             nbgl_useCaseAdvancedChoiceWithDetails(
                 &center_icon as *const nbgl_icon_details_t,
@@ -363,7 +423,7 @@ impl<'a> NbglChoice<'a> {
                 opt_str_ptr(&confirm_text),
                 opt_str_ptr(&cancel_text),
                 &mut details_c as *mut nbgl_warningDetails_t,
-                Some(choice_callback),
+                Some(choice_confirm_callback),
             );
             matches!(self.ux_sync_wait(false), SyncNbgl::UxSyncRetApproved)
         }
@@ -375,5 +435,71 @@ fn opt_str_ptr(s: &CString) -> *const c_char {
     match s.is_empty() {
         true => core::ptr::null(),
         false => s.as_ptr() as *const c_char,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::assert_eq_err as assert_eq;
+    use crate::testing::TestType;
+    use testmacro::test_item as test;
+
+    // Runs `callback` as NBGL would and returns what the flow ends with.
+    fn answer(callback: unsafe extern "C" fn(bool), confirm: bool) -> (u8, bool) {
+        unsafe {
+            G_RET = SyncNbgl::UxSyncRetError.into();
+            G_ENDED = false;
+            callback(confirm);
+            (G_RET, G_ENDED)
+        }
+    }
+
+    const APPROVED: (u8, bool) = (0x00, true);
+    const REJECTED: (u8, bool) = (0x01, true);
+
+    fn both_confirmations() -> NbglChoice<'static> {
+        NbglChoice::new()
+            .ask_confirmation(Some("Accept?"), None, None, None, true)
+            .ask_confirmation(Some("Reject?"), None, None, None, false)
+    }
+
+    #[test]
+    fn review_answers_ignore_choice_confirmations() {
+        let choice = both_confirmations();
+        assert_eq!(answer(choice_callback, true), APPROVED);
+        assert_eq!(answer(choice_callback, false), REJECTED);
+
+        let _confirmations = ActiveConfirmations::set(&choice.confirmations);
+        assert_eq!(answer(choice_callback, true), APPROVED);
+        assert_eq!(answer(choice_callback, false), REJECTED);
+    }
+
+    #[test]
+    fn answer_without_confirmation_stands() {
+        let accept_only = NbglChoice::new().ask_confirmation(None, None, None, None, true);
+        let _confirmations = ActiveConfirmations::set(&accept_only.confirmations);
+        assert_eq!(answer(choice_confirm_callback, false), REJECTED);
+
+        let reject_only = NbglChoice::new().ask_confirmation(None, None, None, None, false);
+        let _confirmations = ActiveConfirmations::set(&reject_only.confirmations);
+        assert_eq!(answer(choice_confirm_callback, true), APPROVED);
+    }
+
+    #[test]
+    fn confirmations_are_cleared_after_show() {
+        let choice = both_confirmations();
+        drop(ActiveConfirmations::set(&choice.confirmations));
+        assert_eq!(unsafe { G_CONFIRMATIONS.is_null() }, true);
+        assert_eq!(answer(choice_confirm_callback, true), APPROVED);
+        assert_eq!(answer(choice_confirm_callback, false), REJECTED);
+    }
+
+    #[test]
+    fn glyph_keeps_confirmations() {
+        static GLYPH: NbglGlyph =
+            NbglGlyph::from_include(include_gif::include_gif!("icons/badge_check.gif", NBGL));
+        let choice = both_confirmations().glyph(&GLYPH);
+        assert_eq!(choice.confirmations.iter().all(Option::is_some), true);
     }
 }
