@@ -14,7 +14,7 @@ matrices:
                                 app falls back to its full manifest device set).
 
 Inputs:
-  * argv[1]            : GitHub token (used to read the manifests via the API).
+  * env ``GH_TOKEN``   : GitHub token (used to read the manifests via the API).
   * env ``APP_LIST``   : space- and/or comma-separated app specs. Each spec is an
                          app repository name (e.g. ``app-boilerplate-rust``),
                          optionally suffixed with ``@<git-ref>`` to test a
@@ -66,12 +66,12 @@ def parse_app_specs(raw: str):
 
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: get_apps_test_matrix.py <github_token>", file=sys.stderr)
+    token = os.environ.get("GH_TOKEN", "")
+    if len(sys.argv) != 1 or not token:
+        print("Usage: GH_TOKEN=<github_token> get_apps_test_matrix.py", file=sys.stderr)
         print("       (the app list is read from the APP_LIST env variable)", file=sys.stderr)
         sys.exit(1)
 
-    token = sys.argv[1]
     raw_apps = os.environ.get("APP_LIST", "")
     specs = parse_app_specs(raw_apps)
     if not specs:

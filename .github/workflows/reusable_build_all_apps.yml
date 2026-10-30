@@ -70,13 +70,16 @@ jobs:
         - name: Set up Python
           uses: actions/setup-python@v6
           with:
-              python-version: '3.x'
+              python-version: '3.13'
         - name: Install ledgered
-          run: pip install ledgered
+          run: pip install --require-hashes -r .github/requirements-ci.txt
         - name: Get all rust apps
           id: get_rust_apps
+          env:
+            GH_TOKEN: ${{ inputs.app_repo_suffix && secrets.CI_BOT_TOKEN || github.token }}
+            APP_REPO_SUFFIX: ${{ inputs.app_repo_suffix }}
           run: |
-            python .github/workflows/get_rust_apps.py "${{ inputs.app_repo_suffix && secrets.CI_BOT_TOKEN || secrets.GITHUB_TOKEN }}" "${{ inputs.app_repo_suffix }}"
+            python .github/workflows/get_rust_apps.py "$APP_REPO_SUFFIX"
             echo "rust_apps=$(cat rust_apps.json)" >> $GITHUB_OUTPUT
 
     display-rust-apps:
@@ -100,8 +103,6 @@ jobs:
         runs-on: ubuntu-latest
         container: ${{ vars.APP_BUILDER_REGISTRY && fromJSON(format('{{"image":"{0}/ledger-app-builder:latest","credentials":{{"username":"{1}","password":"{2}"}}}}', vars.APP_BUILDER_REGISTRY, github.actor, github.token)) || 'ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest' }}
         steps:
-            - name: Install ledgered
-              run: pip install ledgered --break-system-packages
             - name: Clone SDK
               if: ${{ inputs.rust_sdk_branch != '' }}
               uses: actions/checkout@v6
