@@ -880,26 +880,32 @@ impl Comm {
     }
 
     pub fn get_data(&self) -> Result<&[u8], StatusWords> {
+        self.data_range().map(|r| &self.apdu_buffer[r])
+    }
+
+    /// Where the received APDU's data lies in `apdu_buffer`, once its length
+    /// has been checked against what was received.
+    fn data_range(&self) -> Result<core::ops::Range<usize>, StatusWords> {
         if self.rx == 4 {
-            Ok(&[]) // Conforming zero-data APDU
+            Ok(4..4) // Conforming zero-data APDU
         } else {
             let first_len_byte = self.apdu_buffer[4] as usize;
-            let get_data_from_buffer = |len, offset| {
+            let data_range = |len, offset| {
                 if len == 0 || len + offset > self.rx {
                     Err(StatusWords::BadLen)
                 } else {
-                    Ok(&self.apdu_buffer[offset..offset + len])
+                    Ok(offset..offset + len)
                 }
             };
             match (first_len_byte, self.rx) {
-                (0, 5) => Ok(&[]), // Non-conforming zero-data APDU
+                (0, 5) => Ok(5..5), // Non-conforming zero-data APDU
                 (0, 6) => Err(StatusWords::BadLen),
                 (0, _) => {
                     let len =
                         u16::from_be_bytes([self.apdu_buffer[5], self.apdu_buffer[6]]) as usize;
-                    get_data_from_buffer(len, 7)
+                    data_range(len, 7)
                 }
-                (len, _) => get_data_from_buffer(len, 5),
+                (len, _) => data_range(len, 5),
             }
         }
     }
@@ -1014,22 +1020,32 @@ fn handle_bolos_apdu(com: &mut Comm, ins: u8, p1: u8, p2: u8) {
             com.reply_ok();
             crate::exit_app(0);
         }
-        BOLOS_INS_SET_PKI_CERT => unsafe {
-            let public_key = cx_ecfp_384_public_key_t::default();
-            let err = os_pki_load_certificate(
-                com.io_buffer[3],                // P1
-                com.io_buffer[6..].as_mut_ptr(), // Data
-                com.io_buffer[5] as usize,       // Length
-                core::ptr::null_mut(),
-                core::ptr::null_mut(),
-                &public_key as *const cx_ecfp_384_public_key_t as *mut cx_ecfp_384_public_key_t,
-            );
+        BOLOS_INS_SET_PKI_CERT => {
+            let range = match com.data_range() {
+                Ok(r) if !r.is_empty() => r,
+                _ => {
+                    com.reply(StatusWords::BadLen);
+                    return;
+                }
+            };
+            let certificate = &mut com.apdu_buffer[range];
+            let mut public_key = cx_ecfp_384_public_key_t::default();
+            let err = unsafe {
+                os_pki_load_certificate(
+                    p1,
+                    certificate.as_mut_ptr(),
+                    certificate.len(),
+                    core::ptr::null_mut(),
+                    core::ptr::null_mut(),
+                    &mut public_key,
+                )
+            };
             if err != 0 {
                 com.reply(SyscallError::from(PkiLoadCertificateError::from(err)));
             } else {
                 com.reply_ok();
             }
-        },
+        }
         #[cfg(feature = "stack_usage")]
         BOLOS_INS_STACK_CONSUMPTION => {
             crate::testing::handle_stack_consumption_apdu(p1, p2, com);
@@ -1108,5 +1124,27 @@ mod test {
         assert_eq!(c.io_buffer[2], 0x90);
         assert_eq!(c.io_buffer[3], 0x00);
         assert_eq!(c.tx, 0);
+    }
+
+    /// A header-only APDU has no data, whatever bytes an earlier APDU left
+    /// behind the header.
+    #[test]
+    fn data_range_ignores_stale_bytes() {
+        let mut c = Comm::new();
+        c.apdu_buffer[4] = 0xff;
+        c.apdu_buffer[5] = 0xff;
+        c.rx = 4;
+        assert_eq!(c.data_range().ok() == Some(4..4), true);
+    }
+
+    #[test]
+    fn data_range_follows_lc() {
+        let mut c = Comm::new();
+        c.apdu_buffer[4] = 3;
+        c.rx = 8;
+        assert_eq!(c.data_range().ok() == Some(5..8), true);
+        // Lc announcing more than was received.
+        c.apdu_buffer[4] = 0xff;
+        assert_eq!(c.data_range().is_err(), true);
     }
 }
