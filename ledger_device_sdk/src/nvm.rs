@@ -39,6 +39,24 @@
 //! counter.update(&(*counter.get_ref() - 1));
 //! println!("counter value is {}", *counter.get_ref());
 //! ```
+//!
+//! # What can be stored
+//!
+//! A stored value is a copy of its bytes, read back as a `T` from flash, so
+//! `T` must be plain data. Every storage requires `T: Copy`, which rules out
+//! types owning heap memory (`String`, `Vec`, `Box`, ...), but not every type
+//! that is unsound to store:
+//!
+//! * References and raw pointers point to RAM, which does not hold the same
+//!   data from one run of the app to the next.
+//! * `bool`, `char`, enums, `NonZero*` and other types with invalid bit
+//!   patterns can be read back invalid: an interrupted [`AlignedStorage`]
+//!   update leaves a mix of old and new bytes, and a storage never updated
+//!   holds zeroes when its section is loaded zeroed (as Speculos does).
+//! * Padding bytes are stored too, with whatever they held.
+//!
+//! Prefer integers and byte arrays such as `[u8; N]`, and encode other values
+//! explicitly, checking them when decoding.
 
 use AtomicStorageElem::{StorageA, StorageB};
 use ledger_secure_sdk_sys::nvm_write;
@@ -75,14 +93,14 @@ pub trait SingleStorage<T> {
 /// Warning: this wrapper does not provide any guarantee about update atomicity.
 #[repr(align(64))]
 #[derive(Copy, Clone)]
-pub struct AlignedStorage<T> {
+pub struct AlignedStorage<T: Copy> {
     /// Stored value.
     /// This is intentionally private to prevent direct write access (this is
     /// stored in Flash, so only the update method can change the value).
     value: T,
 }
 
-impl<T> AlignedStorage<T> {
+impl<T: Copy> AlignedStorage<T> {
     /// Create a `AlignedStorage<T>` initialized with a given value.
     /// This is to set the initial value of static `AlignedStorage<T>`, as the value
     /// member is private.
@@ -91,7 +109,7 @@ impl<T> AlignedStorage<T> {
     }
 }
 
-impl<T> SingleStorage<T> for AlignedStorage<T> {
+impl<T: Copy> SingleStorage<T> for AlignedStorage<T> {
     /// Return non-mutable reference to the stored value.
     /// The address is always the same for AlignedStorage.
     fn get_ref(&self) -> &T {
@@ -123,12 +141,12 @@ const STORAGE_VALID: u8 = 0xa5;
 /// 1. The flag is reset to 0
 /// 2. The value is updated
 /// 3. The flag is restored to STORAGE_VALID
-pub struct SafeStorage<T> {
+pub struct SafeStorage<T: Copy> {
     flag: AlignedStorage<u8>,
     value: AlignedStorage<T>,
 }
 
-impl<T> SafeStorage<T> {
+impl<T: Copy> SafeStorage<T> {
     pub const fn new(value: T) -> SafeStorage<T> {
         SafeStorage {
             flag: AlignedStorage::new(STORAGE_VALID),
@@ -149,7 +167,7 @@ impl<T> SafeStorage<T> {
     }
 }
 
-impl<T> SingleStorage<T> for SafeStorage<T> {
+impl<T: Copy> SingleStorage<T> for SafeStorage<T> {
     /// Return non-mutable reference to the stored value.
     /// Panic if the storage is not valid (corrupted).
     fn get_ref(&self) -> &T {
@@ -212,7 +230,7 @@ const _: () = assert!(replicas_on_own_pages!([u8; 700]));
 ///
 /// Holds two replicas of the value, each on flash pages of its own, so it
 /// takes at least two pages.
-pub struct AtomicStorage<T> {
+pub struct AtomicStorage<T: Copy> {
     storage_a: PageAligned<SafeStorage<T>>,
     // We also accept situations where both storages are marked as valid, which
     // can happen with tearing. This is not a problem, and we consider the first
@@ -350,7 +368,7 @@ pub struct KeyOutOfRange;
 //            ↑  ↑  ↑  ↑  ↑  ↑  ↑
 // index:     -  -  0  1  -  2  -
 // key:       0, 1, 2, 3, 4, 5, 6
-pub struct Collection<T, const N: usize> {
+pub struct Collection<T: Copy, const N: usize> {
     flags: AtomicStorage<[u8; N]>,
     slots: [AlignedStorage<T>; N],
 }
