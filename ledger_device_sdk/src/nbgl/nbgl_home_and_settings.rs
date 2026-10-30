@@ -141,7 +141,7 @@ impl HomeActionStyle {
 /// `Comm::next_event` has returned (see the `nbgl_home_and_settings` example).
 pub struct HomeAction<'a> {
     text: &'a str,
-    icon: Option<&'a NbglGlyph<'a>>,
+    icon: Option<&'a NbglGlyph<'static>>,
     style: HomeActionStyle,
     callback: fn(),
 }
@@ -159,7 +159,7 @@ impl<'a> HomeAction<'a> {
     }
 
     /// Icon drawn in the button.
-    pub fn icon(self, icon: &'a NbglGlyph<'a>) -> HomeAction<'a> {
+    pub fn icon(self, icon: &'a NbglGlyph<'static>) -> HomeAction<'a> {
         HomeAction {
             icon: Some(icon),
             ..self
@@ -305,7 +305,7 @@ impl NbglHomeAndSettings {
     /// * `glyph` - The icon to display in the center of the page.
     /// # Returns
     /// Returns the builder itself to allow method chaining.
-    pub fn glyph(self, glyph: &NbglGlyph) -> NbglHomeAndSettings {
+    pub fn glyph(self, glyph: &NbglGlyph<'static>) -> NbglHomeAndSettings {
         let icon = glyph.into();
         NbglHomeAndSettings { icon, ..self }
     }

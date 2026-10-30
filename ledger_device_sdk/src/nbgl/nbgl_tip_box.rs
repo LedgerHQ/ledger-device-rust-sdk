@@ -20,7 +20,7 @@ use alloc::boxed::Box;
 /// A touchable tip box on a review's first page, mapped to `nbgl_tipBox_t`.
 pub struct TipBox<'a> {
     text: &'a str,
-    icon: Option<&'a NbglGlyph<'a>>,
+    icon: Option<&'a NbglGlyph<'static>>,
     modal_title: Option<&'a str>,
     infos: &'a [Field<'a>],
 }
@@ -39,7 +39,7 @@ impl<'a> TipBox<'a> {
     }
 
     /// Icon drawn at the start of the tip box.
-    pub fn icon(self, icon: &'a NbglGlyph<'a>) -> TipBox<'a> {
+    pub fn icon(self, icon: &'a NbglGlyph<'static>) -> TipBox<'a> {
         TipBox {
             icon: Some(icon),
             ..self

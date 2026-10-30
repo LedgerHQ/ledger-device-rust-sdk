@@ -252,7 +252,7 @@ impl NbglNavigableContent {
         content: NbglPageContent,
         title: &str,
         touchable_title: bool,
-        top_right_icon: Option<&NbglGlyph>,
+        top_right_icon: Option<&NbglGlyph<'static>>,
     ) -> NbglNavigableContent {
         self.pages.push(PageEntry {
             content,

@@ -72,7 +72,7 @@ impl WarningType {
 /// Every field is optional; those left unset are not drawn.
 #[derive(Default)]
 pub struct CenterInfo<'a> {
-    icon: Option<&'a NbglGlyph<'a>>,
+    icon: Option<&'a NbglGlyph<'static>>,
     title: Option<&'a str>,
     small_title: Option<&'a str>,
     description: Option<&'a str>,
@@ -87,7 +87,7 @@ impl<'a> CenterInfo<'a> {
     }
 
     /// Icon drawn above the text.
-    pub fn icon(self, icon: &'a NbglGlyph<'a>) -> CenterInfo<'a> {
+    pub fn icon(self, icon: &'a NbglGlyph<'static>) -> CenterInfo<'a> {
         CenterInfo {
             icon: Some(icon),
             ..self
@@ -208,7 +208,7 @@ pub struct WarningBar<'a> {
     /// Secondary label under `text`.
     pub sub_text: Option<&'a str>,
     /// Icon shown at the start of the bar.
-    pub icon: Option<&'a NbglGlyph<'a>>,
+    pub icon: Option<&'a NbglGlyph<'static>>,
     /// Page opened when the bar is touched. `None` makes the bar inert.
     pub details: Option<&'a WarningDetails<'a>>,
 }
@@ -245,7 +245,7 @@ pub enum WarningDetails<'a> {
 /// On Nano only `title` is used.
 #[derive(Default)]
 pub struct Prelude<'a> {
-    icon: Option<&'a NbglGlyph<'a>>,
+    icon: Option<&'a NbglGlyph<'static>>,
     title: Option<&'a str>,
     description: Option<&'a str>,
     button_text: Option<&'a str>,
@@ -259,7 +259,7 @@ impl<'a> Prelude<'a> {
     }
 
     /// Icon of the centered info.
-    pub fn icon(self, icon: &'a NbglGlyph<'a>) -> Prelude<'a> {
+    pub fn icon(self, icon: &'a NbglGlyph<'static>) -> Prelude<'a> {
         Prelude {
             icon: Some(icon),
             ..self
@@ -322,8 +322,8 @@ pub struct NbglWarning<'a> {
     intro_details: Option<&'a WarningDetails<'a>>,
     review_details: Option<&'a WarningDetails<'a>>,
     info: Option<&'a CenterInfo<'a>>,
-    intro_top_right_icon: Option<&'a NbglGlyph<'a>>,
-    review_top_right_icon: Option<&'a NbglGlyph<'a>>,
+    intro_top_right_icon: Option<&'a NbglGlyph<'static>>,
+    review_top_right_icon: Option<&'a NbglGlyph<'static>>,
     prelude: Option<&'a Prelude<'a>>,
 }
 
@@ -412,7 +412,7 @@ impl<'a> NbglWarning<'a> {
     ///
     /// Setting this is what makes the button appear at all, so it is required
     /// for [`Self::intro_details`] to be reachable.
-    pub fn intro_top_right_icon(self, icon: &'a NbglGlyph<'a>) -> NbglWarning<'a> {
+    pub fn intro_top_right_icon(self, icon: &'a NbglGlyph<'static>) -> NbglWarning<'a> {
         NbglWarning {
             intro_top_right_icon: Some(icon),
             ..self
@@ -425,7 +425,7 @@ impl<'a> NbglWarning<'a> {
     /// Note that the C SDK declares `reviewTopRightIcon` but never reads it —
     /// the review page picks its own icon. This setter is here for parity with
     /// `nbgl_warning_t`; it currently has no visible effect.
-    pub fn review_top_right_icon(self, icon: &'a NbglGlyph<'a>) -> NbglWarning<'a> {
+    pub fn review_top_right_icon(self, icon: &'a NbglGlyph<'static>) -> NbglWarning<'a> {
         NbglWarning {
             review_top_right_icon: Some(icon),
             ..self

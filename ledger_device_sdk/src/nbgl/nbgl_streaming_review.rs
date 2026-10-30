@@ -132,7 +132,7 @@ impl NbglStreamingReview {
     /// * `glyph` - The icon to display in the center of the page.
     /// # Returns
     /// Returns the builder itself to allow method chaining.
-    pub fn glyph(self, glyph: &NbglGlyph) -> NbglStreamingReview {
+    pub fn glyph(self, glyph: &NbglGlyph<'static>) -> NbglStreamingReview {
         NbglStreamingReview {
             icon: glyph.into(),
             ..self

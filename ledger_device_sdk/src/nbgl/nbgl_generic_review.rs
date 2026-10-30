@@ -96,7 +96,7 @@ impl CenteredInfo {
         text1: &str,
         text2: &str,
         #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))] text3: &str,
-        icon: Option<&NbglGlyph>,
+        icon: Option<&NbglGlyph<'static>>,
         on_top: bool,
         style: CenteredInfoStyle,
         #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))] offset_y: i16,
@@ -160,7 +160,7 @@ impl InfoLongPress {
     /// * `tune_id` — [`TuneIndex`] of the sound played on button activation.
     pub fn new(
         text: &str,
-        icon: Option<&NbglGlyph>,
+        icon: Option<&NbglGlyph<'static>>,
         long_press_text: &str,
         tune_id: TuneIndex,
     ) -> InfoLongPress {
@@ -214,7 +214,7 @@ impl InfoButton {
     /// * `tune_id` — [`TuneIndex`] of the sound played on button activation.
     pub fn new(
         text: &str,
-        icon: Option<&NbglGlyph>,
+        icon: Option<&NbglGlyph<'static>>,
         button_text: &str,
         tune_id: TuneIndex,
     ) -> InfoButton {
@@ -644,7 +644,7 @@ impl ExtendedCenter {
     pub fn new(
         center: &CenterInfo,
         tip_text: Option<&str>,
-        tip_icon: Option<&NbglGlyph>,
+        tip_icon: Option<&NbglGlyph<'static>>,
     ) -> ExtendedCenter {
         ExtendedCenter {
             center: CCenterInfo::new(center),
