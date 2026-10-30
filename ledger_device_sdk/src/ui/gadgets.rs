@@ -25,6 +25,8 @@ use crate::ui::layout::{Draw, Location, StringPlace};
 use numtoa::NumToA;
 
 const MAX_CHAR_PER_LINE: usize = 17;
+/// Lines of normal text under the bold title of a `BoldNormal` page.
+const BOLD_NORMAL_LINES: usize = 3;
 
 /// Handles communication to filter
 /// out actual events, and converts key
@@ -435,6 +437,31 @@ impl<'a> Page<'a> {
         }
     }
 
+    /// Whether [`Self::place`] draws all of the page's text: every label only
+    /// holds characters the font has a glyph for (0x20 to 0x7F), and fits on
+    /// screen. A `BoldNormal` value is wrapped over at most three lines.
+    ///
+    /// [`MultiPageMenu`] does not let a page that does not fit be selected.
+    pub fn fits(&self) -> bool {
+        let fits_line = |s: &str, bold: bool| {
+            is_displayable(s) && s.compute_width(bold) <= crate::ui::SCREEN_WIDTH
+        };
+        let [first, second] = self.label;
+        match self.style {
+            PageStyle::Normal | PageStyle::PictureNormal => {
+                fits_line(first, false) && fits_line(second, false)
+            }
+            PageStyle::BoldCenteredNormal | PageStyle::PictureBold => {
+                fits_line(first, true) && fits_line(second, true)
+            }
+            PageStyle::BoldNormal => {
+                fits_line(first, true)
+                    && is_displayable(second)
+                    && value_lines(second).count() <= BOLD_NORMAL_LINES
+            }
+        }
+    }
+
     pub fn place(&self) {
         match self.style {
             PageStyle::Normal => {
@@ -465,7 +492,7 @@ impl<'a> Page<'a> {
             }
             PageStyle::BoldNormal => {
                 let padding = 1;
-                let max_text_lines = 3;
+                let max_text_lines = BOLD_NORMAL_LINES as u8;
                 let total_height = (OPEN_SANS[0].height * max_text_lines) as usize
                     + OPEN_SANS[1].height as usize
                     + 2 * padding as usize;
@@ -474,20 +501,8 @@ impl<'a> Page<'a> {
                 self.label[0].place(Location::Custom(cur_y), Layout::Centered, true);
                 cur_y += OPEN_SANS[0].height as usize + 2 * padding as usize;
 
-                let mut indices = [(0, 0); 3];
-                let len = self.label[1].len();
-                for (i, indice) in indices.iter_mut().enumerate() {
-                    let start = (i * MAX_CHAR_PER_LINE).min(len);
-                    if start >= len {
-                        break; // Break if we reach the end of the string
-                    }
-                    let end = (start + MAX_CHAR_PER_LINE).min(len);
-                    *indice = (start, end);
-                    (&self.label[1][start..end]).place(
-                        Location::Custom(cur_y),
-                        Layout::Centered,
-                        false,
-                    );
+                for line in value_lines(self.label[1]).take(BOLD_NORMAL_LINES) {
+                    line.place(Location::Custom(cur_y), Layout::Centered, false);
                     cur_y += OPEN_SANS[0].height as usize + 2 * padding as usize;
                 }
             }
@@ -570,6 +585,8 @@ impl<'a> MultiPageMenu<'a> {
                 io::Event::Button(button) => {
                     if UxEvent::Event.request() == BOLOS_UX_OK {
                         match button {
+                            // A page that is not fully drawn cannot be selected.
+                            BothButtonsRelease if !self.pages[index].fits() => (),
                             BothButtonsRelease => return EventOrPageIndex::Index(index),
                             b => {
                                 match b {
@@ -1118,5 +1135,35 @@ mod tests {
         assert_eq!(value_lines(wide).count() > 2, true);
         assert_eq!(lines_cover(wide), true);
         assert_eq!(lines_cover("W@W@W@W@W@W@W@W@W@W@W@W@W@W@"), true);
+    }
+
+    fn bold_normal(value: &str) -> Page<'_> {
+        Page::new(PageStyle::BoldNormal, ["Value", value], None)
+    }
+
+    // Three lines of 17 narrow characters, or of 12 'W'.
+    #[test]
+    fn bold_normal_fits_three_lines() {
+        let hex = "0123456789abcdef0123456789abcdef0123456789abcdef012";
+        assert_eq!(bold_normal(hex).fits(), true);
+        let wide = "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW";
+        assert_eq!(bold_normal(wide).fits(), true);
+    }
+
+    #[test]
+    fn bold_normal_rejects_a_fourth_line() {
+        let hex = "0123456789abcdef0123456789abcdef0123456789abcdef0123";
+        assert_eq!(bold_normal(hex).fits(), false);
+        let wide = "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW";
+        assert_eq!(bold_normal(wide).fits(), false);
+        assert_eq!(bold_normal("Caf\u{e9}").fits(), false);
+    }
+
+    #[test]
+    fn single_line_pages_reject_wide_labels() {
+        let wide = "WWWWWWWWWWWWWWWWW";
+        assert_eq!(Page::from((["Version", "1.0.0"], false)).fits(), true);
+        assert_eq!(Page::from((["Version", wide], false)).fits(), false);
+        assert_eq!(Page::from(([wide, "1.0.0"], true, true)).fits(), false);
     }
 }
