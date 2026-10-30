@@ -451,9 +451,13 @@ pub(crate) fn nb_items(len: usize) -> Option<u8> {
 #[cfg(not(feature = "io_new"))]
 /// Registers the `Comm` instance used by Nbgl.
 ///
-/// Nbgl uses `comm` until it is dropped, so it must stay in place for as long
-/// as Nbgl is used, typically in the main function. [`init_static_comm`]
-/// guarantees this.
+/// Nbgl uses `comm` until it is dropped. Prefer [`init_static_comm`], which
+/// keeps the `Comm` in static storage, where it can neither move nor be
+/// dropped.
+///
+/// If `comm` is moved, Nbgl reaches it at its new address only once the
+/// application calls one of its receive or reply methods: do not show an Nbgl
+/// screen between moving the `Comm` and using it again.
 pub fn init_comm(comm: &mut crate::io::Comm) {
     comm.nbgl_register_comm();
 }

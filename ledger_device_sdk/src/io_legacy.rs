@@ -270,6 +270,9 @@ pub struct Comm {
     /// application replies to it. This is what makes a second incoming APDU a
     /// *double* APDU rather than the normal way of receiving work.
     apdu_in_progress: bool,
+    /// True once registered with Nbgl. It moves with the value, so a moved
+    /// `Comm` can record its new address in `CURRENT_COMM`.
+    nbgl_registered: bool,
 }
 
 impl Default for Comm {
@@ -308,12 +311,14 @@ impl Comm {
             tx_length: 0,
             skip_rx_on_send: false,
             apdu_in_progress: false,
+            nbgl_registered: false,
         }
     }
 
     #[allow(dead_code)]
     pub(crate) fn nbgl_register_comm(&mut self) {
         // Register NBGL callbacks if not already set and record current Comm singleton.
+        self.nbgl_registered = true;
         unsafe {
             CURRENT_COMM = self as *mut Comm;
         }
@@ -322,6 +327,18 @@ impl Comm {
             default_nbgl_fetch_apdu_header,
             default_nbgl_reply_status,
         );
+    }
+
+    /// Records the current address of a `Comm` registered with Nbgl, which
+    /// changes when the value is moved. Called by the methods an application
+    /// uses to receive and reply, so that Nbgl reaches the `Comm` at its new
+    /// address once the application uses it again.
+    fn refresh_nbgl_registration(&mut self) {
+        if self.nbgl_registered {
+            unsafe {
+                CURRENT_COMM = self as *mut Comm;
+            }
+        }
     }
 
     /// Defines [`Comm::expected_cla`] in order to reply automatically [`StatusWords::BadCla`] when
@@ -422,6 +439,7 @@ impl Comm {
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
+        self.refresh_nbgl_registration();
         self.rx_length = 0;
         loop {
             let status = sys_seph::io_rx(&mut self.io_buffer, true);
@@ -852,6 +870,7 @@ impl Comm {
     ///   StatusWords, a SyscallError, or any type which can be converted to a
     ///   Reply.
     pub fn reply<T: Into<Reply>>(&mut self, reply: T) {
+        self.refresh_nbgl_registration();
         // Append status word
         self.append_status_word(reply.into().0);
         // Transmit the response
@@ -915,6 +934,7 @@ impl Comm {
     }
 
     pub fn append(&mut self, m: &[u8]) {
+        self.refresh_nbgl_registration();
         self.io_buffer[self.tx_length..self.tx_length + m.len()].copy_from_slice(m);
         self.tx_length += m.len();
     }
@@ -925,10 +945,11 @@ static mut CURRENT_COMM: *mut Comm = core::ptr::null_mut();
 
 impl Drop for Comm {
     fn drop(&mut self) {
-        // Unregister this instance from Nbgl.
+        // Unregister this instance from Nbgl, including when it was moved
+        // since it last recorded its address.
         // SAFETY: single-threaded runtime; no concurrent access is possible.
         unsafe {
-            if core::ptr::eq(CURRENT_COMM, self) {
+            if self.nbgl_registered || core::ptr::eq(CURRENT_COMM, self) {
                 CURRENT_COMM = core::ptr::null_mut();
             }
         }
@@ -1146,5 +1167,34 @@ mod test {
         // Lc announcing more than was received.
         c.apdu_buffer[4] = 0xff;
         assert_eq!(c.data_range().is_err(), true);
+    }
+
+    fn registered_at(comm: &Comm) -> bool {
+        unsafe { core::ptr::eq(CURRENT_COMM, comm) }
+    }
+
+    /// A registered `Comm` moved elsewhere is reached at its new address once
+    /// used again, and unregisters when dropped.
+    #[test]
+    fn moved_comm_records_its_new_address() {
+        let mut registered = Comm::new();
+        registered.nbgl_register_comm();
+        assert_eq!(registered_at(&registered), true);
+
+        // `replace` moves the registered value out and leaves another `Comm`
+        // at the registered address.
+        let mut slot = Comm::new();
+        let mut moved = core::mem::replace(&mut registered, Comm::new());
+        assert_eq!(registered_at(&moved), false);
+
+        // A `Comm` that was never registered does not take over.
+        slot.refresh_nbgl_registration();
+        assert_eq!(registered_at(&slot), false);
+
+        moved.refresh_nbgl_registration();
+        assert_eq!(registered_at(&moved), true);
+
+        drop(moved);
+        assert_eq!(unsafe { CURRENT_COMM.is_null() }, true);
     }
 }
