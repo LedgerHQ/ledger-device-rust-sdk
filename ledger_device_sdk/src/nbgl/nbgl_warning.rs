@@ -61,7 +61,7 @@ impl WarningType {
     }
 
     /// This warning's bit in the `predefinedSet` bitfield.
-    fn bit(self) -> u32 {
+    pub(crate) fn bit(self) -> u32 {
         1u32 << self.to_c_type()
     }
 }

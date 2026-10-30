@@ -176,9 +176,9 @@ impl NbglStreamingReview {
     /// Sets the warning shown before the review, and reachable from the
     /// top-right button during it.
     ///
-    /// Setting a warning selects `nbgl_useCaseAdvancedReviewStreamingStart`
-    /// over the plain blind-signing start, so it takes effect only in
-    /// combination with [`Self::blind`].
+    /// Setting a warning selects `nbgl_useCaseAdvancedReviewStreamingStart`,
+    /// with or without [`Self::blind`]. In blind mode the blind-signing
+    /// warning is added to the ones configured here.
     /// # Arguments
     /// * `warning` - The warning configuration; see [`NbglWarning`].
     /// # Returns
@@ -190,6 +190,18 @@ impl NbglStreamingReview {
         }
     }
 
+    /// The warning handed to `nbgl_useCaseAdvancedReviewStreamingStart`, if
+    /// one is set; blind mode adds the blind-signing warning to it.
+    fn c_warning(&self) -> Option<nbgl_warning_t> {
+        self.warning.as_ref().map(|w| {
+            let mut warning = w.as_c_type();
+            if self.blind {
+                warning.predefinedSet |= WarningType::BlindSigning.bit();
+            }
+            warning
+        })
+    }
+
     fn start_internal(&self, title: &str, subtitle: Option<&str>) -> bool {
         unsafe {
             let title = CString::new(title).unwrap();
@@ -197,46 +209,38 @@ impl NbglStreamingReview {
                 Some(s) => CString::new(s).unwrap(),
                 None => CString::default(),
             };
+            let subtitle_ptr = match subtitle.is_empty() {
+                true => core::ptr::null(),
+                false => subtitle.as_ptr() as *const c_char,
+            };
 
             self.ux_sync_init();
-            match self.blind {
-                true => match &self.warning {
-                    Some(w) => {
-                        let warning_details = w.as_c_type();
-                        nbgl_useCaseAdvancedReviewStreamingStart(
-                            self.c_operation_type(),
-                            &self.icon as *const nbgl_icon_details_t,
-                            title.as_ptr() as *const c_char,
-                            match subtitle.is_empty() {
-                                true => core::ptr::null(),
-                                false => subtitle.as_ptr() as *const c_char,
-                            },
-                            &warning_details as *const nbgl_warning_t,
-                            Some(choice_callback),
-                        );
-                    }
-                    None => {
-                        nbgl_useCaseReviewStreamingBlindSigningStart(
-                            self.c_operation_type(),
-                            &self.icon as *const nbgl_icon_details_t,
-                            title.as_ptr() as *const c_char,
-                            match subtitle.is_empty() {
-                                true => core::ptr::null(),
-                                false => subtitle.as_ptr() as *const c_char,
-                            },
-                            Some(choice_callback),
-                        );
-                    }
-                },
-                false => {
+            match self.c_warning() {
+                Some(warning) => {
+                    nbgl_useCaseAdvancedReviewStreamingStart(
+                        self.c_operation_type(),
+                        &self.icon as *const nbgl_icon_details_t,
+                        title.as_ptr() as *const c_char,
+                        subtitle_ptr,
+                        &warning as *const nbgl_warning_t,
+                        Some(choice_callback),
+                    );
+                }
+                None if self.blind => {
+                    nbgl_useCaseReviewStreamingBlindSigningStart(
+                        self.c_operation_type(),
+                        &self.icon as *const nbgl_icon_details_t,
+                        title.as_ptr() as *const c_char,
+                        subtitle_ptr,
+                        Some(choice_callback),
+                    );
+                }
+                None => {
                     nbgl_useCaseReviewStreamingStart(
                         self.c_operation_type(),
                         &self.icon as *const nbgl_icon_details_t,
                         title.as_ptr() as *const c_char,
-                        match subtitle.is_empty() {
-                            true => core::ptr::null(),
-                            false => subtitle.as_ptr() as *const c_char,
-                        },
+                        subtitle_ptr,
                         Some(choice_callback),
                     );
                 }
@@ -436,5 +440,44 @@ impl NbglStreamingReview {
     #[cfg(not(feature = "io_new"))]
     pub fn finish(&self, finish_title: &str) -> bool {
         self.finish_internal(finish_title)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::assert_eq_err as assert_eq;
+    use crate::testing::TestType;
+    use testmacro::test_item as test;
+
+    const RISK: u32 = 1 << W3C_RISK_DETECTED_WARN;
+    const BLIND: u32 = 1 << BLIND_SIGNING_WARN;
+
+    fn with_warning() -> NbglStreamingReview {
+        NbglStreamingReview::new().warning_details(Some("dApp"), None, None, None)
+    }
+
+    // No warning: the plain or blind-signing start, chosen by `blind`.
+    #[test]
+    fn no_warning_uses_plain_or_blind_start() {
+        assert_eq!(NbglStreamingReview::new().c_warning().is_none(), true);
+        assert_eq!(
+            NbglStreamingReview::new().blind().c_warning().is_none(),
+            true
+        );
+    }
+
+    #[test]
+    fn warning_is_shown_outside_blind_mode() {
+        let warning = with_warning().c_warning();
+        assert_eq!(warning.map(|w| w.predefinedSet), Some(RISK));
+        assert_eq!(warning.is_some_and(|w| !w.dAppProvider.is_null()), true);
+    }
+
+    #[test]
+    fn blind_mode_adds_blind_signing_warning() {
+        let warning = with_warning().blind().c_warning();
+        assert_eq!(warning.map(|w| w.predefinedSet), Some(RISK | BLIND));
+        assert_eq!(warning.is_some_and(|w| !w.dAppProvider.is_null()), true);
     }
 }
