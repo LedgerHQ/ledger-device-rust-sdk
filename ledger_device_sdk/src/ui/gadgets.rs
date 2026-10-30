@@ -117,7 +117,15 @@ impl<'a> Validator<'a> {
         Validator { message }
     }
 
+    /// Returns `false` without displaying anything if `message` holds a
+    /// character the font has no glyph for (outside 0x20 to 0x7F), or does not
+    /// fit on one line once selected (in bold).
     pub fn ask(&self) -> bool {
+        if !is_displayable(self.message)
+            || self.message.compute_width(true) > crate::ui::SCREEN_WIDTH
+        {
+            return false;
+        }
         clear_screen();
         let mut buttons = ButtonsState::new();
 
@@ -723,7 +731,10 @@ impl<'a> Field<'a> {
     pub fn event_loop(&self, incoming_direction: ButtonEvent, is_first_field: bool) -> ButtonEvent {
         let mut buttons = ButtonsState::new();
         let chunk_max_lines = layout::MAX_LINES - 1;
-        let page_count = 1 + self.value.len() / (chunk_max_lines * MAX_CHAR_PER_LINE);
+        let page_count = value_lines(self.value)
+            .count()
+            .div_ceil(chunk_max_lines)
+            .max(1);
 
         let mut cur_page = match incoming_direction {
             ButtonEvent::LeftButtonRelease => page_count - 1,
@@ -736,20 +747,17 @@ impl<'a> Field<'a> {
         let draw = |page: usize| {
             clear_screen();
             let mut chunks = [Label::default(); layout::MAX_LINES];
-            for (i, chunk) in self
-                .value
-                .as_bytes()
-                .chunks(MAX_CHAR_PER_LINE)
+            for (i, line) in value_lines(self.value)
                 .skip(page * chunk_max_lines)
                 .take(chunk_max_lines)
                 .enumerate()
             {
-                chunks[1 + i] = Label::from(core::str::from_utf8(chunk).unwrap_or(""));
+                chunks[1 + i] = Label::from(line);
             }
 
             let mut header_buf = [b' '; MAX_CHAR_PER_LINE + 4];
 
-            if page == 0 && MAX_CHAR_PER_LINE * chunk_max_lines > self.value.len() {
+            if page_count == 1 {
                 // There is a single page. Do not display counter `( x / n )`
                 header_buf[..self.name.len()].copy_from_slice(self.name.as_bytes());
             } else {
@@ -827,6 +835,34 @@ pub struct MultiFieldReview<'a> {
 fn is_displayable(s: &str) -> bool {
     s.bytes()
         .all(|b| b >= 0x20 && usize::from(b - 0x20) < OPEN_SANS[0].dims.len())
+}
+
+/// Splits a field value into the lines drawn by [`Field`]: at most
+/// `MAX_CHAR_PER_LINE` characters, and no wider than the screen.
+fn value_lines(value: &str) -> impl Iterator<Item = &str> {
+    let mut rest = value.as_bytes();
+    core::iter::from_fn(move || {
+        if rest.is_empty() {
+            return None;
+        }
+        let mut len = 0;
+        let mut width = 0;
+        for &b in rest.iter().take(MAX_CHAR_PER_LINE) {
+            // A character without a glyph gets a line of its own.
+            let w = OPEN_SANS[0]
+                .dims
+                .get(usize::from(b.wrapping_sub(0x20)))
+                .map_or(crate::ui::SCREEN_WIDTH, |&w| w as usize);
+            if len > 0 && width + w > crate::ui::SCREEN_WIDTH {
+                break;
+            }
+            width += w;
+            len += 1;
+        }
+        let (line, tail) = rest.split_at(len);
+        rest = tail;
+        Some(core::str::from_utf8(line).unwrap_or(""))
+    })
 }
 
 // Function to concatenate multiple strings into a fixed-size array
@@ -1039,5 +1075,48 @@ mod tests {
         assert_eq!(is_displayable("\u{7f}"), true);
         assert_eq!(is_displayable("\n"), false);
         assert_eq!(is_displayable("\u{e9}"), false);
+    }
+
+    #[test]
+    fn validator_rejects_undisplayable_message() {
+        let too_wide = "WWWWWWWWWWWWWWWWW";
+        assert_eq!(Validator::new(too_wide).ask(), false);
+        assert_eq!(Validator::new("Caf\u{e9}").ask(), false);
+    }
+
+    // Every line fits on the screen, and together they are the whole value.
+    fn lines_cover(value: &str) -> bool {
+        let mut rest = value;
+        for line in value_lines(value) {
+            if line.is_empty()
+                || line.len() > MAX_CHAR_PER_LINE
+                || line.compute_width(false) > crate::ui::SCREEN_WIDTH
+            {
+                return false;
+            }
+            match rest.strip_prefix(line) {
+                Some(tail) => rest = tail,
+                None => return false,
+            }
+        }
+        rest.is_empty()
+    }
+
+    #[test]
+    fn value_lines_keep_narrow_text_in_17_characters() {
+        let hex = "0123456789abcdef0123456789abcdef01";
+        assert_eq!(value_lines(hex).count(), 2);
+        assert_eq!(value_lines(hex).all(|l| l.len() == 17), true);
+        assert_eq!(lines_cover(hex), true);
+        assert_eq!(value_lines("").count(), 0);
+    }
+
+    // 17 'W' are wider than the screen.
+    #[test]
+    fn value_lines_break_wide_text_to_fit() {
+        let wide = "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW";
+        assert_eq!(value_lines(wide).count() > 2, true);
+        assert_eq!(lines_cover(wide), true);
+        assert_eq!(lines_cover("W@W@W@W@W@W@W@W@W@W@W@W@W@W@"), true);
     }
 }
