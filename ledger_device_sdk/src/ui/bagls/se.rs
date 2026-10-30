@@ -69,14 +69,15 @@ impl Draw for Label<'_> {
         if total_width != 0 {
             let x = self.layout.get_x(total_width);
             let y = self.loc.get_y(c_height);
-            pic_draw(
-                x as i32,
-                y as i32,
-                total_width as u32,
-                c_height as u32,
-                false,
-                &crate::ui::bitmaps::BLANK,
-            )
+            unsafe {
+                ledger_secure_sdk_sys::bagl_hal_draw_rect(
+                    0,
+                    x as i32,
+                    y as i32,
+                    total_width as u32,
+                    c_height as u32,
+                );
+            }
         }
     }
 }
@@ -113,6 +114,9 @@ use core::ffi::c_void;
 
 #[inline(never)]
 fn pic_draw(x: i32, y: i32, width: u32, height: u32, inverted: bool, bitmap: &[u8]) {
+    let Some(bits) = crate::screen::bitmap_bits(width, height, bitmap.len()) else {
+        return;
+    };
     let inverted = [inverted as u32, !inverted as u32];
     unsafe {
         let pic_bmp = ledger_secure_sdk_sys::pic(bitmap.as_ptr() as *mut c_void);
@@ -125,7 +129,7 @@ fn pic_draw(x: i32, y: i32, width: u32, height: u32, inverted: bool, bitmap: &[u
             inverted.as_ptr(),
             1,
             pic_bmp as *const u8,
-            width * height,
+            bits,
         );
     }
 }

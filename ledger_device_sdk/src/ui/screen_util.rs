@@ -2,7 +2,12 @@
 
 use ledger_secure_sdk_sys;
 
+/// Draws a 1-bit-per-pixel bitmap. Nothing is drawn if `bmp` is shorter
+/// than `w * h` bits.
 pub fn draw(x_pos: i32, y_pos: i32, w: u32, h: u32, inv: bool, bmp: &[u8]) {
+    let Some(bits) = crate::screen::bitmap_bits(w, h, bmp.len()) else {
+        return;
+    };
     let inverted = [inv as u32, !inv as u32];
     unsafe {
         ledger_secure_sdk_sys::bagl_hal_draw_bitmap_within_rect(
@@ -14,7 +19,7 @@ pub fn draw(x_pos: i32, y_pos: i32, w: u32, h: u32, inv: bool, bmp: &[u8]) {
             inverted.as_ptr(),
             1,
             bmp.as_ptr(),
-            w * h,
+            bits,
         );
     }
 }
