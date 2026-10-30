@@ -193,13 +193,7 @@ impl NbglStreamingReview {
     /// The warning handed to `nbgl_useCaseAdvancedReviewStreamingStart`, if
     /// one is set; blind mode adds the blind-signing warning to it.
     fn c_warning(&self) -> Option<nbgl_warning_t> {
-        self.warning.as_ref().map(|w| {
-            let mut warning = w.as_c_type();
-            if self.blind {
-                warning.predefinedSet |= WarningType::BlindSigning.bit();
-            }
-            warning
-        })
+        with_blind_signing(self.warning.as_ref().map(CWarning::as_c_type), self.blind)
     }
 
     fn start_internal(&self, title: &str, subtitle: Option<&str>) -> bool {
@@ -443,6 +437,16 @@ impl NbglStreamingReview {
     }
 }
 
+/// `warning` with the blind-signing warning added in blind mode.
+fn with_blind_signing(warning: Option<nbgl_warning_t>, blind: bool) -> Option<nbgl_warning_t> {
+    warning.map(|mut warning| {
+        if blind {
+            warning.predefinedSet |= WarningType::BlindSigning.bit();
+        }
+        warning
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -452,32 +456,43 @@ mod tests {
 
     const RISK: u32 = 1 << W3C_RISK_DETECTED_WARN;
     const BLIND: u32 = 1 << BLIND_SIGNING_WARN;
+    const DAPP: &core::ffi::CStr = c"dApp";
 
-    fn with_warning() -> NbglStreamingReview {
-        NbglStreamingReview::new().warning_details(Some("dApp"), None, None, None)
+    // Built by hand: an `NbglStreamingReview` or `NbglWarning` would link the
+    // whole warning builder into the test binary, which does not fit in flash
+    // on every target.
+    fn risk_warning() -> nbgl_warning_t {
+        nbgl_warning_t {
+            predefinedSet: RISK,
+            dAppProvider: DAPP.as_ptr(),
+            ..Default::default()
+        }
     }
 
     // No warning: the plain or blind-signing start, chosen by `blind`.
     #[test]
     fn no_warning_uses_plain_or_blind_start() {
-        assert_eq!(NbglStreamingReview::new().c_warning().is_none(), true);
+        assert_eq!(with_blind_signing(None, false).is_none(), true);
+        assert_eq!(with_blind_signing(None, true).is_none(), true);
+    }
+
+    #[test]
+    fn warning_is_shown_outside_blind_mode() {
+        let warning = with_blind_signing(Some(risk_warning()), false);
+        assert_eq!(warning.map(|w| w.predefinedSet), Some(RISK));
         assert_eq!(
-            NbglStreamingReview::new().blind().c_warning().is_none(),
+            warning.is_some_and(|w| w.dAppProvider == DAPP.as_ptr()),
             true
         );
     }
 
     #[test]
-    fn warning_is_shown_outside_blind_mode() {
-        let warning = with_warning().c_warning();
-        assert_eq!(warning.map(|w| w.predefinedSet), Some(RISK));
-        assert_eq!(warning.is_some_and(|w| !w.dAppProvider.is_null()), true);
-    }
-
-    #[test]
     fn blind_mode_adds_blind_signing_warning() {
-        let warning = with_warning().blind().c_warning();
+        let warning = with_blind_signing(Some(risk_warning()), true);
         assert_eq!(warning.map(|w| w.predefinedSet), Some(RISK | BLIND));
-        assert_eq!(warning.is_some_and(|w| !w.dAppProvider.is_null()), true);
+        assert_eq!(
+            warning.is_some_and(|w| w.dAppProvider == DAPP.as_ptr()),
+            true
+        );
     }
 }
