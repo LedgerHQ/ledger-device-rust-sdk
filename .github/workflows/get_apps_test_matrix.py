@@ -8,6 +8,11 @@ matrices:
 
   * ``build_matrix.json``     — one entry per (app, device) pair to build.
   * ``apps_matrix.json``      — one entry per app to run Ragger tests on.
+  * ``swap_matrix.json``      — the entries of ``apps_matrix.json`` whose
+                                manifest has a ``[pytest.swap]`` section, to
+                                also run their swap tests. Empty when a device
+                                filter is given: the swap test workflow always
+                                tests every device of the app's manifest.
   * ``run_for_devices.json``  — the device list (in Ragger naming) to forward to
                                 the Ragger reusable workflow, or the literal
                                 ``None`` when no device filter was given (so each
@@ -93,6 +98,7 @@ def main():
 
     build_matrix = []
     apps_matrix = []
+    swap_matrix = []
 
     for name, ref in specs:
         if not name.startswith("app-"):
@@ -129,7 +135,16 @@ def main():
         # Artifact name must be filesystem/GitHub-artifact safe.
         artifact = f"ragger-bins-{re.sub(r'[^A-Za-z0-9._-]', '-', name)}"
 
-        apps_matrix.append({"name": name, "ref": resolved_ref, "artifact": artifact})
+        entry = {"name": name, "ref": resolved_ref, "artifact": artifact}
+        apps_matrix.append(entry)
+        # Only [pytest.<name>] sections (manifest v2+) have a key; a legacy
+        # [tests] section is the standalone tests.
+        if any(getattr(cfg, "key", None) == "swap" for cfg in manifest.pytests):
+            if device_filter:
+                print(f"WARNING: not running swap tests for '{name}': they cover every "
+                      "device of the manifest, and a device filter is set")
+            else:
+                swap_matrix.append(entry)
         for device in sorted(devices):
             build_matrix.append({
                 "app": name,
@@ -158,12 +173,16 @@ def main():
         f.write(json.dumps(build_matrix))
     with open("apps_matrix.json", "w") as f:
         f.write(json.dumps(apps_matrix))
+    with open("swap_matrix.json", "w") as f:
+        f.write(json.dumps(swap_matrix))
     with open("run_for_devices.json", "w") as f:
         f.write(run_for_devices)
 
     print(f"run_for_devices: {run_for_devices}")
     print("Apps to test:")
     print(json.dumps(apps_matrix, indent=2))
+    print("Apps with swap tests:")
+    print(json.dumps(swap_matrix, indent=2))
     print("Build matrix:")
     print(json.dumps(build_matrix, indent=2))
 

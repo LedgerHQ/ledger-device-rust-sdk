@@ -5,7 +5,12 @@ name: Ragger tests for selected Rust apps against a Rust SDK branch
 #      of this Rust SDK (the app's pinned `ledger_device_sdk` dependency is
 #      overridden with a `[patch.crates-io]` pointing at the cloned branch), and
 #   2. runs the app's Ragger functional tests (Speculos) on the freshly built
-#      binaries, through LedgerHQ's official `reusable_ragger_tests.yml`.
+#      binaries, through LedgerHQ's official `reusable_ragger_tests.yml`, and,
+#      for apps whose `ledger_app.toml` has a `[pytest.swap]` section, their swap
+#      tests through `reusable_swap_tests.yml` (Exchange and Ethereum are built
+#      from their `develop` branch by that workflow). Swap tests are skipped
+#      when a device filter is set, since they always cover every device of the
+#      app's manifest.
 #
 # Use it to validate that an in-progress SDK change does not break downstream
 # apps before publishing a new SDK release.
@@ -59,6 +64,7 @@ jobs:
     outputs:
       build_matrix: ${{ steps.matrix.outputs.build_matrix }}
       apps_matrix: ${{ steps.matrix.outputs.apps_matrix }}
+      swap_matrix: ${{ steps.matrix.outputs.swap_matrix }}
       run_for_devices: ${{ steps.matrix.outputs.run_for_devices }}
     steps:
       - name: Checkout repository
@@ -81,6 +87,7 @@ jobs:
           python .github/workflows/get_apps_test_matrix.py
           echo "build_matrix=$(cat build_matrix.json)" >> "$GITHUB_OUTPUT"
           echo "apps_matrix=$(cat apps_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "swap_matrix=$(cat swap_matrix.json)" >> "$GITHUB_OUTPUT"
           echo "run_for_devices=$(cat run_for_devices.json)" >> "$GITHUB_OUTPUT"
 
   build:
@@ -240,5 +247,21 @@ jobs:
       download_app_binaries_artifact: ${{ matrix.app.artifact }}
       run_for_devices: ${{ needs.prepare.outputs.run_for_devices }}
       test_dir: ${{ inputs.test_dir }}
+    secrets:
+      token: ${{ vars.APP_REPO_SUFFIX && secrets.CI_BOT_TOKEN || github.token }}
+
+  swap-tests:
+    name: Swap tests for ${{ matrix.app.name }}
+    needs: [prepare, merge-binaries]
+    if: ${{ needs.prepare.outputs.swap_matrix != '[]' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJSON(needs.prepare.outputs.swap_matrix) }}
+    uses: LedgerHQ/ledger-app-workflows/.github/workflows/reusable_swap_tests.yml@v1
+    with:
+      app_repository: LedgerHQ/${{ matrix.app.name }}
+      app_branch_name: ${{ matrix.app.ref }}
+      download_app_binaries_artifact: ${{ matrix.app.artifact }}
     secrets:
       token: ${{ vars.APP_REPO_SUFFIX && secrets.CI_BOT_TOKEN || github.token }}
