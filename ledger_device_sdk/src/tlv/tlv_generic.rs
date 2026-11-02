@@ -161,12 +161,13 @@ mod tlv_core {
             let tag_start = off;
             let tag = der_u32(payload, &mut off)?;
             let len = der_u32(payload, &mut off)? as usize;
-            if off + len > payload.len() {
+            let end = off.checked_add(len).ok_or(TlvError::LengthOverflow)?;
+            if end > payload.len() {
                 return Err(TlvError::UnexpectedEof);
             }
-            let val = &payload[off..off + len];
-            let raw = &payload[tag_start..off + len];
-            off += len;
+            let val = &payload[off..end];
+            let raw = &payload[tag_start..end];
+            off = end;
             let data = TlvData {
                 tag,
                 value: val,
