@@ -197,6 +197,9 @@ impl NbglStreamingReview {
     }
 
     fn start_internal(&self, title: &str, subtitle: Option<&str>) -> bool {
+        if !self.warning.as_ref().is_none_or(CWarning::fits) {
+            return false;
+        }
         unsafe {
             let title = CString::new(title).unwrap();
             let subtitle = match subtitle {

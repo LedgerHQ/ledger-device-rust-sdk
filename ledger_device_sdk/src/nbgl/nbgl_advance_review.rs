@@ -198,7 +198,10 @@ impl<'a> NbglAdvanceReview<'a> {
     }
 
     fn show_internal(&self, values: &[TagValue]) -> SyncNbgl {
-        if !tag_values_fit(values) || !self.tip_box.as_ref().is_none_or(CTipBox::fits) {
+        if !tag_values_fit(values)
+            || !self.tip_box.as_ref().is_none_or(CTipBox::fits)
+            || !self.warning.as_ref().is_none_or(CWarning::fits)
+        {
             return SyncNbgl::UxSyncRetError;
         }
         unsafe {

@@ -286,6 +286,9 @@ impl<'a> NbglChoice<'a> {
         cancel_text: &str,
         details: &WarningDetails,
     ) -> bool {
+        if !details.fits() {
+            return false;
+        }
         unsafe {
             let icon: nbgl_icon_details_t = match self.glyph {
                 Some(g) => g.into(),
@@ -394,6 +397,9 @@ impl<'a> NbglChoice<'a> {
         cancel_text: &str,
         details: &WarningDetails,
     ) -> bool {
+        if !details.fits() {
+            return false;
+        }
         unsafe {
             let center_icon: nbgl_icon_details_t = match self.glyph {
                 Some(g) => g.into(),
@@ -493,6 +499,26 @@ mod tests {
         assert_eq!(unsafe { G_CONFIRMATIONS.is_null() }, true);
         assert_eq!(answer(choice_confirm_callback, true), APPROVED);
         assert_eq!(answer(choice_confirm_callback, false), REJECTED);
+    }
+
+    #[test]
+    fn details_with_too_many_bars_are_refused() {
+        const BAR: WarningBar = WarningBar {
+            text: "Risk",
+            sub_text: None,
+            icon: None,
+            details: None,
+        };
+        static BARS: [WarningBar; 256] = [BAR; 256];
+        let details = WarningDetails::BarList {
+            title: "Risks",
+            bars: &BARS,
+        };
+        let choice = NbglChoice::new();
+        let shown = choice.show_with_details_internal("Sign?", "", "Yes", "No", &details);
+        assert_eq!(shown, false);
+        let shown = choice.show_advanced_internal(None, "Sign", "Sign?", "", "Yes", "No", &details);
+        assert_eq!(shown, false);
     }
 
     #[test]

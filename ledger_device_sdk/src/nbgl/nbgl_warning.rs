@@ -240,6 +240,25 @@ pub enum WarningDetails<'a> {
     },
 }
 
+impl WarningDetails<'_> {
+    /// Whether this page, and every page reachable from its bars, has at most
+    /// 255 bars per list, the `u8` count NBGL takes.
+    ///
+    /// Only reads lengths, so callers can reject a page before building its
+    /// C copy.
+    pub(crate) fn fits(&self) -> bool {
+        match self {
+            WarningDetails::BarList { bars, .. } => {
+                nb_items(bars.len()).is_some()
+                    && bars
+                        .iter()
+                        .all(|b| b.details.is_none_or(WarningDetails::fits))
+            }
+            _ => true,
+        }
+    }
+}
+
 /// A page shown before the review starts, mapped to `nbgl_preludeDetails_t`.
 ///
 /// On Nano only `title` is used.
@@ -640,7 +659,7 @@ impl CBarList {
 
     fn as_c_type(&self) -> nbgl_genericBarList_t {
         nbgl_genericBarList_t {
-            nbBars: self.texts_ptr.len() as u8,
+            nbBars: nb_items(self.texts_ptr.len()).expect("List too long for NBGL."),
             texts: self.texts_ptr.as_ptr(),
             subTexts: self.sub_texts_ptr.as_ptr(),
             // C declares this `*mut` although it only reads it.
@@ -773,6 +792,8 @@ impl CPrelude {
 /// NBGL only borrows the struct it is handed, so a value of this type must
 /// outlive the use-case call that received it.
 pub(crate) struct CWarning {
+    /// Whether every bar list in the warning fits NBGL; see [`Self::fits`].
+    fits: bool,
     predefined: u32,
     dapp_provider: Option<CString>,
     report_url: Option<CString>,
@@ -796,10 +817,20 @@ pub(crate) struct CWarning {
 
 impl CWarning {
     pub(crate) fn new(warning: &NbglWarning) -> CWarning {
-        let intro_details = warning.intro_details.map(CDetails::new);
-        let review_details = warning.review_details.map(CDetails::new);
+        let fits = [
+            warning.intro_details,
+            warning.review_details,
+            warning.prelude.and_then(|p| p.details),
+        ]
+        .into_iter()
+        .flatten()
+        .all(WarningDetails::fits);
+        // A warning that does not fit is never shown, so its pages are not
+        // converted: the C copy of an oversized bar list has no valid count.
+        let intro_details = warning.intro_details.filter(|_| fits).map(CDetails::new);
+        let review_details = warning.review_details.filter(|_| fits).map(CDetails::new);
         let info = warning.info.map(|i| Box::new(CCenterInfo::new(i)));
-        let prelude = warning.prelude.map(CPrelude::new);
+        let prelude = warning.prelude.filter(|_| fits).map(CPrelude::new);
 
         let c_intro_details = intro_details.as_ref().map(|d| Box::new(d.as_c_type()));
         let c_review_details = review_details.as_ref().map(|d| Box::new(d.as_c_type()));
@@ -807,6 +838,7 @@ impl CWarning {
         let c_prelude = prelude.as_ref().map(|p| Box::new(p.as_c_type()));
 
         CWarning {
+            fits,
             predefined: warning.predefined,
             dapp_provider: opt_cstring(warning.dapp_provider),
             report_url: opt_cstring(warning.report_url),
@@ -823,6 +855,13 @@ impl CWarning {
             c_info,
             c_prelude,
         }
+    }
+
+    /// Whether every bar list in the warning, at any depth, has at most 255
+    /// bars. A review must not start with a warning that does not fit: NBGL
+    /// would show fewer bars than the warning holds.
+    pub(crate) fn fits(&self) -> bool {
+        self.fits
     }
 
     /// Whether touching the review's warning button would find something to
@@ -861,5 +900,54 @@ impl CWarning {
                 None => core::ptr::null(),
             },
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::assert_eq_err as assert_eq;
+    use crate::testing::TestType;
+    use testmacro::test_item as test;
+
+    // `fits` only reads lengths, so a list one bar too long can live in flash
+    // rather than in the heap.
+    const BAR: WarningBar = WarningBar {
+        text: "Risk",
+        sub_text: None,
+        icon: None,
+        details: None,
+    };
+    static BARS: [WarningBar; 256] = [BAR; 256];
+
+    #[test]
+    fn bar_list_fits_up_to_255_bars() {
+        let fits = WarningDetails::BarList {
+            title: "Risks",
+            bars: &BARS[..255],
+        };
+        assert_eq!(fits.fits(), true);
+        let too_long = WarningDetails::BarList {
+            title: "Risks",
+            bars: &BARS,
+        };
+        assert_eq!(too_long.fits(), false);
+    }
+
+    #[test]
+    fn bar_list_fits_checks_nested_lists() {
+        let too_long = WarningDetails::BarList {
+            title: "Risks",
+            bars: &BARS,
+        };
+        let bars = [WarningBar {
+            details: Some(&too_long),
+            ..BAR
+        }];
+        let parent = WarningDetails::BarList {
+            title: "Details",
+            bars: &bars,
+        };
+        assert_eq!(parent.fits(), false);
     }
 }
