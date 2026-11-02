@@ -8,6 +8,16 @@ unsafe extern "C" {
     fn pic(link_address: *mut c_void) -> *mut c_void;
 }
 
+/// Index in the font tables of the glyph drawn for `c`. The font covers 0x20
+/// to 0x7F; any other byte (control characters, UTF-8 sequences) is drawn
+/// as the 0x7F placeholder.
+fn glyph_index(c: u8) -> usize {
+    match c {
+        0x20..=0x7F => usize::from(c - 0x20),
+        _ => 0x7F - 0x20,
+    }
+}
+
 impl StringPlace for &str {
     fn compute_width(&self, bold: bool) -> usize {
         let font_choice = bold as usize;
@@ -15,7 +25,7 @@ impl StringPlace for &str {
             .iter()
             .map(ledger_secure_sdk_sys::pic_rs)
             .fold(0, |acc, c| {
-                acc + OPEN_SANS[font_choice].dims[*c as usize - 0x20] as usize
+                acc + OPEN_SANS[font_choice].dims[glyph_index(*c)] as usize
             })
     }
 
@@ -25,7 +35,7 @@ impl StringPlace for &str {
 
         let font_choice = bold as usize;
         for c in self.as_bytes().iter().map(ledger_secure_sdk_sys::pic_rs) {
-            let offset_c = *c as usize - 0x20;
+            let offset_c = glyph_index(*c);
             let character = unsafe {
                 let tmp = pic(OPEN_SANS[font_choice].chars.0[offset_c].as_ptr() as *mut c_void)
                     as *const u8;
@@ -90,6 +100,38 @@ impl<'a> StringPlace for [Label<'a>] {
         for label in self.iter() {
             label.place(Location::Custom(cur_y), layout, label.bold);
             cur_y += c_height + 2 * padding;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::assert_eq_err as assert_eq;
+    use crate::testing::TestType;
+    use testmacro::test_item as test;
+
+    #[test]
+    fn glyph_index_covers_the_font() {
+        assert_eq!(glyph_index(b' '), 0);
+        assert_eq!(glyph_index(0x7F), OPEN_SANS[0].dims.len() - 1);
+        assert_eq!(glyph_index(b'\n'), glyph_index(0x7F));
+        assert_eq!(glyph_index(0x1F), glyph_index(0x7F));
+        assert_eq!(glyph_index(0xC3), glyph_index(0x7F));
+        assert_eq!(glyph_index(0xFF), glyph_index(0x7F));
+    }
+
+    #[test]
+    fn unsupported_bytes_are_measured_as_placeholders() {
+        for bold in [false, true] {
+            let placeholder = "\u{7f}".compute_width(bold);
+            assert_eq!("\t".compute_width(bold), placeholder);
+            // U+00E9 is two bytes in UTF-8.
+            assert_eq!("\u{e9}".compute_width(bold), 2 * placeholder);
+            assert_eq!(
+                "a\nb".compute_width(bold),
+                "a".compute_width(bold) + placeholder + "b".compute_width(bold)
+            );
         }
     }
 }
