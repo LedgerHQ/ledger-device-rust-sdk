@@ -107,14 +107,19 @@ macro_rules! set_panic {
 }
 
 unsafe extern "C" {
-    fn c_main();
+    // `int c_main(int arg0)` in ledger_secure_sdk_sys/src/c/src.c
+    fn c_main(arg0: core::ffi::c_int) -> core::ffi::c_int;
 }
 
+/// Application entry point, called by the OS with `arg0` in `r0`: 0 for a
+/// normal start, or a pointer to the `libargs_t` of a library call (swap).
+/// `c_main` uses it to decide whether to reset BSS and start I/O, and passes
+/// it on to `sample_main`.
 #[unsafe(link_section = ".boot")]
 #[unsafe(no_mangle)]
-pub extern "C" fn _start() -> ! {
+pub extern "C" fn _start(arg0: core::ffi::c_int) -> ! {
     // Main is in C until the try_context can be set properly from Rust
-    unsafe { c_main() };
+    unsafe { c_main(arg0) };
     ledger_secure_sdk_sys::exit_app(1);
 }
 
