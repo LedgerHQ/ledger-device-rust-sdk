@@ -8,12 +8,11 @@ use ledger_secure_sdk_sys::{
 
 use crate::ui::bitmaps::Glyph;
 
-// Only used by the legacy-IO gadgets (`display_pending_review`, `MultiPageMenu`)
+use crate::uxapp::{BOLOS_UX_OK, UxEvent};
+
+// Only used by the legacy-IO gadgets (`display_pending_review`)
 #[cfg(not(feature = "io_new"))]
-use crate::{
-    ui::bitmaps::WARNING,
-    uxapp::{BOLOS_UX_OK, UxEvent},
-};
+use crate::ui::bitmaps::WARNING;
 #[cfg(not(feature = "io_new"))]
 use ledger_secure_sdk_sys::buttons::ButtonEvent::*;
 
@@ -31,23 +30,45 @@ const BOLD_NORMAL_LINES: usize = 3;
 /// Handles communication to filter
 /// out actual events, and converts key
 /// events into presses/releases
+///
+/// Every SE or SEPH event (buttons, ticker) is first passed to the OS UX task,
+/// which handles the auto-lock and the PIN screen. A button is returned only
+/// while the OS reports that the application has the screen
+/// (`BOLOS_UX_OK`); when the OS takes it, this waits until it gives it back
+/// and returns `None`, and the caller has to redraw its screen.
 pub fn get_event(buttons: &mut ButtonsState) -> Option<ButtonEvent> {
+    get_event_or_redraw(buttons, || ())
+}
+
+/// [`get_event`], calling `redraw` once the OS gives the screen back after
+/// taking it (for instance after the PIN lock).
+fn get_event_or_redraw(
+    buttons: &mut ButtonsState,
+    mut redraw: impl FnMut(),
+) -> Option<ButtonEvent> {
     let mut io_buffer = [0u8; 273];
     let status = seph::io_rx(&mut io_buffer, true);
-    if status > 0 {
-        let packet_type = io_buffer[0];
-        match packet_type {
-            0x01 | 0x02 => {
-                // SE or SEPH event
-                if io_buffer[1] == 0x05 {
-                    let button_info = io_buffer[4] >> 1;
-                    return get_button_event(buttons, button_info);
-                }
-            }
-            _ => {}
-        }
+    if status <= 0 {
+        return None;
     }
-    None
+    match io_buffer[0] {
+        // SE or SEPH event
+        0x01 | 0x02 => {
+            if UxEvent::Event.request() != BOLOS_UX_OK {
+                UxEvent::block();
+                // Presses seen before the OS took over do not carry on.
+                *buttons = ButtonsState::new();
+                redraw();
+                return None;
+            }
+            if io_buffer[1] == 0x05 {
+                let button_info = io_buffer[4] >> 1;
+                return get_button_event(buttons, button_info);
+            }
+            None
+        }
+        _ => None,
+    }
 }
 
 pub fn clear_screen() {
@@ -149,7 +170,7 @@ impl<'a> Validator<'a> {
         let mut response = false;
 
         loop {
-            match get_event(&mut buttons) {
+            match get_event_or_redraw(&mut buttons, || redraw(&lines)) {
                 Some(ButtonEvent::LeftButtonPress) => {
                     UP_S_ARROW.instant_display();
                 }
@@ -269,7 +290,7 @@ impl<'a> MessageValidator<'a> {
 
         let mut buttons = ButtonsState::new();
         loop {
-            match get_event(&mut buttons) {
+            match get_event_or_redraw(&mut buttons, || draw(cur_page)) {
                 Some(ButtonEvent::LeftButtonPress) => {
                     LEFT_S_ARROW.instant_display();
                 }
@@ -331,7 +352,14 @@ impl<'a> Menu<'a> {
         let mut index = 0;
 
         loop {
-            match get_event(&mut buttons) {
+            let redraw = || {
+                clear_screen();
+                UP_ARROW.display();
+                DOWN_ARROW.display();
+                items.place(Location::Middle, Layout::Centered, false);
+                crate::ui::screen_util::screen_update();
+            };
+            match get_event_or_redraw(&mut buttons, redraw) {
                 Some(ButtonEvent::LeftButtonPress) => {
                     UP_S_ARROW.instant_display();
                 }
@@ -512,11 +540,18 @@ impl<'a> Page<'a> {
     pub fn place_and_wait(&self) {
         let mut buttons = ButtonsState::new();
 
-        self.place();
-        crate::ui::screen_util::screen_update();
+        let draw = || {
+            self.place();
+            crate::ui::screen_util::screen_update();
+        };
+        draw();
 
         loop {
-            match get_event(&mut buttons) {
+            let redraw = || {
+                clear_screen();
+                draw();
+            };
+            match get_event_or_redraw(&mut buttons, redraw) {
                 Some(ButtonEvent::LeftButtonRelease)
                 | Some(ButtonEvent::RightButtonRelease)
                 | Some(ButtonEvent::BothButtonsRelease) => return,
@@ -655,7 +690,7 @@ impl<'a> SingleMessage<'a> {
         self.show();
 
         loop {
-            match get_event(&mut buttons) {
+            match get_event_or_redraw(&mut buttons, || self.show()) {
                 Some(ButtonEvent::LeftButtonRelease)
                 | Some(ButtonEvent::RightButtonRelease)
                 | Some(ButtonEvent::BothButtonsRelease) => return,
@@ -711,7 +746,11 @@ impl<'a> MessageScroller<'a> {
         draw(cur_page);
 
         loop {
-            match get_event(&mut buttons) {
+            let redraw = || {
+                clear_screen();
+                draw(cur_page);
+            };
+            match get_event_or_redraw(&mut buttons, redraw) {
                 Some(ButtonEvent::LeftButtonPress) => {
                     LEFT_S_ARROW.instant_display();
                 }
@@ -806,7 +845,7 @@ impl<'a> Field<'a> {
         draw(cur_page);
 
         loop {
-            match get_event(&mut buttons) {
+            match get_event_or_redraw(&mut buttons, || draw(cur_page)) {
                 Some(ButtonEvent::LeftButtonPress) => {
                     LEFT_S_ARROW.instant_display();
                 }
@@ -987,12 +1026,15 @@ impl<'a> MultiFieldReview<'a> {
             match cur_page {
                 cancel if cancel == self.fields.len() + 1 => {
                     let mut buttons = ButtonsState::new();
-                    clear_screen();
-                    LEFT_ARROW.display();
-                    cancel_page.place();
-                    crate::ui::screen_util::screen_update();
+                    let draw = || {
+                        clear_screen();
+                        LEFT_ARROW.display();
+                        cancel_page.place();
+                        crate::ui::screen_util::screen_update();
+                    };
+                    draw();
                     loop {
-                        match get_event(&mut buttons) {
+                        match get_event_or_redraw(&mut buttons, draw) {
                             Some(ButtonEvent::LeftButtonRelease) => {
                                 cur_page = cur_page.saturating_sub(1);
                                 break;
@@ -1004,13 +1046,16 @@ impl<'a> MultiFieldReview<'a> {
                 }
                 validation if validation == self.fields.len() => {
                     let mut buttons = ButtonsState::new();
-                    clear_screen();
-                    LEFT_ARROW.display();
-                    RIGHT_ARROW.display();
-                    validation_page.place();
-                    crate::ui::screen_util::screen_update();
+                    let draw = || {
+                        clear_screen();
+                        LEFT_ARROW.display();
+                        RIGHT_ARROW.display();
+                        validation_page.place();
+                        crate::ui::screen_util::screen_update();
+                    };
+                    draw();
                     loop {
-                        match get_event(&mut buttons) {
+                        match get_event_or_redraw(&mut buttons, draw) {
                             Some(ButtonEvent::LeftButtonRelease) => {
                                 cur_page = cur_page.saturating_sub(1);
                                 if cur_page == 0 && self.fields.is_empty() {
@@ -1054,14 +1099,17 @@ impl<'a> MultiFieldReview<'a> {
 
 fn display_first_page(page_opt: &Option<Page>) {
     if let Some(page) = page_opt {
-        clear_screen();
-        RIGHT_ARROW.display();
-        page.place();
-        crate::ui::screen_util::screen_update();
+        let draw = || {
+            clear_screen();
+            RIGHT_ARROW.display();
+            page.place();
+            crate::ui::screen_util::screen_update();
+        };
+        draw();
 
         let mut buttons = ButtonsState::new();
         loop {
-            if let Some(ButtonEvent::RightButtonRelease) = get_event(&mut buttons) {
+            if let Some(ButtonEvent::RightButtonRelease) = get_event_or_redraw(&mut buttons, draw) {
                 return;
             }
         }
