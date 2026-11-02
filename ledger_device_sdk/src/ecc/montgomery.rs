@@ -72,6 +72,7 @@ impl<const N: usize> ECPrivateKey<N, 'M'> {
     /// Return the generated shared secret.
     /// We suppose the group size `N` is the same as the shared secret size.
     pub fn ecdh(&self, p: &[u8]) -> Result<[u8; N], CxError> {
+        self.check_layout()?;
         let mut secret = [0u8; N];
         let len = unsafe {
             cx_ecdh_no_throw(
