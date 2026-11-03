@@ -19,7 +19,8 @@ jobs:
           fetch-tags: true
           repository: ${{ github.repository }}
           ref: ${{ github.ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # Only reads the crate versions: no credentials left on the runner.
+          persist-credentials: false
 
       - name: Check versions against changelogs
         run: |
