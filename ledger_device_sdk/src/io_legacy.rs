@@ -259,7 +259,15 @@ pub struct Comm {
     pub expected_cla: Option<u8>,
 
     pub apdu_type: u8,
+    /// Response being built with [`Comm::append`] or by indexing the `Comm`,
+    /// sent by [`Comm::reply`]. Received frames go to `rx_buffer`, so polling
+    /// events before replying leaves the response as it is.
     pub io_buffer: [u8; 273],
+    /// Last frame received: an APDU or a SEPH event.
+    pub(crate) rx_buffer: [u8; 273],
+    /// Header of the last APDU accepted, returned by
+    /// [`Comm::get_apdu_metadata`].
+    header: ApduHeader,
     pub rx_length: usize,
     pub tx_length: usize,
     /// When true, apdu_send skips the io_rx(false) call.
@@ -307,6 +315,13 @@ impl Comm {
             expected_cla: None,
             apdu_type: seph::PacketTypes::PacketTypeNone as u8,
             io_buffer: [0u8; 273],
+            rx_buffer: [0u8; 273],
+            header: ApduHeader {
+                cla: 0,
+                ins: 0,
+                p1: 0,
+                p2: 0,
+            },
             rx_length: 0,
             tx_length: 0,
             skip_rx_on_send: false,
@@ -442,7 +457,7 @@ impl Comm {
         self.refresh_nbgl_registration();
         self.rx_length = 0;
         loop {
-            let status = sys_seph::io_rx(&mut self.io_buffer, true);
+            let status = sys_seph::io_rx(&mut self.rx_buffer, true);
 
             if status > 0
                 && let Some(value) = self.decode_event(status)
@@ -467,7 +482,7 @@ impl Comm {
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
-        let status = sys_seph::io_rx(&mut self.io_buffer, true);
+        let status = sys_seph::io_rx(&mut self.rx_buffer, true);
         if status <= 0 {
             return false;
         }
@@ -476,51 +491,54 @@ impl Comm {
         self.detect_apdu::<T>(status)
     }
 
-    /// Answer an APDU of `rx` bytes, still in `io_buffer`, received while
+    /// Answer an APDU of `rx` bytes, still in `rx_buffer`, received while
     /// another command is in flight.
     ///
     /// Only BOLOS [`BOLOS_INS_GET_VERSION`] is answered inline, as `io_new`
     /// does, so that hosts can still identify the app while a screen is
     /// displayed. Everything else is answered [`StatusWords::CmdNotAccepted`].
     /// The reply goes out on the transport the APDU was received on, and the
-    /// state of the command in flight is kept as is.
+    /// command in flight is kept as is, including its header and any response
+    /// already staged.
     fn handle_double_apdu(&mut self, rx: usize) {
-        let received_apdu_type = self.io_buffer[0];
+        let received_apdu_type = self.rx_buffer[0];
 
         if Self::is_device_locked() {
             self.reject_apdu(StatusWords::DeviceLocked);
             return;
         }
 
-        if rx < 4 || !is_bolos_apdu_allowed_in_flight(self.io_buffer[1], self.io_buffer[2]) {
+        if rx < 4 || !is_bolos_apdu_allowed_in_flight(self.rx_buffer[1], self.rx_buffer[2]) {
             self.reject_apdu(StatusWords::CmdNotAccepted);
             return;
         }
 
         // `get_data` cannot validate the length here as it works on the
         // in-flight command's `apdu_buffer`. BOLOS APDUs only use short Lc.
-        let lc = self.io_buffer[5] as usize;
+        let lc = self.rx_buffer[5] as usize;
         let length_ok = rx == 4 || (rx == 5 && lc == 0) || (lc != 0 && rx == 5 + lc);
         if !length_ok {
             self.reject_apdu(StatusWords::BadLen);
             return;
         }
 
-        // `handle_bolos_apdu` reads its request from `io_buffer` and replies
+        // `handle_bolos_apdu` builds its answer in `io_buffer` and replies
         // through `apdu_send`, which uses the response state: reply on the
-        // received APDU's transport, then restore the command's state.
+        // received APDU's transport, then restore the command's response.
         let saved = (self.apdu_type, self.tx, self.tx_length, self.rx_length);
+        let staged = self.io_buffer;
         self.apdu_type = received_apdu_type;
         self.tx = 0;
         self.tx_length = 0;
         self.skip_rx_on_send = true;
         handle_bolos_apdu(
             self,
-            self.io_buffer[2],
-            self.io_buffer[3],
-            self.io_buffer[4],
+            self.rx_buffer[2],
+            self.rx_buffer[3],
+            self.rx_buffer[4],
         );
         (self.apdu_type, self.tx, self.tx_length, self.rx_length) = saved;
+        self.io_buffer = staged;
         self.skip_rx_on_send = false;
         self.apdu_in_progress = true;
     }
@@ -556,20 +574,15 @@ impl Comm {
             }
 
             // Manage BOLOS specific APDUs B0xxyyzz
-            if self.io_buffer[1] == 0xB0 {
+            if self.header.cla == 0xB0 {
                 self.skip_rx_on_send = true;
-                handle_bolos_apdu(
-                    self,
-                    self.io_buffer[2],
-                    self.io_buffer[3],
-                    self.io_buffer[4],
-                );
+                handle_bolos_apdu(self, self.header.ins, self.header.p1, self.header.p2);
                 return None;
             }
 
             // If CLA filtering is enabled, automatically reject APDUs with wrong CLA
             if let Some(cla) = self.expected_cla
-                && self.io_buffer[1] != cla
+                && self.header.cla != cla
             {
                 self.reply(StatusWords::BadCla);
                 return None;
@@ -717,13 +730,13 @@ impl Comm {
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
-        let packet_type = self.io_buffer[0];
+        let packet_type = self.rx_buffer[0];
 
         match seph::PacketTypes::from(packet_type) {
             seph::PacketTypes::PacketTypeSeph | seph::PacketTypes::PacketTypeSeEvent => {
                 // SE or SEPH event
                 let mut seph_buffer = [0u8; 272];
-                seph_buffer[0..272].copy_from_slice(&self.io_buffer[1..273]);
+                seph_buffer[0..272].copy_from_slice(&self.rx_buffer[1..273]);
                 if let Some(event) = self.process_event(seph_buffer, length - 1) {
                     return Some(event);
                 }
@@ -744,7 +757,13 @@ impl Comm {
                     self.reply(StatusWords::DeviceLocked);
                     return None;
                 }
-                self.apdu_buffer[0..272].copy_from_slice(&self.io_buffer[1..273]);
+                self.apdu_buffer[0..272].copy_from_slice(&self.rx_buffer[1..273]);
+                self.header = ApduHeader {
+                    cla: self.rx_buffer[1],
+                    ins: self.rx_buffer[2],
+                    p1: self.rx_buffer[3],
+                    p2: self.rx_buffer[4],
+                };
                 self.apdu_type = packet_type;
                 self.rx_length = length as usize;
                 self.rx = self.rx_length - 1;
@@ -784,7 +803,7 @@ impl Comm {
     fn reject_apdu(&self, sw: StatusWords) {
         let sw = sw as u16;
         let resp = [(sw >> 8) as u8, sw as u8];
-        sys_seph::io_tx(self.io_buffer[0], &resp, resp.len());
+        sys_seph::io_tx(self.rx_buffer[0], &resp, resp.len());
     }
 
     /// Wait for the next Command event. Discards received button events.
@@ -881,11 +900,10 @@ impl Comm {
         self.reply_ok();
     }
 
-    /// Return APDU Metadata
+    /// Return APDU Metadata: the header of the last APDU accepted, which
+    /// events or APDUs received since do not change.
     pub fn get_apdu_metadata(&self) -> &ApduHeader {
-        assert!(self.io_buffer.len() >= 5);
-        let ptr = &self.io_buffer[1] as &u8 as *const u8 as *const ApduHeader;
-        unsafe { &*ptr }
+        &self.header
     }
 
     pub fn get_data(&self) -> Result<&[u8], StatusWords> {
@@ -1159,31 +1177,53 @@ mod test {
         assert_eq!(c.data_range().is_err(), true);
     }
 
-    /// An APDU decoded while a command is in flight, as `next_event` does when
-    /// an app polls for buttons before replying, is rejected and leaves the
-    /// command in flight untouched.
+    /// Puts `apdu` in the receive buffer as if it had arrived on `transport`,
+    /// and decodes it.
+    fn receive(c: &mut Comm, transport: u8, apdu: &[u8]) -> Option<Event<ApduHeader>> {
+        c.rx_buffer[0] = transport;
+        c.rx_buffer[1..1 + apdu.len()].copy_from_slice(apdu);
+        c.decode_event::<ApduHeader>(apdu.len() as i32 + 1)
+    }
+
+    fn header_of(c: &Comm) -> (u8, u8, u8, u8) {
+        let h = c.get_apdu_metadata();
+        (h.cla, h.ins, h.p1, h.p2)
+    }
+
+    /// APDUs received while a command is in flight, as when an app polls for
+    /// buttons before replying, are answered without changing the command in
+    /// flight: its header, data, transport and the response already staged.
     #[test]
     fn double_apdu_keeps_the_command_in_flight() {
         let mut c = Comm::new();
-        // Command A in flight: received over USB HID, not replied to yet.
+        // Command A, received over USB HID and handed to the application.
         let a = [0xe0, 0x02, 0x00, 0x00, 0x02, 0xaa, 0xbb];
-        c.apdu_buffer[..a.len()].copy_from_slice(&a);
-        c.apdu_type = OS_IO_PACKET_TYPE_USB_HID_APDU as u8;
-        c.rx_length = a.len() + 1;
-        c.rx = a.len();
-        c.apdu_in_progress = true;
+        let event = receive(&mut c, OS_IO_PACKET_TYPE_USB_HID_APDU, &a);
+        assert_eq!(matches!(event, Some(Event::Command(_))), true);
+        assert_eq!(c.apdu_in_progress, true);
+        // Part of its response is staged before replying.
+        c.append(&[0x11, 0x22, 0x33]);
 
-        // Command B, with other data, arrives over BLE.
-        let b = [0xe0, 0x02, 0x00, 0x00, 0x02, 0xcc, 0xdd];
-        c.io_buffer[0] = OS_IO_PACKET_TYPE_BLE_APDU as u8;
-        c.io_buffer[1..1 + b.len()].copy_from_slice(&b);
+        // Command B, with another header and data, arrives over BLE and is
+        // rejected; then BOLOS GET_VERSION, which is answered inline.
+        let b = [0xe0, 0x04, 0x01, 0x00, 0x02, 0xcc, 0xdd];
+        assert_eq!(
+            receive(&mut c, OS_IO_PACKET_TYPE_BLE_APDU, &b).is_none(),
+            true
+        );
+        let get_version = [0xb0, BOLOS_INS_GET_VERSION, 0x00, 0x00];
+        assert_eq!(
+            receive(&mut c, OS_IO_PACKET_TYPE_BLE_APDU, &get_version).is_none(),
+            true
+        );
 
-        let event = c.decode_event::<ApduHeader>(b.len() as i32 + 1);
-        assert_eq!(event.is_none(), true);
+        assert_eq!(header_of(&c), (0xe0, 0x02, 0x00, 0x00));
         assert_eq!(c.apdu_buffer[..a.len()] == a, true);
-        assert_eq!(c.apdu_type, OS_IO_PACKET_TYPE_USB_HID_APDU as u8);
-        assert_eq!(c.rx_length, a.len() + 1);
+        assert_eq!(c.get_data().ok() == Some(&[0xaa, 0xbb][..]), true);
+        assert_eq!(c.apdu_type, OS_IO_PACKET_TYPE_USB_HID_APDU);
         assert_eq!(c.rx, a.len());
+        assert_eq!(c.tx_length, 3);
+        assert_eq!(c.io_buffer[..3] == [0x11, 0x22, 0x33], true);
         assert_eq!(c.event_pending, false);
         assert_eq!(c.apdu_in_progress, true);
     }
