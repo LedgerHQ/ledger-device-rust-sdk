@@ -384,8 +384,12 @@ impl TagValueConfirm {
 #[allow(clippy::needless_update)]
 impl From<&TagValueConfirm> for nbgl_contentTagValueConfirm_t {
     fn from(tvc: &TagValueConfirm) -> nbgl_contentTagValueConfirm_t {
+        let mut tag_value_list: nbgl_contentTagValueList_t = (&tvc.tag_value_list).into();
+        // A touched value icon reports the list token to the same callback as
+        // the confirmation button, so it must not share its token.
+        tag_value_list.token = VALUE_ICON_TOKEN as u8;
         nbgl_contentTagValueConfirm_t {
-            tagValueList: (&tvc.tag_value_list).into(),
+            tagValueList: tag_value_list,
             detailsButtonToken: (FIRST_USER_TOKEN + 2) as u8,
             tuneId: tvc.tune_id as u8,
             confirmationText: tvc.confirmation_text.as_ptr() as *const c_char,
@@ -459,16 +463,26 @@ impl From<&InfosList> for nbgl_contentInfoList_t {
 /// end the review.
 const INTERMEDIATE_ACTION_TOKEN: u32 = FIRST_USER_TOKEN + 3;
 
-unsafe extern "C" fn action_callback(token: c_int, _index: u8, _page: c_int) {
-    if token == INTERMEDIATE_ACTION_TOKEN as i32 {
-        return;
-    }
-    unsafe {
-        if token == FIRST_USER_TOKEN as i32 {
-            G_RET = SyncNbgl::UxSyncRetApproved.into();
-        } else if token == (FIRST_USER_TOKEN + 1) as i32 {
-            G_RET = SyncNbgl::UxSyncRetRejected.into();
+/// Token of the value icons of a [`TagValueConfirm`]: a touch is reported to
+/// the app, and does not end the review.
+const VALUE_ICON_TOKEN: u32 = FIRST_USER_TOKEN + 4;
+
+/// Callback of the contents that can end a flow. Only the confirmation and
+/// cancel tokens end it; any other token leaves it running.
+unsafe extern "C" fn action_callback(token: c_int, index: u8, page: c_int) {
+    let result = if token == FIRST_USER_TOKEN as c_int {
+        SyncNbgl::UxSyncRetApproved
+    } else if token == (FIRST_USER_TOKEN + 1) as c_int {
+        SyncNbgl::UxSyncRetRejected
+    } else {
+        if token == VALUE_ICON_TOKEN as c_int {
+            // Reported with the token of a plain TagValueList.
+            unsafe { content_action_callback(FIRST_USER_TOKEN as c_int, index, page) };
         }
+        return;
+    };
+    unsafe {
+        G_RET = result.into();
         G_ENDED = true;
     }
 }
@@ -880,12 +894,15 @@ impl NbglGenericReview {
     }
 
     /// Sets the function run when a control inside one of the contents is
-    /// touched — a switch, a choice, or a bar.
+    /// touched — a switch, a choice, a bar, or a value icon.
     ///
     /// It receives the token of the touched element and, for a choices list,
     /// the index chosen. Each content type assigns `FIRST_USER_TOKEN + i` to
     /// its `i`th element, except `ChoicesList`, which uses one token and
-    /// reports the selection in `index`.
+    /// reports the selection in `index`, and the value icons of a
+    /// `TagValueList` or `TagValueConfirm`, reported as `FIRST_USER_TOKEN` with
+    /// the index of the pair on its page. Touching a value icon never ends the
+    /// review.
     ///
     /// Without this the interactive lists are drawn but report nothing.
     pub fn on_action(mut self, on_action: fn(u8, u8)) -> NbglGenericReview {
@@ -1050,5 +1067,75 @@ mod tests {
         assert_eq!(unsafe { CStr::from_ptr(pair.item) }.to_bytes(), b"Amount");
         assert_eq!(unsafe { CStr::from_ptr(pair.value) }.to_bytes(), b"42");
         drop(churn);
+    }
+
+    static mut LAST_ACTION: Option<(u8, u8)> = None;
+
+    fn record_action(token: u8, index: u8) {
+        unsafe { LAST_ACTION = Some((token, index)) };
+    }
+
+    /// Runs `action_callback` with `token` on a flow still running, and
+    /// returns whether it ended the flow, with the result it set.
+    fn run_action(token: u32, index: u8) -> (bool, u8) {
+        unsafe {
+            G_RET = SyncNbgl::UxSyncRetError.into();
+            G_ENDED = false;
+            action_callback(token as c_int, index, 0);
+            (G_ENDED, G_RET)
+        }
+    }
+
+    #[test]
+    fn tag_value_confirm_value_icons_do_not_share_the_confirmation_token() {
+        let tvc = TagValueConfirm::new(
+            &TagValueList::new(
+                &[Field {
+                    name: "To",
+                    value: "alice",
+                }],
+                0,
+                false,
+                false,
+            ),
+            TuneIndex::TapCasual,
+            "Approve",
+            "Reject",
+        );
+        let c_tvc: nbgl_contentTagValueConfirm_t = (&tvc).into();
+        assert_eq!(c_tvc.tagValueList.token, VALUE_ICON_TOKEN as u8);
+        assert_eq!(c_tvc.confirmationToken, FIRST_USER_TOKEN as u8);
+        assert_eq!(c_tvc.cancelToken, (FIRST_USER_TOKEN + 1) as u8);
+    }
+
+    #[test]
+    fn value_icon_touch_is_reported_without_ending_the_review() {
+        set_content_action(Some(record_action));
+        unsafe { LAST_ACTION = None };
+
+        assert_eq!(
+            run_action(VALUE_ICON_TOKEN, 2),
+            (false, SyncNbgl::UxSyncRetError.into())
+        );
+        assert_eq!(unsafe { LAST_ACTION }, Some((FIRST_USER_TOKEN as u8, 2)));
+
+        set_content_action(None);
+    }
+
+    #[test]
+    fn only_confirm_and_cancel_tokens_end_the_review() {
+        let error: u8 = SyncNbgl::UxSyncRetError.into();
+        assert_eq!(
+            run_action(FIRST_USER_TOKEN, 0),
+            (true, SyncNbgl::UxSyncRetApproved.into())
+        );
+        assert_eq!(
+            run_action(FIRST_USER_TOKEN + 1, 0),
+            (true, SyncNbgl::UxSyncRetRejected.into())
+        );
+        assert_eq!(run_action(FIRST_USER_TOKEN + 2, 0), (false, error));
+        assert_eq!(run_action(INTERMEDIATE_ACTION_TOKEN, 0), (false, error));
+        assert_eq!(run_action(0, 0), (false, error));
+        assert_eq!(run_action(VALUE_ICON_TOKEN, 0), (false, error));
     }
 }
