@@ -9,6 +9,7 @@
 //!
 //! Used to display streamed transaction review screens.
 use super::*;
+use alloc::boxed::Box;
 
 /// A builder to create and show a streaming review flow.
 pub struct NbglStreamingReview {
@@ -18,6 +19,11 @@ pub struct NbglStreamingReview {
     skip: bool,
     /// Owns the C strings, icons and details tree behind the warning.
     warning: Option<CWarning>,
+    /// The warning handed to `nbgl_useCaseAdvancedReviewStreamingStart`, built
+    /// from `warning` and `blind`. NBGL keeps this pointer until the review
+    /// ends, so it is boxed to stay at the same address for as long as the
+    /// builder lives, even if the builder moves.
+    c_warning: Option<Box<nbgl_warning_t>>,
     /// Extra `nbgl_operationType_t` bits set alongside the transaction type.
     operation_flags: nbgl_operationType_t,
     /// App handler for a touched value icon.
@@ -50,6 +56,7 @@ impl NbglStreamingReview {
             blind: false,
             skip: false,
             warning: None,
+            c_warning: None,
             operation_flags: 0,
             on_value_icon: None,
         }
@@ -125,6 +132,7 @@ impl NbglStreamingReview {
             blind: true,
             ..self
         }
+        .with_c_warning()
     }
 
     /// Sets the icon to display in the center of the page.
@@ -188,12 +196,16 @@ impl NbglStreamingReview {
             warning: Some(CWarning::new(warning)),
             ..self
         }
+        .with_c_warning()
     }
 
-    /// The warning handed to `nbgl_useCaseAdvancedReviewStreamingStart`, if
-    /// one is set; blind mode adds the blind-signing warning to it.
-    fn c_warning(&self) -> Option<nbgl_warning_t> {
-        with_blind_signing(self.warning.as_ref().map(CWarning::as_c_type), self.blind)
+    /// Rebuilds the warning handed to `nbgl_useCaseAdvancedReviewStreamingStart`,
+    /// if one is set; blind mode adds the blind-signing warning to it.
+    fn with_c_warning(self) -> NbglStreamingReview {
+        let c_warning =
+            with_blind_signing(self.warning.as_ref().map(CWarning::as_c_type), self.blind)
+                .map(Box::new);
+        NbglStreamingReview { c_warning, ..self }
     }
 
     fn start_internal(&self, title: &str, subtitle: Option<&str>) -> bool {
@@ -212,14 +224,14 @@ impl NbglStreamingReview {
             };
 
             self.ux_sync_init();
-            match self.c_warning() {
+            match self.c_warning.as_deref() {
                 Some(warning) => {
                     nbgl_useCaseAdvancedReviewStreamingStart(
                         self.c_operation_type(),
                         &self.icon as *const nbgl_icon_details_t,
                         title.as_ptr() as *const c_char,
                         subtitle_ptr,
-                        &warning as *const nbgl_warning_t,
+                        warning as *const nbgl_warning_t,
                         Some(choice_callback),
                     );
                 }
@@ -486,6 +498,34 @@ mod tests {
         assert_eq!(
             warning.is_some_and(|w| w.dAppProvider == DAPP.as_ptr()),
             true
+        );
+    }
+
+    // NBGL keeps the start warning's address for the whole review: it must not
+    // change when the builder moves between `start` and `next`/`finish`.
+    #[test]
+    fn start_warning_keeps_its_address_when_the_review_moves() {
+        let review = NbglStreamingReview::new().blind();
+        // Blind mode without a warning uses the plain blind-signing start.
+        assert_eq!(review.c_warning.is_none(), true);
+
+        let review = NbglStreamingReview {
+            c_warning: with_blind_signing(Some(risk_warning()), review.blind).map(Box::new),
+            ..review
+        };
+        let before = review
+            .c_warning
+            .as_deref()
+            .map(|w| w as *const nbgl_warning_t);
+        let moved = [review];
+        let after = moved[0]
+            .c_warning
+            .as_deref()
+            .map(|w| w as *const nbgl_warning_t);
+        assert_eq!(before.is_some() && before == after, true);
+        assert_eq!(
+            moved[0].c_warning.as_deref().map(|w| w.predefinedSet),
+            Some(RISK | BLIND)
         );
     }
 
