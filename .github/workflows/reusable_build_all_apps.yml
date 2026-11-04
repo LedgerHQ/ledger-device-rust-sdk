@@ -60,12 +60,11 @@ jobs:
       outputs:
         rust_apps: ${{ steps.get_rust_apps.outputs.rust_apps }}
       steps:
+        # The app list helper and its requirements come from this workflow's
+        # own revision, not from the SDK revision under test.
         - name: Checkout repository
           uses: actions/checkout@v6
           with:
-            repository: ${{ inputs.rust_sdk_repo }}
-            ref: ${{ inputs.rust_sdk_branch || 'master' }}
-            token: ${{ secrets.CI_BOT_TOKEN || github.token }}
             persist-credentials: false
         - name: Set up Python
           uses: actions/setup-python@v6

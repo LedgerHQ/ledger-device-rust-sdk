@@ -63,6 +63,7 @@ jobs:
           repository: ${{ inputs.rust_sdk_repo }}
           ref: ${{ inputs.rust_sdk_branch }}
           token: ${{ secrets.CI_BOT_TOKEN || github.token }}
+          persist-credentials: false
 
       - name: Clone C SDK
         if: ${{ inputs.c_sdk_branch != '' }}
@@ -72,6 +73,7 @@ jobs:
           ref: ${{ inputs.c_sdk_branch }}
           token: ${{ secrets.CI_BOT_TOKEN || github.token }}
           path: c_sdk
+          persist-credentials: false
 
       - name: Setup C SDK
         if: ${{ inputs.c_sdk_branch != '' }}
