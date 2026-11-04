@@ -472,13 +472,7 @@ impl Comm {
             return false;
         }
 
-        // An APDU received while a command is in flight is handled directly on
-        // the received frame, whatever its CLA or length.
-        if self.apdu_in_progress && Self::is_apdu_packet(self.io_buffer[0]) {
-            self.handle_double_apdu(status as usize - 1);
-            return false;
-        }
-
+        // A double APDU is answered by `decode_event`, and is not a command.
         self.detect_apdu::<T>(status)
     }
 
@@ -739,6 +733,13 @@ impl Comm {
             | seph::PacketTypes::PacketTypeUsbHidApdu
             | seph::PacketTypes::PacketTypeUsbWebusbApdu
             | seph::PacketTypes::PacketTypeBleApdu => {
+                // An APDU received while a command is in flight is handled
+                // directly on the received frame, whatever its CLA or length,
+                // and whichever function received it.
+                if self.apdu_in_progress {
+                    self.handle_double_apdu((length as usize).saturating_sub(1));
+                    return None;
+                }
                 if Self::is_device_locked() {
                     self.reply(StatusWords::DeviceLocked);
                     return None;
@@ -770,17 +771,6 @@ impl Comm {
             }
             _ => false,
         }
-    }
-
-    /// True if a received SEPH frame carries an APDU rather than an event.
-    fn is_apdu_packet(packet_type: u8) -> bool {
-        matches!(
-            seph::PacketTypes::from(packet_type),
-            seph::PacketTypes::PacketTypeRawApdu
-                | seph::PacketTypes::PacketTypeUsbHidApdu
-                | seph::PacketTypes::PacketTypeUsbWebusbApdu
-                | seph::PacketTypes::PacketTypeBleApdu
-        )
     }
 
     /// Answer `sw` to an APDU received while another command is in flight.
@@ -1167,6 +1157,35 @@ mod test {
         // Lc announcing more than was received.
         c.apdu_buffer[4] = 0xff;
         assert_eq!(c.data_range().is_err(), true);
+    }
+
+    /// An APDU decoded while a command is in flight, as `next_event` does when
+    /// an app polls for buttons before replying, is rejected and leaves the
+    /// command in flight untouched.
+    #[test]
+    fn double_apdu_keeps_the_command_in_flight() {
+        let mut c = Comm::new();
+        // Command A in flight: received over USB HID, not replied to yet.
+        let a = [0xe0, 0x02, 0x00, 0x00, 0x02, 0xaa, 0xbb];
+        c.apdu_buffer[..a.len()].copy_from_slice(&a);
+        c.apdu_type = OS_IO_PACKET_TYPE_USB_HID_APDU as u8;
+        c.rx_length = a.len() + 1;
+        c.rx = a.len();
+        c.apdu_in_progress = true;
+
+        // Command B, with other data, arrives over BLE.
+        let b = [0xe0, 0x02, 0x00, 0x00, 0x02, 0xcc, 0xdd];
+        c.io_buffer[0] = OS_IO_PACKET_TYPE_BLE_APDU as u8;
+        c.io_buffer[1..1 + b.len()].copy_from_slice(&b);
+
+        let event = c.decode_event::<ApduHeader>(b.len() as i32 + 1);
+        assert_eq!(event.is_none(), true);
+        assert_eq!(c.apdu_buffer[..a.len()] == a, true);
+        assert_eq!(c.apdu_type, OS_IO_PACKET_TYPE_USB_HID_APDU as u8);
+        assert_eq!(c.rx_length, a.len() + 1);
+        assert_eq!(c.rx, a.len());
+        assert_eq!(c.event_pending, false);
+        assert_eq!(c.apdu_in_progress, true);
     }
 
     fn registered_at(comm: &Comm) -> bool {
