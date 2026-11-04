@@ -103,19 +103,40 @@ pub fn clear_screen() {
 /// ```
 #[cfg(not(feature = "io_new"))]
 pub fn display_pending_review(comm: &mut io::Comm) {
-    clear_screen();
+    let draw = || {
+        clear_screen();
 
-    // Add icon and text to match the C SDK equivalent.
-    WARNING.draw(57, 10);
-    "Pending".place(Location::Custom(28), Layout::Centered, true);
-    "Ledger review".place(Location::Custom(42), Layout::Centered, true);
+        // Add icon and text to match the C SDK equivalent.
+        WARNING.draw(57, 10);
+        "Pending".place(Location::Custom(28), Layout::Centered, true);
+        "Ledger review".place(Location::Custom(42), Layout::Centered, true);
 
-    crate::ui::screen_util::screen_update();
+        crate::ui::screen_util::screen_update();
+    };
+    draw();
 
-    // Process events until a double button press release.
+    // Process events until a double button press release. Like
+    // `MultiPageMenu`, events are handed to the OS UX task first, and the
+    // popup waits while the OS shows its own screens.
     loop {
-        if let io::Event::Button(BothButtonsRelease) = comm.next_event::<io::ApduHeader>() {
-            break;
+        match comm.next_event::<io::ApduHeader>() {
+            io::Event::Button(button) => {
+                if UxEvent::Event.request() == BOLOS_UX_OK && button == BothButtonsRelease {
+                    break;
+                }
+            }
+            io::Event::Ticker => {
+                if UxEvent::Event.request() != BOLOS_UX_OK {
+                    // Commands are not handled before the popup is dismissed.
+                    while let (_, Some(io::Event::Command(_))) =
+                        UxEvent::block_and_get_event::<io::ApduHeader>(comm)
+                    {
+                        comm.reply(io::StatusWords::CmdNotAccepted);
+                    }
+                    draw();
+                }
+            }
+            io::Event::Command(_) => comm.reply(io::StatusWords::CmdNotAccepted),
         }
     }
 }
