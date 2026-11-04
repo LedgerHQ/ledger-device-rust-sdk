@@ -1069,6 +1069,43 @@ mod tests {
         drop(churn);
     }
 
+    static ICON_BITMAP: [u8; 8] = [0x18, 0x3c, 0x7e, 0xff, 0xff, 0x7e, 0x3c, 0x18];
+    static ICON: NbglGlyph<'static> = NbglGlyph::new(&ICON_BITMAP, 8, 8, 1, false);
+
+    #[test]
+    fn tag_value_confirm_value_icon_points_at_the_static_bitmap() {
+        let tvc = {
+            let values = [TagValue {
+                value_icon: Some(&ICON),
+                ..TagValue::from(&Field {
+                    name: "To",
+                    value: "alice",
+                })
+            }];
+            // The confirm copies the list, which is then dropped with the pairs.
+            TagValueConfirm::new(
+                &TagValueList::new_ext(&values, false, false),
+                TuneIndex::TapCasual,
+                "Approve",
+                "Reject",
+            )
+        };
+        // Reuse the heap the source list was freed from.
+        let churn: Vec<CString> = (0..8)
+            .map(|_| CString::new("XXXXXXXXXXXXXXXX").unwrap())
+            .collect();
+
+        let c_tvc: nbgl_contentTagValueConfirm_t = (&tvc).into();
+        let pair = unsafe { *c_tvc.tagValueList.pairs };
+        let icon = unsafe { *pair.__bindgen_anon_1.valueIcon };
+        // Copied out, as the C struct is packed.
+        let (bitmap, width, height) = (icon.bitmap, icon.width, icon.height);
+        assert_eq!(core::ptr::eq(bitmap, ICON_BITMAP.as_ptr()), true);
+        assert_eq!(width, 8);
+        assert_eq!(height, 8);
+        drop(churn);
+    }
+
     static mut LAST_ACTION: Option<(u8, u8)> = None;
 
     fn record_action(token: u8, index: u8) {

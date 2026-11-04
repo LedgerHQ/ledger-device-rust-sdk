@@ -228,7 +228,12 @@ pub struct TagValue<'a> {
     /// and the `aliasValue` bit selects between them. A list may not mix pairs
     /// carrying an icon with pairs carrying an extension either — see
     /// [`TagValue`] for why.
-    pub value_icon: Option<&'a NbglGlyph<'a>>,
+    ///
+    /// The glyph is copied, but not its bitmap, which builders keeping the
+    /// pairs (such as `TagValueList`) point at until
+    /// they are shown: it must be `'static`, as glyphs declared with
+    /// `include_gif!` are.
+    pub value_icon: Option<&'a NbglGlyph<'static>>,
     /// Starts a new review page at this pair rather than packing it after the
     /// previous one.
     pub force_page_start: bool,
