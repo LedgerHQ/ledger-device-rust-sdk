@@ -702,8 +702,9 @@ impl<'a> SingleMessage<'a> {
 
 /// A horizontal scroller that
 /// splits any given message
-/// over several panes in chunks
-/// of MAX_CHAR_PER_LINE characters.
+/// over several panes, one line each,
+/// of at most MAX_CHAR_PER_LINE characters
+/// and no wider than the screen.
 /// Press both buttons to exit.
 pub struct MessageScroller<'a> {
     message: &'a str,
@@ -717,7 +718,7 @@ impl<'a> MessageScroller<'a> {
     pub fn event_loop(&self) {
         clear_screen();
         let mut buttons = ButtonsState::new();
-        let page_count = (self.message.len() - 1) / MAX_CHAR_PER_LINE + 1;
+        let page_count = value_lines(self.message).count();
         if page_count == 0 {
             return;
         }
@@ -727,9 +728,7 @@ impl<'a> MessageScroller<'a> {
         // A closure to draw common elements of the screen
         // cur_page passed as parameter to prevent borrowing
         let mut draw = |page: usize| {
-            let start = page * MAX_CHAR_PER_LINE;
-            let end = (start + MAX_CHAR_PER_LINE).min(self.message.len());
-            let chunk = &self.message[start..end];
+            let chunk = value_lines(self.message).nth(page).unwrap_or("");
             label.erase();
             label.text = chunk;
             LEFT_ARROW.erase();
@@ -893,31 +892,32 @@ fn is_displayable(s: &str) -> bool {
         .all(|b| b >= 0x20 && usize::from(b - 0x20) < OPEN_SANS[0].dims.len())
 }
 
-/// Splits a field value into the lines drawn by [`Field`]: at most
-/// `MAX_CHAR_PER_LINE` characters, and no wider than the screen.
+/// Splits a text into the lines drawn by [`Field`] and [`MessageScroller`]: at
+/// most `MAX_CHAR_PER_LINE` characters, and no wider than the screen.
 fn value_lines(value: &str) -> impl Iterator<Item = &str> {
-    let mut rest = value.as_bytes();
+    let mut rest = value;
     core::iter::from_fn(move || {
         if rest.is_empty() {
             return None;
         }
         let mut len = 0;
         let mut width = 0;
-        for &b in rest.iter().take(MAX_CHAR_PER_LINE) {
-            // A character without a glyph gets a line of its own.
-            let w = OPEN_SANS[0]
-                .dims
-                .get(usize::from(b.wrapping_sub(0x20)))
+        for (count, c) in rest.chars().take(MAX_CHAR_PER_LINE).enumerate() {
+            // A character without a glyph gets a line of its own, where each
+            // of its bytes is drawn as the font's square.
+            let w = u8::try_from(c)
+                .ok()
+                .and_then(|b| OPEN_SANS[0].dims.get(usize::from(b.wrapping_sub(0x20))))
                 .map_or(crate::ui::SCREEN_WIDTH, |&w| w as usize);
-            if len > 0 && width + w > crate::ui::SCREEN_WIDTH {
+            if count > 0 && width + w > crate::ui::SCREEN_WIDTH {
                 break;
             }
             width += w;
-            len += 1;
+            len += c.len_utf8();
         }
         let (line, tail) = rest.split_at(len);
         rest = tail;
-        Some(core::str::from_utf8(line).unwrap_or(""))
+        Some(line)
     })
 }
 
@@ -1183,6 +1183,23 @@ mod tests {
         assert_eq!(value_lines(wide).count() > 2, true);
         assert_eq!(lines_cover(wide), true);
         assert_eq!(lines_cover("W@W@W@W@W@W@W@W@W@W@W@W@W@W@"), true);
+    }
+
+    // A character without a glyph is kept whole, on a line of its own.
+    #[test]
+    fn value_lines_keep_non_ascii_characters_whole() {
+        let mut lines = value_lines("aaaaaaaaaaaaaaaa\u{e9}");
+        assert_eq!(lines.next(), Some("aaaaaaaaaaaaaaaa"));
+        assert_eq!(lines.next(), Some("\u{e9}"));
+        assert_eq!(lines.next(), None);
+
+        let mut lines = value_lines("ab\u{20ac}cd");
+        assert_eq!(lines.next(), Some("ab"));
+        assert_eq!(lines.next(), Some("\u{20ac}"));
+        assert_eq!(lines.next(), Some("cd"));
+        assert_eq!(lines.next(), None);
+
+        assert_eq!(lines_cover("Caf\u{e9} \u{1f600} na\u{ef}ve"), true);
     }
 
     fn bold_normal(value: &str) -> Page<'_> {
