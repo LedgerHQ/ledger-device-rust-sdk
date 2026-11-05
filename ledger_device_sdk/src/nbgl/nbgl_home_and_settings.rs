@@ -45,16 +45,6 @@ pub(crate) struct NvmBinding {
     pub(crate) ops: NvmOps,
 }
 
-/// Panics unless `nvm_data` lies in the `.nvm_data` section, where an
-/// `AtomicStorage` lives for as long as the app, so that the pointer the
-/// settings callbacks keep to it cannot outlive it.
-pub(crate) fn check_settings_storage<const N: usize>(nvm_data: &AtomicStorage<[u8; N]>) {
-    let ptr = nvm_data as *const AtomicStorage<[u8; N]> as *const u8;
-    if !crate::in_nvm_data(ptr, core::mem::size_of::<AtomicStorage<[u8; N]>>()) {
-        panic!("Settings storage must be a static in the .nvm_data section.");
-    }
-}
-
 pub(crate) unsafe fn nvm_read<const N: usize>(ptr: *mut (), idx: usize) -> u8 {
     let data = unsafe { &*(ptr as *const AtomicStorage<[u8; N]>) };
     data.get_ref()[idx]
@@ -391,9 +381,7 @@ impl NbglHomeAndSettings {
     /// * `settings_strings` - A slice of tuples containing the setting name and description.
     /// # Panics
     /// Panics if there are more settings than the NVM array has bytes, each
-    /// setting needing one byte of storage, or if `nvm_data` is not in the
-    /// `.nvm_data` section (a static declared with [`NVMData`](crate::NVMData)):
-    /// the settings callbacks reach it for as long as the screen is shown.
+    /// setting needing one byte of storage.
     /// # Returns
     /// Returns the builder itself to allow method chaining.
     pub fn settings<const N: usize>(
@@ -404,7 +392,6 @@ impl NbglHomeAndSettings {
         if settings_strings.len() > N {
             panic!("More settings than the NVM array has bytes.");
         }
-        check_settings_storage(nvm_data);
 
         // Records reads and writes instantiated for this N, the length being
         // invisible to the statics they are published to.
