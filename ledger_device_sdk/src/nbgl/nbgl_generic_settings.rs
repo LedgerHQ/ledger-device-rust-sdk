@@ -107,7 +107,9 @@ impl NbglGenericSettings {
 
     /// # Panics
     /// Panics if there are more settings than the NVM array has bytes, each
-    /// setting needing one byte of storage.
+    /// setting needing one byte of storage, or if `nvm_data` is not in the
+    /// `.nvm_data` section (a static declared with [`NVMData`](crate::NVMData)):
+    /// the settings callbacks reach it for as long as the screen is shown.
     // `tuneId` is touchscreen-only, so the struct update below is needed on
     // Nano and redundant elsewhere.
     #[allow(clippy::needless_update)]
@@ -119,6 +121,7 @@ impl NbglGenericSettings {
         if settings_strings.len() > N {
             panic!("More settings than the NVM array has bytes.");
         }
+        check_settings_storage(nvm_data);
 
         self.settings_title_subtitle = settings_strings
             .iter()
