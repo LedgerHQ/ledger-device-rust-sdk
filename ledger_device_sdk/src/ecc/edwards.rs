@@ -380,6 +380,7 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
     pub const EP: usize = 2 * N;
 
     pub fn sign(&self, hash: &[u8]) -> Result<([u8; Self::EP], u32), CxError> {
+        self.check_layout()?;
         let mut sig = [0u8; Self::EP];
         let sig_len = Self::EP;
         let hash_id = match self.keylength {
@@ -408,9 +409,10 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
 impl<const P: usize> ECPublicKey<P, 'E'> {
     /// Verifies the first `signature.1` bytes of `signature.0` against `hash`.
     ///
-    /// Returns `false` if `signature.1` exceeds the length of `signature.0`.
+    /// Returns `false` if `signature.1` exceeds the length of `signature.0`,
+    /// or if the key's curve, buffer size and `keylength` do not match.
     pub fn verify(&self, signature: (&[u8], u32), hash: &[u8], hash_id: u8) -> bool {
-        if signature.1 as usize > signature.0.len() {
+        if signature.1 as usize > signature.0.len() || !self.fits_layout() {
             return false;
         }
         unsafe {

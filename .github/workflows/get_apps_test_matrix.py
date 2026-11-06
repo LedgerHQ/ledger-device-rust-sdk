@@ -8,13 +8,18 @@ matrices:
 
   * ``build_matrix.json``     — one entry per (app, device) pair to build.
   * ``apps_matrix.json``      — one entry per app to run Ragger tests on.
+  * ``swap_matrix.json``      — the entries of ``apps_matrix.json`` whose
+                                manifest has a ``[pytest.swap]`` section, to
+                                also run their swap tests. Empty when a device
+                                filter is given: the swap test workflow always
+                                tests every device of the app's manifest.
   * ``run_for_devices.json``  — the device list (in Ragger naming) to forward to
                                 the Ragger reusable workflow, or the literal
                                 ``None`` when no device filter was given (so each
                                 app falls back to its full manifest device set).
 
 Inputs:
-  * argv[1]            : GitHub token (used to read the manifests via the API).
+  * env ``GH_TOKEN``   : GitHub token (used to read the manifests via the API).
   * env ``APP_LIST``   : space- and/or comma-separated app specs. Each spec is an
                          app repository name (e.g. ``app-boilerplate-rust``),
                          optionally suffixed with ``@<git-ref>`` to test a
@@ -66,12 +71,12 @@ def parse_app_specs(raw: str):
 
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: get_apps_test_matrix.py <github_token>", file=sys.stderr)
+    token = os.environ.get("GH_TOKEN", "")
+    if len(sys.argv) != 1 or not token:
+        print("Usage: GH_TOKEN=<github_token> get_apps_test_matrix.py", file=sys.stderr)
         print("       (the app list is read from the APP_LIST env variable)", file=sys.stderr)
         sys.exit(1)
 
-    token = sys.argv[1]
     raw_apps = os.environ.get("APP_LIST", "")
     specs = parse_app_specs(raw_apps)
     if not specs:
@@ -93,6 +98,7 @@ def main():
 
     build_matrix = []
     apps_matrix = []
+    swap_matrix = []
 
     for name, ref in specs:
         if not name.startswith("app-"):
@@ -129,7 +135,16 @@ def main():
         # Artifact name must be filesystem/GitHub-artifact safe.
         artifact = f"ragger-bins-{re.sub(r'[^A-Za-z0-9._-]', '-', name)}"
 
-        apps_matrix.append({"name": name, "ref": resolved_ref, "artifact": artifact})
+        entry = {"name": name, "ref": resolved_ref, "artifact": artifact}
+        apps_matrix.append(entry)
+        # Only [pytest.<name>] sections (manifest v2+) have a key; a legacy
+        # [tests] section is the standalone tests.
+        if any(getattr(cfg, "key", None) == "swap" for cfg in manifest.pytests):
+            if device_filter:
+                print(f"WARNING: not running swap tests for '{name}': they cover every "
+                      "device of the manifest, and a device filter is set")
+            else:
+                swap_matrix.append(entry)
         for device in sorted(devices):
             build_matrix.append({
                 "app": name,
@@ -158,12 +173,16 @@ def main():
         f.write(json.dumps(build_matrix))
     with open("apps_matrix.json", "w") as f:
         f.write(json.dumps(apps_matrix))
+    with open("swap_matrix.json", "w") as f:
+        f.write(json.dumps(swap_matrix))
     with open("run_for_devices.json", "w") as f:
         f.write(run_for_devices)
 
     print(f"run_for_devices: {run_for_devices}")
     print("Apps to test:")
     print(json.dumps(apps_matrix, indent=2))
+    print("Apps with swap tests:")
+    print(json.dumps(swap_matrix, indent=2))
     print("Build matrix:")
     print(json.dumps(build_matrix, indent=2))
 

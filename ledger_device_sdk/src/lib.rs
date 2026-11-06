@@ -107,14 +107,19 @@ macro_rules! set_panic {
 }
 
 unsafe extern "C" {
-    fn c_main();
+    // `int c_main(int arg0)` in ledger_secure_sdk_sys/src/c/src.c
+    fn c_main(arg0: core::ffi::c_int) -> core::ffi::c_int;
 }
 
+/// Application entry point, called by the OS with `arg0` in `r0`: 0 for a
+/// normal start, or a pointer to the `libargs_t` of a library call (swap).
+/// `c_main` uses it to decide whether to reset BSS and start I/O, and passes
+/// it on to `sample_main`.
 #[unsafe(link_section = ".boot")]
 #[unsafe(no_mangle)]
-pub extern "C" fn _start() -> ! {
+pub extern "C" fn _start(arg0: core::ffi::c_int) -> ! {
     // Main is in C until the try_context can be set properly from Rust
-    unsafe { c_main() };
+    unsafe { c_main(arg0) };
     ledger_secure_sdk_sys::exit_app(1);
 }
 
@@ -160,6 +165,9 @@ unsafe extern "C" {
     // To force the compiler out of this assumption, we define
     // it as a function instead, but it is _not_ a function at all
     fn _nvm_data_start();
+    // End of the data held in .nvm_data: the relocation marker that follows
+    // it (see link.ld) is not application data.
+    fn _nvram_prev_run();
 }
 
 /// The following is a means to correctly access data stored in NVM
@@ -173,25 +181,48 @@ impl<T> NVMData<T> {
         NVMData { data }
     }
 
+    /// Offset of the wrapped data in `.nvm_data`, or `None` if `self` is not
+    /// at an offset where a value of type `T` fits in the section.
+    ///
+    /// A static placed in `.nvm_data` is addressed through the static base
+    /// (r9) like a RAM static, so its offset from r9 is its offset in the
+    /// section. An `NVMData` on the stack or past the section size is rejected;
+    /// one in `.bss` or on the heap cannot be told apart from a static by its
+    /// offset, and would alias data of the section.
+    fn nvm_offset(&self) -> Option<usize> {
+        let addr = &self.data as *const T as u32;
+        let static_base: u32;
+        unsafe { core::arch::asm!("mov {}, r9", out(reg) static_base) };
+        let offset = usize::try_from(addr.wrapping_sub(static_base)).ok()?;
+        let section_len = (_nvram_prev_run as *const u8 as usize)
+            .wrapping_sub(_nvm_data_start as *const u8 as usize);
+        let end = offset.checked_add(core::mem::size_of::<T>())?;
+        (end <= section_len).then_some(offset)
+    }
+
     /// This will return a mutable access by casting the pointer
     /// to the correct offset in `.nvm_data` manually.
     /// This is necessary when using the `rwpi` relocation model,
     /// because a static mutable will be assumed to be located in
     /// RAM, and be accessed through the static base (r9)
+    ///
+    /// # Panics
+    /// Panics if `self` is not at an offset of the `.nvm_data` section (see
+    /// [`Self::nvm_offset`]).
     fn get_addr(&self) -> *mut T {
-        use core::arch::asm;
+        let offset = self
+            .nvm_offset()
+            .expect("NVMData must be a static in the .nvm_data section");
         unsafe {
-            // Compute offset in .nvm_data by taking the reference to
-            // self.data and subtracting r9
-            let addr = &self.data as *const T as u32;
-            let static_base: u32;
-            asm!( "mov {}, r9", out(reg) static_base);
-            let offset = (addr - static_base) as isize;
-            let data_addr = (_nvm_data_start as *const u8).offset(offset);
+            let data_addr = (_nvm_data_start as *const u8).add(offset);
             ledger_secure_sdk_sys::pic(data_addr as *mut core::ffi::c_void) as *mut T
         }
     }
 
+    /// Mutable access to the data in `.nvm_data`.
+    ///
+    /// # Panics
+    /// Panics if `self` is not a static in the `.nvm_data` section.
     pub fn get_mut(&mut self) -> &mut T {
         unsafe {
             let pic_addr = self.get_addr();
@@ -199,6 +230,10 @@ impl<T> NVMData<T> {
         }
     }
 
+    /// Shared access to the data in `.nvm_data`.
+    ///
+    /// # Panics
+    /// Panics if `self` is not a static in the `.nvm_data` section.
     pub fn get_ref(&self) -> &T {
         unsafe {
             let pic_addr = self.get_addr();
@@ -211,4 +246,29 @@ impl<T> NVMData<T> {
 #[unsafe(no_mangle)]
 fn sample_main() {
     test_main();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::assert_eq_err as assert_eq;
+    use crate::testing::TestType;
+    use testmacro::test_item as test;
+
+    #[unsafe(link_section = ".nvm_data")]
+    static mut IN_NVM: NVMData<[u32; 4]> = NVMData::new([0; 4]);
+
+    #[test]
+    fn nvm_offset_accepts_statics_in_nvm_data() {
+        let data = unsafe { &*&raw const IN_NVM };
+        assert_eq!(data.nvm_offset().is_some(), true);
+        assert_eq!(data.get_ref(), &[0u32; 4]);
+    }
+
+    #[test]
+    fn nvm_offset_rejects_values_on_the_stack() {
+        // The stack is far past the start of RAM, so past the section size.
+        let local = NVMData::new([0u32; 4]);
+        assert_eq!(local.nvm_offset(), None);
+    }
 }

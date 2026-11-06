@@ -161,7 +161,7 @@ impl<'a> NbglReviewExtended<'a> {
 
     /// Shows the extended review flow with the provided fields on the review pages (internal implementation).
     fn show_internal(&self, values: &[TagValue]) -> SyncNbgl {
-        if nb_items(values.len()).is_none() {
+        if !tag_values_fit(values) {
             return SyncNbgl::UxSyncRetError;
         }
         unsafe {

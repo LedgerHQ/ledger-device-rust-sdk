@@ -20,7 +20,7 @@
 //! which reports both outcomes, and draw the previous screen again afterwards
 //! (see the `nbgl_home_and_settings` example).
 //!
-//! To ask for confirmation as part of accepting or rejecting a review, use
+//! To ask for confirmation as part of accepting or rejecting a choice, use
 //! [`NbglChoice::ask_confirmation`] instead, which handles both outcomes.
 //!
 //! ```no_run

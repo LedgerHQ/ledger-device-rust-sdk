@@ -123,8 +123,7 @@ impl<'a> NbglAddressReview<'a> {
     }
 
     fn show_internal(&self, address: &str) -> bool {
-        let nb_pairs = self.tag_value_list.as_ref().map_or(0, |l| l.nb_pairs());
-        if nb_items(nb_pairs).is_none() {
+        if !self.tag_value_list.as_ref().is_none_or(CTagValueList::fits) {
             return false;
         }
         unsafe {

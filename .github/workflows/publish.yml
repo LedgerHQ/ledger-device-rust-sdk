@@ -4,7 +4,9 @@ on:
   push:
     branches:
       - master
-  workflow_dispatch:  # Allow manual workflow dispatch
+
+permissions:
+  contents: read
 
 jobs:
   check_versions:
@@ -17,7 +19,8 @@ jobs:
           fetch-tags: true
           repository: ${{ github.repository }}
           ref: ${{ github.ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # Only reads the crate versions: no credentials left on the runner.
+          persist-credentials: false
 
       - name: Check versions against changelogs
         run: |
@@ -35,6 +38,7 @@ jobs:
 
   deploy_include_gif:
     name: Deploy include_gif
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     uses: LedgerHQ/ledger-app-workflows/.github/workflows/reusable_crates_deployment.yml@v1
     needs: check_versions
     permissions:
@@ -45,10 +49,11 @@ jobs:
       package_directory: "include_gif"
       publish: true
       release: false
-      dry_run: ${{ github.event_name == 'workflow_dispatch' }}
+      dry_run: false
 
   deploy_ledger_secure_sdk_sys:
     name: Deploy ledger_secure_sdk_sys
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     uses: LedgerHQ/ledger-app-workflows/.github/workflows/reusable_crates_deployment.yml@v1
     needs: check_versions
     permissions:
@@ -59,10 +64,11 @@ jobs:
       package_directory: "ledger_secure_sdk_sys"
       publish: true
       release: false
-      dry_run: ${{ github.event_name == 'workflow_dispatch' }}
+      dry_run: false
 
   deploy_ledger_device_sdk:
     name: Deploy ledger_device_sdk
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     uses: LedgerHQ/ledger-app-workflows/.github/workflows/reusable_crates_deployment.yml@v1
     needs: [check_versions, deploy_include_gif, deploy_ledger_secure_sdk_sys]
     permissions:
@@ -73,4 +79,4 @@ jobs:
       package_directory: "ledger_device_sdk"
       publish: true
       release: false
-      dry_run: ${{ github.event_name == 'workflow_dispatch' }}
+      dry_run: false

@@ -9,6 +9,23 @@
 //!
 //! Used to display streamed transaction review screens.
 use super::*;
+use alloc::boxed::Box;
+use alloc::rc::Rc;
+
+/// The warning handed to `nbgl_useCaseAdvancedReviewStreamingStart`, with the
+/// data its pointers refer to.
+struct StartWarning {
+    _data: Rc<CWarning>,
+    descriptor: nbgl_warning_t,
+}
+
+/// Warning of the streaming review being shown.
+///
+/// NBGL keeps the pointer it is given at the start of the review, and reads it
+/// until the review is finished, whichever `NbglStreamingReview` the review is
+/// continued with: the review, not the builder, owns it. Set by `start`, and
+/// released by `finish` or by the next `start`.
+static mut STARTED_WARNING: Option<Box<StartWarning>> = None;
 
 /// A builder to create and show a streaming review flow.
 pub struct NbglStreamingReview {
@@ -16,8 +33,9 @@ pub struct NbglStreamingReview {
     tx_type: TransactionType,
     blind: bool,
     skip: bool,
-    /// Owns the C strings, icons and details tree behind the warning.
-    warning: Option<CWarning>,
+    /// Owns the C strings, icons and details tree behind the warning; shared
+    /// with [`STARTED_WARNING`] once the review is started.
+    warning: Option<Rc<CWarning>>,
     /// Extra `nbgl_operationType_t` bits set alongside the transaction type.
     operation_flags: nbgl_operationType_t,
     /// App handler for a touched value icon.
@@ -132,7 +150,7 @@ impl NbglStreamingReview {
     /// * `glyph` - The icon to display in the center of the page.
     /// # Returns
     /// Returns the builder itself to allow method chaining.
-    pub fn glyph(self, glyph: &NbglGlyph) -> NbglStreamingReview {
+    pub fn glyph(self, glyph: &NbglGlyph<'static>) -> NbglStreamingReview {
         NbglStreamingReview {
             icon: glyph.into(),
             ..self
@@ -176,67 +194,81 @@ impl NbglStreamingReview {
     /// Sets the warning shown before the review, and reachable from the
     /// top-right button during it.
     ///
-    /// Setting a warning selects `nbgl_useCaseAdvancedReviewStreamingStart`
-    /// over the plain blind-signing start, so it takes effect only in
-    /// combination with [`Self::blind`].
+    /// Setting a warning selects `nbgl_useCaseAdvancedReviewStreamingStart`,
+    /// with or without [`Self::blind`]. In blind mode the blind-signing
+    /// warning is added to the ones configured here.
     /// # Arguments
     /// * `warning` - The warning configuration; see [`NbglWarning`].
     /// # Returns
     /// Returns the builder itself to allow method chaining.
     pub fn warning(self, warning: &NbglWarning) -> NbglStreamingReview {
         NbglStreamingReview {
-            warning: Some(CWarning::new(warning)),
+            warning: Some(Rc::new(CWarning::new(warning))),
             ..self
         }
     }
 
+    /// The warning handed to `nbgl_useCaseAdvancedReviewStreamingStart`, if
+    /// one is set; blind mode adds the blind-signing warning to it.
+    fn start_warning(&self) -> Option<Box<StartWarning>> {
+        let data = self.warning.as_ref()?;
+        let descriptor = with_blind_signing(Some(data.as_c_type()), self.blind)?;
+        Some(Box::new(StartWarning {
+            _data: Rc::clone(data),
+            descriptor,
+        }))
+    }
+
     fn start_internal(&self, title: &str, subtitle: Option<&str>) -> bool {
+        if !self.warning.as_ref().is_none_or(|w| w.fits()) {
+            return false;
+        }
         unsafe {
             let title = CString::new(title).unwrap();
             let subtitle = match subtitle {
                 Some(s) => CString::new(s).unwrap(),
                 None => CString::default(),
             };
+            let subtitle_ptr = match subtitle.is_empty() {
+                true => core::ptr::null(),
+                false => subtitle.as_ptr() as *const c_char,
+            };
+
+            // The box keeps its address once moved into the slot, which owns it
+            // until the review is finished.
+            let start_warning = self.start_warning();
+            let warning = start_warning
+                .as_ref()
+                .map(|w| &w.descriptor as *const nbgl_warning_t);
+            STARTED_WARNING = start_warning;
 
             self.ux_sync_init();
-            match self.blind {
-                true => match &self.warning {
-                    Some(w) => {
-                        let warning_details = w.as_c_type();
-                        nbgl_useCaseAdvancedReviewStreamingStart(
-                            self.c_operation_type(),
-                            &self.icon as *const nbgl_icon_details_t,
-                            title.as_ptr() as *const c_char,
-                            match subtitle.is_empty() {
-                                true => core::ptr::null(),
-                                false => subtitle.as_ptr() as *const c_char,
-                            },
-                            &warning_details as *const nbgl_warning_t,
-                            Some(choice_callback),
-                        );
-                    }
-                    None => {
-                        nbgl_useCaseReviewStreamingBlindSigningStart(
-                            self.c_operation_type(),
-                            &self.icon as *const nbgl_icon_details_t,
-                            title.as_ptr() as *const c_char,
-                            match subtitle.is_empty() {
-                                true => core::ptr::null(),
-                                false => subtitle.as_ptr() as *const c_char,
-                            },
-                            Some(choice_callback),
-                        );
-                    }
-                },
-                false => {
+            match warning {
+                Some(warning) => {
+                    nbgl_useCaseAdvancedReviewStreamingStart(
+                        self.c_operation_type(),
+                        &self.icon as *const nbgl_icon_details_t,
+                        title.as_ptr() as *const c_char,
+                        subtitle_ptr,
+                        warning,
+                        Some(choice_callback),
+                    );
+                }
+                None if self.blind => {
+                    nbgl_useCaseReviewStreamingBlindSigningStart(
+                        self.c_operation_type(),
+                        &self.icon as *const nbgl_icon_details_t,
+                        title.as_ptr() as *const c_char,
+                        subtitle_ptr,
+                        Some(choice_callback),
+                    );
+                }
+                None => {
                     nbgl_useCaseReviewStreamingStart(
                         self.c_operation_type(),
                         &self.icon as *const nbgl_icon_details_t,
                         title.as_ptr() as *const c_char,
-                        match subtitle.is_empty() {
-                            true => core::ptr::null(),
-                            false => subtitle.as_ptr() as *const c_char,
-                        },
+                        subtitle_ptr,
                         Some(choice_callback),
                     );
                 }
@@ -270,7 +302,7 @@ impl NbglStreamingReview {
     }
 
     fn next_internal(&self, values: &[TagValue]) -> NbglStreamingReviewStatus {
-        if nb_items(values.len()).is_none() {
+        if !tag_values_fit(values) {
             return NbglStreamingReviewStatus::Rejected;
         }
         unsafe {
@@ -307,6 +339,8 @@ impl NbglStreamingReview {
                 Some(choice_callback),
             );
             let sync_ret = self.ux_sync_wait(false);
+            // The review is over: NBGL no longer reads its warning.
+            STARTED_WARNING = None;
 
             // Return true if the user approved the transaction, false otherwise.
             matches!(sync_ret, SyncNbgl::UxSyncRetApproved)
@@ -436,5 +470,76 @@ impl NbglStreamingReview {
     #[cfg(not(feature = "io_new"))]
     pub fn finish(&self, finish_title: &str) -> bool {
         self.finish_internal(finish_title)
+    }
+}
+
+/// `warning` with the blind-signing warning added in blind mode.
+fn with_blind_signing(warning: Option<nbgl_warning_t>, blind: bool) -> Option<nbgl_warning_t> {
+    warning.map(|mut warning| {
+        if blind {
+            warning.predefinedSet |= WarningType::BlindSigning.bit();
+        }
+        warning
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::assert_eq_err as assert_eq;
+    use crate::testing::TestType;
+    use testmacro::test_item as test;
+
+    const RISK: u32 = 1 << W3C_RISK_DETECTED_WARN;
+    const BLIND: u32 = 1 << BLIND_SIGNING_WARN;
+    const DAPP: &core::ffi::CStr = c"dApp";
+
+    // Built by hand: an `NbglStreamingReview` or `NbglWarning` would link the
+    // whole warning builder into the test binary, which does not fit in flash
+    // on every target.
+    fn risk_warning() -> nbgl_warning_t {
+        nbgl_warning_t {
+            predefinedSet: RISK,
+            dAppProvider: DAPP.as_ptr(),
+            ..Default::default()
+        }
+    }
+
+    // No warning: the plain or blind-signing start, chosen by `blind`.
+    #[test]
+    fn no_warning_uses_plain_or_blind_start() {
+        assert_eq!(with_blind_signing(None, false).is_none(), true);
+        assert_eq!(with_blind_signing(None, true).is_none(), true);
+    }
+
+    #[test]
+    fn warning_is_shown_outside_blind_mode() {
+        let warning = with_blind_signing(Some(risk_warning()), false);
+        assert_eq!(warning.map(|w| w.predefinedSet), Some(RISK));
+        assert_eq!(
+            warning.is_some_and(|w| w.dAppProvider == DAPP.as_ptr()),
+            true
+        );
+    }
+
+    // Blind mode without a warning uses the plain blind-signing start, which
+    // hands NBGL no warning to keep.
+    #[test]
+    fn blind_without_warning_starts_without_one() {
+        assert_eq!(
+            NbglStreamingReview::new().blind().start_warning().is_none(),
+            true
+        );
+        assert_eq!(NbglStreamingReview::new().start_warning().is_none(), true);
+    }
+
+    #[test]
+    fn blind_mode_adds_blind_signing_warning() {
+        let warning = with_blind_signing(Some(risk_warning()), true);
+        assert_eq!(warning.map(|w| w.predefinedSet), Some(RISK | BLIND));
+        assert_eq!(
+            warning.is_some_and(|w| w.dAppProvider == DAPP.as_ptr()),
+            true
+        );
     }
 }

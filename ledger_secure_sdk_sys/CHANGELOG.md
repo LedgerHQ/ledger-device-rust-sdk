@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.18.1] - 2026-11-06
+
+### Fixed
+- `c_main` is declared as `int c_main(int arg0)` and receives the argument the OS
+  passes to the entry point (0 for a normal start, a `libargs_t` pointer for a
+  library call).
+- `c_main` runs `sample_main` once: an exception, `EXCEPTION_IO_RESET` included,
+  ends the app instead of booting it and running `sample_main` again in the same
+  memory.
+- `seph::io_tx` sends only the first `length` bytes of the buffer. When `length` is
+  larger than the buffer or than 65535, it sends nothing and returns -1, as a
+  failed transmission does.
+
 ## [1.18.0] - 2026-10-16
 
 ### Added

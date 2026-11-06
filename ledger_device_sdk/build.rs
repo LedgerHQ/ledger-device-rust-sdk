@@ -31,6 +31,17 @@ fn generate_install_parameters() {
     let metadata: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("Failed to parse cargo metadata output");
 
+    // This build script runs as a dependency, so Cargo only knows the inputs
+    // declared here. The install parameters come from the app's manifest, and
+    // a workspace member can gain or lose a [package.metadata.ledger] section,
+    // so every workspace manifest is tracked, along with the root one.
+    track_file(&root_dir.join("Cargo.toml"));
+    for package in metadata["packages"].as_array().into_iter().flatten() {
+        if let Some(manifest) = package["manifest_path"].as_str() {
+            track_file(std::path::Path::new(manifest));
+        }
+    }
+
     println!("cargo:warning=Looking for ledger metadata...");
 
     if let Some(package) = select_app_package(&metadata) {
@@ -181,6 +192,7 @@ fn generate_install_parameters() {
 
         // Now we have all the parameters, we can call the install_params.py script to generate the TLV blob
         let install_params_exe = c_sdk_path.join("install_params.py");
+        track_file(&install_params_exe);
         let mut generate_tlv_install_params = std::process::Command::new("python3");
         generate_tlv_install_params.arg(&install_params_exe);
         generate_tlv_install_params.arg("--appName").arg(app_name);
@@ -334,6 +346,13 @@ fn select_app_package(metadata: &serde_json::Value) -> Option<&serde_json::Value
     }
 }
 
+/// Rebuild when `path` changes.
+fn track_file(path: &std::path::Path) {
+    let path = path.to_str().expect("tracked path is not UTF-8");
+    check_directive_value("tracked path", path);
+    println!("cargo:rerun-if-changed={path}");
+}
+
 /// Values printed in `cargo:` directives must be single-line text.
 fn check_directive_value(what: &str, value: &str) {
     if value.chars().any(char::is_control) {
@@ -374,6 +393,8 @@ fn convert_icon_to_hex(
     );
 
     let icon2glyph = c_sdk_path.join("lib_nbgl/tools/icon2glyph.py");
+    track_file(&icon2glyph);
+    track_file(&root_dir.join(icon));
     let mut cmd = Command::new("python3");
     cmd.arg(&icon2glyph);
     cmd.arg("--hexbitmap").arg(&icon_hex_file);
@@ -430,6 +451,19 @@ fn resolve_variant() -> Option<String> {
 
 fn main() {
     println!("cargo:rerun-if-changed=Cargo.toml");
-    println!("cargo:rerun-if-env-changed=LEDGER_APP_PACKAGE");
+    // App selection and C SDK location (see `select_app_package` and
+    // `resolve_c_sdk_path`). Variant features need no directive: Cargo reruns
+    // the build script when the crate's features change.
+    for var in [
+        "LEDGER_APP_PACKAGE",
+        "LEDGER_SDK_PATH",
+        "NANOSP_SDK",
+        "NANOX_SDK",
+        "STAX_SDK",
+        "FLEX_SDK",
+        "APEX_P_SDK",
+    ] {
+        println!("cargo:rerun-if-env-changed={var}");
+    }
     generate_install_parameters();
 }

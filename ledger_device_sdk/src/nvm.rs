@@ -39,13 +39,31 @@
 //! counter.update(&(*counter.get_ref() - 1));
 //! println!("counter value is {}", *counter.get_ref());
 //! ```
+//!
+//! # What can be stored
+//!
+//! A stored value is a copy of its bytes, read back as a `T` from flash, so
+//! `T` must be plain data. Every storage requires `T: Copy`, which rules out
+//! types owning heap memory (`String`, `Vec`, `Box`, ...), but not every type
+//! that is unsound to store:
+//!
+//! * References and raw pointers point to RAM, which does not hold the same
+//!   data from one run of the app to the next.
+//! * `bool`, `char`, enums, `NonZero*` and other types with invalid bit
+//!   patterns can be read back invalid: an interrupted [`AlignedStorage`]
+//!   update leaves a mix of old and new bytes, and a storage never updated
+//!   holds zeroes when its section is loaded zeroed (as Speculos does).
+//! * Padding bytes are stored too, with whatever they held.
+//!
+//! Prefer integers and byte arrays such as `[u8; N]`, and encode other values
+//! explicitly, checking them when decoding.
 
 use AtomicStorageElem::{StorageA, StorageB};
 use ledger_secure_sdk_sys::nvm_write;
 
-// Warning: currently alignment is fixed by magic values everywhere, since
-// rust does not allow using a constant in repr(align(...))
-// This code will work correctly only for the currently set page size of 64.
+// `repr(align(...))` does not accept a constant, so alignments are literals:
+// 64 bytes for `AlignedStorage`, and the flash page size of each device for the
+// replicas of `AtomicStorage`.
 
 /// Returned when trying to insert data when no more space is available
 pub struct StorageFullError;
@@ -68,22 +86,21 @@ pub trait SingleStorage<T> {
 /// Wraps a variable stored in Non-Volatile Memory to provide read and update
 /// methods.
 ///
-/// Always aligned to the beginning of a page to prevent different
-/// AlignedStorage sharing a common Flash page (this is required to implement
-/// unfinished write detection in SafeStorage and atomic operations in
-/// AtomicStorage).
+/// Aligned to 64 bytes. This is smaller than a flash page (256 or 512 bytes),
+/// so neighbouring values can share a page, and an interrupted update can also
+/// damage them.
 ///
 /// Warning: this wrapper does not provide any guarantee about update atomicity.
 #[repr(align(64))]
 #[derive(Copy, Clone)]
-pub struct AlignedStorage<T> {
+pub struct AlignedStorage<T: Copy> {
     /// Stored value.
     /// This is intentionally private to prevent direct write access (this is
     /// stored in Flash, so only the update method can change the value).
     value: T,
 }
 
-impl<T> AlignedStorage<T> {
+impl<T: Copy> AlignedStorage<T> {
     /// Create a `AlignedStorage<T>` initialized with a given value.
     /// This is to set the initial value of static `AlignedStorage<T>`, as the value
     /// member is private.
@@ -92,7 +109,7 @@ impl<T> AlignedStorage<T> {
     }
 }
 
-impl<T> SingleStorage<T> for AlignedStorage<T> {
+impl<T: Copy> SingleStorage<T> for AlignedStorage<T> {
     /// Return non-mutable reference to the stored value.
     /// The address is always the same for AlignedStorage.
     fn get_ref(&self) -> &T {
@@ -124,12 +141,12 @@ const STORAGE_VALID: u8 = 0xa5;
 /// 1. The flag is reset to 0
 /// 2. The value is updated
 /// 3. The flag is restored to STORAGE_VALID
-pub struct SafeStorage<T> {
+pub struct SafeStorage<T: Copy> {
     flag: AlignedStorage<u8>,
     value: AlignedStorage<T>,
 }
 
-impl<T> SafeStorage<T> {
+impl<T: Copy> SafeStorage<T> {
     pub const fn new(value: T) -> SafeStorage<T> {
         SafeStorage {
             flag: AlignedStorage::new(STORAGE_VALID),
@@ -150,7 +167,7 @@ impl<T> SafeStorage<T> {
     }
 }
 
-impl<T> SingleStorage<T> for SafeStorage<T> {
+impl<T: Copy> SingleStorage<T> for SafeStorage<T> {
     /// Return non-mutable reference to the stored value.
     /// Panic if the storage is not valid (corrupted).
     fn get_ref(&self) -> &T {
@@ -165,34 +182,61 @@ impl<T> SingleStorage<T> for SafeStorage<T> {
     }
 }
 
-/// Non-Volatile data storage with atomic update support.
-/// Takes at minimum twice the size of the data to be stored, plus 2 bytes.
-/// Aligning to the required page size is done through a macro
-/// as `#[repr(align(N))]` does not accept variable 'N'
-macro_rules! atomic_storage {
+/// Wraps a replica of an [`AtomicStorage`] so that it starts on a flash page of
+/// its own, and is padded to a whole number of pages: updating one replica
+/// never touches the page of the other.
+///
+/// The alignment is the flash page size, set per device through a macro as
+/// `#[repr(align(N))]` does not accept variable 'N'.
+macro_rules! page_aligned {
     ($n:expr) => {
         #[repr(align($n))]
-        pub struct AtomicStorage<T> {
-            // We must keep the storage B in another page, so when we update the
-            // storage A, erasing the page of A won't modify the storage for B.
-            // This is currently guaranteed by the alignment of AlignedStorage.
-            storage_a: SafeStorage<T>,
-            storage_b: SafeStorage<T>, // We also accept situations where both storages are marked as valid, which
-                                       // can happen with tearing. This is not a problem, and we consider the first
-                                       // one is the "correct" one.
-        }
+        struct PageAligned<T>(T);
+
+        /// Flash page size, matching `PAGE_SIZE` in the device's linker layout.
+        const PAGE_SIZE: usize = $n;
     };
 }
 
 #[cfg(target_os = "nanox")]
-atomic_storage!(256);
+page_aligned!(256);
 #[cfg(any(
     target_os = "nanosplus",
     target_os = "stax",
     target_os = "flex",
     target_os = "apex_p"
 ))]
-atomic_storage!(512);
+page_aligned!(512);
+
+/// Whether both replicas of an `AtomicStorage<T>` start on a page boundary and
+/// share no page.
+macro_rules! replicas_on_own_pages {
+    ($t:ty) => {{
+        let a = core::mem::offset_of!(AtomicStorage<$t>, storage_a);
+        let b = core::mem::offset_of!(AtomicStorage<$t>, storage_b);
+        let size = core::mem::size_of::<PageAligned<SafeStorage<$t>>>();
+        a % PAGE_SIZE == 0 && b % PAGE_SIZE == 0 && a.abs_diff(b) >= size
+    }};
+}
+
+// Checked at build time, for every device, for values smaller and larger
+// than a page.
+const _: () = assert!(replicas_on_own_pages!(u8));
+const _: () = assert!(replicas_on_own_pages!(i32));
+const _: () = assert!(replicas_on_own_pages!([u8; 10]));
+const _: () = assert!(replicas_on_own_pages!([u8; 700]));
+
+/// Non-Volatile data storage with atomic update support.
+///
+/// Holds two replicas of the value, each on flash pages of its own, so it
+/// takes at least two pages.
+pub struct AtomicStorage<T: Copy> {
+    storage_a: PageAligned<SafeStorage<T>>,
+    // We also accept situations where both storages are marked as valid, which
+    // can happen with tearing. This is not a problem, and we consider the first
+    // one is the "correct" one.
+    storage_b: PageAligned<SafeStorage<T>>,
+}
 
 pub enum AtomicStorageElem {
     StorageA,
@@ -206,8 +250,8 @@ where
     /// Create an `AtomicStorage<T>` initialized with a given value.
     pub const fn new(value: &T) -> AtomicStorage<T> {
         AtomicStorage {
-            storage_a: SafeStorage::new(*value),
-            storage_b: SafeStorage::new(*value),
+            storage_a: PageAligned(SafeStorage::new(*value)),
+            storage_b: PageAligned(SafeStorage::new(*value)),
         }
     }
 
@@ -219,9 +263,9 @@ where
     /// zeroes `.nvm_data`), or its first update was interrupted before the written storage was
     /// validated, and the next update stores the value again.
     fn which(&self) -> Option<AtomicStorageElem> {
-        if self.storage_a.is_valid() {
+        if self.storage_a.0.is_valid() {
             Some(StorageA)
-        } else if self.storage_b.is_valid() {
+        } else if self.storage_b.0.is_valid() {
             Some(StorageB)
         } else {
             None
@@ -231,8 +275,8 @@ where
     /// The stored value, or `None` when the storage holds no value yet (see [`Self::which`]).
     fn stored(&self) -> Option<&T> {
         match self.which()? {
-            StorageA => Some(self.storage_a.get_ref()),
-            StorageB => Some(self.storage_b.get_ref()),
+            StorageA => Some(self.storage_a.0.get_ref()),
+            StorageB => Some(self.storage_b.0.get_ref()),
         }
     }
 
@@ -261,10 +305,10 @@ impl<const N: usize> AtomicStorage<[u8; N]> {
     /// comparison must cover every stored byte, padding and unused enum payload included, to
     /// tell whether anything of the replaced value is left.
     pub fn settle(&mut self) {
-        let (current, other) = if self.storage_a.is_valid() {
-            (&self.storage_a, &self.storage_b)
-        } else if self.storage_b.is_valid() {
-            (&self.storage_b, &self.storage_a)
+        let (current, other) = if self.storage_a.0.is_valid() {
+            (&self.storage_a.0, &self.storage_b.0)
+        } else if self.storage_b.0.is_valid() {
+            (&self.storage_b.0, &self.storage_a.0)
         } else {
             return;
         };
@@ -298,12 +342,12 @@ where
     fn update(&mut self, value: &T) {
         match self.which() {
             Some(StorageA) | None => {
-                self.storage_b.update(value);
-                self.storage_a.invalidate();
+                self.storage_b.0.update(value);
+                self.storage_a.0.invalidate();
             }
             Some(StorageB) => {
-                self.storage_a.update(value);
-                self.storage_b.invalidate();
+                self.storage_a.0.update(value);
+                self.storage_b.0.invalidate();
             }
         }
     }
@@ -311,7 +355,11 @@ where
 pub struct KeyOutOfRange;
 
 /// A Non-Volatile fixed-size collection of fixed-size items.
-/// Items insertion and deletion are atomic.
+/// Items insertion and deletion are atomic: an interrupted one leaves the
+/// collection as it was before or after it.
+///
+/// Items are not page-isolated (see [`AlignedStorage`]): an interrupted
+/// insertion can also damage the items sharing the flash page of the new one.
 /// Items update is not implemented because the atomicity of this operation
 /// cannot be guaranteed here.
 // We use the term `index` to represent the user-facing number of an element in the collection,
@@ -320,7 +368,7 @@ pub struct KeyOutOfRange;
 //            ↑  ↑  ↑  ↑  ↑  ↑  ↑
 // index:     -  -  0  1  -  2  -
 // key:       0, 1, 2, 3, 4, 5, 6
-pub struct Collection<T, const N: usize> {
+pub struct Collection<T: Copy, const N: usize> {
     flags: AtomicStorage<[u8; N]>,
     slots: [AlignedStorage<T>; N],
 }
@@ -536,8 +584,8 @@ mod tests {
     fn atomic_storage_initializes_zeroed_nvm() {
         let pointer = &raw mut NEVER_UPDATED;
         let storage = unsafe { (*pointer).get_mut() };
-        storage.storage_a.invalidate();
-        storage.storage_b.invalidate();
+        storage.storage_a.0.invalidate();
+        storage.storage_b.0.invalidate();
         assert_eq!(*storage.get_or_init(&[7; 4]), [7; 4]);
         assert_eq!(*storage.get_ref(), [7; 4]);
         storage.update(&[1, 2, 3, 4]);
@@ -551,8 +599,8 @@ mod tests {
     fn atomic_storage_updates_zeroed_nvm() {
         let pointer = &raw mut NEVER_UPDATED;
         let storage = unsafe { (*pointer).get_mut() };
-        storage.storage_a.invalidate();
-        storage.storage_b.invalidate();
+        storage.storage_a.0.invalidate();
+        storage.storage_b.0.invalidate();
         storage.update(&[3; 4]);
         assert_eq!(*storage.get_ref(), [3; 4]);
     }
@@ -568,8 +616,8 @@ mod tests {
     fn collection_with_zeroed_flags_is_empty() {
         let pointer = &raw mut NEVER_UPDATED_COLLECTION;
         let collection = unsafe { (*pointer).get_mut() };
-        collection.flags.storage_a.invalidate();
-        collection.flags.storage_b.invalidate();
+        collection.flags.storage_a.0.invalidate();
+        collection.flags.storage_b.0.invalidate();
         assert_eq!(collection.len(), 0);
         assert_eq!(collection.is_empty(), true);
         assert_eq!(collection.remaining(), 4);
@@ -593,13 +641,13 @@ mod tests {
         storage.update(&[1; 4]);
         storage.update(&[2; 4]);
         let replaced = [
-            *storage.storage_a.value.get_ref(),
-            *storage.storage_b.value.get_ref(),
+            *storage.storage_a.0.value.get_ref(),
+            *storage.storage_b.0.value.get_ref(),
         ];
         assert_eq!(replaced.contains(&[1; 4]), true);
         storage.settle();
-        assert_eq!(*storage.storage_a.value.get_ref(), [2; 4]);
-        assert_eq!(*storage.storage_b.value.get_ref(), [2; 4]);
+        assert_eq!(*storage.storage_a.0.value.get_ref(), [2; 4]);
+        assert_eq!(*storage.storage_b.0.value.get_ref(), [2; 4]);
         assert_eq!(*storage.get_ref(), [2; 4]);
         storage.settle();
         assert_eq!(*storage.get_ref(), [2; 4]);
@@ -614,15 +662,15 @@ mod tests {
         let storage = unsafe { (*pointer).get_mut() };
         storage.update(&[3; 4]);
         storage.update(&[4; 4]);
-        let other = if storage.storage_a.is_valid() {
-            &mut storage.storage_b
+        let other = if storage.storage_a.0.is_valid() {
+            &mut storage.storage_b.0
         } else {
-            &mut storage.storage_a
+            &mut storage.storage_a.0
         };
         other.value.update(&[4, 4, 3, 3]);
         storage.settle();
-        assert_eq!(*storage.storage_a.value.get_ref(), [4; 4]);
-        assert_eq!(*storage.storage_b.value.get_ref(), [4; 4]);
+        assert_eq!(*storage.storage_a.0.value.get_ref(), [4; 4]);
+        assert_eq!(*storage.storage_b.0.value.get_ref(), [4; 4]);
         assert_eq!(*storage.get_ref(), [4; 4]);
     }
 }
