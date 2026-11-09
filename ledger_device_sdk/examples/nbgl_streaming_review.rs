@@ -186,5 +186,57 @@ extern "C" fn sample_main() {
         }
     }
 
+    // Review started by a builder that is dropped right after `start`, then
+    // continued and finished through another one: the last page shows the icon
+    // given to `start`.
+    if !start_with_temporary_builder(comm, &FERRIS) {
+        NbglReviewStatus::new().show(comm, false);
+        ledger_secure_sdk_sys::exit_app(0);
+    }
+    overwrite_stack();
+    let review = NbglStreamingReview::new();
+    let mut success: Option<bool> = None;
+    for c in fields.chunks(1) {
+        match review.next(comm, c) {
+            NbglStreamingReviewStatus::Next => {}
+            NbglStreamingReviewStatus::Skipped => {
+                success = Some(review.finish(comm, "Sign to send token\n"));
+                break;
+            }
+            NbglStreamingReviewStatus::Rejected => {
+                success = Some(false);
+                break;
+            }
+        }
+    }
+    match success {
+        Some(b) => {
+            NbglReviewStatus::new().show(comm, b);
+        }
+        None => {
+            let success = review.finish(comm, "Sign to send token\n");
+            NbglReviewStatus::new().show(comm, success);
+        }
+    }
+
     ledger_device_sdk::exit_app(0);
+}
+
+/// Starts a streaming review with a builder that is dropped on return.
+#[inline(never)]
+fn start_with_temporary_builder<const N: usize>(
+    comm: &mut ledger_device_sdk::io::Comm<N>,
+    glyph: &NbglGlyph<'static>,
+) -> bool {
+    NbglStreamingReview::new()
+        .glyph(glyph)
+        .tx_type(TransactionType::Transaction)
+        .start(comm, "Streaming example", Some("Temporary builder"))
+}
+
+/// Fills the stack the dropped builder was on.
+#[inline(never)]
+fn overwrite_stack() {
+    let filler = core::hint::black_box([0xa5u8; 512]);
+    core::hint::black_box(&filler);
 }

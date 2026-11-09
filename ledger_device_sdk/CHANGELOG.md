@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   APDU is displayed is answered `CmdNotAccepted`, as with `io_new`, and the
   next APDU is handled as a new command. A command received on the last poll
   of a screen is returned by the next `next_event`.
+- `nbgl`: `NbglStreamingReview` keeps the icon of a started review until it is
+  finished, so the builder it was started with may be moved or dropped before
+  `finish`, or the review finished through another builder.
 
 ## [1.43.0] - 2026-11-06
 
