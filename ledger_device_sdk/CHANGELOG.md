@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- `ecc`: `Ed25519Stream::sign_finalize` returns `CxError::Locked`, and wipes the
+  stream, when called while a `Bn`, `EcPoint`, `MontCtx` or `BnLock` is alive.
+
+### Fixed
+- `ecc`: `Ed25519Stream` frees every BN and EC point it allocates, on error
+  paths too.
+
 ## [1.43.0] - 2026-11-06
 
 ### Added
