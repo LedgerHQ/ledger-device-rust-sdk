@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - `ecc`: `Ed25519Stream` frees every BN and EC point it allocates, on error
   paths too.
+- `io_legacy`: a command received while an NBGL screen that does not exit on
+  APDU is displayed is answered `CmdNotAccepted`, as with `io_new`, and the
+  next APDU is handled as a new command. A command received on the last poll
+  of a screen is returned by the next `next_event`.
 
 ## [1.43.0] - 2026-11-06
 

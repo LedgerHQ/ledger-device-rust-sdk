@@ -278,6 +278,10 @@ pub struct Comm {
     /// application replies to it. This is what makes a second incoming APDU a
     /// *double* APDU rather than the normal way of receiving work.
     apdu_in_progress: bool,
+    /// True from the moment [`Comm::next_event_ahead`] accepts a command while
+    /// an NBGL screen is displayed until it is handed to the application, or
+    /// answered because the screen did not exit to handle it.
+    pending_apdu: bool,
     /// True once registered with Nbgl. It moves with the value, so a moved
     /// `Comm` can record its new address in `CURRENT_COMM`.
     nbgl_registered: bool,
@@ -326,6 +330,7 @@ impl Comm {
             tx_length: 0,
             skip_rx_on_send: false,
             apdu_in_progress: false,
+            pending_apdu: false,
             nbgl_registered: false,
         }
     }
@@ -411,9 +416,13 @@ impl Comm {
         self.rx_length = 0;
         // Replying completes the current command.
         self.apdu_in_progress = false;
+        self.pending_apdu = false;
     }
 
     /// Wait and return next button press event or APDU command.
+    ///
+    /// A command received by an NBGL screen that ended before handing it over
+    /// (see [`Comm::next_event_ahead`]) is returned first.
     ///
     /// `T` can be any type built from a [`ApduHeader`] using the [`TryFrom<ApduHeader>`] trait.
     /// The conversion can embed complex parsing logic, including checks on CLA, INS, P1 and P2
@@ -455,6 +464,9 @@ impl Comm {
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
         self.refresh_nbgl_registration();
+        if let Some(event) = self.take_pending_command() {
+            return event;
+        }
         self.rx_length = 0;
         loop {
             let status = sys_seph::io_rx(&mut self.rx_buffer, true);
@@ -477,11 +489,22 @@ impl Comm {
     ///   returned so the caller can leave the screen and handle it.
     /// * a command is being processed (review, status, … screen): an incoming
     ///   APDU is a double APDU and is answered [`StatusWords::CmdNotAccepted`].
+    ///
+    /// A command accepted on one call is pending until it is handed to the
+    /// application, by the home screen or by [`Comm::next_event`]. If this is
+    /// called again first, the displayed screen did not exit to handle it: the
+    /// command is answered [`StatusWords::CmdNotAccepted`] and dropped, so that
+    /// the screen keeps running and the next APDU is a new command.
     pub fn next_event_ahead<T>(&mut self) -> bool
     where
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
+        if self.pending_apdu {
+            self.reject_pending_apdu();
+            return false;
+        }
+
         let status = sys_seph::io_rx(&mut self.rx_buffer, true);
         if status <= 0 {
             return false;
@@ -489,6 +512,41 @@ impl Comm {
 
         // A double APDU is answered by `decode_event`, and is not a command.
         self.detect_apdu::<T>(status)
+    }
+
+    /// Answer the pending command [`StatusWords::CmdNotAccepted`], on the
+    /// transport it was received on, and drop it.
+    fn reject_pending_apdu(&mut self) {
+        self.pending_apdu = false;
+        self.event_pending = false;
+        self.rx_length = 0;
+        self.apdu_in_progress = false;
+        let sw = (StatusWords::CmdNotAccepted as u16).to_be_bytes();
+        sys_seph::io_tx(self.apdu_type, &sw, sw.len());
+    }
+
+    /// Hand the pending command, if any, to the application.
+    ///
+    /// Its header is checked again against `T`, as it was accepted by the
+    /// NBGL callbacks as a plain [`ApduHeader`]; it is answered with the
+    /// conversion error otherwise.
+    fn take_pending_command<T>(&mut self) -> Option<Event<T>>
+    where
+        T: TryFrom<ApduHeader>,
+        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
+    {
+        if !self.pending_apdu {
+            return None;
+        }
+        self.pending_apdu = false;
+        self.event_pending = false;
+        match T::try_from(self.header) {
+            Ok(ins) => Some(Event::Command(ins)),
+            Err(sw) => {
+                self.reply(sw);
+                None
+            }
+        }
     }
 
     /// Answer an APDU of `rx` bytes, still in `rx_buffer`, received while
@@ -786,6 +844,7 @@ impl Comm {
                 self.rx_length = length as usize;
                 self.rx = self.rx_length - 1;
                 self.event_pending = true;
+                self.pending_apdu = true;
                 true
             }
             _ => false,
@@ -981,10 +1040,13 @@ fn default_nbgl_next_event_ahead() -> bool {
     registered_comm().next_event_ahead::<ApduHeader>()
 }
 
+/// Hands the pending command to the home screen, which returns it to the
+/// application.
 #[allow(dead_code)]
 fn default_nbgl_fetch_apdu_header() -> Option<ApduHeader> {
     let comm = registered_comm();
-    if comm.event_pending && comm.rx_length >= 5 {
+    if comm.pending_apdu {
+        comm.pending_apdu = false;
         return Some(*comm.get_apdu_metadata());
     }
     None
@@ -1226,6 +1288,100 @@ mod test {
         assert_eq!(c.io_buffer[..3] == [0x11, 0x22, 0x33], true);
         assert_eq!(c.event_pending, false);
         assert_eq!(c.apdu_in_progress, true);
+    }
+
+    /// Puts `apdu` in the receive buffer as if it had arrived on `transport`
+    /// while an NBGL screen is displayed, and lets the NBGL callbacks decode it.
+    fn receive_ahead(c: &mut Comm, transport: u8, apdu: &[u8]) -> bool {
+        c.rx_buffer[0] = transport;
+        c.rx_buffer[1..1 + apdu.len()].copy_from_slice(apdu);
+        c.detect_apdu::<ApduHeader>(apdu.len() as i32 + 1)
+    }
+
+    const CMD_A: [u8; 7] = [0xe0, 0x02, 0x00, 0x00, 0x02, 0xaa, 0xbb];
+    const CMD_B: [u8; 5] = [0xe0, 0x04, 0x01, 0x00, 0x00];
+
+    /// A command received while a screen that does not exit on APDU is
+    /// displayed (a status screen after a reply, for instance) is answered once
+    /// polling resumes, and the next APDU is a new command, not a double APDU.
+    #[test]
+    fn pending_command_is_answered_when_the_screen_does_not_exit() {
+        let mut c = Comm::new();
+        // Received over BLE, as the test below answers it: a USB HID response
+        // crashes Speculos in the unit test setup.
+        assert_eq!(
+            receive_ahead(&mut c, OS_IO_PACKET_TYPE_BLE_APDU, &CMD_A),
+            true
+        );
+        assert_eq!(c.pending_apdu, true);
+        assert_eq!(c.apdu_in_progress, true);
+
+        // The screen polls again: the command is answered and dropped.
+        assert_eq!(c.next_event_ahead::<ApduHeader>(), false);
+        assert_eq!(c.pending_apdu, false);
+        assert_eq!(c.apdu_in_progress, false);
+        assert_eq!(c.event_pending, false);
+        assert_eq!(c.take_pending_command::<ApduHeader>().is_none(), true);
+
+        // The next APDU is handed to the application.
+        let event = receive(&mut c, OS_IO_PACKET_TYPE_USB_HID_APDU, &CMD_B);
+        assert_eq!(matches!(event, Some(Event::Command(_))), true);
+        assert_eq!(header_of(&c), (0xe0, 0x04, 0x01, 0x00));
+        assert_eq!(c.apdu_in_progress, true);
+    }
+
+    /// A command received on the last poll of a screen is handed to the
+    /// application by the next `next_event`, with its header and data.
+    #[test]
+    fn pending_command_is_handed_to_next_event() {
+        let mut c = Comm::new();
+        assert_eq!(
+            receive_ahead(&mut c, OS_IO_PACKET_TYPE_BLE_APDU, &CMD_A),
+            true
+        );
+
+        let event = c.take_pending_command::<ApduHeader>();
+        assert_eq!(
+            matches!(event, Some(Event::Command(h)) if (h.cla, h.ins) == (0xe0, 0x02)),
+            true
+        );
+        assert_eq!(c.get_data().ok() == Some(&[0xaa, 0xbb][..]), true);
+        assert_eq!(c.apdu_type, OS_IO_PACKET_TYPE_BLE_APDU);
+        assert_eq!(c.pending_apdu, false);
+        assert_eq!(c.event_pending, false);
+        // It is now in flight: another APDU is a double APDU.
+        assert_eq!(c.apdu_in_progress, true);
+        assert_eq!(
+            receive(&mut c, OS_IO_PACKET_TYPE_BLE_APDU, &CMD_B).is_none(),
+            true
+        );
+        assert_eq!(header_of(&c), (0xe0, 0x02, 0x00, 0x00));
+
+        // It is handed over once only.
+        assert_eq!(c.take_pending_command::<ApduHeader>().is_none(), true);
+    }
+
+    /// The home screen takes the pending command, which is then neither
+    /// answered by the next poll nor handed over again.
+    #[test]
+    fn home_screen_takes_the_pending_command() {
+        let mut c = Comm::new();
+        c.nbgl_register_comm();
+        assert_eq!(
+            receive_ahead(&mut c, OS_IO_PACKET_TYPE_USB_HID_APDU, &CMD_A),
+            true
+        );
+
+        let header = default_nbgl_fetch_apdu_header();
+        assert_eq!(
+            matches!(header, Some(h) if (h.cla, h.ins, h.p1, h.p2) == (0xe0, 0x02, 0x00, 0x00)),
+            true
+        );
+        assert_eq!(default_nbgl_fetch_apdu_header().is_none(), true);
+        assert_eq!(c.pending_apdu, false);
+        assert_eq!(c.apdu_in_progress, true);
+        assert_eq!(c.take_pending_command::<ApduHeader>().is_none(), true);
+        drop(c);
     }
 
     fn registered_at(comm: &Comm) -> bool {
