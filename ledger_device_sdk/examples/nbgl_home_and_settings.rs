@@ -34,14 +34,15 @@ impl TryFrom<ApduHeader> for Instruction {
 
 mod settings {
 
-    use ledger_device_sdk::NVMData;
     use ledger_device_sdk::nvm::*;
 
-    // This is necessary to store the object in NVM and not in RAM
+    // Stores the object in NVM and not in RAM: `DATA` is an
+    // `NVMData<AtomicStorage<[u8; SETTINGS_SIZE]>>` in `.nvm_data`.
     const SETTINGS_SIZE: usize = 10;
-    #[unsafe(link_section = ".nvm_data")]
-    static mut DATA: NVMData<AtomicStorage<[u8; SETTINGS_SIZE]>> =
-        NVMData::new(AtomicStorage::new(&[0u8; SETTINGS_SIZE]));
+    ledger_device_sdk::nvm_data! {
+        static mut DATA: AtomicStorage<[u8; SETTINGS_SIZE]> =
+            AtomicStorage::new(&[0u8; SETTINGS_SIZE]);
+    }
 
     #[derive(Clone, Copy)]
     pub struct Settings;

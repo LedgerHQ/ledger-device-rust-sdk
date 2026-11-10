@@ -13,13 +13,13 @@
 //! update:
 //!
 //! ```
-//! use ledger_device_sdk::NVMData;
 //! use ledger_device_sdk::nvm::AtomicStorage;
 //!
-//! // This is necessary to store the object in NVM and not in RAM
-//! #[link_section=".nvm_data"]
-//! static mut COUNTER: NVMData<AtomicStorage<i32>> =
-//!     NVMData::new(AtomicStorage::new(&3));
+//! // Places the object in NVM and not in RAM: `COUNTER` is an
+//! // `NVMData<AtomicStorage<i32>>` in the `.nvm_data` section.
+//! ledger_device_sdk::nvm_data! {
+//!     static mut COUNTER: AtomicStorage<i32> = AtomicStorage::new(&3);
+//! }
 //! ```
 //!
 //! In the program, `COUNTER` must not be used directly. It is a static variable
@@ -57,9 +57,59 @@
 //!
 //! Prefer integers and byte arrays such as `[u8; N]`, and encode other values
 //! explicitly, checking them when decoding.
+//!
+//! [`nvm_data!`](crate::nvm_data) enforces this: the storages it declares must
+//! hold an [`NvmValue`], which the SDK implements for integers and arrays of
+//! them only. An app storing a type of its own implements `NvmValue` for it,
+//! after checking the contract of the trait.
 
 use AtomicStorageElem::{StorageA, StorageB};
 use ledger_secure_sdk_sys::nvm_write;
+
+/// A type whose bytes can be stored in NVM and read back as a value of it.
+///
+/// # Safety
+/// Implementors hold no references or pointers, have no padding bytes, and
+/// every bit pattern of their size is a valid value of them: a stored value
+/// can be read back from another run of the app, torn by an interrupted
+/// update, or zeroed.
+pub unsafe trait NvmValue: Copy {}
+
+macro_rules! nvm_value {
+    ($($t:ty),*) => { $(unsafe impl NvmValue for $t {})* };
+}
+nvm_value!(
+    u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize
+);
+
+// SAFETY: the elements of an array are laid out with no padding between them,
+// and an `NvmValue` has none in itself.
+unsafe impl<T: NvmValue, const N: usize> NvmValue for [T; N] {}
+
+mod sealed {
+    pub trait Sealed {}
+}
+
+/// A type [`nvm_data!`](crate::nvm_data) can declare: one of the storages of
+/// this module holding an [`NvmValue`], or an `NvmValue` the app writes with
+/// its own calls to `nvm_write`.
+pub trait NvmStorable: sealed::Sealed {}
+
+impl<T: NvmValue> sealed::Sealed for T {}
+impl<T: NvmValue> NvmStorable for T {}
+impl<T: NvmValue> sealed::Sealed for AlignedStorage<T> {}
+impl<T: NvmValue> NvmStorable for AlignedStorage<T> {}
+impl<T: NvmValue> sealed::Sealed for SafeStorage<T> {}
+impl<T: NvmValue> NvmStorable for SafeStorage<T> {}
+impl<T: NvmValue> sealed::Sealed for AtomicStorage<T> {}
+impl<T: NvmValue> NvmStorable for AtomicStorage<T> {}
+impl<T: NvmValue, const N: usize> sealed::Sealed for Collection<T, N> {}
+impl<T: NvmValue, const N: usize> NvmStorable for Collection<T, N> {}
+
+/// Fails to compile unless `T` is [`NvmStorable`]; called by
+/// [`nvm_data!`](crate::nvm_data).
+#[doc(hidden)]
+pub const fn require_nvm_storable<T: NvmStorable>() {}
 
 // `repr(align(...))` does not accept a constant, so alignments are literals:
 // 64 bytes for `AlignedStorage`, and the flash page size of each device for the
@@ -244,6 +294,16 @@ const _: () = assert!(replicas_on_own_pages!(u8));
 const _: () = assert!(replicas_on_own_pages!(i32));
 const _: () = assert!(replicas_on_own_pages!([u8; 10]));
 const _: () = assert!(replicas_on_own_pages!([u8; 700]));
+
+// The storages `nvm_data!` accepts, for every device.
+const _: () = {
+    require_nvm_storable::<u8>();
+    require_nvm_storable::<[u32; 4]>();
+    require_nvm_storable::<AlignedStorage<i64>>();
+    require_nvm_storable::<SafeStorage<[u8; 10]>>();
+    require_nvm_storable::<AtomicStorage<[[u16; 2]; 3]>>();
+    require_nvm_storable::<Collection<u32, 4>>();
+};
 
 /// Non-Volatile data storage with atomic update support.
 ///
@@ -585,14 +645,13 @@ where
 #[cfg(test)]
 mod tests {
     use super::{AtomicStorage, Collection, STORAGE_VALID, SafeStorage, SingleStorage};
-    use crate::NVMData;
     use crate::assert_eq_err as assert_eq;
     use crate::testing::TestType;
     use testmacro::test_item as test;
 
-    #[unsafe(link_section = ".nvm_data")]
-    static mut NEVER_UPDATED: NVMData<AtomicStorage<[u8; 4]>> =
-        NVMData::new(AtomicStorage::new(&[0; 4]));
+    crate::nvm_data! {
+        static mut NEVER_UPDATED: AtomicStorage<[u8; 4]> = AtomicStorage::new(&[0; 4]);
+    }
 
     // An application started from a zeroed `.nvm_data`, as Speculos loads it for applications,
     // finds both validity flags of a storage it never updated clear: `get_or_init` stores the
@@ -624,9 +683,9 @@ mod tests {
         assert_eq!(*storage.get_ref(), [3; 4]);
     }
 
-    #[unsafe(link_section = ".nvm_data")]
-    static mut NEVER_UPDATED_COLLECTION: NVMData<Collection<u32, 4>> =
-        NVMData::new(Collection::new(0));
+    crate::nvm_data! {
+        static mut NEVER_UPDATED_COLLECTION: Collection<u32, 4> = Collection::new(0);
+    }
 
     // A collection whose allocation flags were never updated, as in the zeroed `.nvm_data`
     // Speculos loads, is empty, which is what `Collection::new` stores: it is read and added
@@ -647,8 +706,9 @@ mod tests {
         assert_eq!(collection.get(0), Some(&7));
     }
 
-    #[unsafe(link_section = ".nvm_data")]
-    static mut SETTLED: NVMData<AtomicStorage<[u8; 4]>> = NVMData::new(AtomicStorage::new(&[0; 4]));
+    crate::nvm_data! {
+        static mut SETTLED: AtomicStorage<[u8; 4]> = AtomicStorage::new(&[0; 4]);
+    }
 
     // An update leaves the replaced value in the storage it invalidates; settling overwrites it
     // with the current value, keeps the current value readable, and writes nothing once both
@@ -693,9 +753,9 @@ mod tests {
         assert_eq!(*storage.get_ref(), [4; 4]);
     }
 
-    #[unsafe(link_section = ".nvm_data")]
-    static mut INTERRUPTED: NVMData<AtomicStorage<[u8; 4]>> =
-        NVMData::new(AtomicStorage::new(&[0; 4]));
+    crate::nvm_data! {
+        static mut INTERRUPTED: AtomicStorage<[u8; 4]> = AtomicStorage::new(&[0; 4]);
+    }
 
     /// The replica an update of `storage` writes, and the one it invalidates.
     fn replicas(

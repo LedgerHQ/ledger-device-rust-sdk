@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `nbgl`: `NbglHomeAndSettings::nvm_settings` and
   `NbglGenericSettings::nvm_settings` set the settings as `settings` does, but
   take the storage as `&'static mut AtomicStorage<[u8; N]>`.
+- `nvm_data!` declares `NVMData` statics in the `.nvm_data` section. The type
+  it declares must be `nvm::NvmStorable`: an `AlignedStorage`, `SafeStorage`,
+  `AtomicStorage` or `Collection` holding an `nvm::NvmValue`, or an `NvmValue`
+  the app writes itself.
+- `nvm`: `NvmValue`, an `unsafe` trait for types that can be stored as their
+  bytes, implemented for integers and arrays of `NvmValue`.
+- `NVMData::new_unchecked`, an `unsafe` `NVMData::new` for statics declared
+  in `.nvm_data` by hand.
 
 ### Deprecated
 - `nbgl`: `NbglHomeAndSettings::settings` and `NbglGenericSettings::settings`,
@@ -28,6 +36,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   then calling `.nvm_settings(settings.get_mut(), &strings)` instead of
   `.settings(...)`.
+- `NVMData::new`, for `nvm_data!`. A declaration such as
+
+  ```rust
+  #[link_section = ".nvm_data"]
+  static mut DATA: NVMData<AtomicStorage<[u8; 10]>> =
+      NVMData::new(AtomicStorage::new(&[0; 10]));
+  ```
+
+  becomes
+
+  ```rust
+  ledger_device_sdk::nvm_data! {
+      static mut DATA: AtomicStorage<[u8; 10]> = AtomicStorage::new(&[0; 10]);
+  }
+  ```
+
+  The static keeps its name and type. A storage of a type that is not
+  `NvmValue` (`bool`, enums, structs) no longer compiles once declared with
+  `nvm_data!`: store it as a `[u8; N]` it is encoded to and checked when
+  decoded, or implement `NvmValue` for it after checking the contract of the
+  trait.
 
 ### Changed
 - `nbgl`: `settings` and `nvm_settings` panic unless the storage they are given

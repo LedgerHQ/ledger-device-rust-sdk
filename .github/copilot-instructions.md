@@ -89,11 +89,14 @@ ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
 ### 3. NVM Storage Patterns
 
-Data **must** be stored in flash with `#[link_section=".nvm_data"]`:
+Data **must** be stored in flash, in the `.nvm_data` section: declare it with
+`nvm_data!`, which places it there (`NVMData::new` is deprecated). Stored types
+must implement `NvmValue` (integers and arrays of them; encode anything else):
 
 ```rust
-#[link_section=".nvm_data"]
-static mut COUNTER: NVMData<AtomicStorage<i32>> = NVMData::new(AtomicStorage::new(&3));
+ledger_device_sdk::nvm_data! {
+    static mut COUNTER: AtomicStorage<i32> = AtomicStorage::new(&3);
+}
 
 // Always use PIC-aware access
 let mut counter = unsafe { COUNTER.get_mut() };
