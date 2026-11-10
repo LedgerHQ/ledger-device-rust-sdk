@@ -55,7 +55,7 @@ mod settings {
     impl Settings {
         #[inline(never)]
         #[allow(unused)]
-        pub fn get_mut(&mut self) -> &mut AtomicStorage<[u8; SETTINGS_SIZE]> {
+        pub fn get_mut(&mut self) -> &'static mut AtomicStorage<[u8; SETTINGS_SIZE]> {
             let data = &raw mut DATA;
             unsafe { (*data).get_mut() }
         }
@@ -182,7 +182,7 @@ extern "C" fn sample_main() {
 
     let mut home = NbglHomeAndSettings::new()
         .glyph(&FERRIS)
-        .settings(settings.get_mut(), &settings_strings)
+        .nvm_settings(settings.get_mut(), &settings_strings)
         .app_name("Example App")
         .info_list(&[
             ("Version", env!("CARGO_PKG_VERSION")),

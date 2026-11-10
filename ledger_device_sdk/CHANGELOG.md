@@ -7,7 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `nbgl`: `NbglHomeAndSettings::nvm_settings` and
+  `NbglGenericSettings::nvm_settings` set the settings as `settings` does, but
+  take the storage as `&'static mut AtomicStorage<[u8; N]>`.
+
+### Deprecated
+- `nbgl`: `NbglHomeAndSettings::settings` and `NbglGenericSettings::settings`,
+  for `nvm_settings`. Apps building with `-D warnings` (as `cargo clippy` in the
+  app guidelines checks) fail until they migrate. The usual change is in the
+  app's settings wrapper, returning the storage of its `NVMData` static as
+  `&'static mut`:
+
+  ```rust
+  pub fn get_mut(&mut self) -> &'static mut AtomicStorage<[u8; SETTINGS_SIZE]> {
+      let data = &raw mut DATA;
+      unsafe { (*data).get_mut() }
+  }
+  ```
+
+  then calling `.nvm_settings(settings.get_mut(), &strings)` instead of
+  `.settings(...)`.
+
 ### Changed
+- `nbgl`: `settings` and `nvm_settings` panic unless the storage they are given
+  lies in the `.nvm_data` section (a static declared with `NVMData`).
 - `ecc`: `Ed25519Stream::sign_finalize` returns `CxError::Locked`, and wipes the
   stream, when called while a `Bn`, `EcPoint`, `MontCtx` or `BnLock` is alive.
 - `nvm`: the flag and the value of a `SafeStorage` each lie on flash pages of

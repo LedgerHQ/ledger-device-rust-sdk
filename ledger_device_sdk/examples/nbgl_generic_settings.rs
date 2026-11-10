@@ -29,7 +29,7 @@ mod settings {
     impl Settings {
         #[inline(never)]
         #[allow(unused)]
-        pub fn get_mut(&mut self) -> &mut AtomicStorage<[u8; SETTINGS_SIZE]> {
+        pub fn get_mut(&mut self) -> &'static mut AtomicStorage<[u8; SETTINGS_SIZE]> {
             let data = &raw mut DATA;
             unsafe { (*data).get_mut() }
         }
@@ -72,7 +72,7 @@ extern "C" fn sample_main() {
     let mut settings: settings::Settings = Default::default();
     let mut menu = NbglGenericSettings::new()
         .title("Settings and Info")
-        .settings(settings.get_mut(), &settings_strings)
+        .nvm_settings(settings.get_mut(), &settings_strings)
         .info(&[("Field 1", "Value 1"), ("Field 2", "Value 2")]);
 
     let _ = menu.show(comm);
@@ -86,7 +86,7 @@ extern "C" fn sample_main() {
     let mut settings: settings::Settings = Default::default();
     let mut menu = NbglGenericSettings::new()
         .title("Only Settings")
-        .settings(settings.get_mut(), &settings_strings);
+        .nvm_settings(settings.get_mut(), &settings_strings);
 
     let _ = menu.show(comm);
 
