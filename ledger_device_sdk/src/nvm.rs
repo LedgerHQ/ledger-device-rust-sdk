@@ -63,7 +63,7 @@ use ledger_secure_sdk_sys::nvm_write;
 
 // `repr(align(...))` does not accept a constant, so alignments are literals:
 // 64 bytes for `AlignedStorage`, and the flash page size of each device for the
-// replicas of `AtomicStorage`.
+// flag and the value of `SafeStorage` and the replicas of `AtomicStorage`.
 
 /// Returned when trying to insert data when no more space is available
 pub struct StorageFullError;
@@ -130,61 +130,9 @@ impl<T: Copy> SingleStorage<T> for AlignedStorage<T> {
     }
 }
 
-/// Just a non-zero magic to mark a storage as valid, when the update procedure
-/// has not been interrupted. Any value excepted 0 and 0xff may work.
-const STORAGE_VALID: u8 = 0xa5;
-
-/// Non-Volatile data storage, with a flag to detect corruption if the update
-/// has been interrupted somehow.
-///
-/// During update:
-/// 1. The flag is reset to 0
-/// 2. The value is updated
-/// 3. The flag is restored to STORAGE_VALID
-pub struct SafeStorage<T: Copy> {
-    flag: AlignedStorage<u8>,
-    value: AlignedStorage<T>,
-}
-
-impl<T: Copy> SafeStorage<T> {
-    pub const fn new(value: T) -> SafeStorage<T> {
-        SafeStorage {
-            flag: AlignedStorage::new(STORAGE_VALID),
-            value: AlignedStorage::new(value),
-        }
-    }
-
-    /// Set the validation flag to zero to mark the content as invalid.
-    /// This used for instance by the atomic storage management.
-    pub fn invalidate(&mut self) {
-        self.flag.update(&0);
-    }
-
-    /// Returns true if the stored value is not corrupted, false if a previous
-    /// update operation has been interrupted.
-    pub fn is_valid(&self) -> bool {
-        *self.flag.get_ref() == STORAGE_VALID
-    }
-}
-
-impl<T: Copy> SingleStorage<T> for SafeStorage<T> {
-    /// Return non-mutable reference to the stored value.
-    /// Panic if the storage is not valid (corrupted).
-    fn get_ref(&self) -> &T {
-        assert_eq!(*self.flag.get_ref(), STORAGE_VALID);
-        self.value.get_ref()
-    }
-
-    fn update(&mut self, value: &T) {
-        self.flag.update(&0);
-        self.value.update(value);
-        self.flag.update(&STORAGE_VALID);
-    }
-}
-
-/// Wraps a replica of an [`AtomicStorage`] so that it starts on a flash page of
-/// its own, and is padded to a whole number of pages: updating one replica
-/// never touches the page of the other.
+/// Wraps a part of a storage so that it starts on a flash page of its own, and
+/// is padded to a whole number of pages: updating it never touches the page of
+/// another part.
 ///
 /// The alignment is the flash page size, set per device through a macro as
 /// `#[repr(align(N))]` does not accept variable 'N'.
@@ -208,6 +156,61 @@ page_aligned!(256);
 ))]
 page_aligned!(512);
 
+/// Just a non-zero magic to mark a storage as valid, when the update procedure
+/// has not been interrupted. Any value excepted 0 and 0xff may work.
+const STORAGE_VALID: u8 = 0xa5;
+
+/// Non-Volatile data storage, with a flag to detect corruption if the update
+/// has been interrupted somehow.
+///
+/// During update:
+/// 1. The flag is reset to 0
+/// 2. The value is updated
+/// 3. The flag is restored to STORAGE_VALID
+///
+/// The flag and the value each lie on flash pages of their own, so writing the
+/// flag never touches the value: a storage takes at least two pages.
+pub struct SafeStorage<T: Copy> {
+    flag: PageAligned<AlignedStorage<u8>>,
+    value: PageAligned<AlignedStorage<T>>,
+}
+
+impl<T: Copy> SafeStorage<T> {
+    pub const fn new(value: T) -> SafeStorage<T> {
+        SafeStorage {
+            flag: PageAligned(AlignedStorage::new(STORAGE_VALID)),
+            value: PageAligned(AlignedStorage::new(value)),
+        }
+    }
+
+    /// Set the validation flag to zero to mark the content as invalid.
+    /// This used for instance by the atomic storage management.
+    pub fn invalidate(&mut self) {
+        self.flag.0.update(&0);
+    }
+
+    /// Returns true if the stored value is not corrupted, false if a previous
+    /// update operation has been interrupted.
+    pub fn is_valid(&self) -> bool {
+        *self.flag.0.get_ref() == STORAGE_VALID
+    }
+}
+
+impl<T: Copy> SingleStorage<T> for SafeStorage<T> {
+    /// Return non-mutable reference to the stored value.
+    /// Panic if the storage is not valid (corrupted).
+    fn get_ref(&self) -> &T {
+        assert_eq!(*self.flag.0.get_ref(), STORAGE_VALID);
+        self.value.0.get_ref()
+    }
+
+    fn update(&mut self, value: &T) {
+        self.flag.0.update(&0);
+        self.value.0.update(value);
+        self.flag.0.update(&STORAGE_VALID);
+    }
+}
+
 /// Whether both replicas of an `AtomicStorage<T>` start on a page boundary and
 /// share no page.
 macro_rules! replicas_on_own_pages {
@@ -219,8 +222,24 @@ macro_rules! replicas_on_own_pages {
     }};
 }
 
+/// Whether the flag and the value of a `SafeStorage<T>` start on a page
+/// boundary and share no page.
+macro_rules! flag_and_value_on_own_pages {
+    ($t:ty) => {{
+        let f = core::mem::offset_of!(SafeStorage<$t>, flag);
+        let v = core::mem::offset_of!(SafeStorage<$t>, value);
+        let f_size = core::mem::size_of::<PageAligned<AlignedStorage<u8>>>();
+        let v_size = core::mem::size_of::<PageAligned<AlignedStorage<$t>>>();
+        f % PAGE_SIZE == 0 && v % PAGE_SIZE == 0 && (f + f_size <= v || v + v_size <= f)
+    }};
+}
+
 // Checked at build time, for every device, for values smaller and larger
 // than a page.
+const _: () = assert!(flag_and_value_on_own_pages!(u8));
+const _: () = assert!(flag_and_value_on_own_pages!(i32));
+const _: () = assert!(flag_and_value_on_own_pages!([u8; 10]));
+const _: () = assert!(flag_and_value_on_own_pages!([u8; 700]));
 const _: () = assert!(replicas_on_own_pages!(u8));
 const _: () = assert!(replicas_on_own_pages!(i32));
 const _: () = assert!(replicas_on_own_pages!([u8; 10]));
@@ -228,8 +247,8 @@ const _: () = assert!(replicas_on_own_pages!([u8; 700]));
 
 /// Non-Volatile data storage with atomic update support.
 ///
-/// Holds two replicas of the value, each on flash pages of its own, so it
-/// takes at least two pages.
+/// Holds two replicas of the value, each a [`SafeStorage`] on flash pages of
+/// its own, so it takes at least four pages.
 pub struct AtomicStorage<T: Copy> {
     storage_a: PageAligned<SafeStorage<T>>,
     // We also accept situations where both storages are marked as valid, which
@@ -312,12 +331,12 @@ impl<const N: usize> AtomicStorage<[u8; N]> {
         } else {
             return;
         };
-        if current.value.get_ref() == other.value.get_ref() {
+        if current.value.0.get_ref() == other.value.0.get_ref() {
             return;
         }
         // Writing the current value again lands it in the other storage, which becomes current;
         // the one invalidated holds the same bytes.
-        let value = *current.value.get_ref();
+        let value = *current.value.0.get_ref();
         self.update(&value);
     }
 }
@@ -565,7 +584,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{AtomicStorage, Collection, SingleStorage};
+    use super::{AtomicStorage, Collection, STORAGE_VALID, SafeStorage, SingleStorage};
     use crate::NVMData;
     use crate::assert_eq_err as assert_eq;
     use crate::testing::TestType;
@@ -641,13 +660,13 @@ mod tests {
         storage.update(&[1; 4]);
         storage.update(&[2; 4]);
         let replaced = [
-            *storage.storage_a.0.value.get_ref(),
-            *storage.storage_b.0.value.get_ref(),
+            *storage.storage_a.0.value.0.get_ref(),
+            *storage.storage_b.0.value.0.get_ref(),
         ];
         assert_eq!(replaced.contains(&[1; 4]), true);
         storage.settle();
-        assert_eq!(*storage.storage_a.0.value.get_ref(), [2; 4]);
-        assert_eq!(*storage.storage_b.0.value.get_ref(), [2; 4]);
+        assert_eq!(*storage.storage_a.0.value.0.get_ref(), [2; 4]);
+        assert_eq!(*storage.storage_b.0.value.0.get_ref(), [2; 4]);
         assert_eq!(*storage.get_ref(), [2; 4]);
         storage.settle();
         assert_eq!(*storage.get_ref(), [2; 4]);
@@ -667,10 +686,69 @@ mod tests {
         } else {
             &mut storage.storage_a.0
         };
-        other.value.update(&[4, 4, 3, 3]);
+        other.value.0.update(&[4, 4, 3, 3]);
         storage.settle();
-        assert_eq!(*storage.storage_a.0.value.get_ref(), [4; 4]);
-        assert_eq!(*storage.storage_b.0.value.get_ref(), [4; 4]);
+        assert_eq!(*storage.storage_a.0.value.0.get_ref(), [4; 4]);
+        assert_eq!(*storage.storage_b.0.value.0.get_ref(), [4; 4]);
+        assert_eq!(*storage.get_ref(), [4; 4]);
+    }
+
+    #[unsafe(link_section = ".nvm_data")]
+    static mut INTERRUPTED: NVMData<AtomicStorage<[u8; 4]>> =
+        NVMData::new(AtomicStorage::new(&[0; 4]));
+
+    /// The replica an update of `storage` writes, and the one it invalidates.
+    fn replicas(
+        storage: &mut AtomicStorage<[u8; 4]>,
+        writes_a: bool,
+    ) -> (&mut SafeStorage<[u8; 4]>, &mut SafeStorage<[u8; 4]>) {
+        if writes_a {
+            (&mut storage.storage_a.0, &mut storage.storage_b.0)
+        } else {
+            (&mut storage.storage_b.0, &mut storage.storage_a.0)
+        }
+    }
+
+    /// Steps through an update of `storage`, holding `old`, to `new`, and checks
+    /// what a power loss after each write leaves. With the flag and the value of
+    /// a replica on pages of their own, and the replicas on pages of their own, a
+    /// write damages only the part it writes: these are all the states an
+    /// interrupted update can leave.
+    fn check_interrupted_update(
+        storage: &mut AtomicStorage<[u8; 4]>,
+        old: [u8; 4],
+        new: [u8; 4],
+    ) -> Result<(), ()> {
+        assert_eq!(*storage.get_ref(), old);
+        let writes_a = !storage.storage_a.0.is_valid();
+        replicas(storage, writes_a).0.invalidate();
+        assert_eq!(*storage.get_ref(), old);
+        let torn = [new[0], new[1], old[2], old[3]];
+        replicas(storage, writes_a).0.value.0.update(&torn);
+        assert_eq!(*storage.get_ref(), old);
+        replicas(storage, writes_a).0.value.0.update(&new);
+        assert_eq!(*storage.get_ref(), old);
+        replicas(storage, writes_a).0.flag.0.update(&STORAGE_VALID);
+        // Both replicas are valid until the old one is invalidated: the first one is read.
+        assert_eq!(*storage.get_ref(), if writes_a { new } else { old });
+        replicas(storage, writes_a).1.invalidate();
+        assert_eq!(*storage.get_ref(), new);
+        Ok(())
+    }
+
+    // An update interrupted after any of its writes, from the first replica to the second and
+    // back, leaves the old or the new value.
+    #[test]
+    fn atomic_storage_interrupted_update_keeps_old_or_new() {
+        let pointer = &raw mut INTERRUPTED;
+        let storage = unsafe { (*pointer).get_mut() };
+        storage.update(&[1; 4]);
+        let a_current = storage.storage_a.0.is_valid();
+        check_interrupted_update(storage, [1; 4], [2; 4])?;
+        assert_eq!(storage.storage_a.0.is_valid(), !a_current);
+        check_interrupted_update(storage, [2; 4], [3; 4])?;
+        assert_eq!(storage.storage_a.0.is_valid(), a_current);
+        storage.update(&[4; 4]);
         assert_eq!(*storage.get_ref(), [4; 4]);
     }
 }

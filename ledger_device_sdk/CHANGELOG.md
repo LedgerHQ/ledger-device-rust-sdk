@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - `ecc`: `Ed25519Stream::sign_finalize` returns `CxError::Locked`, and wipes the
   stream, when called while a `Bn`, `EcPoint`, `MontCtx` or `BnLock` is alive.
+- `nvm`: the flag and the value of a `SafeStorage` each lie on flash pages of
+  their own, so a `SafeStorage` takes at least two pages, and an
+  `AtomicStorage` (the allocation flags of a `Collection` included) four.
 
 ### Fixed
 - `ecc`: `Ed25519Stream` frees every BN and EC point it allocates, on error
