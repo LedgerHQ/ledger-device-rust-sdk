@@ -5,6 +5,83 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.44.0] - 2026-11-12
+
+### Added
+- `nbgl`: `NbglHomeAndSettings::nvm_settings` and
+  `NbglGenericSettings::nvm_settings` set the settings as `settings` does, but
+  take the storage as `&'static mut AtomicStorage<[u8; N]>`.
+- `nvm_data!` declares `NVMData` statics in the `.nvm_data` section. The type
+  it declares must be `nvm::NvmStorable`: an `AlignedStorage`, `SafeStorage`,
+  `AtomicStorage` or `Collection` holding an `nvm::NvmValue`, or an `NvmValue`
+  the app writes itself.
+- `nvm`: `NvmValue`, an `unsafe` trait for types that can be stored as their
+  bytes, implemented for integers and arrays of `NvmValue`.
+- `NVMData::new_unchecked`, an `unsafe` `NVMData::new` for statics declared
+  in `.nvm_data` by hand.
+
+### Deprecated
+- `nbgl`: `NbglHomeAndSettings::settings` and `NbglGenericSettings::settings`,
+  for `nvm_settings`. Apps building with `-D warnings` (as `cargo clippy` in the
+  app guidelines checks) fail until they migrate. The usual change is in the
+  app's settings wrapper, returning the storage of its `NVMData` static as
+  `&'static mut`. A safe function returning `&'static mut` each time it is
+  called would let two such references alias, so the wrapper is `unsafe`, with
+  the exclusivity its callers check:
+
+  ```rust
+  /// # Safety
+  /// No other reference to the storage may be in use while the returned one is.
+  pub unsafe fn get_mut(&mut self) -> &'static mut AtomicStorage<[u8; SETTINGS_SIZE]> {
+      let data = &raw mut DATA;
+      unsafe { (*data).get_mut() }
+  }
+  ```
+
+  then calling `.nvm_settings(unsafe { settings.get_mut() }, &strings)` instead
+  of `.settings(...)`.
+- `NVMData::new`, for `nvm_data!`. A declaration such as
+
+  ```rust
+  #[link_section = ".nvm_data"]
+  static mut DATA: NVMData<AtomicStorage<[u8; 10]>> =
+      NVMData::new(AtomicStorage::new(&[0; 10]));
+  ```
+
+  becomes
+
+  ```rust
+  ledger_device_sdk::nvm_data! {
+      static mut DATA: AtomicStorage<[u8; 10]> = AtomicStorage::new(&[0; 10]);
+  }
+  ```
+
+  The static keeps its name and type. A storage of a type that is not
+  `NvmValue` (`bool`, enums, structs) no longer compiles once declared with
+  `nvm_data!`: store it as a `[u8; N]` it is encoded to and checked when
+  decoded, or implement `NvmValue` for it after checking the contract of the
+  trait.
+
+### Changed
+- `nbgl`: `settings` and `nvm_settings` panic unless the storage they are given
+  lies in the `.nvm_data` section (a static declared with `NVMData`).
+- `ecc`: `Ed25519Stream::sign_finalize` returns `CxError::Locked`, and wipes the
+  stream, when called while a `Bn`, `EcPoint`, `MontCtx` or `BnLock` is alive.
+- `nvm`: the flag and the value of a `SafeStorage` each lie on flash pages of
+  their own, so a `SafeStorage` takes at least two pages, and an
+  `AtomicStorage` (the allocation flags of a `Collection` included) four.
+
+### Fixed
+- `ecc`: `Ed25519Stream` frees every BN and EC point it allocates, on error
+  paths too.
+- `io_legacy`: a command received while an NBGL screen that does not exit on
+  APDU is displayed is answered `CmdNotAccepted`, as with `io_new`, and the
+  next APDU is handled as a new command. A command received on the last poll
+  of a screen is returned by the next `next_event`.
+- `nbgl`: `NbglStreamingReview` keeps the icon of a started review until it is
+  finished, so the builder it was started with may be moved or dropped before
+  `finish`, or the review finished through another builder.
+
 ## [1.43.0] - 2026-11-06
 
 ### Added

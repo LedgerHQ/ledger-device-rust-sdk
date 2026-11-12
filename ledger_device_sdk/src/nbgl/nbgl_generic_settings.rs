@@ -105,13 +105,43 @@ impl NbglGenericSettings {
         self
     }
 
+    /// Sets the settings to display, one switch per string pair, each stored in
+    /// one byte of `nvm_data`. The settings callbacks read and update
+    /// `nvm_data` for as long as the screen is shown, so it must be a static
+    /// declared with [`NVMData`](crate::NVMData).
+    ///
+    /// # Panics
+    /// Panics if there are more settings than the NVM array has bytes, or if
+    /// `nvm_data` is not in the `.nvm_data` section.
+    pub fn nvm_settings<const N: usize>(
+        self,
+        nvm_data: &'static mut AtomicStorage<[u8; N]>,
+        settings_strings: &[[&str; 2]],
+    ) -> NbglGenericSettings {
+        self.bind_settings(nvm_data, settings_strings)
+    }
+
     /// # Panics
     /// Panics if there are more settings than the NVM array has bytes, each
-    /// setting needing one byte of storage.
+    /// setting needing one byte of storage, or if `nvm_data` is not in the
+    /// `.nvm_data` section (a static declared with [`NVMData`](crate::NVMData)):
+    /// the settings callbacks reach it for as long as the screen is shown.
+    #[deprecated(
+        since = "1.44.0",
+        note = "use `nvm_settings`, which takes the storage as `&'static mut`"
+    )]
+    pub fn settings<const N: usize>(
+        self,
+        nvm_data: &mut AtomicStorage<[u8; N]>,
+        settings_strings: &[[&str; 2]],
+    ) -> NbglGenericSettings {
+        self.bind_settings(nvm_data, settings_strings)
+    }
+
     // `tuneId` is touchscreen-only, so the struct update below is needed on
     // Nano and redundant elsewhere.
     #[allow(clippy::needless_update)]
-    pub fn settings<const N: usize>(
+    fn bind_settings<const N: usize>(
         mut self,
         nvm_data: &mut AtomicStorage<[u8; N]>,
         settings_strings: &[[&str; 2]],
@@ -119,6 +149,7 @@ impl NbglGenericSettings {
         if settings_strings.len() > N {
             panic!("More settings than the NVM array has bytes.");
         }
+        check_settings_storage(nvm_data);
 
         self.settings_title_subtitle = settings_strings
             .iter()

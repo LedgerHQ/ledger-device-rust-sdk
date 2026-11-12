@@ -58,6 +58,12 @@ pub(crate) fn bn_retain(word_nbytes: usize) -> Result<(), CxError> {
     Ok(())
 }
 
+/// Whether a [`Bn`], [`EcPoint`](crate::ecc::math::EcPoint), [`MontCtx`] or
+/// [`BnLock`] currently holds the BN lock.
+pub(crate) fn bn_is_held() -> bool {
+    BN_RC.count.get() > 0
+}
+
 /// Decrement the BN reference count, releasing the lock when it reaches zero.
 pub(crate) fn bn_release() {
     let c = BN_RC.count.get();

@@ -170,14 +170,103 @@ unsafe extern "C" {
     fn _nvram_prev_run();
 }
 
+/// Size of the data area of `.nvm_data`, from `_nvm_data_start` to the
+/// relocation marker.
+fn nvm_data_len() -> usize {
+    (_nvram_prev_run as *const u8 as usize).wrapping_sub(_nvm_data_start as *const u8 as usize)
+}
+
+/// Whether the `size` bytes at `ptr` lie in the data area of `.nvm_data`, at
+/// the address the app runs it from: where [`NVMData::get_ref`] and
+/// [`NVMData::get_mut`] point.
+#[cfg(any(
+    target_os = "stax",
+    target_os = "flex",
+    target_os = "apex_p",
+    feature = "nano_nbgl",
+    test
+))]
+pub(crate) fn in_nvm_data(ptr: *const u8, size: usize) -> bool {
+    // SAFETY: only translates the address of the section start, as `get_addr`
+    // does.
+    let start = unsafe {
+        ledger_secure_sdk_sys::pic(_nvm_data_start as *const u8 as *mut core::ffi::c_void)
+    } as usize;
+    (ptr as usize)
+        .checked_sub(start)
+        .and_then(|offset| offset.checked_add(size))
+        .is_some_and(|end| end <= nvm_data_len())
+}
+
 /// The following is a means to correctly access data stored in NVM
 /// through the `#[link_section = ".nvm_data"]` attribute
+///
+/// Declare it with [`nvm_data!`], which places it in that section.
 pub struct NVMData<T> {
     data: T,
 }
 
+/// Declares statics in the `.nvm_data` section, each holding an [`NVMData`]
+/// of the declared type.
+///
+/// ```ignore
+/// use ledger_device_sdk::nvm::AtomicStorage;
+///
+/// ledger_device_sdk::nvm_data! {
+///     static mut COUNTER: AtomicStorage<i32> = AtomicStorage::new(&3);
+/// }
+/// // declares
+/// // static mut COUNTER: NVMData<AtomicStorage<i32>>
+/// ```
+///
+/// The declared type must be [`NvmStorable`](crate::nvm::NvmStorable): one
+/// of the storages of [`nvm`] holding an [`NvmValue`](crate::nvm::NvmValue),
+/// or an `NvmValue` the app writes itself.
+///
+/// ```compile_fail
+/// use ledger_device_sdk::nvm::AtomicStorage;
+///
+/// ledger_device_sdk::nvm_data! {
+///     static mut FLAG: AtomicStorage<bool> = AtomicStorage::new(&false);
+/// }
+/// ```
+#[macro_export]
+macro_rules! nvm_data {
+    ($($(#[$attr:meta])* $vis:vis static mut $name:ident: $ty:ty = $init:expr;)*) => {
+        $(
+            $(#[$attr])*
+            #[unsafe(link_section = ".nvm_data")]
+            $vis static mut $name: $crate::NVMData<$ty> = {
+                $crate::nvm::require_nvm_storable::<$ty>();
+                // Evaluated outside the `unsafe` block below, so that the initializer gets no
+                // unsafe permission from the macro.
+                let data: $ty = $init;
+                // SAFETY: this is a static in `.nvm_data`.
+                unsafe { $crate::NVMData::new_unchecked(data) }
+            };
+        )*
+    };
+}
+
 impl<T> NVMData<T> {
+    /// Wraps `data`.
+    ///
+    /// The accessors are only valid for a static in the `.nvm_data` section.
+    #[deprecated(
+        since = "1.44.0",
+        note = "declare the static with `nvm_data!`, which places it in `.nvm_data`"
+    )]
     pub const fn new(data: T) -> NVMData<T> {
+        NVMData { data }
+    }
+
+    /// Wraps `data`, as [`nvm_data!`] does.
+    ///
+    /// # Safety
+    /// The `NVMData` must be a static declared with
+    /// `#[link_section = ".nvm_data"]`: its accessors translate its address
+    /// into that section, and would otherwise refer to other data of it.
+    pub const unsafe fn new_unchecked(data: T) -> NVMData<T> {
         NVMData { data }
     }
 
@@ -194,10 +283,8 @@ impl<T> NVMData<T> {
         let static_base: u32;
         unsafe { core::arch::asm!("mov {}, r9", out(reg) static_base) };
         let offset = usize::try_from(addr.wrapping_sub(static_base)).ok()?;
-        let section_len = (_nvram_prev_run as *const u8 as usize)
-            .wrapping_sub(_nvm_data_start as *const u8 as usize);
         let end = offset.checked_add(core::mem::size_of::<T>())?;
-        (end <= section_len).then_some(offset)
+        (end <= nvm_data_len()).then_some(offset)
     }
 
     /// This will return a mutable access by casting the pointer
@@ -255,8 +342,9 @@ mod tests {
     use crate::testing::TestType;
     use testmacro::test_item as test;
 
-    #[unsafe(link_section = ".nvm_data")]
-    static mut IN_NVM: NVMData<[u32; 4]> = NVMData::new([0; 4]);
+    crate::nvm_data! {
+        static mut IN_NVM: [u32; 4] = [0; 4];
+    }
 
     #[test]
     fn nvm_offset_accepts_statics_in_nvm_data() {
@@ -266,8 +354,21 @@ mod tests {
     }
 
     #[test]
+    fn in_nvm_data_accepts_data_of_nvm_data_statics_only() {
+        let data = unsafe { &*&raw const IN_NVM }.get_ref();
+        let ptr = data as *const [u32; 4] as *const u8;
+        assert_eq!(in_nvm_data(ptr, core::mem::size_of::<[u32; 4]>()), true);
+        // Past the end of the section.
+        assert_eq!(in_nvm_data(ptr, usize::MAX), false);
+        // On the stack.
+        let local = [0u32; 4];
+        assert_eq!(in_nvm_data(local.as_ptr() as *const u8, 16), false);
+    }
+
+    #[test]
     fn nvm_offset_rejects_values_on_the_stack() {
         // The stack is far past the start of RAM, so past the section size.
+        #[allow(deprecated)]
         let local = NVMData::new([0u32; 4]);
         assert_eq!(local.nvm_offset(), None);
     }
