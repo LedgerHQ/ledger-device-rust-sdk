@@ -25,17 +25,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   for `nvm_settings`. Apps building with `-D warnings` (as `cargo clippy` in the
   app guidelines checks) fail until they migrate. The usual change is in the
   app's settings wrapper, returning the storage of its `NVMData` static as
-  `&'static mut`:
+  `&'static mut`. A safe function returning `&'static mut` each time it is
+  called would let two such references alias, so the wrapper is `unsafe`, with
+  the exclusivity its callers check:
 
   ```rust
-  pub fn get_mut(&mut self) -> &'static mut AtomicStorage<[u8; SETTINGS_SIZE]> {
+  /// # Safety
+  /// No other reference to the storage may be in use while the returned one is.
+  pub unsafe fn get_mut(&mut self) -> &'static mut AtomicStorage<[u8; SETTINGS_SIZE]> {
       let data = &raw mut DATA;
       unsafe { (*data).get_mut() }
   }
   ```
 
-  then calling `.nvm_settings(settings.get_mut(), &strings)` instead of
-  `.settings(...)`.
+  then calling `.nvm_settings(unsafe { settings.get_mut() }, &strings)` instead
+  of `.settings(...)`.
 - `NVMData::new`, for `nvm_data!`. A declaration such as
 
   ```rust

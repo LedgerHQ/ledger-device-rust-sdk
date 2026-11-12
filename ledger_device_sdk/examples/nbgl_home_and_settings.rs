@@ -54,9 +54,15 @@ mod settings {
     }
 
     impl Settings {
+        /// The settings storage, for `nvm_settings`.
+        ///
+        /// # Safety
+        /// No other reference to the storage may be in use while the returned one is: call it
+        /// once per settings screen, and do not read the storage through another reference
+        /// while that screen is shown.
         #[inline(never)]
         #[allow(unused)]
-        pub fn get_mut(&mut self) -> &'static mut AtomicStorage<[u8; SETTINGS_SIZE]> {
+        pub unsafe fn get_mut(&mut self) -> &'static mut AtomicStorage<[u8; SETTINGS_SIZE]> {
             let data = &raw mut DATA;
             unsafe { (*data).get_mut() }
         }
@@ -183,7 +189,8 @@ extern "C" fn sample_main() {
 
     let mut home = NbglHomeAndSettings::new()
         .glyph(&FERRIS)
-        .nvm_settings(settings.get_mut(), &settings_strings)
+        // SAFETY: the only reference to the settings storage while the home screen is shown.
+        .nvm_settings(unsafe { settings.get_mut() }, &settings_strings)
         .app_name("Example App")
         .info_list(&[
             ("Version", env!("CARGO_PKG_VERSION")),

@@ -238,8 +238,11 @@ macro_rules! nvm_data {
             #[unsafe(link_section = ".nvm_data")]
             $vis static mut $name: $crate::NVMData<$ty> = {
                 $crate::nvm::require_nvm_storable::<$ty>();
+                // Evaluated outside the `unsafe` block below, so that the initializer gets no
+                // unsafe permission from the macro.
+                let data: $ty = $init;
                 // SAFETY: this is a static in `.nvm_data`.
-                unsafe { $crate::NVMData::new_unchecked($init) }
+                unsafe { $crate::NVMData::new_unchecked(data) }
             };
         )*
     };
