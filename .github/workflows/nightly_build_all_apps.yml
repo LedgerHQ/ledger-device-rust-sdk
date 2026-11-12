@@ -12,6 +12,10 @@ on:
     # every Monday at 4 AM UTC
     - cron: '0 4 * * 1'
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   retrieve-rust-apps:
     name: Retrieve Rust Apps
@@ -21,16 +25,21 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.x'
+          python-version: '3.13'
       - name: Install ledgered
-        run: pip install ledgered
+        run: pip install --require-hashes -r .github/requirements-ci.txt
       - name: Get all rust apps
         id: get_rust_apps
+        env:
+          GH_TOKEN: ${{ vars.APP_REPO_SUFFIX && secrets.CI_BOT_TOKEN || github.token }}
+          APP_REPO_SUFFIX: ${{ vars.APP_REPO_SUFFIX }}
         run: |
-          python .github/workflows/get_rust_apps.py "${{ vars.APP_REPO_SUFFIX && secrets.CI_BOT_TOKEN || secrets.GITHUB_TOKEN }}" "${{ vars.APP_REPO_SUFFIX }}"
+          python .github/workflows/get_rust_apps.py "$APP_REPO_SUFFIX"
           echo "rust_apps=$(cat rust_apps.json)" >> $GITHUB_OUTPUT
 
   build:
@@ -59,15 +68,13 @@ jobs:
           echo "Rust nightly version:"
           rustc +nightly --version
 
-      - name: Install ledgered
-        run: pip install ledgered --break-system-packages
-
       - name: Clone App
         uses: actions/checkout@v6
         with:
           repository: LedgerHQ/${{ matrix.app-name }}
           token: ${{ vars.APP_REPO_SUFFIX && secrets.CI_BOT_TOKEN || github.token }}
           submodules: true
+          persist-credentials: false
 
       - name: Override rust-toolchain.toml to use latest nightly
         run: |
@@ -82,7 +89,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           echo "Building apps against Rust SDK ref '$RUST_SDK_REF'"
-          git clone "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}" /tmp/rust-sdk
+          # Pass the token for this command only, so the clone keeps no credentials.
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" \
+            clone "https://github.com/${{ github.repository }}" /tmp/rust-sdk
           git -C /tmp/rust-sdk checkout "$RUST_SDK_REF"
           build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
           manifest="$build_directory/Cargo.toml"

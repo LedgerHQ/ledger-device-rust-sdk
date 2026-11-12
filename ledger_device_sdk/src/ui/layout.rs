@@ -31,8 +31,10 @@ impl Location {
     pub fn get_y(&self, height: usize) -> usize {
         match self {
             Location::Top => crate::ui::Y_PADDING,
-            Location::Middle => (crate::ui::SCREEN_HEIGHT - height) / 2,
-            Location::Bottom => crate::ui::SCREEN_HEIGHT - height - crate::ui::Y_PADDING,
+            Location::Middle => crate::ui::SCREEN_HEIGHT.saturating_sub(height) / 2,
+            Location::Bottom => crate::ui::SCREEN_HEIGHT
+                .saturating_sub(height)
+                .saturating_sub(crate::ui::Y_PADDING),
             Location::Custom(y) => *y,
         }
     }
@@ -79,5 +81,13 @@ mod tests {
         assert_eq!(Layout::Centered.get_x(wide), 0);
         assert_eq!(Layout::RightAligned.get_x(wide), 0);
         assert_eq!(Layout::Centered.get_x(28), 50);
+    }
+
+    #[test]
+    fn get_y_keeps_tall_content_on_screen() {
+        let tall = crate::ui::SCREEN_HEIGHT + 10;
+        assert_eq!(Location::Middle.get_y(tall), 0);
+        assert_eq!(Location::Bottom.get_y(tall), 0);
+        assert_eq!(Location::Middle.get_y(12), 26);
     }
 }

@@ -8,12 +8,11 @@ use ledger_secure_sdk_sys::{
 
 use crate::ui::bitmaps::Glyph;
 
-// Only used by the legacy-IO gadgets (`display_pending_review`, `MultiPageMenu`)
+use crate::uxapp::{BOLOS_UX_OK, UxEvent};
+
+// Only used by the legacy-IO gadgets (`display_pending_review`)
 #[cfg(not(feature = "io_new"))]
-use crate::{
-    ui::bitmaps::WARNING,
-    uxapp::{BOLOS_UX_OK, UxEvent},
-};
+use crate::ui::bitmaps::WARNING;
 #[cfg(not(feature = "io_new"))]
 use ledger_secure_sdk_sys::buttons::ButtonEvent::*;
 
@@ -25,27 +24,51 @@ use crate::ui::layout::{Draw, Location, StringPlace};
 use numtoa::NumToA;
 
 const MAX_CHAR_PER_LINE: usize = 17;
+/// Lines of normal text under the bold title of a `BoldNormal` page.
+const BOLD_NORMAL_LINES: usize = 3;
 
 /// Handles communication to filter
 /// out actual events, and converts key
 /// events into presses/releases
+///
+/// Every SE or SEPH event (buttons, ticker) is first passed to the OS UX task,
+/// which handles the auto-lock and the PIN screen. A button is returned only
+/// while the OS reports that the application has the screen
+/// (`BOLOS_UX_OK`); when the OS takes it, this waits until it gives it back
+/// and returns `None`, and the caller has to redraw its screen.
 pub fn get_event(buttons: &mut ButtonsState) -> Option<ButtonEvent> {
+    get_event_or_redraw(buttons, || ())
+}
+
+/// [`get_event`], calling `redraw` once the OS gives the screen back after
+/// taking it (for instance after the PIN lock).
+fn get_event_or_redraw(
+    buttons: &mut ButtonsState,
+    mut redraw: impl FnMut(),
+) -> Option<ButtonEvent> {
     let mut io_buffer = [0u8; 273];
     let status = seph::io_rx(&mut io_buffer, true);
-    if status > 0 {
-        let packet_type = io_buffer[0];
-        match packet_type {
-            0x01 | 0x02 => {
-                // SE or SEPH event
-                if io_buffer[1] == 0x05 {
-                    let button_info = io_buffer[4] >> 1;
-                    return get_button_event(buttons, button_info);
-                }
-            }
-            _ => {}
-        }
+    if status <= 0 {
+        return None;
     }
-    None
+    match io_buffer[0] {
+        // SE or SEPH event
+        0x01 | 0x02 => {
+            if UxEvent::Event.request() != BOLOS_UX_OK {
+                UxEvent::block();
+                // Presses seen before the OS took over do not carry on.
+                *buttons = ButtonsState::new();
+                redraw();
+                return None;
+            }
+            if io_buffer[1] == 0x05 {
+                let button_info = io_buffer[4] >> 1;
+                return get_button_event(buttons, button_info);
+            }
+            None
+        }
+        _ => None,
+    }
 }
 
 pub fn clear_screen() {
@@ -80,19 +103,40 @@ pub fn clear_screen() {
 /// ```
 #[cfg(not(feature = "io_new"))]
 pub fn display_pending_review(comm: &mut io::Comm) {
-    clear_screen();
+    let draw = || {
+        clear_screen();
 
-    // Add icon and text to match the C SDK equivalent.
-    WARNING.draw(57, 10);
-    "Pending".place(Location::Custom(28), Layout::Centered, true);
-    "Ledger review".place(Location::Custom(42), Layout::Centered, true);
+        // Add icon and text to match the C SDK equivalent.
+        WARNING.draw(57, 10);
+        "Pending".place(Location::Custom(28), Layout::Centered, true);
+        "Ledger review".place(Location::Custom(42), Layout::Centered, true);
 
-    crate::ui::screen_util::screen_update();
+        crate::ui::screen_util::screen_update();
+    };
+    draw();
 
-    // Process events until a double button press release.
+    // Process events until a double button press release. Like
+    // `MultiPageMenu`, events are handed to the OS UX task first, and the
+    // popup waits while the OS shows its own screens.
     loop {
-        if let io::Event::Button(BothButtonsRelease) = comm.next_event::<io::ApduHeader>() {
-            break;
+        match comm.next_event::<io::ApduHeader>() {
+            io::Event::Button(button) => {
+                if UxEvent::Event.request() == BOLOS_UX_OK && button == BothButtonsRelease {
+                    break;
+                }
+            }
+            io::Event::Ticker => {
+                if UxEvent::Event.request() != BOLOS_UX_OK {
+                    // Commands are not handled before the popup is dismissed.
+                    while let (_, Some(io::Event::Command(_))) =
+                        UxEvent::block_and_get_event::<io::ApduHeader>(comm)
+                    {
+                        comm.reply(io::StatusWords::CmdNotAccepted);
+                    }
+                    draw();
+                }
+            }
+            io::Event::Command(_) => comm.reply(io::StatusWords::CmdNotAccepted),
         }
     }
 }
@@ -117,7 +161,15 @@ impl<'a> Validator<'a> {
         Validator { message }
     }
 
+    /// Returns `false` without displaying anything if `message` holds a
+    /// character the font has no glyph for (outside 0x20 to 0x7F), or does not
+    /// fit on one line once selected (in bold).
     pub fn ask(&self) -> bool {
+        if !is_displayable(self.message)
+            || self.message.compute_width(true) > crate::ui::SCREEN_WIDTH
+        {
+            return false;
+        }
         clear_screen();
         let mut buttons = ButtonsState::new();
 
@@ -139,7 +191,7 @@ impl<'a> Validator<'a> {
         let mut response = false;
 
         loop {
-            match get_event(&mut buttons) {
+            match get_event_or_redraw(&mut buttons, || redraw(&lines)) {
                 Some(ButtonEvent::LeftButtonPress) => {
                     UP_S_ARROW.instant_display();
                 }
@@ -259,7 +311,7 @@ impl<'a> MessageValidator<'a> {
 
         let mut buttons = ButtonsState::new();
         loop {
-            match get_event(&mut buttons) {
+            match get_event_or_redraw(&mut buttons, || draw(cur_page)) {
                 Some(ButtonEvent::LeftButtonPress) => {
                     LEFT_S_ARROW.instant_display();
                 }
@@ -321,7 +373,14 @@ impl<'a> Menu<'a> {
         let mut index = 0;
 
         loop {
-            match get_event(&mut buttons) {
+            let redraw = || {
+                clear_screen();
+                UP_ARROW.display();
+                DOWN_ARROW.display();
+                items.place(Location::Middle, Layout::Centered, false);
+                crate::ui::screen_util::screen_update();
+            };
+            match get_event_or_redraw(&mut buttons, redraw) {
                 Some(ButtonEvent::LeftButtonPress) => {
                     UP_S_ARROW.instant_display();
                 }
@@ -427,6 +486,31 @@ impl<'a> Page<'a> {
         }
     }
 
+    /// Whether [`Self::place`] draws all of the page's text: every label only
+    /// holds characters the font has a glyph for (0x20 to 0x7F), and fits on
+    /// screen. A `BoldNormal` value is wrapped over at most three lines.
+    ///
+    /// [`MultiPageMenu`] does not let a page that does not fit be selected.
+    pub fn fits(&self) -> bool {
+        let fits_line = |s: &str, bold: bool| {
+            is_displayable(s) && s.compute_width(bold) <= crate::ui::SCREEN_WIDTH
+        };
+        let [first, second] = self.label;
+        match self.style {
+            PageStyle::Normal | PageStyle::PictureNormal => {
+                fits_line(first, false) && fits_line(second, false)
+            }
+            PageStyle::BoldCenteredNormal | PageStyle::PictureBold => {
+                fits_line(first, true) && fits_line(second, true)
+            }
+            PageStyle::BoldNormal => {
+                fits_line(first, true)
+                    && is_displayable(second)
+                    && value_lines(second).count() <= BOLD_NORMAL_LINES
+            }
+        }
+    }
+
     pub fn place(&self) {
         match self.style {
             PageStyle::Normal => {
@@ -457,7 +541,7 @@ impl<'a> Page<'a> {
             }
             PageStyle::BoldNormal => {
                 let padding = 1;
-                let max_text_lines = 3;
+                let max_text_lines = BOLD_NORMAL_LINES as u8;
                 let total_height = (OPEN_SANS[0].height * max_text_lines) as usize
                     + OPEN_SANS[1].height as usize
                     + 2 * padding as usize;
@@ -466,20 +550,8 @@ impl<'a> Page<'a> {
                 self.label[0].place(Location::Custom(cur_y), Layout::Centered, true);
                 cur_y += OPEN_SANS[0].height as usize + 2 * padding as usize;
 
-                let mut indices = [(0, 0); 3];
-                let len = self.label[1].len();
-                for (i, indice) in indices.iter_mut().enumerate() {
-                    let start = (i * MAX_CHAR_PER_LINE).min(len);
-                    if start >= len {
-                        break; // Break if we reach the end of the string
-                    }
-                    let end = (start + MAX_CHAR_PER_LINE).min(len);
-                    *indice = (start, end);
-                    (&self.label[1][start..end]).place(
-                        Location::Custom(cur_y),
-                        Layout::Centered,
-                        false,
-                    );
+                for line in value_lines(self.label[1]).take(BOLD_NORMAL_LINES) {
+                    line.place(Location::Custom(cur_y), Layout::Centered, false);
                     cur_y += OPEN_SANS[0].height as usize + 2 * padding as usize;
                 }
             }
@@ -489,11 +561,18 @@ impl<'a> Page<'a> {
     pub fn place_and_wait(&self) {
         let mut buttons = ButtonsState::new();
 
-        self.place();
-        crate::ui::screen_util::screen_update();
+        let draw = || {
+            self.place();
+            crate::ui::screen_util::screen_update();
+        };
+        draw();
 
         loop {
-            match get_event(&mut buttons) {
+            let redraw = || {
+                clear_screen();
+                draw();
+            };
+            match get_event_or_redraw(&mut buttons, redraw) {
                 Some(ButtonEvent::LeftButtonRelease)
                 | Some(ButtonEvent::RightButtonRelease)
                 | Some(ButtonEvent::BothButtonsRelease) => return,
@@ -562,6 +641,8 @@ impl<'a> MultiPageMenu<'a> {
                 io::Event::Button(button) => {
                     if UxEvent::Event.request() == BOLOS_UX_OK {
                         match button {
+                            // A page that is not fully drawn cannot be selected.
+                            BothButtonsRelease if !self.pages[index].fits() => (),
                             BothButtonsRelease => return EventOrPageIndex::Index(index),
                             b => {
                                 match b {
@@ -630,7 +711,7 @@ impl<'a> SingleMessage<'a> {
         self.show();
 
         loop {
-            match get_event(&mut buttons) {
+            match get_event_or_redraw(&mut buttons, || self.show()) {
                 Some(ButtonEvent::LeftButtonRelease)
                 | Some(ButtonEvent::RightButtonRelease)
                 | Some(ButtonEvent::BothButtonsRelease) => return,
@@ -642,8 +723,9 @@ impl<'a> SingleMessage<'a> {
 
 /// A horizontal scroller that
 /// splits any given message
-/// over several panes in chunks
-/// of MAX_CHAR_PER_LINE characters.
+/// over several panes, one line each,
+/// of at most MAX_CHAR_PER_LINE characters
+/// and no wider than the screen.
 /// Press both buttons to exit.
 pub struct MessageScroller<'a> {
     message: &'a str,
@@ -657,7 +739,7 @@ impl<'a> MessageScroller<'a> {
     pub fn event_loop(&self) {
         clear_screen();
         let mut buttons = ButtonsState::new();
-        let page_count = (self.message.len() - 1) / MAX_CHAR_PER_LINE + 1;
+        let page_count = value_lines(self.message).count();
         if page_count == 0 {
             return;
         }
@@ -667,9 +749,7 @@ impl<'a> MessageScroller<'a> {
         // A closure to draw common elements of the screen
         // cur_page passed as parameter to prevent borrowing
         let mut draw = |page: usize| {
-            let start = page * MAX_CHAR_PER_LINE;
-            let end = (start + MAX_CHAR_PER_LINE).min(self.message.len());
-            let chunk = &self.message[start..end];
+            let chunk = value_lines(self.message).nth(page).unwrap_or("");
             label.erase();
             label.text = chunk;
             LEFT_ARROW.erase();
@@ -686,7 +766,11 @@ impl<'a> MessageScroller<'a> {
         draw(cur_page);
 
         loop {
-            match get_event(&mut buttons) {
+            let redraw = || {
+                clear_screen();
+                draw(cur_page);
+            };
+            match get_event_or_redraw(&mut buttons, redraw) {
                 Some(ButtonEvent::LeftButtonPress) => {
                     LEFT_S_ARROW.instant_display();
                 }
@@ -723,7 +807,10 @@ impl<'a> Field<'a> {
     pub fn event_loop(&self, incoming_direction: ButtonEvent, is_first_field: bool) -> ButtonEvent {
         let mut buttons = ButtonsState::new();
         let chunk_max_lines = layout::MAX_LINES - 1;
-        let page_count = 1 + self.value.len() / (chunk_max_lines * MAX_CHAR_PER_LINE);
+        let page_count = value_lines(self.value)
+            .count()
+            .div_ceil(chunk_max_lines)
+            .max(1);
 
         let mut cur_page = match incoming_direction {
             ButtonEvent::LeftButtonRelease => page_count - 1,
@@ -736,20 +823,17 @@ impl<'a> Field<'a> {
         let draw = |page: usize| {
             clear_screen();
             let mut chunks = [Label::default(); layout::MAX_LINES];
-            for (i, chunk) in self
-                .value
-                .as_bytes()
-                .chunks(MAX_CHAR_PER_LINE)
+            for (i, line) in value_lines(self.value)
                 .skip(page * chunk_max_lines)
                 .take(chunk_max_lines)
                 .enumerate()
             {
-                chunks[1 + i] = Label::from(core::str::from_utf8(chunk).unwrap_or(""));
+                chunks[1 + i] = Label::from(line);
             }
 
             let mut header_buf = [b' '; MAX_CHAR_PER_LINE + 4];
 
-            if page == 0 && MAX_CHAR_PER_LINE * chunk_max_lines > self.value.len() {
+            if page_count == 1 {
                 // There is a single page. Do not display counter `( x / n )`
                 header_buf[..self.name.len()].copy_from_slice(self.name.as_bytes());
             } else {
@@ -781,7 +865,7 @@ impl<'a> Field<'a> {
         draw(cur_page);
 
         loop {
-            match get_event(&mut buttons) {
+            match get_event_or_redraw(&mut buttons, || draw(cur_page)) {
                 Some(ButtonEvent::LeftButtonPress) => {
                     LEFT_S_ARROW.instant_display();
                 }
@@ -827,6 +911,35 @@ pub struct MultiFieldReview<'a> {
 fn is_displayable(s: &str) -> bool {
     s.bytes()
         .all(|b| b >= 0x20 && usize::from(b - 0x20) < OPEN_SANS[0].dims.len())
+}
+
+/// Splits a text into the lines drawn by [`Field`] and [`MessageScroller`]: at
+/// most `MAX_CHAR_PER_LINE` characters, and no wider than the screen.
+fn value_lines(value: &str) -> impl Iterator<Item = &str> {
+    let mut rest = value;
+    core::iter::from_fn(move || {
+        if rest.is_empty() {
+            return None;
+        }
+        let mut len = 0;
+        let mut width = 0;
+        for (count, c) in rest.chars().take(MAX_CHAR_PER_LINE).enumerate() {
+            // A character without a glyph gets a line of its own, where each
+            // of its bytes is drawn as the font's square.
+            let w = u8::try_from(c)
+                .ok()
+                .and_then(|b| OPEN_SANS[0].dims.get(usize::from(b.wrapping_sub(0x20))))
+                .map_or(crate::ui::SCREEN_WIDTH, |&w| w as usize);
+            if count > 0 && width + w > crate::ui::SCREEN_WIDTH {
+                break;
+            }
+            width += w;
+            len += c.len_utf8();
+        }
+        let (line, tail) = rest.split_at(len);
+        rest = tail;
+        Some(line)
+    })
 }
 
 // Function to concatenate multiple strings into a fixed-size array
@@ -934,12 +1047,15 @@ impl<'a> MultiFieldReview<'a> {
             match cur_page {
                 cancel if cancel == self.fields.len() + 1 => {
                     let mut buttons = ButtonsState::new();
-                    clear_screen();
-                    LEFT_ARROW.display();
-                    cancel_page.place();
-                    crate::ui::screen_util::screen_update();
+                    let draw = || {
+                        clear_screen();
+                        LEFT_ARROW.display();
+                        cancel_page.place();
+                        crate::ui::screen_util::screen_update();
+                    };
+                    draw();
                     loop {
-                        match get_event(&mut buttons) {
+                        match get_event_or_redraw(&mut buttons, draw) {
                             Some(ButtonEvent::LeftButtonRelease) => {
                                 cur_page = cur_page.saturating_sub(1);
                                 break;
@@ -951,13 +1067,16 @@ impl<'a> MultiFieldReview<'a> {
                 }
                 validation if validation == self.fields.len() => {
                     let mut buttons = ButtonsState::new();
-                    clear_screen();
-                    LEFT_ARROW.display();
-                    RIGHT_ARROW.display();
-                    validation_page.place();
-                    crate::ui::screen_util::screen_update();
+                    let draw = || {
+                        clear_screen();
+                        LEFT_ARROW.display();
+                        RIGHT_ARROW.display();
+                        validation_page.place();
+                        crate::ui::screen_util::screen_update();
+                    };
+                    draw();
                     loop {
-                        match get_event(&mut buttons) {
+                        match get_event_or_redraw(&mut buttons, draw) {
                             Some(ButtonEvent::LeftButtonRelease) => {
                                 cur_page = cur_page.saturating_sub(1);
                                 if cur_page == 0 && self.fields.is_empty() {
@@ -1001,14 +1120,17 @@ impl<'a> MultiFieldReview<'a> {
 
 fn display_first_page(page_opt: &Option<Page>) {
     if let Some(page) = page_opt {
-        clear_screen();
-        RIGHT_ARROW.display();
-        page.place();
-        crate::ui::screen_util::screen_update();
+        let draw = || {
+            clear_screen();
+            RIGHT_ARROW.display();
+            page.place();
+            crate::ui::screen_util::screen_update();
+        };
+        draw();
 
         let mut buttons = ButtonsState::new();
         loop {
-            if let Some(ButtonEvent::RightButtonRelease) = get_event(&mut buttons) {
+            if let Some(ButtonEvent::RightButtonRelease) = get_event_or_redraw(&mut buttons, draw) {
                 return;
             }
         }
@@ -1039,5 +1161,95 @@ mod tests {
         assert_eq!(is_displayable("\u{7f}"), true);
         assert_eq!(is_displayable("\n"), false);
         assert_eq!(is_displayable("\u{e9}"), false);
+    }
+
+    #[test]
+    fn validator_rejects_undisplayable_message() {
+        let too_wide = "WWWWWWWWWWWWWWWWW";
+        assert_eq!(Validator::new(too_wide).ask(), false);
+        assert_eq!(Validator::new("Caf\u{e9}").ask(), false);
+    }
+
+    // Every line fits on the screen, and together they are the whole value.
+    fn lines_cover(value: &str) -> bool {
+        let mut rest = value;
+        for line in value_lines(value) {
+            if line.is_empty()
+                || line.len() > MAX_CHAR_PER_LINE
+                || line.compute_width(false) > crate::ui::SCREEN_WIDTH
+            {
+                return false;
+            }
+            match rest.strip_prefix(line) {
+                Some(tail) => rest = tail,
+                None => return false,
+            }
+        }
+        rest.is_empty()
+    }
+
+    #[test]
+    fn value_lines_keep_narrow_text_in_17_characters() {
+        let hex = "0123456789abcdef0123456789abcdef01";
+        assert_eq!(value_lines(hex).count(), 2);
+        assert_eq!(value_lines(hex).all(|l| l.len() == 17), true);
+        assert_eq!(lines_cover(hex), true);
+        assert_eq!(value_lines("").count(), 0);
+    }
+
+    // 17 'W' are wider than the screen.
+    #[test]
+    fn value_lines_break_wide_text_to_fit() {
+        let wide = "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW";
+        assert_eq!(value_lines(wide).count() > 2, true);
+        assert_eq!(lines_cover(wide), true);
+        assert_eq!(lines_cover("W@W@W@W@W@W@W@W@W@W@W@W@W@W@"), true);
+    }
+
+    // A character without a glyph is kept whole, on a line of its own.
+    #[test]
+    fn value_lines_keep_non_ascii_characters_whole() {
+        let mut lines = value_lines("aaaaaaaaaaaaaaaa\u{e9}");
+        assert_eq!(lines.next(), Some("aaaaaaaaaaaaaaaa"));
+        assert_eq!(lines.next(), Some("\u{e9}"));
+        assert_eq!(lines.next(), None);
+
+        let mut lines = value_lines("ab\u{20ac}cd");
+        assert_eq!(lines.next(), Some("ab"));
+        assert_eq!(lines.next(), Some("\u{20ac}"));
+        assert_eq!(lines.next(), Some("cd"));
+        assert_eq!(lines.next(), None);
+
+        assert_eq!(lines_cover("Caf\u{e9} \u{1f600} na\u{ef}ve"), true);
+    }
+
+    fn bold_normal(value: &str) -> Page<'_> {
+        Page::new(PageStyle::BoldNormal, ["Value", value], None)
+    }
+
+    // Three lines of 17 narrow characters, or of 12 'W'.
+    #[test]
+    fn bold_normal_fits_three_lines() {
+        let hex = "0123456789abcdef0123456789abcdef0123456789abcdef012";
+        assert_eq!(bold_normal(hex).fits(), true);
+        let wide = "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW";
+        assert_eq!(bold_normal(wide).fits(), true);
+    }
+
+    #[test]
+    fn bold_normal_rejects_a_fourth_line() {
+        let hex = "0123456789abcdef0123456789abcdef0123456789abcdef0123";
+        assert_eq!(bold_normal(hex).fits(), false);
+        let wide = "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW";
+        assert_eq!(bold_normal(wide).fits(), false);
+        assert_eq!(bold_normal("Caf\u{e9}").fits(), false);
+    }
+
+    #[test]
+    fn single_line_pages_reject_wide_labels() {
+        let wide = "WWWWWWWWWWWWWWWWW";
+        assert_eq!(Page::from((["Version", "1.0.0"], false)).fits(), true);
+        assert_eq!(Page::from((["Version", wide], false)).fits(), false);
+        assert_eq!(Page::from(([wide, "1.0.0"], true, true)).fits(), false);
     }
 }

@@ -33,6 +33,7 @@ impl<const N: usize> ECPrivateKey<N, 'W'> {
         hash_id: u8,
         mode: u32,
     ) -> Result<([u8; Self::S], u32, u32), CxError> {
+        self.check_layout()?;
         let mut sig = [0u8; Self::S];
         let mut sig_len = Self::S;
         let mut info = 0;
@@ -78,6 +79,7 @@ impl<const N: usize> ECPrivateKey<N, 'W'> {
     /// Return the generated shared secret.
     /// We suppose the group size `N` is the same as the shared secret size.
     pub fn ecdh(&self, p: &[u8]) -> Result<[u8; N], CxError> {
+        self.check_layout()?;
         let mut secret = [0u8; N];
         let len = unsafe {
             cx_ecdh_no_throw(
@@ -101,9 +103,10 @@ impl<const N: usize> ECPrivateKey<N, 'W'> {
 impl<const P: usize> ECPublicKey<P, 'W'> {
     /// Verifies the first `signature.1` bytes of `signature.0` against `hash`.
     ///
-    /// Returns `false` if `signature.1` exceeds the length of `signature.0`.
+    /// Returns `false` if `signature.1` exceeds the length of `signature.0`,
+    /// or if the key's curve, buffer size and `keylength` do not match.
     pub fn verify(&self, signature: (&[u8], u32), hash: &[u8]) -> bool {
-        if signature.1 as usize > signature.0.len() {
+        if signature.1 as usize > signature.0.len() || !self.fits_layout() {
             return false;
         }
         unsafe {

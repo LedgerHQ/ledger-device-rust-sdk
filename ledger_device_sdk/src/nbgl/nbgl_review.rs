@@ -119,7 +119,7 @@ impl<'a> NbglReview<'a> {
     }
 
     fn show_internal(&self, values: &[TagValue]) -> bool {
-        if nb_items(values.len()).is_none() {
+        if !tag_values_fit(values) {
             return false;
         }
         unsafe {

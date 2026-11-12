@@ -23,6 +23,9 @@ on:
           required: false
           default: ''
           type: string
+      secrets:
+        CI_BOT_TOKEN:
+          required: false
     workflow_dispatch:
       inputs:
         c_sdk_repo:
@@ -46,6 +49,10 @@ on:
           default: ''
           type: string
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
     retrieve-rust-apps:
       name: Retrieve Rust Apps
@@ -53,22 +60,25 @@ jobs:
       outputs:
         rust_apps: ${{ steps.get_rust_apps.outputs.rust_apps }}
       steps:
+        # The app list helper and its requirements come from this workflow's
+        # own revision, not from the SDK revision under test.
         - name: Checkout repository
           uses: actions/checkout@v6
           with:
-            repository: ${{ inputs.rust_sdk_repo }}
-            ref: ${{ inputs.rust_sdk_branch || 'master' }}
-            token: ${{ secrets.CI_BOT_TOKEN || github.token }}
+            persist-credentials: false
         - name: Set up Python
           uses: actions/setup-python@v6
           with:
-              python-version: '3.x'
+              python-version: '3.13'
         - name: Install ledgered
-          run: pip install ledgered
+          run: pip install --require-hashes -r .github/requirements-ci.txt
         - name: Get all rust apps
           id: get_rust_apps
+          env:
+            GH_TOKEN: ${{ inputs.app_repo_suffix && secrets.CI_BOT_TOKEN || github.token }}
+            APP_REPO_SUFFIX: ${{ inputs.app_repo_suffix }}
           run: |
-            python .github/workflows/get_rust_apps.py "${{ inputs.app_repo_suffix && secrets.CI_BOT_TOKEN || secrets.GITHUB_TOKEN }}" "${{ inputs.app_repo_suffix }}"
+            python .github/workflows/get_rust_apps.py "$APP_REPO_SUFFIX"
             echo "rust_apps=$(cat rust_apps.json)" >> $GITHUB_OUTPUT
 
     display-rust-apps:
@@ -92,8 +102,6 @@ jobs:
         runs-on: ubuntu-latest
         container: ${{ vars.APP_BUILDER_REGISTRY && fromJSON(format('{{"image":"{0}/ledger-app-builder:latest","credentials":{{"username":"{1}","password":"{2}"}}}}', vars.APP_BUILDER_REGISTRY, github.actor, github.token)) || 'ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest' }}
         steps:
-            - name: Install ledgered
-              run: pip install ledgered --break-system-packages
             - name: Clone SDK
               if: ${{ inputs.rust_sdk_branch != '' }}
               uses: actions/checkout@v6
@@ -102,6 +110,7 @@ jobs:
                 repository: ${{ inputs.rust_sdk_repo }}
                 ref: ${{ inputs.rust_sdk_branch }}
                 token: ${{ secrets.CI_BOT_TOKEN || github.token }}
+                persist-credentials: false
             - name: Clone App
               uses: actions/checkout@v6
               with:
@@ -109,6 +118,7 @@ jobs:
                 token: ${{ inputs.app_repo_suffix && secrets.CI_BOT_TOKEN || github.token }}
                 submodules: true
                 path: ${{ matrix.app-name }}
+                persist-credentials: false
             - name: Patch Cargo.toml
               continue-on-error: false
               if: ${{ inputs.rust_sdk_branch != '' }}
@@ -141,6 +151,7 @@ jobs:
                 ref: ${{ inputs.c_sdk_branch }}
                 token: ${{ secrets.CI_BOT_TOKEN || github.token }}
                 path: c_sdk
+                persist-credentials: false
 
             - name: Build
               shell: bash

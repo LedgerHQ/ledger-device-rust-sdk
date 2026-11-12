@@ -9,6 +9,31 @@
 //!
 //! Used to display streamed transaction review screens.
 use super::*;
+use alloc::boxed::Box;
+use alloc::rc::Rc;
+
+/// The warning handed to `nbgl_useCaseAdvancedReviewStreamingStart`, with the
+/// data its pointers refer to.
+struct StartWarning {
+    _data: Rc<CWarning>,
+    descriptor: nbgl_warning_t,
+}
+
+/// What NBGL keeps from the start of a streaming review: the icon, drawn again
+/// on the last page by `finish`, and the warning.
+struct Started {
+    icon: nbgl_icon_details_t,
+    warning: Option<StartWarning>,
+}
+
+/// The icon and warning of the streaming review being shown.
+///
+/// NBGL keeps the pointers it is given at the start of the review, and reads
+/// them until the review is finished, whichever `NbglStreamingReview` the
+/// review is continued with, or whether the one it was started with still
+/// exists: the review, not the builder, owns them. Set by `start`, and
+/// released by `finish` or by the next `start`.
+static mut STARTED: Option<Box<Started>> = None;
 
 /// A builder to create and show a streaming review flow.
 pub struct NbglStreamingReview {
@@ -16,8 +41,9 @@ pub struct NbglStreamingReview {
     tx_type: TransactionType,
     blind: bool,
     skip: bool,
-    /// Owns the C strings, icons and details tree behind the warning.
-    warning: Option<CWarning>,
+    /// Owns the C strings, icons and details tree behind the warning; shared
+    /// with [`STARTED`] once the review is started.
+    warning: Option<Rc<CWarning>>,
     /// Extra `nbgl_operationType_t` bits set alongside the transaction type.
     operation_flags: nbgl_operationType_t,
     /// App handler for a touched value icon.
@@ -132,7 +158,7 @@ impl NbglStreamingReview {
     /// * `glyph` - The icon to display in the center of the page.
     /// # Returns
     /// Returns the builder itself to allow method chaining.
-    pub fn glyph(self, glyph: &NbglGlyph) -> NbglStreamingReview {
+    pub fn glyph(self, glyph: &NbglGlyph<'static>) -> NbglStreamingReview {
         NbglStreamingReview {
             icon: glyph.into(),
             ..self
@@ -176,67 +202,99 @@ impl NbglStreamingReview {
     /// Sets the warning shown before the review, and reachable from the
     /// top-right button during it.
     ///
-    /// Setting a warning selects `nbgl_useCaseAdvancedReviewStreamingStart`
-    /// over the plain blind-signing start, so it takes effect only in
-    /// combination with [`Self::blind`].
+    /// Setting a warning selects `nbgl_useCaseAdvancedReviewStreamingStart`,
+    /// with or without [`Self::blind`]. In blind mode the blind-signing
+    /// warning is added to the ones configured here.
     /// # Arguments
     /// * `warning` - The warning configuration; see [`NbglWarning`].
     /// # Returns
     /// Returns the builder itself to allow method chaining.
     pub fn warning(self, warning: &NbglWarning) -> NbglStreamingReview {
         NbglStreamingReview {
-            warning: Some(CWarning::new(warning)),
+            warning: Some(Rc::new(CWarning::new(warning))),
             ..self
         }
     }
 
+    /// The warning handed to `nbgl_useCaseAdvancedReviewStreamingStart`, if
+    /// one is set; blind mode adds the blind-signing warning to it.
+    fn start_warning(&self) -> Option<StartWarning> {
+        let data = self.warning.as_ref()?;
+        let descriptor = with_blind_signing(Some(data.as_c_type()), self.blind)?;
+        Some(StartWarning {
+            _data: Rc::clone(data),
+            descriptor,
+        })
+    }
+
+    /// Stores in [`STARTED`] what NBGL keeps from the start of the review,
+    /// replacing what the previous review kept, and returns the icon and
+    /// warning to hand to C.
+    ///
+    /// The box keeps its address once moved into the slot, so the pointers
+    /// stay valid until the slot is emptied.
+    fn retain_started(&self) -> (*const nbgl_icon_details_t, Option<*const nbgl_warning_t>) {
+        let started = Box::new(Started {
+            icon: self.icon,
+            warning: self.start_warning(),
+        });
+        let icon = &started.icon as *const nbgl_icon_details_t;
+        let warning = started
+            .warning
+            .as_ref()
+            .map(|w| &w.descriptor as *const nbgl_warning_t);
+        unsafe {
+            STARTED = Some(started);
+        }
+        (icon, warning)
+    }
+
     fn start_internal(&self, title: &str, subtitle: Option<&str>) -> bool {
+        if !self.warning.as_ref().is_none_or(|w| w.fits()) {
+            return false;
+        }
         unsafe {
             let title = CString::new(title).unwrap();
             let subtitle = match subtitle {
                 Some(s) => CString::new(s).unwrap(),
                 None => CString::default(),
             };
+            let subtitle_ptr = match subtitle.is_empty() {
+                true => core::ptr::null(),
+                false => subtitle.as_ptr() as *const c_char,
+            };
+
+            // NBGL reads the icon again in `finish`, and the warning until
+            // then: hand it copies owned by the review, not by `self`.
+            let (icon, warning) = self.retain_started();
 
             self.ux_sync_init();
-            match self.blind {
-                true => match &self.warning {
-                    Some(w) => {
-                        let warning_details = w.as_c_type();
-                        nbgl_useCaseAdvancedReviewStreamingStart(
-                            self.c_operation_type(),
-                            &self.icon as *const nbgl_icon_details_t,
-                            title.as_ptr() as *const c_char,
-                            match subtitle.is_empty() {
-                                true => core::ptr::null(),
-                                false => subtitle.as_ptr() as *const c_char,
-                            },
-                            &warning_details as *const nbgl_warning_t,
-                            Some(choice_callback),
-                        );
-                    }
-                    None => {
-                        nbgl_useCaseReviewStreamingBlindSigningStart(
-                            self.c_operation_type(),
-                            &self.icon as *const nbgl_icon_details_t,
-                            title.as_ptr() as *const c_char,
-                            match subtitle.is_empty() {
-                                true => core::ptr::null(),
-                                false => subtitle.as_ptr() as *const c_char,
-                            },
-                            Some(choice_callback),
-                        );
-                    }
-                },
-                false => {
+            match warning {
+                Some(warning) => {
+                    nbgl_useCaseAdvancedReviewStreamingStart(
+                        self.c_operation_type(),
+                        icon,
+                        title.as_ptr() as *const c_char,
+                        subtitle_ptr,
+                        warning,
+                        Some(choice_callback),
+                    );
+                }
+                None if self.blind => {
+                    nbgl_useCaseReviewStreamingBlindSigningStart(
+                        self.c_operation_type(),
+                        icon,
+                        title.as_ptr() as *const c_char,
+                        subtitle_ptr,
+                        Some(choice_callback),
+                    );
+                }
+                None => {
                     nbgl_useCaseReviewStreamingStart(
                         self.c_operation_type(),
-                        &self.icon as *const nbgl_icon_details_t,
+                        icon,
                         title.as_ptr() as *const c_char,
-                        match subtitle.is_empty() {
-                            true => core::ptr::null(),
-                            false => subtitle.as_ptr() as *const c_char,
-                        },
+                        subtitle_ptr,
                         Some(choice_callback),
                     );
                 }
@@ -270,7 +328,7 @@ impl NbglStreamingReview {
     }
 
     fn next_internal(&self, values: &[TagValue]) -> NbglStreamingReviewStatus {
-        if nb_items(values.len()).is_none() {
+        if !tag_values_fit(values) {
             return NbglStreamingReviewStatus::Rejected;
         }
         unsafe {
@@ -307,6 +365,7 @@ impl NbglStreamingReview {
                 Some(choice_callback),
             );
             let sync_ret = self.ux_sync_wait(false);
+            release_started();
 
             // Return true if the user approved the transaction, false otherwise.
             matches!(sync_ret, SyncNbgl::UxSyncRetApproved)
@@ -436,5 +495,139 @@ impl NbglStreamingReview {
     #[cfg(not(feature = "io_new"))]
     pub fn finish(&self, finish_title: &str) -> bool {
         self.finish_internal(finish_title)
+    }
+}
+
+/// Releases what [`STARTED`] holds, once the review is over and NBGL no longer
+/// reads its icon nor warning.
+fn release_started() {
+    unsafe {
+        STARTED = None;
+    }
+}
+
+/// `warning` with the blind-signing warning added in blind mode.
+fn with_blind_signing(warning: Option<nbgl_warning_t>, blind: bool) -> Option<nbgl_warning_t> {
+    warning.map(|mut warning| {
+        if blind {
+            warning.predefinedSet |= WarningType::BlindSigning.bit();
+        }
+        warning
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::assert_eq_err as assert_eq;
+    use crate::testing::TestType;
+    use testmacro::test_item as test;
+
+    const RISK: u32 = 1 << W3C_RISK_DETECTED_WARN;
+    const BLIND: u32 = 1 << BLIND_SIGNING_WARN;
+    const DAPP: &core::ffi::CStr = c"dApp";
+
+    // Built by hand: an `NbglStreamingReview` or `NbglWarning` would link the
+    // whole warning builder into the test binary, which does not fit in flash
+    // on every target.
+    fn risk_warning() -> nbgl_warning_t {
+        nbgl_warning_t {
+            predefinedSet: RISK,
+            dAppProvider: DAPP.as_ptr(),
+            ..Default::default()
+        }
+    }
+
+    // No warning: the plain or blind-signing start, chosen by `blind`.
+    #[test]
+    fn no_warning_uses_plain_or_blind_start() {
+        assert_eq!(with_blind_signing(None, false).is_none(), true);
+        assert_eq!(with_blind_signing(None, true).is_none(), true);
+    }
+
+    #[test]
+    fn warning_is_shown_outside_blind_mode() {
+        let warning = with_blind_signing(Some(risk_warning()), false);
+        assert_eq!(warning.map(|w| w.predefinedSet), Some(RISK));
+        assert_eq!(
+            warning.is_some_and(|w| w.dAppProvider == DAPP.as_ptr()),
+            true
+        );
+    }
+
+    // Blind mode without a warning uses the plain blind-signing start, which
+    // hands NBGL no warning to keep.
+    #[test]
+    fn blind_without_warning_starts_without_one() {
+        assert_eq!(
+            NbglStreamingReview::new().blind().start_warning().is_none(),
+            true
+        );
+        assert_eq!(NbglStreamingReview::new().start_warning().is_none(), true);
+    }
+
+    /// The icon `start` hands to C, read back without forming a reference into
+    /// the packed descriptor.
+    fn icon_size(icon: *const nbgl_icon_details_t) -> (u16, u16) {
+        let icon = unsafe { core::ptr::read_unaligned(icon) };
+        (icon.width, icon.height)
+    }
+
+    fn started_icon() -> Option<*const nbgl_icon_details_t> {
+        unsafe {
+            (*(&raw const STARTED))
+                .as_ref()
+                .map(|s| &s.icon as *const nbgl_icon_details_t)
+        }
+    }
+
+    fn review_with_icon(width: u16, height: u16) -> NbglStreamingReview {
+        let mut review = NbglStreamingReview::new();
+        review.icon.width = width;
+        review.icon.height = height;
+        review
+    }
+
+    /// The icon NBGL draws again on the last page is owned by the review, and
+    /// outlives the builder the review was started with.
+    #[test]
+    fn started_icon_outlives_the_builder() {
+        let icon = {
+            let review = review_with_icon(64, 48);
+            let (icon, warning) = review.retain_started();
+            assert_eq!(warning.is_none(), true);
+            assert_eq!(core::ptr::eq(icon, &review.icon), false);
+            icon
+        };
+        // Reuse the stack the builder was on.
+        let churn = core::hint::black_box([0xa5u8; 256]);
+        assert_eq!(churn[0], 0xa5);
+
+        assert_eq!(started_icon() == Some(icon), true);
+        assert_eq!(icon_size(icon), (64, 48));
+        release_started();
+    }
+
+    /// The next start replaces the icon, and finishing releases it.
+    #[test]
+    fn started_icon_is_replaced_then_released() {
+        let first = review_with_icon(64, 48).retain_started().0;
+        let second = review_with_icon(32, 32).retain_started().0;
+        assert_eq!(started_icon() == Some(second), true);
+        assert_eq!(icon_size(second), (32, 32));
+        assert_eq!(core::ptr::eq(first, second), false);
+
+        release_started();
+        assert_eq!(started_icon().is_none(), true);
+    }
+
+    #[test]
+    fn blind_mode_adds_blind_signing_warning() {
+        let warning = with_blind_signing(Some(risk_warning()), true);
+        assert_eq!(warning.map(|w| w.predefinedSet), Some(RISK | BLIND));
+        assert_eq!(
+            warning.is_some_and(|w| w.dAppProvider == DAPP.as_ptr()),
+            true
+        );
     }
 }

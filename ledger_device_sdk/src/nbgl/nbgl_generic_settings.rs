@@ -48,12 +48,13 @@ pub struct NbglGenericSettings {
     title: CString,
     init_page: usize,
     info: InfoHolder,
-    info_list: Option<nbgl_contentInfoList_t>,
+    has_info: bool,
     settings_title_subtitle: Vec<[CString; 2]>,
     /// Switch descriptors handed to C; owned here so their number is not capped.
     switches: Vec<nbgl_contentSwitch_t>,
-    content: nbgl_content_t,
-    generic_contents: nbgl_genericContents_t,
+    /// The NVM storage the switches are bound to, published to [`NVM_PTR`] and
+    /// [`NVM_OPS`] only while this instance is shown.
+    nvm: Option<NvmBinding>,
 }
 
 impl SyncNBGL for NbglGenericSettings {}
@@ -70,11 +71,10 @@ impl NbglGenericSettings {
             title: CString::default(),
             init_page: 0,
             info: InfoHolder::default(),
-            info_list: None,
+            has_info: false,
             settings_title_subtitle: Vec::default(),
             switches: Vec::default(),
-            content: nbgl_content_t::default(),
-            generic_contents: nbgl_genericContents_t::default(),
+            nvm: None,
         }
     }
 
@@ -101,24 +101,47 @@ impl NbglGenericSettings {
                 .push(self.info.values.last().unwrap().as_ptr() as *const i8);
         }
 
-        self.info_list = Some(nbgl_contentInfoList_t {
-            infoTypes: self.info.fields_ptr[..].as_ptr() as *const *const ::core::ffi::c_char,
-            infoContents: self.info.values_ptr[..].as_ptr() as *const *const ::core::ffi::c_char,
-            nbInfos: fields_values.len() as u8,
-            infoExtensions: core::ptr::null(),
-            token: 0,
-            withExtensions: false,
-        });
+        self.has_info = true;
         self
+    }
+
+    /// Sets the settings to display, one switch per string pair, each stored in
+    /// one byte of `nvm_data`. The settings callbacks read and update
+    /// `nvm_data` for as long as the screen is shown, so it must be a static
+    /// declared with [`NVMData`](crate::NVMData).
+    ///
+    /// # Panics
+    /// Panics if there are more settings than the NVM array has bytes, or if
+    /// `nvm_data` is not in the `.nvm_data` section.
+    pub fn nvm_settings<const N: usize>(
+        self,
+        nvm_data: &'static mut AtomicStorage<[u8; N]>,
+        settings_strings: &[[&str; 2]],
+    ) -> NbglGenericSettings {
+        self.bind_settings(nvm_data, settings_strings)
     }
 
     /// # Panics
     /// Panics if there are more settings than the NVM array has bytes, each
-    /// setting needing one byte of storage.
+    /// setting needing one byte of storage, or if `nvm_data` is not in the
+    /// `.nvm_data` section (a static declared with [`NVMData`](crate::NVMData)):
+    /// the settings callbacks reach it for as long as the screen is shown.
+    #[deprecated(
+        since = "1.44.0",
+        note = "use `nvm_settings`, which takes the storage as `&'static mut`"
+    )]
+    pub fn settings<const N: usize>(
+        self,
+        nvm_data: &mut AtomicStorage<[u8; N]>,
+        settings_strings: &[[&str; 2]],
+    ) -> NbglGenericSettings {
+        self.bind_settings(nvm_data, settings_strings)
+    }
+
     // `tuneId` is touchscreen-only, so the struct update below is needed on
     // Nano and redundant elsewhere.
     #[allow(clippy::needless_update)]
-    pub fn settings<const N: usize>(
+    fn bind_settings<const N: usize>(
         mut self,
         nvm_data: &mut AtomicStorage<[u8; N]>,
         settings_strings: &[[&str; 2]],
@@ -126,85 +149,114 @@ impl NbglGenericSettings {
         if settings_strings.len() > N {
             panic!("More settings than the NVM array has bytes.");
         }
+        check_settings_storage(nvm_data);
 
         self.settings_title_subtitle = settings_strings
             .iter()
             .map(|s| [CString::new(s[0]).unwrap(), CString::new(s[1]).unwrap()])
             .collect();
 
-        NVM_PTR.store(
-            nvm_data as *mut AtomicStorage<[u8; N]> as *mut (),
-            Ordering::Relaxed,
-        );
-        unsafe {
-            NVM_OPS = Some(NvmOps {
+        let nvm = NvmBinding {
+            ptr: nvm_data as *mut AtomicStorage<[u8; N]> as *mut (),
+            ops: NvmOps {
                 read: nvm_read::<N>,
                 toggle: nvm_toggle::<N>,
-            });
-
-            let nvm = NVM_PTR.load(Ordering::Relaxed);
-            self.switches = self
-                .settings_title_subtitle
-                .iter()
-                .enumerate()
-                .map(|(i, setting)| {
-                    let state = match (nvm.is_null(), NVM_OPS) {
-                        (false, Some(ops)) => (ops.read)(nvm, i),
-                        _ => OFF_STATE,
-                    };
-                    nbgl_contentSwitch_t {
-                        text: setting[0].as_ptr(),
-                        subText: setting[1].as_ptr(),
-                        initState: state,
-                        token: (FIRST_USER_TOKEN + i as u32) as u8,
-                        #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
-                        tuneId: TuneIndex::TapCasual as u8,
-                        ..Default::default()
-                    }
-                })
-                .collect();
-
-            SWITCHES_PTR.store(self.switches.as_mut_ptr(), Ordering::Relaxed);
-            SWITCHES_LEN.store(self.switches.len(), Ordering::Relaxed);
-        }
-
-        self.content = nbgl_content_t {
-            content: nbgl_content_u {
-                switchesList: nbgl_pageSwitchesList_s {
-                    switches: self.switches.as_ptr(),
-                    nbSwitches: settings_strings.len() as u8,
-                },
             },
-            contentActionCallback: Some(settings_callback),
-            type_: SWITCHES_LIST,
         };
 
-        self.generic_contents = nbgl_genericContents_t {
-            callbackCallNeeded: false,
-            __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
-                contentsList: &self.content as *const nbgl_content_t,
-            },
-            nbContents: 1,
-        };
+        self.switches = self
+            .settings_title_subtitle
+            .iter()
+            .enumerate()
+            .map(|(i, setting)| nbgl_contentSwitch_t {
+                text: setting[0].as_ptr(),
+                subText: setting[1].as_ptr(),
+                initState: unsafe { (nvm.ops.read)(nvm.ptr, i) },
+                token: (FIRST_USER_TOKEN + i as u32) as u8,
+                #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+                tuneId: TuneIndex::TapCasual as u8,
+                ..Default::default()
+            })
+            .collect();
+        self.nvm = Some(nvm);
 
         self
     }
 
     fn show_internal(&mut self) -> SyncNbgl {
+        let (Some(nb_switches), Some(nb_infos), Some(init_page)) = (
+            nb_items(self.switches.len()),
+            nb_items(self.info.fields.len()),
+            nb_items(self.init_page),
+        ) else {
+            return SyncNbgl::UxSyncRetError;
+        };
+
+        // The C structs are built here rather than in the builders: they point
+        // at each other, and `self` may have moved since it was configured.
+        let content = nbgl_content_t {
+            content: nbgl_content_u {
+                switchesList: nbgl_pageSwitchesList_s {
+                    switches: self.switches.as_ptr(),
+                    nbSwitches: nb_switches,
+                },
+            },
+            contentActionCallback: Some(settings_callback),
+            type_: SWITCHES_LIST,
+        };
+        // Without `settings`, there is no switches page to show.
+        let generic_contents = match self.nvm {
+            Some(_) => nbgl_genericContents_t {
+                callbackCallNeeded: false,
+                __bindgen_anon_1: nbgl_genericContents_t__bindgen_ty_1 {
+                    contentsList: &content as *const nbgl_content_t,
+                },
+                nbContents: 1,
+            },
+            None => nbgl_genericContents_t::default(),
+        };
+        let info_list = nbgl_contentInfoList_t {
+            infoTypes: self.info.fields_ptr.as_ptr() as *const *const c_char,
+            infoContents: self.info.values_ptr.as_ptr() as *const *const c_char,
+            nbInfos: nb_infos,
+            infoExtensions: core::ptr::null(),
+            token: 0,
+            withExtensions: false,
+        };
+
+        // Published for the callback only while this instance is on screen.
+        SWITCHES_PTR.store(self.switches.as_mut_ptr(), Ordering::Relaxed);
+        SWITCHES_LEN.store(self.switches.len(), Ordering::Relaxed);
+        NVM_PTR.store(
+            self.nvm.map_or(core::ptr::null_mut(), |nvm| nvm.ptr),
+            Ordering::Relaxed,
+        );
+        unsafe {
+            NVM_OPS = self.nvm.map(|nvm| nvm.ops);
+        }
+
         self.ux_sync_init();
         unsafe {
             nbgl_useCaseGenericSettings(
                 self.title.as_ptr() as *const c_char,
-                self.init_page as u8,
-                &self.generic_contents as *const nbgl_genericContents_t,
-                match self.info_list {
-                    Some(ref il) => il as *const nbgl_contentInfoList_t,
-                    None => core::ptr::null(),
+                init_page,
+                &generic_contents as *const nbgl_genericContents_t,
+                match self.has_info {
+                    true => &info_list as *const nbgl_contentInfoList_t,
+                    false => core::ptr::null(),
                 },
                 Some(quit_callback),
             )
         }
-        self.ux_sync_wait(false)
+        let ret = self.ux_sync_wait(false);
+
+        SWITCHES_PTR.store(core::ptr::null_mut(), Ordering::Relaxed);
+        SWITCHES_LEN.store(0, Ordering::Relaxed);
+        NVM_PTR.store(core::ptr::null_mut(), Ordering::Relaxed);
+        unsafe {
+            NVM_OPS = None;
+        }
+        ret
     }
 
     #[cfg(not(feature = "io_new"))]

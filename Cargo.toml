@@ -17,3 +17,7 @@ authors = ["Ledger"]
 [profile.release]
 opt-level = 's'
 lto = true
+
+# Tests run on the device, where debug builds barely fit in flash.
+[profile.test]
+opt-level = 1

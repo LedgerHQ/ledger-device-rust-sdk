@@ -306,12 +306,14 @@ impl<const N: usize> Comm<N> {
         let in_progress = self.apdu_in_progress;
 
         let sw: Reply = match self.recv_event() {
-            RawEvent::Apdu { header, .. }
-                if header.cla == 0xB0
-                    && (!in_progress
-                        || is_bolos_apdu_allowed_in_flight(header.cla, header.ins)) =>
+            RawEvent::Apdu {
+                header,
+                offset,
+                length,
+            } if header.cla == 0xB0
+                && (!in_progress || is_bolos_apdu_allowed_in_flight(header.cla, header.ins)) =>
             {
-                handle_bolos_apdu::<N>(self, header.ins, header.p1, header.p2);
+                handle_bolos_apdu::<N>(self, header.ins, header.p1, header.p2, offset, length);
                 // The BOLOS reply must not be taken for the reply to the
                 // command in flight.
                 self.apdu_in_progress = in_progress;

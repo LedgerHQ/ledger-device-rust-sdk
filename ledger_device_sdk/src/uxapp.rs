@@ -89,7 +89,7 @@ impl UxEvent {
         let mut ret = unsafe { os_sched_last_status(TASK_BOLOS_UX as u32) } as u32;
         let mut event = None;
         while ret == BOLOS_UX_IGNORE || ret == BOLOS_UX_CONTINUE {
-            let status = sys_seph::io_rx(&mut comm.io_buffer, true);
+            let status = sys_seph::io_rx(&mut comm.rx_buffer, true);
             if status > 0 {
                 event = comm.decode_event(status)
             }

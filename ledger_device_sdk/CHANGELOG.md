@@ -5,6 +5,158 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.44.0] - 2026-11-12
+
+### Added
+- `nbgl`: `NbglHomeAndSettings::nvm_settings` and
+  `NbglGenericSettings::nvm_settings` set the settings as `settings` does, but
+  take the storage as `&'static mut AtomicStorage<[u8; N]>`.
+- `nvm_data!` declares `NVMData` statics in the `.nvm_data` section. The type
+  it declares must be `nvm::NvmStorable`: an `AlignedStorage`, `SafeStorage`,
+  `AtomicStorage` or `Collection` holding an `nvm::NvmValue`, or an `NvmValue`
+  the app writes itself.
+- `nvm`: `NvmValue`, an `unsafe` trait for types that can be stored as their
+  bytes, implemented for integers and arrays of `NvmValue`.
+- `NVMData::new_unchecked`, an `unsafe` `NVMData::new` for statics declared
+  in `.nvm_data` by hand.
+
+### Deprecated
+- `nbgl`: `NbglHomeAndSettings::settings` and `NbglGenericSettings::settings`,
+  for `nvm_settings`. Apps building with `-D warnings` (as `cargo clippy` in the
+  app guidelines checks) fail until they migrate. The usual change is in the
+  app's settings wrapper, returning the storage of its `NVMData` static as
+  `&'static mut`. A safe function returning `&'static mut` each time it is
+  called would let two such references alias, so the wrapper is `unsafe`, with
+  the exclusivity its callers check:
+
+  ```rust
+  /// # Safety
+  /// No other reference to the storage may be in use while the returned one is.
+  pub unsafe fn get_mut(&mut self) -> &'static mut AtomicStorage<[u8; SETTINGS_SIZE]> {
+      let data = &raw mut DATA;
+      unsafe { (*data).get_mut() }
+  }
+  ```
+
+  then calling `.nvm_settings(unsafe { settings.get_mut() }, &strings)` instead
+  of `.settings(...)`.
+- `NVMData::new`, for `nvm_data!`. A declaration such as
+
+  ```rust
+  #[link_section = ".nvm_data"]
+  static mut DATA: NVMData<AtomicStorage<[u8; 10]>> =
+      NVMData::new(AtomicStorage::new(&[0; 10]));
+  ```
+
+  becomes
+
+  ```rust
+  ledger_device_sdk::nvm_data! {
+      static mut DATA: AtomicStorage<[u8; 10]> = AtomicStorage::new(&[0; 10]);
+  }
+  ```
+
+  The static keeps its name and type. A storage of a type that is not
+  `NvmValue` (`bool`, enums, structs) no longer compiles once declared with
+  `nvm_data!`: store it as a `[u8; N]` it is encoded to and checked when
+  decoded, or implement `NvmValue` for it after checking the contract of the
+  trait.
+
+### Changed
+- `nbgl`: `settings` and `nvm_settings` panic unless the storage they are given
+  lies in the `.nvm_data` section (a static declared with `NVMData`).
+- `ecc`: `Ed25519Stream::sign_finalize` returns `CxError::Locked`, and wipes the
+  stream, when called while a `Bn`, `EcPoint`, `MontCtx` or `BnLock` is alive.
+- `nvm`: the flag and the value of a `SafeStorage` each lie on flash pages of
+  their own, so a `SafeStorage` takes at least two pages, and an
+  `AtomicStorage` (the allocation flags of a `Collection` included) four.
+
+### Fixed
+- `ecc`: `Ed25519Stream` frees every BN and EC point it allocates, on error
+  paths too.
+- `io_legacy`: a command received while an NBGL screen that does not exit on
+  APDU is displayed is answered `CmdNotAccepted`, as with `io_new`, and the
+  next APDU is handled as a new command. A command received on the last poll
+  of a screen is returned by the next `next_event`.
+- `nbgl`: `NbglStreamingReview` keeps the icon of a started review until it is
+  finished, so the builder it was started with may be moved or dropped before
+  `finish`, or the review finished through another builder.
+
+## [1.43.0] - 2026-11-06
+
+### Added
+- `ui`: `Page::fits` tells whether all of a page's text is drawn. `MultiPageMenu`
+  does not return the index of a page that does not fit.
+
+### Changed
+- `nbgl`: setters and fields that keep an icon after the call take
+  `NbglGlyph<'static>`: `NbglStreamingReview::glyph`, `NbglHomeAndSettings::glyph`,
+  `HomeAction::icon`, `CenterInfo::icon`, `Prelude::icon`, `TipBox::icon`,
+  `WarningBar::icon`, the `NbglWarning` top-right icons, `TagValue::value_icon`, the
+  `CenteredInfo`, `InfoLongPress`, `InfoButton` and `ExtendedCenter` constructors and
+  the `NbglNavigableContent` page top-right icon. Glyphs built with `include_gif!`
+  are `NbglGlyph<'static>`, so their callers are unchanged.
+- `nvm`: `AlignedStorage`, `SafeStorage`, `AtomicStorage` and `Collection` require
+  `T: Copy`. The module documentation lists what can be stored.
+- `nvm`: each `AtomicStorage` replica lies on flash pages of its own (256 bytes on
+  Nano X, 512 elsewhere), so an `AtomicStorage` of a small value takes two pages.
+- `nvm`: `NVMData::get_ref` and `get_mut` panic when the value is not within the
+  `.nvm_data` section.
+- `nbgl`: reviews check their lists, nested lists, tip box and warning bar lists
+  against the 255 items NBGL can hold, and return their reject or error result
+  before any screen is shown. `NbglNavigableContent` panics on too many pages or
+  list items. `NbglGenericSettings::show` returns an error when the switch count,
+  info count or initial page does not fit.
+- `nbgl`: `NbglStreamingReview::start` uses the configured warning in every mode; in
+  blind mode the blind-signing warning is added to it.
+- `nbgl`: touching a value icon of a `TagValueConfirm` reports it to the app's
+  `on_action` handler and leaves the review running.
+- `ui`: `Field`, `MultiFieldReview`, `MessageScroller` and `BoldNormal` pages split
+  text into lines of at most 17 characters that are also no wider than the screen.
+  `MessageScroller` pages by those lines.
+- `ui`: `Validator::ask` and `MessageValidator::ask` return `false` without
+  displaying anything when a string holds a character without a glyph or does not
+  fit on one line.
+- `ui`: the legacy widgets and the pending review popup hand device events to the
+  OS UX task first, wait while the OS shows its own screens (auto-lock, PIN), then
+  redraw their current screen. The pending review popup answers commands received
+  meanwhile with `CmdNotAccepted`.
+- `io_legacy`: `Comm` receives into a buffer of its own; `io_buffer` only holds the
+  response being built. `get_apdu_metadata` returns the header of the command in
+  flight.
+- `io_legacy`: an APDU received while a command is in flight is answered on every
+  receive path (BOLOS `GET_VERSION` answered, anything else `CmdNotAccepted`),
+  leaving the command in flight and its staged response as they were.
+- `io_legacy`: a `Comm` registered with `nbgl::init_comm` is followed when it moves,
+  and unregistered when dropped.
+- `ecc`: private and public keys are checked against their curve and size before
+  being passed to the C SDK. Signing, public key derivation and ECDH return
+  `InvalidParameterSize`, and verification returns `false`, for a key that does not
+  match.
+- Boot: `_start` forwards the argument the OS passes to the entry point to `c_main`,
+  and the app exits when `sample_main` ends with an exception instead of running it
+  again.
+- Requires `ledger_secure_sdk_sys` 1.18.1.
+
+### Fixed
+- `nbgl`: `NbglStreamingReview` keeps the warning it starts the review with until
+  `finish()` or the next `start()`.
+- `nbgl`: `NbglChoice` keeps its confirmation screens on itself instead of in
+  module-wide state.
+- `nbgl`: `NbglGenericSettings` builds the C structures it hands to NBGL when it is
+  shown, so it may be moved after being configured.
+- `nbgl`: `NbglSpinner` texts are kept by the SDK, so the spinner may be dropped
+  once `show()` returns.
+- `io`: the BOLOS PKI certificate handler takes P1 and the certificate from the
+  decoded APDU, and answers `BadLen` to an APDU without data.
+- `tlv`: the generic parser returns `LengthOverflow` when a value's end offset does
+  not fit in `usize`.
+- `ui`: characters outside 0x20 to 0x7F are drawn as the font's placeholder glyph.
+- `screen`, `ui`: bitmap drawing draws nothing when the bitmap is shorter than its
+  width and height require.
+- Build: the install parameters are generated again when one of their inputs
+  changes. Test builds are optimized at `opt-level` 1.
+
 ## [1.42.2] - 2026-10-27
 
 ### Fixed

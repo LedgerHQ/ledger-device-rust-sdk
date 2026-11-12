@@ -53,7 +53,7 @@ Set `LEDGER_SDK_PATH` to point `build.rs` at a local C SDK checkout instead of h
 - **`#![no_std]` + `alloc`.** Use `core::` / `alloc::`; no `std::`. Heap requires the `heap` feature (on by default).
 - **Panic handler is mandatory.** Every app calls `ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);`.
 - **Position-independent code.** Apps are relocated at runtime. Wrap static accesses with `pic_rs` / `pic_rs_mut` (or the `Pic<T>` helper in `lib.rs`).
-- **NVM storage.** Persistent data goes in `#[link_section=".nvm_data"]` with `NVMData<T>` and `AtomicStorage` / `AlignedStorage` / `SafeStorage` (see `ledger_device_sdk/src/nvm.rs`). The `NVMData` accessors compute `.nvm_data` offsets from `r9` — do not bypass them.
+- **NVM storage.** Persistent data is declared with the `nvm_data!` macro (an `NVMData<T>` static in `.nvm_data`; `NVMData::new` is deprecated) holding `AtomicStorage` / `AlignedStorage` / `SafeStorage` of an `NvmValue` (see `ledger_device_sdk/src/nvm.rs`). The `NVMData` accessors compute `.nvm_data` offsets from `r9` — do not bypass them.
 - **Dual IO modules.** `io_legacy` (default, blocking event loop with `Comm`) vs `io_new` (callback-based, opt-in via the `io_new` feature). `pub mod io` in `lib.rs` re-exports whichever is selected; most NBGL examples require `io_new`.
 - **Examples are the canonical usage docs.** `ledger_device_sdk/examples/` is where current NBGL widget, APDU, and PKI/TLV patterns live; prefer reading those over inferring from the API.
 

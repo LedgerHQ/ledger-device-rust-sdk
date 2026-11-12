@@ -137,7 +137,8 @@ jobs:
     name: Build all Rust apps
     if: github.event_name != 'workflow_dispatch'
     uses: ./.github/workflows/reusable_build_all_apps.yml
-    secrets: inherit
+    secrets:
+      CI_BOT_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
     with:
       rust_sdk_repo: ${{ github.repository }}
       rust_sdk_branch: ${{ github.ref }}
@@ -147,7 +148,8 @@ jobs:
     name: Build all Rust apps (manual)
     if: github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/reusable_build_all_apps.yml
-    secrets: inherit
+    secrets:
+      CI_BOT_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
     with:
       rust_sdk_repo: ${{ github.repository }}
       rust_sdk_branch: ${{ inputs.rust_sdk_branch }}

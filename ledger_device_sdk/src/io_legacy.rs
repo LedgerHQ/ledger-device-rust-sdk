@@ -259,7 +259,15 @@ pub struct Comm {
     pub expected_cla: Option<u8>,
 
     pub apdu_type: u8,
+    /// Response being built with [`Comm::append`] or by indexing the `Comm`,
+    /// sent by [`Comm::reply`]. Received frames go to `rx_buffer`, so polling
+    /// events before replying leaves the response as it is.
     pub io_buffer: [u8; 273],
+    /// Last frame received: an APDU or a SEPH event.
+    pub(crate) rx_buffer: [u8; 273],
+    /// Header of the last APDU accepted, returned by
+    /// [`Comm::get_apdu_metadata`].
+    header: ApduHeader,
     pub rx_length: usize,
     pub tx_length: usize,
     /// When true, apdu_send skips the io_rx(false) call.
@@ -270,6 +278,13 @@ pub struct Comm {
     /// application replies to it. This is what makes a second incoming APDU a
     /// *double* APDU rather than the normal way of receiving work.
     apdu_in_progress: bool,
+    /// True from the moment [`Comm::next_event_ahead`] accepts a command while
+    /// an NBGL screen is displayed until it is handed to the application, or
+    /// answered because the screen did not exit to handle it.
+    pending_apdu: bool,
+    /// True once registered with Nbgl. It moves with the value, so a moved
+    /// `Comm` can record its new address in `CURRENT_COMM`.
+    nbgl_registered: bool,
 }
 
 impl Default for Comm {
@@ -304,16 +319,26 @@ impl Comm {
             expected_cla: None,
             apdu_type: seph::PacketTypes::PacketTypeNone as u8,
             io_buffer: [0u8; 273],
+            rx_buffer: [0u8; 273],
+            header: ApduHeader {
+                cla: 0,
+                ins: 0,
+                p1: 0,
+                p2: 0,
+            },
             rx_length: 0,
             tx_length: 0,
             skip_rx_on_send: false,
             apdu_in_progress: false,
+            pending_apdu: false,
+            nbgl_registered: false,
         }
     }
 
     #[allow(dead_code)]
     pub(crate) fn nbgl_register_comm(&mut self) {
         // Register NBGL callbacks if not already set and record current Comm singleton.
+        self.nbgl_registered = true;
         unsafe {
             CURRENT_COMM = self as *mut Comm;
         }
@@ -322,6 +347,18 @@ impl Comm {
             default_nbgl_fetch_apdu_header,
             default_nbgl_reply_status,
         );
+    }
+
+    /// Records the current address of a `Comm` registered with Nbgl, which
+    /// changes when the value is moved. Called by the methods an application
+    /// uses to receive and reply, so that Nbgl reaches the `Comm` at its new
+    /// address once the application uses it again.
+    fn refresh_nbgl_registration(&mut self) {
+        if self.nbgl_registered {
+            unsafe {
+                CURRENT_COMM = self as *mut Comm;
+            }
+        }
     }
 
     /// Defines [`Comm::expected_cla`] in order to reply automatically [`StatusWords::BadCla`] when
@@ -379,9 +416,13 @@ impl Comm {
         self.rx_length = 0;
         // Replying completes the current command.
         self.apdu_in_progress = false;
+        self.pending_apdu = false;
     }
 
     /// Wait and return next button press event or APDU command.
+    ///
+    /// A command received by an NBGL screen that ended before handing it over
+    /// (see [`Comm::next_event_ahead`]) is returned first.
     ///
     /// `T` can be any type built from a [`ApduHeader`] using the [`TryFrom<ApduHeader>`] trait.
     /// The conversion can embed complex parsing logic, including checks on CLA, INS, P1 and P2
@@ -422,9 +463,13 @@ impl Comm {
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
+        self.refresh_nbgl_registration();
+        if let Some(event) = self.take_pending_command() {
+            return event;
+        }
         self.rx_length = 0;
         loop {
-            let status = sys_seph::io_rx(&mut self.io_buffer, true);
+            let status = sys_seph::io_rx(&mut self.rx_buffer, true);
 
             if status > 0
                 && let Some(value) = self.decode_event(status)
@@ -444,71 +489,114 @@ impl Comm {
     ///   returned so the caller can leave the screen and handle it.
     /// * a command is being processed (review, status, … screen): an incoming
     ///   APDU is a double APDU and is answered [`StatusWords::CmdNotAccepted`].
+    ///
+    /// A command accepted on one call is pending until it is handed to the
+    /// application, by the home screen or by [`Comm::next_event`]. If this is
+    /// called again first, the displayed screen did not exit to handle it: the
+    /// command is answered [`StatusWords::CmdNotAccepted`] and dropped, so that
+    /// the screen keeps running and the next APDU is a new command.
     pub fn next_event_ahead<T>(&mut self) -> bool
     where
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
-        let status = sys_seph::io_rx(&mut self.io_buffer, true);
+        if self.pending_apdu {
+            self.reject_pending_apdu();
+            return false;
+        }
+
+        let status = sys_seph::io_rx(&mut self.rx_buffer, true);
         if status <= 0 {
             return false;
         }
 
-        // An APDU received while a command is in flight is handled directly on
-        // the received frame, whatever its CLA or length.
-        if self.apdu_in_progress && Self::is_apdu_packet(self.io_buffer[0]) {
-            self.handle_double_apdu(status as usize - 1);
-            return false;
-        }
-
+        // A double APDU is answered by `decode_event`, and is not a command.
         self.detect_apdu::<T>(status)
     }
 
-    /// Answer an APDU of `rx` bytes, still in `io_buffer`, received while
+    /// Answer the pending command [`StatusWords::CmdNotAccepted`], on the
+    /// transport it was received on, and drop it.
+    fn reject_pending_apdu(&mut self) {
+        self.pending_apdu = false;
+        self.event_pending = false;
+        self.rx_length = 0;
+        self.apdu_in_progress = false;
+        let sw = (StatusWords::CmdNotAccepted as u16).to_be_bytes();
+        sys_seph::io_tx(self.apdu_type, &sw, sw.len());
+    }
+
+    /// Hand the pending command, if any, to the application.
+    ///
+    /// Its header is checked again against `T`, as it was accepted by the
+    /// NBGL callbacks as a plain [`ApduHeader`]; it is answered with the
+    /// conversion error otherwise.
+    fn take_pending_command<T>(&mut self) -> Option<Event<T>>
+    where
+        T: TryFrom<ApduHeader>,
+        Reply: From<<T as TryFrom<ApduHeader>>::Error>,
+    {
+        if !self.pending_apdu {
+            return None;
+        }
+        self.pending_apdu = false;
+        self.event_pending = false;
+        match T::try_from(self.header) {
+            Ok(ins) => Some(Event::Command(ins)),
+            Err(sw) => {
+                self.reply(sw);
+                None
+            }
+        }
+    }
+
+    /// Answer an APDU of `rx` bytes, still in `rx_buffer`, received while
     /// another command is in flight.
     ///
     /// Only BOLOS [`BOLOS_INS_GET_VERSION`] is answered inline, as `io_new`
     /// does, so that hosts can still identify the app while a screen is
     /// displayed. Everything else is answered [`StatusWords::CmdNotAccepted`].
     /// The reply goes out on the transport the APDU was received on, and the
-    /// state of the command in flight is kept as is.
+    /// command in flight is kept as is, including its header and any response
+    /// already staged.
     fn handle_double_apdu(&mut self, rx: usize) {
-        let received_apdu_type = self.io_buffer[0];
+        let received_apdu_type = self.rx_buffer[0];
 
         if Self::is_device_locked() {
             self.reject_apdu(StatusWords::DeviceLocked);
             return;
         }
 
-        if rx < 4 || !is_bolos_apdu_allowed_in_flight(self.io_buffer[1], self.io_buffer[2]) {
+        if rx < 4 || !is_bolos_apdu_allowed_in_flight(self.rx_buffer[1], self.rx_buffer[2]) {
             self.reject_apdu(StatusWords::CmdNotAccepted);
             return;
         }
 
         // `get_data` cannot validate the length here as it works on the
         // in-flight command's `apdu_buffer`. BOLOS APDUs only use short Lc.
-        let lc = self.io_buffer[5] as usize;
+        let lc = self.rx_buffer[5] as usize;
         let length_ok = rx == 4 || (rx == 5 && lc == 0) || (lc != 0 && rx == 5 + lc);
         if !length_ok {
             self.reject_apdu(StatusWords::BadLen);
             return;
         }
 
-        // `handle_bolos_apdu` reads its request from `io_buffer` and replies
+        // `handle_bolos_apdu` builds its answer in `io_buffer` and replies
         // through `apdu_send`, which uses the response state: reply on the
-        // received APDU's transport, then restore the command's state.
+        // received APDU's transport, then restore the command's response.
         let saved = (self.apdu_type, self.tx, self.tx_length, self.rx_length);
+        let staged = self.io_buffer;
         self.apdu_type = received_apdu_type;
         self.tx = 0;
         self.tx_length = 0;
         self.skip_rx_on_send = true;
         handle_bolos_apdu(
             self,
-            self.io_buffer[2],
-            self.io_buffer[3],
-            self.io_buffer[4],
+            self.rx_buffer[2],
+            self.rx_buffer[3],
+            self.rx_buffer[4],
         );
         (self.apdu_type, self.tx, self.tx_length, self.rx_length) = saved;
+        self.io_buffer = staged;
         self.skip_rx_on_send = false;
         self.apdu_in_progress = true;
     }
@@ -544,20 +632,15 @@ impl Comm {
             }
 
             // Manage BOLOS specific APDUs B0xxyyzz
-            if self.io_buffer[1] == 0xB0 {
+            if self.header.cla == 0xB0 {
                 self.skip_rx_on_send = true;
-                handle_bolos_apdu(
-                    self,
-                    self.io_buffer[2],
-                    self.io_buffer[3],
-                    self.io_buffer[4],
-                );
+                handle_bolos_apdu(self, self.header.ins, self.header.p1, self.header.p2);
                 return None;
             }
 
             // If CLA filtering is enabled, automatically reject APDUs with wrong CLA
             if let Some(cla) = self.expected_cla
-                && self.io_buffer[1] != cla
+                && self.header.cla != cla
             {
                 self.reply(StatusWords::BadCla);
                 return None;
@@ -705,13 +788,13 @@ impl Comm {
         T: TryFrom<ApduHeader>,
         Reply: From<<T as TryFrom<ApduHeader>>::Error>,
     {
-        let packet_type = self.io_buffer[0];
+        let packet_type = self.rx_buffer[0];
 
         match seph::PacketTypes::from(packet_type) {
             seph::PacketTypes::PacketTypeSeph | seph::PacketTypes::PacketTypeSeEvent => {
                 // SE or SEPH event
                 let mut seph_buffer = [0u8; 272];
-                seph_buffer[0..272].copy_from_slice(&self.io_buffer[1..273]);
+                seph_buffer[0..272].copy_from_slice(&self.rx_buffer[1..273]);
                 if let Some(event) = self.process_event(seph_buffer, length - 1) {
                     return Some(event);
                 }
@@ -721,11 +804,24 @@ impl Comm {
             | seph::PacketTypes::PacketTypeUsbHidApdu
             | seph::PacketTypes::PacketTypeUsbWebusbApdu
             | seph::PacketTypes::PacketTypeBleApdu => {
+                // An APDU received while a command is in flight is handled
+                // directly on the received frame, whatever its CLA or length,
+                // and whichever function received it.
+                if self.apdu_in_progress {
+                    self.handle_double_apdu((length as usize).saturating_sub(1));
+                    return None;
+                }
                 if Self::is_device_locked() {
                     self.reply(StatusWords::DeviceLocked);
                     return None;
                 }
-                self.apdu_buffer[0..272].copy_from_slice(&self.io_buffer[1..273]);
+                self.apdu_buffer[0..272].copy_from_slice(&self.rx_buffer[1..273]);
+                self.header = ApduHeader {
+                    cla: self.rx_buffer[1],
+                    ins: self.rx_buffer[2],
+                    p1: self.rx_buffer[3],
+                    p2: self.rx_buffer[4],
+                };
                 self.apdu_type = packet_type;
                 self.rx_length = length as usize;
                 self.rx = self.rx_length - 1;
@@ -748,21 +844,11 @@ impl Comm {
                 self.rx_length = length as usize;
                 self.rx = self.rx_length - 1;
                 self.event_pending = true;
+                self.pending_apdu = true;
                 true
             }
             _ => false,
         }
-    }
-
-    /// True if a received SEPH frame carries an APDU rather than an event.
-    fn is_apdu_packet(packet_type: u8) -> bool {
-        matches!(
-            seph::PacketTypes::from(packet_type),
-            seph::PacketTypes::PacketTypeRawApdu
-                | seph::PacketTypes::PacketTypeUsbHidApdu
-                | seph::PacketTypes::PacketTypeUsbWebusbApdu
-                | seph::PacketTypes::PacketTypeBleApdu
-        )
     }
 
     /// Answer `sw` to an APDU received while another command is in flight.
@@ -776,7 +862,7 @@ impl Comm {
     fn reject_apdu(&self, sw: StatusWords) {
         let sw = sw as u16;
         let resp = [(sw >> 8) as u8, sw as u8];
-        sys_seph::io_tx(self.io_buffer[0], &resp, resp.len());
+        sys_seph::io_tx(self.rx_buffer[0], &resp, resp.len());
     }
 
     /// Wait for the next Command event. Discards received button events.
@@ -852,6 +938,7 @@ impl Comm {
     ///   StatusWords, a SyscallError, or any type which can be converted to a
     ///   Reply.
     pub fn reply<T: Into<Reply>>(&mut self, reply: T) {
+        self.refresh_nbgl_registration();
         // Append status word
         self.append_status_word(reply.into().0);
         // Transmit the response
@@ -872,34 +959,39 @@ impl Comm {
         self.reply_ok();
     }
 
-    /// Return APDU Metadata
+    /// Return APDU Metadata: the header of the last APDU accepted, which
+    /// events or APDUs received since do not change.
     pub fn get_apdu_metadata(&self) -> &ApduHeader {
-        assert!(self.io_buffer.len() >= 5);
-        let ptr = &self.io_buffer[1] as &u8 as *const u8 as *const ApduHeader;
-        unsafe { &*ptr }
+        &self.header
     }
 
     pub fn get_data(&self) -> Result<&[u8], StatusWords> {
+        self.data_range().map(|r| &self.apdu_buffer[r])
+    }
+
+    /// Where the received APDU's data lies in `apdu_buffer`, once its length
+    /// has been checked against what was received.
+    fn data_range(&self) -> Result<core::ops::Range<usize>, StatusWords> {
         if self.rx == 4 {
-            Ok(&[]) // Conforming zero-data APDU
+            Ok(4..4) // Conforming zero-data APDU
         } else {
             let first_len_byte = self.apdu_buffer[4] as usize;
-            let get_data_from_buffer = |len, offset| {
+            let data_range = |len, offset| {
                 if len == 0 || len + offset > self.rx {
                     Err(StatusWords::BadLen)
                 } else {
-                    Ok(&self.apdu_buffer[offset..offset + len])
+                    Ok(offset..offset + len)
                 }
             };
             match (first_len_byte, self.rx) {
-                (0, 5) => Ok(&[]), // Non-conforming zero-data APDU
+                (0, 5) => Ok(5..5), // Non-conforming zero-data APDU
                 (0, 6) => Err(StatusWords::BadLen),
                 (0, _) => {
                     let len =
                         u16::from_be_bytes([self.apdu_buffer[5], self.apdu_buffer[6]]) as usize;
-                    get_data_from_buffer(len, 7)
+                    data_range(len, 7)
                 }
-                (len, _) => get_data_from_buffer(len, 5),
+                (len, _) => data_range(len, 5),
             }
         }
     }
@@ -909,6 +1001,7 @@ impl Comm {
     }
 
     pub fn append(&mut self, m: &[u8]) {
+        self.refresh_nbgl_registration();
         self.io_buffer[self.tx_length..self.tx_length + m.len()].copy_from_slice(m);
         self.tx_length += m.len();
     }
@@ -919,10 +1012,11 @@ static mut CURRENT_COMM: *mut Comm = core::ptr::null_mut();
 
 impl Drop for Comm {
     fn drop(&mut self) {
-        // Unregister this instance from Nbgl.
+        // Unregister this instance from Nbgl, including when it was moved
+        // since it last recorded its address.
         // SAFETY: single-threaded runtime; no concurrent access is possible.
         unsafe {
-            if core::ptr::eq(CURRENT_COMM, self) {
+            if self.nbgl_registered || core::ptr::eq(CURRENT_COMM, self) {
                 CURRENT_COMM = core::ptr::null_mut();
             }
         }
@@ -946,10 +1040,13 @@ fn default_nbgl_next_event_ahead() -> bool {
     registered_comm().next_event_ahead::<ApduHeader>()
 }
 
+/// Hands the pending command to the home screen, which returns it to the
+/// application.
 #[allow(dead_code)]
 fn default_nbgl_fetch_apdu_header() -> Option<ApduHeader> {
     let comm = registered_comm();
-    if comm.event_pending && comm.rx_length >= 5 {
+    if comm.pending_apdu {
+        comm.pending_apdu = false;
         return Some(*comm.get_apdu_metadata());
     }
     None
@@ -1014,22 +1111,32 @@ fn handle_bolos_apdu(com: &mut Comm, ins: u8, p1: u8, p2: u8) {
             com.reply_ok();
             crate::exit_app(0);
         }
-        BOLOS_INS_SET_PKI_CERT => unsafe {
-            let public_key = cx_ecfp_384_public_key_t::default();
-            let err = os_pki_load_certificate(
-                com.io_buffer[3],                // P1
-                com.io_buffer[6..].as_mut_ptr(), // Data
-                com.io_buffer[5] as usize,       // Length
-                core::ptr::null_mut(),
-                core::ptr::null_mut(),
-                &public_key as *const cx_ecfp_384_public_key_t as *mut cx_ecfp_384_public_key_t,
-            );
+        BOLOS_INS_SET_PKI_CERT => {
+            let range = match com.data_range() {
+                Ok(r) if !r.is_empty() => r,
+                _ => {
+                    com.reply(StatusWords::BadLen);
+                    return;
+                }
+            };
+            let certificate = &mut com.apdu_buffer[range];
+            let mut public_key = cx_ecfp_384_public_key_t::default();
+            let err = unsafe {
+                os_pki_load_certificate(
+                    p1,
+                    certificate.as_mut_ptr(),
+                    certificate.len(),
+                    core::ptr::null_mut(),
+                    core::ptr::null_mut(),
+                    &mut public_key,
+                )
+            };
             if err != 0 {
                 com.reply(SyscallError::from(PkiLoadCertificateError::from(err)));
             } else {
                 com.reply_ok();
             }
-        },
+        }
         #[cfg(feature = "stack_usage")]
         BOLOS_INS_STACK_CONSUMPTION => {
             crate::testing::handle_stack_consumption_apdu(p1, p2, com);
@@ -1108,5 +1215,201 @@ mod test {
         assert_eq!(c.io_buffer[2], 0x90);
         assert_eq!(c.io_buffer[3], 0x00);
         assert_eq!(c.tx, 0);
+    }
+
+    /// A header-only APDU has no data, whatever bytes an earlier APDU left
+    /// behind the header.
+    #[test]
+    fn data_range_ignores_stale_bytes() {
+        let mut c = Comm::new();
+        c.apdu_buffer[4] = 0xff;
+        c.apdu_buffer[5] = 0xff;
+        c.rx = 4;
+        assert_eq!(c.data_range().ok() == Some(4..4), true);
+    }
+
+    #[test]
+    fn data_range_follows_lc() {
+        let mut c = Comm::new();
+        c.apdu_buffer[4] = 3;
+        c.rx = 8;
+        assert_eq!(c.data_range().ok() == Some(5..8), true);
+        // Lc announcing more than was received.
+        c.apdu_buffer[4] = 0xff;
+        assert_eq!(c.data_range().is_err(), true);
+    }
+
+    /// Puts `apdu` in the receive buffer as if it had arrived on `transport`,
+    /// and decodes it.
+    fn receive(c: &mut Comm, transport: u8, apdu: &[u8]) -> Option<Event<ApduHeader>> {
+        c.rx_buffer[0] = transport;
+        c.rx_buffer[1..1 + apdu.len()].copy_from_slice(apdu);
+        c.decode_event::<ApduHeader>(apdu.len() as i32 + 1)
+    }
+
+    fn header_of(c: &Comm) -> (u8, u8, u8, u8) {
+        let h = c.get_apdu_metadata();
+        (h.cla, h.ins, h.p1, h.p2)
+    }
+
+    /// APDUs received while a command is in flight, as when an app polls for
+    /// buttons before replying, are answered without changing the command in
+    /// flight: its header, data, transport and the response already staged.
+    #[test]
+    fn double_apdu_keeps_the_command_in_flight() {
+        let mut c = Comm::new();
+        // Command A, received over USB HID and handed to the application.
+        let a = [0xe0, 0x02, 0x00, 0x00, 0x02, 0xaa, 0xbb];
+        let event = receive(&mut c, OS_IO_PACKET_TYPE_USB_HID_APDU, &a);
+        assert_eq!(matches!(event, Some(Event::Command(_))), true);
+        assert_eq!(c.apdu_in_progress, true);
+        // Part of its response is staged before replying.
+        c.append(&[0x11, 0x22, 0x33]);
+
+        // Command B, with another header and data, arrives over BLE and is
+        // rejected; then BOLOS GET_VERSION, which is answered inline.
+        let b = [0xe0, 0x04, 0x01, 0x00, 0x02, 0xcc, 0xdd];
+        assert_eq!(
+            receive(&mut c, OS_IO_PACKET_TYPE_BLE_APDU, &b).is_none(),
+            true
+        );
+        let get_version = [0xb0, BOLOS_INS_GET_VERSION, 0x00, 0x00];
+        assert_eq!(
+            receive(&mut c, OS_IO_PACKET_TYPE_BLE_APDU, &get_version).is_none(),
+            true
+        );
+
+        assert_eq!(header_of(&c), (0xe0, 0x02, 0x00, 0x00));
+        assert_eq!(c.apdu_buffer[..a.len()] == a, true);
+        assert_eq!(c.get_data().ok() == Some(&[0xaa, 0xbb][..]), true);
+        assert_eq!(c.apdu_type, OS_IO_PACKET_TYPE_USB_HID_APDU);
+        assert_eq!(c.rx, a.len());
+        assert_eq!(c.tx_length, 3);
+        assert_eq!(c.io_buffer[..3] == [0x11, 0x22, 0x33], true);
+        assert_eq!(c.event_pending, false);
+        assert_eq!(c.apdu_in_progress, true);
+    }
+
+    /// Puts `apdu` in the receive buffer as if it had arrived on `transport`
+    /// while an NBGL screen is displayed, and lets the NBGL callbacks decode it.
+    fn receive_ahead(c: &mut Comm, transport: u8, apdu: &[u8]) -> bool {
+        c.rx_buffer[0] = transport;
+        c.rx_buffer[1..1 + apdu.len()].copy_from_slice(apdu);
+        c.detect_apdu::<ApduHeader>(apdu.len() as i32 + 1)
+    }
+
+    const CMD_A: [u8; 7] = [0xe0, 0x02, 0x00, 0x00, 0x02, 0xaa, 0xbb];
+    const CMD_B: [u8; 5] = [0xe0, 0x04, 0x01, 0x00, 0x00];
+
+    /// A command received while a screen that does not exit on APDU is
+    /// displayed (a status screen after a reply, for instance) is answered once
+    /// polling resumes, and the next APDU is a new command, not a double APDU.
+    #[test]
+    fn pending_command_is_answered_when_the_screen_does_not_exit() {
+        let mut c = Comm::new();
+        // Received over BLE, as the test below answers it: a USB HID response
+        // crashes Speculos in the unit test setup.
+        assert_eq!(
+            receive_ahead(&mut c, OS_IO_PACKET_TYPE_BLE_APDU, &CMD_A),
+            true
+        );
+        assert_eq!(c.pending_apdu, true);
+        assert_eq!(c.apdu_in_progress, true);
+
+        // The screen polls again: the command is answered and dropped.
+        assert_eq!(c.next_event_ahead::<ApduHeader>(), false);
+        assert_eq!(c.pending_apdu, false);
+        assert_eq!(c.apdu_in_progress, false);
+        assert_eq!(c.event_pending, false);
+        assert_eq!(c.take_pending_command::<ApduHeader>().is_none(), true);
+
+        // The next APDU is handed to the application.
+        let event = receive(&mut c, OS_IO_PACKET_TYPE_USB_HID_APDU, &CMD_B);
+        assert_eq!(matches!(event, Some(Event::Command(_))), true);
+        assert_eq!(header_of(&c), (0xe0, 0x04, 0x01, 0x00));
+        assert_eq!(c.apdu_in_progress, true);
+    }
+
+    /// A command received on the last poll of a screen is handed to the
+    /// application by the next `next_event`, with its header and data.
+    #[test]
+    fn pending_command_is_handed_to_next_event() {
+        let mut c = Comm::new();
+        assert_eq!(
+            receive_ahead(&mut c, OS_IO_PACKET_TYPE_BLE_APDU, &CMD_A),
+            true
+        );
+
+        let event = c.take_pending_command::<ApduHeader>();
+        assert_eq!(
+            matches!(event, Some(Event::Command(h)) if (h.cla, h.ins) == (0xe0, 0x02)),
+            true
+        );
+        assert_eq!(c.get_data().ok() == Some(&[0xaa, 0xbb][..]), true);
+        assert_eq!(c.apdu_type, OS_IO_PACKET_TYPE_BLE_APDU);
+        assert_eq!(c.pending_apdu, false);
+        assert_eq!(c.event_pending, false);
+        // It is now in flight: another APDU is a double APDU.
+        assert_eq!(c.apdu_in_progress, true);
+        assert_eq!(
+            receive(&mut c, OS_IO_PACKET_TYPE_BLE_APDU, &CMD_B).is_none(),
+            true
+        );
+        assert_eq!(header_of(&c), (0xe0, 0x02, 0x00, 0x00));
+
+        // It is handed over once only.
+        assert_eq!(c.take_pending_command::<ApduHeader>().is_none(), true);
+    }
+
+    /// The home screen takes the pending command, which is then neither
+    /// answered by the next poll nor handed over again.
+    #[test]
+    fn home_screen_takes_the_pending_command() {
+        let mut c = Comm::new();
+        c.nbgl_register_comm();
+        assert_eq!(
+            receive_ahead(&mut c, OS_IO_PACKET_TYPE_USB_HID_APDU, &CMD_A),
+            true
+        );
+
+        let header = default_nbgl_fetch_apdu_header();
+        assert_eq!(
+            matches!(header, Some(h) if (h.cla, h.ins, h.p1, h.p2) == (0xe0, 0x02, 0x00, 0x00)),
+            true
+        );
+        assert_eq!(default_nbgl_fetch_apdu_header().is_none(), true);
+        assert_eq!(c.pending_apdu, false);
+        assert_eq!(c.apdu_in_progress, true);
+        assert_eq!(c.take_pending_command::<ApduHeader>().is_none(), true);
+        drop(c);
+    }
+
+    fn registered_at(comm: &Comm) -> bool {
+        unsafe { core::ptr::eq(CURRENT_COMM, comm) }
+    }
+
+    /// A registered `Comm` moved elsewhere is reached at its new address once
+    /// used again, and unregisters when dropped.
+    #[test]
+    fn moved_comm_records_its_new_address() {
+        let mut registered = Comm::new();
+        registered.nbgl_register_comm();
+        assert_eq!(registered_at(&registered), true);
+
+        // `replace` moves the registered value out and leaves another `Comm`
+        // at the registered address.
+        let mut slot = Comm::new();
+        let mut moved = core::mem::replace(&mut registered, Comm::new());
+        assert_eq!(registered_at(&moved), false);
+
+        // A `Comm` that was never registered does not take over.
+        slot.refresh_nbgl_registration();
+        assert_eq!(registered_at(&slot), false);
+
+        moved.refresh_nbgl_registration();
+        assert_eq!(registered_at(&moved), true);
+
+        drop(moved);
+        assert_eq!(unsafe { CURRENT_COMM.is_null() }, true);
     }
 }

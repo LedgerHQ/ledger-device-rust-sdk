@@ -369,30 +369,25 @@ int c_main(int arg0) {
   // formerly known as 'os_boot()'
   try_context_set(NULL);
 
-  for(;;) {
-    BEGIN_TRY {
-      TRY {
+  // sample_main runs once: an exception, an IO reset included, ends the app
+  // (c_main returns to _start, which exits) instead of restarting it in place.
+  BEGIN_TRY {
+    TRY {
 #ifdef HAVE_APP_STORAGE
-        // Writes the storage header on first start or after corruption; idempotent across IO
-        // reset retries.
-        if (app_storage_starts(arg0))
-          app_storage_init();
+      // Writes the storage header on first start or after corruption.
+      if (app_storage_starts(arg0))
+        app_storage_init();
 #endif  // HAVE_APP_STORAGE
-        // if libcall, does not start io and memory allocator
-        if (arg0 == 0)
-          c_boot_std();
-        sample_main(arg0);
-      }
-      CATCH(EXCEPTION_IO_RESET) {
-        continue;
-      }
-      CATCH_ALL {
-        break;
-      }
-      FINALLY {
-      }
+      // if libcall, does not start io and memory allocator
+      if (arg0 == 0)
+        c_boot_std();
+      sample_main(arg0);
     }
-    END_TRY;
+    CATCH_ALL {
+    }
+    FINALLY {
+    }
   }
+  END_TRY;
   return 0;
 }

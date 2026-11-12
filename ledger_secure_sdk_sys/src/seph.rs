@@ -52,14 +52,17 @@ pub fn io_rx(buffer: &mut [u8], check_se_event: bool) -> i32 {
     }
 }
 
+/// Send the first `length` bytes of `buffer`.
+///
+/// Returns -1, as a failed transmission does, without sending anything if
+/// `length` is larger than `buffer` or than the 65535 bytes the OS accepts.
 pub fn io_tx(apdu_type: u8, buffer: &[u8], length: usize) -> i32 {
     canary::init_and_check();
-    unsafe {
-        os_io_tx_cmd(
-            apdu_type,
-            buffer.as_ptr() as _,
-            length as u16,
-            core::ptr::null_mut(),
-        )
-    }
+    let Some(data) = buffer.get(..length) else {
+        return -1;
+    };
+    let Ok(length) = u16::try_from(data.len()) else {
+        return -1;
+    };
+    unsafe { os_io_tx_cmd(apdu_type, data.as_ptr() as _, length, core::ptr::null_mut()) }
 }

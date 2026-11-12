@@ -1,5 +1,6 @@
-use crate::bn::BnLock;
+use crate::bn::{Bn, bn_is_held};
 use crate::check_cx_ok;
+use crate::ecc::math::{CurveDomainParam, EcPoint};
 use crate::ecc::{
     ChainCode, CurvesId, CxError, ECPrivateKey, ECPublicKey, HDKeyDeriveMode, Secret, SeedDerive,
     bip32_derive,
@@ -134,42 +135,20 @@ impl Ed25519Stream {
             .map_err(|_| CxError::GenericError)?;
         self.signature.reverse();
 
+        // Every BN and point below is destroyed when dropped, on error paths
+        // too. The last one dropped releases the BN lock, which erases the BN
+        // memory: public_key() and cx_edwards_compress_point_no_throw take the
+        // lock themselves.
         let sign = {
-            let _lock = BnLock::acquire(32)?;
-
-            let mut r = CX_BN_FLAG_UNSET;
-
-            check_cx_ok!(cx_bn_alloc_init(
-                &mut r as *mut cx_bn_t,
-                64,
-                self.signature.as_ptr(),
-                self.signature.len(),
-            ));
-
-            let mut ed_p = cx_ecpoint_t::default();
+            let r = Bn::alloc_init_size(64, &self.signature)?;
             // Get the generator for Ed25519's curve
-            check_cx_ok!(cx_ecpoint_alloc(
-                &mut ed_p as *mut cx_ecpoint_t,
-                CX_CURVE_Ed25519
-            ));
-            check_cx_ok!(cx_ecdomain_generator_bn(CX_CURVE_Ed25519, &mut ed_p));
-
+            let mut ed_p = EcPoint::new(CurvesId::Ed25519)?;
+            CurvesId::Ed25519.generator_bn(&mut ed_p)?;
             // Multiply r by generator, store in ed_p. r is secret: use the
             // randomized multiplication, as the C SDK EdDSA signer does.
-            check_cx_ok!(cx_ecpoint_rnd_scalarmul_bn(&mut ed_p, r));
-
-            // and copy/compress it to ctx.big_r
-            let mut sign = 0;
-
-            check_cx_ok!(cx_ecpoint_compress(
-                &ed_p,
-                self.big_r.as_mut_ptr(),
-                self.big_r.len(),
-                &mut sign
-            ));
-            // _lock drops here; public_key() and cx_edwards_compress_point_no_throw
-            // manage their own BN locks internally
-            sign
+            ed_p.rnd_scalarmul_bn(r)?;
+            // and copy/compress it to big_r
+            ed_p.compress(&mut self.big_r)?
         };
 
         self.big_r.reverse();
@@ -198,8 +177,14 @@ impl Ed25519Stream {
 
     fn compute_s(&mut self, key: &ECPrivateKey<32, 'E'>) -> Result<(), CxError> {
         // Compute S (see https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.6, step 5)
-        let _lock = BnLock::acquire(32)?;
-        let (h_a, ed25519_order) = {
+        // Every BN below is destroyed when dropped, on error paths too, and the
+        // last one dropped releases the BN lock, which erases the BN memory.
+
+        // Get the group order
+        let mut ed25519_order = Bn::alloc(64)?;
+        CurvesId::Ed25519.domain_parameter_bn(CurveDomainParam::Order, &mut ed25519_order)?;
+
+        let h_a = {
             let mut h_scalar = Secret::<64>::new();
             self.hash
                 .finalize(h_scalar.as_mut())
@@ -208,27 +193,9 @@ impl Ed25519Stream {
             h_scalar.0.reverse();
 
             // Make k into a BN
-            let mut h_scalar_bn = CX_BN_FLAG_UNSET;
-            check_cx_ok!(cx_bn_alloc_init(
-                &mut h_scalar_bn as *mut cx_bn_t,
-                64,
-                h_scalar.0.as_ptr(),
-                h_scalar.0.len(),
-            ));
-
-            // Get the group order
-            let mut ed25519_order = CX_BN_FLAG_UNSET;
-
-            check_cx_ok!(cx_bn_alloc(&mut ed25519_order, 64));
-
-            check_cx_ok!(cx_ecdomain_parameter_bn(
-                CX_CURVE_Ed25519,
-                CX_CURVE_PARAM_Order,
-                ed25519_order,
-            ));
+            let h_scalar_bn = Bn::alloc_init_size(64, &h_scalar.0)?;
 
             // Generate the hashed private key
-            let mut rv = CX_BN_FLAG_UNSET;
             let mut temp = Secret::<64>::new();
 
             self.hash.reset();
@@ -244,48 +211,32 @@ impl Ed25519Stream {
             let key_slice = &mut temp.0[0..32];
 
             key_slice.reverse();
-            let mut key_bn = CX_BN_FLAG_UNSET;
 
             // Load key into bn
-            check_cx_ok!(cx_bn_alloc_init(
-                &mut key_bn as *mut cx_bn_t,
-                64,
-                key_slice.as_ptr(),
-                key_slice.len(),
-            ));
+            let key_bn = Bn::alloc_init_size(64, key_slice)?;
 
-            check_cx_ok!(cx_bn_alloc(&mut rv, 64));
+            // The hash context still holds the key and its digest; temp
+            // zeroizes on drop.
+            self.hash.reset();
 
             // multiply h_scalar_bn by key_bn
-            check_cx_ok!(cx_bn_mod_mul(rv, key_bn, h_scalar_bn, ed25519_order));
-
-            // Destroy the private key, so it doesn't leak from with_private_key even in the bn
-            // area. temp will zeroize on drop already, but the hash context still
-            // holds the key and its digest.
-            self.hash.reset();
-            check_cx_ok!(cx_bn_destroy(&mut key_bn));
-            (rv, ed25519_order)
+            let rv = Bn::alloc(64)?;
+            rv.mod_mul(&key_bn, &h_scalar_bn, &ed25519_order)?;
+            rv
         };
 
-        let mut r = CX_BN_FLAG_UNSET;
-        check_cx_ok!(cx_bn_alloc_init(
-            &mut r as *mut cx_bn_t,
-            64,
-            self.signature.as_ptr(),
-            self.signature.len(),
-        ));
+        let r = Bn::alloc_init_size(64, &self.signature)?;
 
         // finally, compute s:
-        let mut s = CX_BN_FLAG_UNSET;
-        check_cx_ok!(cx_bn_alloc(&mut s, 64));
-        check_cx_ok!(cx_bn_mod_add(s, h_a, r, ed25519_order));
+        let s = Bn::alloc(64)?;
+        s.mod_add(&h_a, &r, &ed25519_order)?;
 
         // Spooky sub 0 to avoid Nano S+ bug
-        check_cx_ok!(cx_bn_set_u32(r, 0));
+        r.set_u32(0)?;
 
-        check_cx_ok!(cx_bn_mod_sub(s, s, r, ed25519_order));
+        s.mod_sub(&s, &r, &ed25519_order)?;
         // and copy s back to normal memory to return.
-        check_cx_ok!(cx_bn_export(s, self.signature.as_mut_ptr(), 32));
+        s.export(&mut self.signature[..32])?;
 
         self.signature[..32].reverse();
 
@@ -303,9 +254,19 @@ impl Ed25519Stream {
     /// second pass carried the same message, then computes the signature. On
     /// any error, including a different key or a mismatch between both passes,
     /// all state is wiped and no signature is produced.
+    ///
+    /// Returns [`CxError::Locked`] while the BN lock is held, by a
+    /// [`Bn`](crate::bn::Bn), an [`EcPoint`], a
+    /// [`MontCtx`](crate::bn::MontCtx) or a [`BnLock`](crate::bn::BnLock):
+    /// the signature works in BN memory that is only erased once the lock is
+    /// released, so it must not be computed while another object keeps it.
     pub fn sign_finalize(&mut self, key: &ECPrivateKey<32, 'E'>) -> Result<(), CxError> {
         if !matches!(self.phase, SignPhase::NoncePass | SignPhase::ChallengePass) {
             return Err(CxError::InvalidParameter);
+        }
+        if bn_is_held() {
+            self.wipe();
+            return Err(CxError::Locked);
         }
         let res = self.check_key(key).and_then(|_| match self.phase {
             SignPhase::NoncePass => self.end_nonce_pass(key),
@@ -380,6 +341,7 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
     pub const EP: usize = 2 * N;
 
     pub fn sign(&self, hash: &[u8]) -> Result<([u8; Self::EP], u32), CxError> {
+        self.check_layout()?;
         let mut sig = [0u8; Self::EP];
         let sig_len = Self::EP;
         let hash_id = match self.keylength {
@@ -408,9 +370,10 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
 impl<const P: usize> ECPublicKey<P, 'E'> {
     /// Verifies the first `signature.1` bytes of `signature.0` against `hash`.
     ///
-    /// Returns `false` if `signature.1` exceeds the length of `signature.0`.
+    /// Returns `false` if `signature.1` exceeds the length of `signature.0`,
+    /// or if the key's curve, buffer size and `keylength` do not match.
     pub fn verify(&self, signature: (&[u8], u32), hash: &[u8], hash_id: u8) -> bool {
-        if signature.1 as usize > signature.0.len() {
+        if signature.1 as usize > signature.0.len() || !self.fits_layout() {
             return false;
         }
         unsafe {
@@ -697,5 +660,65 @@ mod tests {
         assert_eq!(streamer.sign_update(MSG1).is_err(), true);
         assert_eq!(streamer.sign_finalize(&sk).is_err(), true);
         assert_eq!(streamer.signature().is_ok(), true);
+    }
+
+    fn stream_sign(sk: &ECPrivateKey<32, 'E'>, msg: &[u8]) -> Result<[u8; 64], CxError> {
+        let mut streamer = Ed25519Stream::default();
+        streamer.init(sk)?;
+        stream_pass(&mut streamer, sk, &[msg])?;
+        stream_pass(&mut streamer, sk, &[msg])?;
+        Ok(*streamer.signature()?)
+    }
+
+    #[test]
+    fn eddsa_ed25519_stream_rejects_held_bn_lock() {
+        let sk = Ed25519::derive_from_path(&PATH0);
+        let expected = stream_sign(&sk, MSG1).map_err(display_error_code)?;
+        let mut streamer = Ed25519Stream::default();
+
+        // Lock held through the first pass.
+        streamer.init(&sk).map_err(display_error_code)?;
+        {
+            let _outer = Bn::alloc(32).map_err(display_error_code)?;
+            assert_eq!(
+                stream_pass(&mut streamer, &sk, &[MSG1]),
+                Err(CxError::Locked)
+            );
+        }
+        assert_eq!(streamer.sign_update(MSG1).is_err(), true);
+        assert_eq!(bn_is_held(), false);
+
+        // Lock taken between both passes.
+        streamer.init(&sk).map_err(display_error_code)?;
+        stream_pass(&mut streamer, &sk, &[MSG1]).map_err(display_error_code)?;
+        {
+            let _outer = EcPoint::new(CurvesId::Ed25519).map_err(display_error_code)?;
+            assert_eq!(
+                stream_pass(&mut streamer, &sk, &[MSG1]),
+                Err(CxError::Locked)
+            );
+        }
+        assert_eq!(streamer.signature().is_err(), true);
+        assert_eq!(bn_is_held(), false);
+
+        // Signing works again, with the same signature, once the lock is released.
+        assert_eq!(
+            stream_sign(&sk, MSG1).map_err(display_error_code)? == expected,
+            true
+        );
+    }
+
+    #[test]
+    fn eddsa_ed25519_stream_releases_bn_memory() {
+        let sk = Ed25519::derive_from_path(&PATH0);
+        let expected = stream_sign(&sk, MSG1).map_err(display_error_code)?;
+        // Far more signatures than the BN memory could hold if any of them
+        // left its handles allocated.
+        for _ in 0..32 {
+            let sig = stream_sign(&sk, MSG1).map_err(display_error_code)?;
+            assert_eq!(sig == expected, true);
+            assert_eq!(bn_is_held(), false);
+            assert_eq!(crate::bn::BnLock::is_locked_bool(), false);
+        }
     }
 }

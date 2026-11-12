@@ -72,6 +72,37 @@ impl From<u8> for CurvesId {
     }
 }
 
+impl CurvesId {
+    /// Curve family, as used by the `TY` parameter of the key types: `'W'`,
+    /// `'E'` or `'M'`, from the range the C SDK assigns to the curve identifier.
+    fn family(self) -> Option<char> {
+        let id = match self {
+            CurvesId::Invalid => return None,
+            curve => curve as u8,
+        };
+        let within = |start, end| id > start && id < end;
+        if within(CX_CURVE_WEIERSTRASS_START, CX_CURVE_WEIERSTRASS_END) {
+            Some('W')
+        } else if within(CX_CURVE_TWISTED_EDWARDS_START, CX_CURVE_TWISTED_EDWARDS_END) {
+            Some('E')
+        } else if within(CX_CURVE_MONTGOMERY_START, CX_CURVE_MONTGOMERY_END) {
+            Some('M')
+        } else {
+            None
+        }
+    }
+
+    /// Size in bytes of the curve's scalars and coordinates, as the C SDK
+    /// reports it, or `None` for a curve it does not support.
+    fn size(self) -> Option<usize> {
+        // Curves outside the three families are not passed to the C SDK.
+        self.family()?;
+        let mut size = 0;
+        let err = unsafe { cx_ecdomain_parameters_length(self as u8, &mut size) };
+        (err == CX_OK).then_some(size)
+    }
+}
+
 impl From<CurvesId> for u8 {
     fn from(curve: CurvesId) -> u8 {
         curve as u8
@@ -213,6 +244,10 @@ impl<const N: usize, const TY: char> ECPrivateKey<N, TY> {
     /// Create a new private key from a curve identifier and with a given
     /// length and type. The preferred way to create a key is by using
     /// a curve type directly like `Secp256k1::new()`
+    ///
+    /// A key whose curve is not of type `TY` or does not use `N`-byte
+    /// scalars is refused by every operation with
+    /// [`CxError::InvalidParameterSize`].
     pub fn new(curve: CurvesId) -> ECPrivateKey<N, TY> {
         ECPrivateKey {
             curve,
@@ -239,6 +274,7 @@ impl<const N: usize, const TY: char> ECPrivateKey<N, TY> {
     where
         [(); Self::P]: Sized,
     {
+        self.check_layout()?;
         let mut pubkey = ECPublicKey::<{ Self::P }, TY>::new(self.curve);
         let err = unsafe {
             cx_ecfp_generate_pair_no_throw(
@@ -254,6 +290,15 @@ impl<const N: usize, const TY: char> ECPrivateKey<N, TY> {
         } else {
             Ok(pubkey)
         }
+    }
+
+    /// Checks the layout the C SDK expects before the key is passed to it:
+    /// a curve of type `TY` whose scalars are `N` bytes long. The C side reads
+    /// and writes buffers sized from the curve, not from `N`.
+    pub(crate) fn check_layout(&self) -> Result<(), CxError> {
+        let fits =
+            self.keylength == N && self.curve.family() == Some(TY) && self.curve.size() == Some(N);
+        fits.then_some(()).ok_or(CxError::InvalidParameterSize)
     }
 }
 
@@ -280,6 +325,20 @@ impl<const P: usize, const TY: char> ECPublicKey<P, TY> {
             keylength: P,
             pubkey: [0u8; P],
         }
+    }
+
+    /// Whether the key can be passed to the C SDK: a curve of type `TY`, a
+    /// buffer large enough for the curve's uncompressed point, and a
+    /// `keylength` within the buffer. A shorter `keylength` (a compressed
+    /// point) is allowed.
+    pub(crate) fn fits_layout(&self) -> bool {
+        self.keylength <= P
+            && self.curve.family() == Some(TY)
+            && self
+                .curve
+                .size()
+                .and_then(|size| size.checked_mul(2)?.checked_add(1))
+                .is_some_and(|len| len <= P)
     }
 }
 
@@ -588,5 +647,78 @@ mod tests {
             const P: [u32; 2] = make_bip32_path(b"m/1234/5678'");
             assert_eq!(P, [1234u32, 5678u32 + 0x80000000u32]);
         }
+    }
+
+    #[test]
+    fn curve_family_and_size() {
+        assert_eq!(CurvesId::Secp256k1.family(), Some('W'));
+        assert_eq!(CurvesId::Secp256k1.size(), Some(32));
+        assert_eq!(CurvesId::Secp384r1.size(), Some(48));
+        assert_eq!(CurvesId::Ed25519.family(), Some('E'));
+        assert_eq!(CurvesId::Ed25519.size(), Some(32));
+        assert_eq!(CurvesId::Curve25519.family(), Some('M'));
+        assert_eq!(CurvesId::Curve25519.size(), Some(32));
+        assert_eq!(CurvesId::Invalid.family(), None);
+        assert_eq!(CurvesId::Invalid.size(), None);
+    }
+
+    #[test]
+    fn private_key_refuses_mismatched_curve() {
+        let err = Err(CxError::InvalidParameterSize);
+        // Too small for the curve.
+        let key = ECPrivateKey::<32, 'W'>::new(CurvesId::Secp521r1);
+        assert_eq!(key.public_key().map(|_| ()), err);
+        assert_eq!(key.sign(&[0u8; 32]).map(|_| ()), err);
+        // Too large for the curve.
+        let key = ECPrivateKey::<48, 'W'>::new(CurvesId::Secp256k1);
+        assert_eq!(key.ecdh(&[0u8; 65]).map(|_| ()), err);
+        // Curve of another family.
+        let key = ECPrivateKey::<32, 'W'>::new(CurvesId::Ed25519);
+        assert_eq!(key.public_key().map(|_| ()), err);
+        let key = ECPrivateKey::<32, 'E'>::new(CurvesId::Secp256k1);
+        assert_eq!(key.sign(&[0u8; 32]).map(|_| ()), err);
+        let key = ECPrivateKey::<32, 'M'>::new(CurvesId::Ed25519);
+        assert_eq!(key.ecdh(&[0u8; 65]).map(|_| ()), err);
+        // Default key, with no curve.
+        let key = ECPrivateKey::<32, 'W'>::default();
+        assert_eq!(key.public_key().map(|_| ()), err);
+    }
+
+    #[test]
+    fn private_key_accepts_matching_curve() {
+        assert_eq!(Secp256k1::new().check_layout(), Ok(()));
+        assert_eq!(Secp384r1::new().check_layout(), Ok(()));
+        assert_eq!(Ed25519::new().check_layout(), Ok(()));
+        assert_eq!(Curve25519::new().check_layout(), Ok(()));
+    }
+
+    #[test]
+    fn public_key_layout() {
+        let key = ECPublicKey::<65, 'W'>::new(CurvesId::Secp256k1);
+        assert_eq!(key.fits_layout(), true);
+
+        let mut key = ECPublicKey::<65, 'W'>::new(CurvesId::Secp256k1);
+        key.keylength = 66;
+        assert_eq!(key.fits_layout(), false);
+        assert_eq!(key.verify((&[0u8; 72], 72), &[0u8; 32]), false);
+        key.keylength = usize::MAX;
+        assert_eq!(key.fits_layout(), false);
+
+        // The buffer is too small for an uncompressed P-384 point.
+        let key = ECPublicKey::<65, 'W'>::new(CurvesId::Secp384r1);
+        assert_eq!(key.fits_layout(), false);
+        assert_eq!(key.verify((&[0u8; 72], 72), &[0u8; 32]), false);
+
+        // Curve of another family.
+        let key = ECPublicKey::<65, 'W'>::new(CurvesId::Ed25519);
+        assert_eq!(key.fits_layout(), false);
+        let key = ECPublicKey::<65, 'E'>::new(CurvesId::Secp256k1);
+        assert_eq!(key.fits_layout(), false);
+        assert_eq!(key.verify((&[0u8; 64], 64), &[0u8; 32], CX_SHA512), false);
+
+        // A compressed Ed25519 point is shorter than the buffer.
+        let mut key = ECPublicKey::<65, 'E'>::new(CurvesId::Ed25519);
+        key.keylength = 33;
+        assert_eq!(key.fits_layout(), true);
     }
 }

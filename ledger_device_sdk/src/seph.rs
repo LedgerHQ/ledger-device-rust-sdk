@@ -103,3 +103,19 @@ pub fn handle_event(_apdu_buffer: &mut [u8], spi_buffer: &[u8]) {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::assert_eq_err as assert_eq;
+    use crate::testing::TestType;
+    use ledger_secure_sdk_sys::seph as sys_seph;
+    use testmacro::test_item as test;
+
+    #[test]
+    fn io_tx_refuses_a_length_past_the_buffer() {
+        let buffer = [0x90, 0x00];
+        assert_eq!(sys_seph::io_tx(0x01, &buffer, 3), -1);
+        assert_eq!(sys_seph::io_tx(0x01, &buffer[..1], 2), -1);
+        assert_eq!(sys_seph::io_tx(0x01, &[], usize::MAX), -1);
+    }
+}

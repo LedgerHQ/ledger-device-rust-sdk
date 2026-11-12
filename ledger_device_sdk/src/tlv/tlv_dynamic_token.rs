@@ -283,6 +283,15 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_dynamic_token_tlv_max_der_length() {
+        let mut out = DynamicTokenOut::default();
+        // Tag 0x01 with a 4-byte length of 0xFFFFFFFF.
+        let payload = [0x01, 0x84, 0xFF, 0xFF, 0xFF, 0xFF];
+        let res = parse_dynamic_token_tlv(&payload, &mut out);
+        assert_eq!(res, Err(crate::tlv::TlvError::LengthOverflow));
+    }
+
+    #[test]
     fn test_parse_dynamic_token_tlv_length_overflow() {
         let mut out = DynamicTokenOut::default();
         let mut invalid_payload = TLV_PAYLOAD.to_vec();

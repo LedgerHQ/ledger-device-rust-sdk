@@ -40,9 +40,19 @@ static mut NVM_OPS: Option<NvmOps> = None;
 /// The NVM storage a builder's settings are bound to, published to
 /// [`NVM_PTR`] and [`NVM_OPS`] only when that builder is drawn.
 #[derive(Copy, Clone)]
-struct NvmBinding {
-    ptr: *mut (),
-    ops: NvmOps,
+pub(crate) struct NvmBinding {
+    pub(crate) ptr: *mut (),
+    pub(crate) ops: NvmOps,
+}
+
+/// Panics unless `nvm_data` lies in the `.nvm_data` section, where an
+/// `AtomicStorage` lives for as long as the app, so that the pointer the
+/// settings callbacks keep to it cannot outlive it.
+pub(crate) fn check_settings_storage<const N: usize>(nvm_data: &AtomicStorage<[u8; N]>) {
+    let ptr = nvm_data as *const AtomicStorage<[u8; N]> as *const u8;
+    if !crate::in_nvm_data(ptr, core::mem::size_of::<AtomicStorage<[u8; N]>>()) {
+        panic!("Settings storage must be a static in the .nvm_data section.");
+    }
 }
 
 pub(crate) unsafe fn nvm_read<const N: usize>(ptr: *mut (), idx: usize) -> u8 {
@@ -141,7 +151,7 @@ impl HomeActionStyle {
 /// `Comm::next_event` has returned (see the `nbgl_home_and_settings` example).
 pub struct HomeAction<'a> {
     text: &'a str,
-    icon: Option<&'a NbglGlyph<'a>>,
+    icon: Option<&'a NbglGlyph<'static>>,
     style: HomeActionStyle,
     callback: fn(),
 }
@@ -159,7 +169,7 @@ impl<'a> HomeAction<'a> {
     }
 
     /// Icon drawn in the button.
-    pub fn icon(self, icon: &'a NbglGlyph<'a>) -> HomeAction<'a> {
+    pub fn icon(self, icon: &'a NbglGlyph<'static>) -> HomeAction<'a> {
         HomeAction {
             icon: Some(icon),
             ..self
@@ -305,7 +315,7 @@ impl NbglHomeAndSettings {
     /// * `glyph` - The icon to display in the center of the page.
     /// # Returns
     /// Returns the builder itself to allow method chaining.
-    pub fn glyph(self, glyph: &NbglGlyph) -> NbglHomeAndSettings {
+    pub fn glyph(self, glyph: &NbglGlyph<'static>) -> NbglHomeAndSettings {
         let icon = glyph.into();
         NbglHomeAndSettings { icon, ..self }
     }
@@ -376,15 +386,50 @@ impl NbglHomeAndSettings {
     }
 
     /// Sets the settings to display in the settings page.
+    ///
+    /// The settings callbacks read and update `nvm_data` for as long as the
+    /// screen is shown, which can be after [`show_and_return`](Self::show_and_return)
+    /// returns, so it must be a static declared with [`NVMData`](crate::NVMData).
+    /// # Arguments
+    /// * `nvm_data` - The `AtomicStorage` holding the settings, one byte each.
+    /// * `settings_strings` - A slice of tuples containing the setting name and description.
+    /// # Panics
+    /// Panics if there are more settings than the NVM array has bytes, or if
+    /// `nvm_data` is not in the `.nvm_data` section.
+    /// # Returns
+    /// Returns the builder itself to allow method chaining.
+    pub fn nvm_settings<const N: usize>(
+        self,
+        nvm_data: &'static mut AtomicStorage<[u8; N]>,
+        settings_strings: &[[&str; 2]],
+    ) -> NbglHomeAndSettings {
+        self.bind_settings(nvm_data, settings_strings)
+    }
+
+    /// Sets the settings to display in the settings page.
     /// # Arguments
     /// * `nvm_data` - A mutable reference to an `AtomicStorage` containing the settings data.
     /// * `settings_strings` - A slice of tuples containing the setting name and description.
     /// # Panics
     /// Panics if there are more settings than the NVM array has bytes, each
-    /// setting needing one byte of storage.
+    /// setting needing one byte of storage, or if `nvm_data` is not in the
+    /// `.nvm_data` section (a static declared with [`NVMData`](crate::NVMData)):
+    /// the settings callbacks reach it for as long as the screen is shown.
     /// # Returns
     /// Returns the builder itself to allow method chaining.
+    #[deprecated(
+        since = "1.44.0",
+        note = "use `nvm_settings`, which takes the storage as `&'static mut`"
+    )]
     pub fn settings<const N: usize>(
+        self,
+        nvm_data: &mut AtomicStorage<[u8; N]>,
+        settings_strings: &[[&str; 2]],
+    ) -> NbglHomeAndSettings {
+        self.bind_settings(nvm_data, settings_strings)
+    }
+
+    fn bind_settings<const N: usize>(
         self,
         nvm_data: &mut AtomicStorage<[u8; N]>,
         settings_strings: &[[&str; 2]],
@@ -392,6 +437,7 @@ impl NbglHomeAndSettings {
         if settings_strings.len() > N {
             panic!("More settings than the NVM array has bytes.");
         }
+        check_settings_storage(nvm_data);
 
         // Records reads and writes instantiated for this N, the length being
         // invisible to the statics they are published to.
