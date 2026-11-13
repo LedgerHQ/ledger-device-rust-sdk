@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `uxapp`: `UxEvent::delay_lock(delay_ms)` asks the OS to push back the
+  auto-lock by a delay the app chooses. `UxEvent::DelayLock.request()` keeps
+  asking for `DEFAULT_LOCK_DELAY_MS` (10 s). On Flex, a request only moves the
+  deadline when `now + delay_ms` is later than the current one: an app
+  streaming APDUs for longer than the auto-lock setting needs a delay well
+  above the gap between two requests.
+
+### Fixed
+- `uxapp`: `UxEvent::request` did not set `G_ux_params.len`, the number of
+  bytes of `u` the `os_ux` syscall copies. The C UX lib stores the last UX
+  status in that field, so the OS got a stale length (`0`, `0x69`, `0x97`,
+  `0xAA`…). For `DelayLock` the delay could be dropped or read as garbage, and
+  the device could auto-lock while an app was still receiving APDUs.
+  `DelayLock` now sends the size of `lock_delay`, and the other events `0`, as
+  the C SDK does for `BOLOS_UX_EVENT`.
+
 ## [1.44.0] - 2026-11-12
 
 ### Added
