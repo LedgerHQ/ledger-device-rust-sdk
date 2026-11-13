@@ -28,11 +28,20 @@ pub enum UxEvent {
     LastID = BOLOS_UX_DELAY_LOCK + 1,
 }
 
+/// Delay [`UxEvent::DelayLock`] asks for, in ms. See [`UxEvent::delay_lock`].
+pub const DEFAULT_LOCK_DELAY_MS: u32 = 10_000;
+
 impl UxEvent {
     #[allow(unused)]
     pub fn request(&self) -> u32 {
+        if let Self::DelayLock = self {
+            return Self::delay_lock(DEFAULT_LOCK_DELAY_MS);
+        }
         unsafe {
-            //let mut params = bolos_ux_params_t::default();
+            // None of these events carries parameters, but `len` (the number
+            // of bytes of `u` the syscall copies) must still be set: the C UX
+            // lib stores the last UX status in it (lib_ux_nbgl/ux.c).
+            G_ux_params.len = 0;
             G_ux_params.ux_id = match self {
                 Self::Event => Self::Event as u8,
                 Self::Keyboard => Self::Keyboard as u8,
@@ -44,19 +53,8 @@ impl UxEvent {
 
                     Self::ValidatePIN as u8
                 }
-                Self::DelayLock => {
-                    #[cfg(any(
-                        target_os = "apex_p",
-                        target_os = "stax",
-                        target_os = "flex",
-                        feature = "nano_nbgl"
-                    ))]
-                    {
-                        G_ux_params.u.lock_delay.delay_ms = 10000;
-                    }
-
-                    Self::DelayLock as u8
-                }
+                // Handled above.
+                Self::DelayLock => Self::DelayLock as u8,
                 Self::LastID => panic!("Unknown UX Event"),
             };
 
@@ -66,6 +64,43 @@ impl UxEvent {
                 Self::ValidatePIN => Self::block(),
                 _ => os_sched_last_status(TASK_BOLOS_UX as u32) as u32,
             }
+        }
+    }
+
+    /// Asks the OS to push the auto-lock back to `delay_ms` from now, and
+    /// returns the UX task status.
+    ///
+    /// Observed on Flex: the request only moves the auto-lock deadline when
+    /// `now + delay_ms` is later than the current one, so a delay shorter
+    /// than the time left does nothing. An app that streams APDUs for longer
+    /// than the auto-lock setting needs a delay well above the gap between two
+    /// requests: with about 5 s between requests, 10 s let a Flex lock
+    /// mid-stream and 60 s did not.
+    pub fn delay_lock(delay_ms: u32) -> u32 {
+        unsafe {
+            G_ux_params.ux_id = Self::DelayLock as u8;
+            G_ux_params.len = 0;
+            #[cfg(any(
+                target_os = "apex_p",
+                target_os = "stax",
+                target_os = "flex",
+                feature = "nano_nbgl"
+            ))]
+            {
+                G_ux_params.u.lock_delay.delay_ms = delay_ms;
+                // `lock_delay` holds a single u32.
+                G_ux_params.len = core::mem::size_of::<u32>() as _;
+            }
+            #[cfg(not(any(
+                target_os = "apex_p",
+                target_os = "stax",
+                target_os = "flex",
+                feature = "nano_nbgl"
+            )))]
+            let _ = delay_ms;
+
+            os_ux(&raw mut G_ux_params as *mut bolos_ux_params_t);
+            os_sched_last_status(TASK_BOLOS_UX as u32) as u32
         }
     }
 
