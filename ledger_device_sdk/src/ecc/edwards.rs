@@ -94,6 +94,29 @@ fn key_id(key: &ECPrivateKey<32, 'E'>) -> Result<[u8; 32], CxError> {
     res.map(|_| id)
 }
 
+/// Size in bytes of an Ed25519 scalar (the curve's domain length).
+const ED25519_SCALAR_LEN: usize = 32;
+
+/// The nonce scalar `r = digest mod L` (RFC 8032 section 5.1.6, step 2), in a
+/// BN of the curve's size. `digest` is the SHA-512 digest as a big-endian
+/// integer, i.e. byte-reversed.
+///
+/// On a device, `cx_ecpoint_rnd_scalarmul_bn` rejects a scalar BN larger than
+/// the curve with `CX_INVALID_PARAMETER_SIZE`: a 64-byte BN fails even when
+/// it holds a value below the order. The digest is therefore reduced into a
+/// 32-byte BN first, as the C SDK's `cx_eddsa_sign_hash` does. Speculos
+/// accepts the larger BN, and its `cx_bn_nbytes` reports the value's length
+/// rounded up to the `cx_bn_lock` word size (32 bytes), not the allocated
+/// size, so off-device a test can only check that the value is reduced.
+fn nonce_scalar(digest: &[u8; 64]) -> Result<Bn, CxError> {
+    let h = Bn::alloc_init_size(64, digest)?;
+    let mut order = Bn::alloc(ED25519_SCALAR_LEN)?;
+    CurvesId::Ed25519.domain_parameter_bn(CurveDomainParam::Order, &mut order)?;
+    let r = Bn::alloc(ED25519_SCALAR_LEN)?;
+    r.reduce(&h, &order)?;
+    Ok(r)
+}
+
 impl Ed25519Stream {
     /// Start a new signature with `key`, discarding any previous state.
     pub fn init(&mut self, key: &ECPrivateKey<32, 'E'>) -> Result<(), CxError> {
@@ -140,7 +163,7 @@ impl Ed25519Stream {
         // memory: public_key() and cx_edwards_compress_point_no_throw take the
         // lock themselves.
         let sign = {
-            let r = Bn::alloc_init_size(64, &self.signature)?;
+            let r = nonce_scalar(&self.signature)?;
             // Get the generator for Ed25519's curve
             let mut ed_p = EcPoint::new(CurvesId::Ed25519)?;
             CurvesId::Ed25519.generator_bn(&mut ed_p)?;
@@ -589,6 +612,47 @@ mod tests {
         assert_eq!(
             *streamer.signature().map_err(display_error_code)? == sig,
             true
+        );
+    }
+
+    // On a device, cx_ecpoint_rnd_scalarmul_bn rejects a scalar BN larger
+    // than the curve; Speculos accepts it, so the signing tests above pass
+    // either way. Check the nonce scalar directly: it must be reduced below
+    // the order and fit the curve's size. (Speculos reports a BN's value
+    // length rounded up to the 32-byte lock word size, so any reduced value
+    // reports 32 there, and only a device can also see an oversized
+    // allocation.)
+    #[test]
+    fn eddsa_ed25519_stream_nonce_scalar_has_curve_size() {
+        let curve_len = CurvesId::Ed25519.size_bytes();
+        let mut order = Bn::alloc(curve_len).map_err(display_error_code)?;
+        CurvesId::Ed25519
+            .domain_parameter_bn(CurveDomainParam::Order, &mut order)
+            .map_err(display_error_code)?;
+        let mut order_bytes = [0u8; 32];
+        order.export(&mut order_bytes).map_err(display_error_code)?;
+
+        // A digest below the order is its own residue.
+        let mut digest = [0u8; 64];
+        digest[63] = 7;
+        let r = nonce_scalar(&digest).map_err(display_error_code)?;
+        assert_eq!(r.nbytes().map_err(display_error_code)?, curve_len);
+        assert_eq!(r.get_u32().map_err(display_error_code)?, 7);
+
+        // order + 5 reduces to 5 (the order's last byte is 0xed: no carry).
+        let mut digest = [0u8; 64];
+        digest[32..].copy_from_slice(&order_bytes);
+        digest[63] = order_bytes[31] + 5;
+        let r = nonce_scalar(&digest).map_err(display_error_code)?;
+        assert_eq!(r.nbytes().map_err(display_error_code)?, curve_len);
+        assert_eq!(r.get_u32().map_err(display_error_code)?, 5);
+
+        // The largest digest reduces below the order.
+        let r = nonce_scalar(&[0xff; 64]).map_err(display_error_code)?;
+        assert_eq!(r.nbytes().map_err(display_error_code)?, curve_len);
+        assert_eq!(
+            r.cmp_bn(&order).map_err(display_error_code)?,
+            core::cmp::Ordering::Less
         );
     }
 
