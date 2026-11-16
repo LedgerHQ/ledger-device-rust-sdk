@@ -213,6 +213,12 @@ impl EcPoint {
     }
 
     /// Randomised scalar multiplication with BN scalar.
+    ///
+    /// `bn_k` must be a BN of the curve's size ([`CurvesId::size_bytes`])
+    /// holding a value below the curve order: on a device, a larger BN fails
+    /// with `CX_INVALID_PARAMETER_SIZE` even if its value is below the order.
+    /// Speculos does not enforce the size. Reduce a wider value first with
+    /// [`Bn::reduce`] into a BN of the curve's size.
     /// # Arguments
     /// * `self` - The `EcPoint` instance to multiply
     /// * `bn_k` - The scalar as a BN handle

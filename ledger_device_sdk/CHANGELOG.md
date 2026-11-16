@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- `ecc`: `Ed25519Stream` signs on devices again. Since the nonce point uses the
+  randomized scalar multiplication, the first `sign_finalize` failed with
+  `CxError::InvalidParameterSize` on a device (Speculos accepted the call):
+  `cx_ecpoint_rnd_scalarmul_bn` rejects a scalar BN larger than the curve, and
+  the nonce was passed as a 64-byte BN. It is now reduced mod the group order
+  into a 32-byte BN first, as the C SDK EdDSA signer does. Signatures are
+  unchanged.
+
 ## [1.44.1] - 2026-11-13
 
 ### Added
