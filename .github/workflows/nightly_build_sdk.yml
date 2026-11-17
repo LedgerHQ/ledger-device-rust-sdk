@@ -15,10 +15,19 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   build-and-test:
     name: Build and test SDK (${{ matrix.target }})
+    # Workflows are shared with the public mirror; the scheduled canary only
+    # runs in the private -dev repo (the only one with APP_REPO_SUFFIX set).
+    # Manual dispatch still works in both.
+    if: github.event_name != 'schedule' || vars.APP_REPO_SUFFIX != ''
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     container: ${{ vars.APP_BUILDER_REGISTRY && fromJSON(format('{{"image":"{0}/ledger-app-dev-tools:latest","credentials":{{"username":"{1}","password":"{2}"}}}}', vars.APP_BUILDER_REGISTRY, github.actor, github.token)) || 'ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest' }}
     strategy:
       fail-fast: false
@@ -36,9 +45,29 @@ jobs:
       - name: Install latest Rust nightly
         run: |
           rustup toolchain install nightly --component rust-src
-          cargo +nightly ledger setup -t custom_target_nightly
           echo "Rust version:"
           rustc +nightly --version
+          echo "RUSTC_NIGHTLY_VERSION=$(rustc +nightly --version)" >> "$GITHUB_ENV"
+
+      - name: Install custom targets from the checked-out ref
+        # Not `cargo ledger setup`: it downloads the target specs and link
+        # script from a fixed branch of the public repo, so fixes staged on the
+        # ref under test (e.g. a NIGHTLY_PREP_REF branch) would not be exercised.
+        shell: bash
+        run: |
+          sysroot=$(rustc +nightly --print sysroot)
+          for t in nanox nanosplus stax flex apex_p; do
+            install -D -m644 "ledger_secure_sdk_sys/devices/$t/$t.json" \
+              "$sysroot/lib/rustlib/$t/target.json"
+          done
+          # link_wrap.sh must sit next to rust-lld.
+          rust_lld=$(find "$sysroot" -name rust-lld -print -quit)
+          if [[ -z "$rust_lld" ]]; then
+            echo "rust-lld not found in $sysroot" >&2
+            exit 1
+          fi
+          install -m755 ledger_secure_sdk_sys/link_wrap.sh "$(dirname "$rust_lld")/link_wrap.sh"
+          echo "Installed custom targets into $sysroot/lib/rustlib and link_wrap.sh next to $rust_lld"
 
       - name: Override rust-toolchain.toml to use latest nightly
         run: |
@@ -72,3 +101,42 @@ jobs:
         env:
           RUSTFLAGS: "-Zunstable-options"
         run: cargo test --target ${{ matrix.target }} --features unit_test --tests
+
+      - name: Record nightly version in job summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### ${{ matrix.target }}: ${{ job.status }}"
+            echo ""
+            echo "- Toolchain: \`${RUSTC_NIGHTLY_VERSION:-not installed}\`"
+            echo "- SDK ref: \`$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo detached)\` @ \`$(git rev-parse --short HEAD)\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  notify-failure:
+    name: Report canary failure
+    needs: build-and-test
+    if: failure() && github.event_name == 'schedule' && vars.APP_REPO_SUFFIX != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      issues: write
+    steps:
+      - name: Open or update the canary failure issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Nightly canary failure: SDK build/test against latest Rust nightly"
+          body="The weekly nightly canary failed: $RUN_URL
+
+          See NIGHTLY.md §3: triage within one week. The toolchain version is in each job's summary."
+          existing=$(gh issue list --state open --search "in:title \"$title\"" --json number,title \
+            --jq "map(select(.title == \"$title\")) | .[0].number // empty")
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "Failed again: $RUN_URL"
+            echo "Commented on existing issue #$existing"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi
