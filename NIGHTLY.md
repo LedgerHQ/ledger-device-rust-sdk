@@ -73,7 +73,10 @@ nightly will break us.
 
 Policy:
 - The weekly `schedule` (Mondays 03:00 UTC) **must be enabled**, not just
-  `workflow_dispatch`.
+  `workflow_dispatch`. It runs only in the private `-dev` repo (the jobs are
+  skipped on the public mirror); a failure opens or updates a tracking issue
+  there. `workflow_dispatch` works in both repos. The same gate and failure
+  issue apply to the apps canary (`nightly_build_all_apps.yml`).
 - A canary failure is **triaged within one week** — it is not release-blocking,
   but it predicts pain at the next bump and may reveal a feature that changed
   upstream.

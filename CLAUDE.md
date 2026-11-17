@@ -42,7 +42,7 @@ cargo clippy --target <device> -- -D warnings   # run per-crate, per-target
 cargo fmt --all --check
 ```
 
-CI matrix (`.github/workflows/ci.yml`) runs `cargo clippy` and `cargo test` for every crate × every device target. A change that compiles for one target can easily break another — match the matrix when in doubt.
+CI (`.github/workflows/ci.yml`) runs `cargo clippy` for every crate × every device target, and `cargo test` in `ledger_device_sdk` on every device target (with `unit_test`, plus the `mlkem,mldsa` and `app_storage_*` feature sets). A change that compiles for one target can easily break another — match the matrix when in doubt.
 
 The recommended way to build/test reproducibly is the `ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest` Docker image (it has the toolchain, `cargo-ledger`, Speculos, and Ragger preinstalled).
 

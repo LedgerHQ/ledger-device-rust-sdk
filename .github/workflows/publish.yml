@@ -36,6 +36,12 @@ jobs:
             fi
           done
 
+      - name: Check ledger_secure_sdk_sys packages the target specs
+        # `cargo ledger setup` installs the target specs and link_wrap.sh from the
+        # published ledger_secure_sdk_sys crate, so they must stay in the package.
+        # Also run on every PR by ci.yml.
+        run: bash .github/workflows/check_sys_crate_package.sh
+
   deploy_include_gif:
     name: Deploy include_gif
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
