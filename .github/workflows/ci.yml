@@ -47,6 +47,18 @@ jobs:
         run: |
           cargo fmt --all --check
 
+  sys-crate-package:
+    name: Check ledger_secure_sdk_sys package contents
+    runs-on: ubuntu-latest
+    container: ${{ vars.APP_BUILDER_REGISTRY && fromJSON(format('{{"image":"{0}/ledger-app-dev-tools:latest","credentials":{{"username":"{1}","password":"{2}"}}}}', vars.APP_BUILDER_REGISTRY, github.actor, github.token)) || 'ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest' }}
+    steps:
+      - name: Clone
+        uses: actions/checkout@v6
+      - name: Check target specs and link_wrap.sh are packaged
+        # `cargo ledger setup` installs them from the published crate; catch an
+        # include/exclude dropping them here rather than at publish time.
+        run: bash .github/workflows/check_sys_crate_package.sh
+
   build:
     name: Build SDK
     if: github.event_name != 'workflow_dispatch'
