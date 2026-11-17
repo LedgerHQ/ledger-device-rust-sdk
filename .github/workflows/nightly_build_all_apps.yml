@@ -16,10 +16,23 @@ permissions:
   contents: read
   packages: read
 
+env:
+  # While a nightly bump is in preparation, build every app against the SDK
+  # prep branch (see NIGHTLY.md §3). When neither the dispatch input nor the
+  # NIGHTLY_PREP_REF repo variable is set, apps build against their pinned
+  # (crates.io) SDK.
+  RUST_SDK_REF: ${{ github.event.inputs.rust_sdk_ref || vars.NIGHTLY_PREP_REF }}
+
 jobs:
   retrieve-rust-apps:
     name: Retrieve Rust Apps
+    # Workflows are shared with the public mirror; the scheduled canary only
+    # runs in the private -dev repo (the only one with APP_REPO_SUFFIX set).
+    # Manual dispatch still works in both. `build` and `report` need this job,
+    # so they are skipped too.
+    if: github.event_name != 'schedule' || vars.APP_REPO_SUFFIX != ''
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     outputs:
       rust_apps: ${{ steps.get_rust_apps.outputs.rust_apps }}
     steps:
@@ -46,27 +59,28 @@ jobs:
     name: Build ${{ matrix.app-name }} (${{ matrix.device }})
     needs: retrieve-rust-apps
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     container: ${{ vars.APP_BUILDER_REGISTRY && fromJSON(format('{{"image":"{0}/ledger-app-dev-tools:latest","credentials":{{"username":"{1}","password":"{2}"}}}}', vars.APP_BUILDER_REGISTRY, github.actor, github.token)) || 'ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest' }}
-    env:
-      # While a nightly bump is in preparation, build every app against the SDK
-      # prep branch (see NIGHTLY.md §3). When neither the dispatch input nor the
-      # NIGHTLY_PREP_REF repo variable is set, apps build against their pinned
-      # (crates.io) SDK.
-      RUST_SDK_REF: ${{ github.event.inputs.rust_sdk_ref || vars.NIGHTLY_PREP_REF }}
+    outputs:
+      rustc_version: ${{ steps.nightly.outputs.rustc_version }}
     strategy:
       fail-fast: false
       matrix:
+        # The public app-boilerplate-rust is always built: it has no -dev
+        # counterpart, so get_rust_apps.py does not list it in the private repo.
+        # In the public repo its listed entries merge with these (no duplicates).
         app-name: ["app-boilerplate-rust"]
         device: ["nanos+", "nanox", "stax", "flex", "apex_p"]
+        # Plus one entry per (app, device) pair listed by get_rust_apps.py.
         include: ${{ fromJSON(needs.retrieve-rust-apps.outputs.rust_apps) }}
     steps:
       - name: Install latest Rust nightly
+        id: nightly
         run: |
           rustup toolchain install nightly --component rust-src
-          cargo +nightly ledger setup -t custom_target_nightly
-          echo "RUST_NIGHTLY=nightly" >> $GITHUB_ENV
           echo "Rust nightly version:"
           rustc +nightly --version
+          echo "rustc_version=$(rustc +nightly --version)" >> "$GITHUB_OUTPUT"
 
       - name: Clone App
         uses: actions/checkout@v6
@@ -87,12 +101,13 @@ jobs:
         if: ${{ env.RUST_SDK_REF != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
+          SDK_REPO: ${{ github.repository }}
         run: |
           echo "Building apps against Rust SDK ref '$RUST_SDK_REF'"
           # Pass the token for this command only, so the clone keeps no credentials.
           auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
           git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" \
-            clone "https://github.com/${{ github.repository }}" /tmp/rust-sdk
+            clone "https://github.com/$SDK_REPO" /tmp/rust-sdk
           git -C /tmp/rust-sdk checkout "$RUST_SDK_REF"
           build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
           manifest="$build_directory/Cargo.toml"
@@ -124,18 +139,121 @@ jobs:
           echo "Resulting [patch.crates-io] section:"
           grep -n -A3 '\[patch\.crates-io\]' "$manifest" || true
 
+      - name: Install custom targets
+        # Target specs and link script must match the SDK being built: the prep
+        # checkout when one is set, otherwise master (which tracks the published
+        # releases the apps resolve to).
+        shell: bash
+        run: |
+          if [[ -z "$RUST_SDK_REF" ]]; then
+            cargo +nightly ledger setup
+            exit 0
+          fi
+          sys_crate=/tmp/rust-sdk/ledger_secure_sdk_sys
+          sysroot=$(rustc +nightly --print sysroot)
+          for t in nanox nanosplus stax flex apex_p; do
+            install -D -m644 "$sys_crate/devices/$t/$t.json" \
+              "$sysroot/lib/rustlib/$t/target.json"
+          done
+          # link_wrap.sh must sit next to rust-lld.
+          rust_lld=$(find "$sysroot" -name rust-lld -print -quit)
+          if [[ -z "$rust_lld" ]]; then
+            echo "rust-lld not found in $sysroot" >&2
+            exit 1
+          fi
+          install -m755 "$sys_crate/link_wrap.sh" "$(dirname "$rust_lld")/link_wrap.sh"
+          echo "Installed custom targets from $RUST_SDK_REF into $sysroot/lib/rustlib"
+
       - name: Build
+        shell: bash
         env:
           RUSTFLAGS: "-Zunstable-options"
+          APP_NAME: ${{ matrix.app-name }}
+          DEVICE: ${{ matrix.device }}
         run: |
           build_directory=$(ledger-manifest --output-build-directory ledger_app.toml)
-          cd $build_directory
+          cd "$build_directory"
           # Refresh Cargo.lock so the app builds against the newest SDK it permits:
           # the patched prep-branch checkout when a bump is in preparation, or the
           # latest published (crates.io) release otherwise — rather than whatever
           # older version the committed lockfile pinned.
           echo "Updating ledger_device_sdk to the newest version the app permits"
           cargo update ledger_device_sdk
-          device=$(echo ${{ matrix.device }} | sed 's/+/plus/')
-          echo "Building ${{ matrix.app-name }} for $device with latest Rust nightly"
-          cargo ledger build $device
+          if [[ -n "$RUST_SDK_REF" ]]; then
+            # Cargo only warns when a [patch] does not match the app's version
+            # requirement, and then silently builds the crates.io SDK. A patched
+            # path dependency has no `source` in Cargo.lock; a registry copy does.
+            lockfile="$(dirname "$(cargo locate-project --workspace --message-format plain)")/Cargo.lock"
+            if awk '/^\[\[/ { p = 0 }
+                    $0 == "name = \"ledger_device_sdk\"" { p = 1 }
+                    p && /^source = / { bad = 1 }
+                    END { exit !bad }' "$lockfile"; then
+              echo "::error::$APP_NAME still resolves ledger_device_sdk from crates.io; the [patch] to $RUST_SDK_REF was not applied (version requirement mismatch?)"
+              exit 1
+            fi
+          fi
+          device=${DEVICE/+/plus}
+          echo "Building $APP_NAME for $device with latest Rust nightly"
+          cargo ledger build "$device"
+
+  report:
+    name: Report results
+    needs: [retrieve-rust-apps, build]
+    if: always() && needs.retrieve-rust-apps.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RUN_ID: ${{ github.run_id }}
+      RUN_ATTEMPT: ${{ github.run_attempt }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      RUSTC_VERSION: ${{ needs.build.outputs.rustc_version }}
+    steps:
+      - name: Write job summary
+        run: |
+          gh api --paginate "repos/$GH_REPO/actions/runs/$RUN_ID/attempts/$RUN_ATTEMPT/jobs?per_page=100" \
+            --jq '.jobs[] | select(.name | startswith("Build ")) | [.name, (.conclusion // "unknown")] | @tsv' \
+            > jobs.tsv
+          total=$(awk 'END { print NR }' jobs.tsv)
+          passed=$(awk -F'\t' '$2 == "success" { n++ } END { print n + 0 }' jobs.tsv)
+          awk -F'\t' '$2 != "success" { printf "| %s | %s |\n", $1, $2 }' jobs.tsv > failed.md
+          if [ -n "$RUST_SDK_REF" ]; then
+            sdk="prep ref \`$RUST_SDK_REF\`"
+          else
+            sdk="latest crates.io release each app permits"
+          fi
+          {
+            echo "## Rust apps against latest nightly"
+            echo ""
+            echo "- Toolchain: \`${RUSTC_VERSION:-unknown}\`"
+            echo "- SDK: $sdk"
+            echo "- Result: $passed/$total build jobs passed"
+            if [ -s failed.md ]; then
+              echo ""
+              echo "| Job | Conclusion |"
+              echo "|---|---|"
+              cat failed.md
+            fi
+          } | tee summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open or update the canary failure issue
+        if: needs.build.result == 'failure' && github.event_name == 'schedule' && vars.APP_REPO_SUFFIX != ''
+        run: |
+          title="Nightly canary failure: Rust apps build against latest Rust nightly"
+          { echo "The weekly apps canary failed: $RUN_URL"; echo ""; cat summary.md; } > body.md
+          existing=$(gh issue list --state open --search "in:title \"$title\"" --json number,title \
+            --jq "map(select(.title == \"$title\")) | .[0].number // empty")
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file body.md
+            echo "Commented on existing issue #$existing"
+          else
+            {
+              echo ""
+              echo "See NIGHTLY.md §3: triage within one week. A failure may also be a pre-existing app breakage unrelated to the nightly; compare with the app's own CI."
+            } >> body.md
+            gh issue create --title "$title" --body-file body.md
+          fi
