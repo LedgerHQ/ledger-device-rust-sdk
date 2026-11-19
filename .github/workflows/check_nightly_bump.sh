@@ -38,6 +38,9 @@ pin_minor=$(manifest_minor "$tmp")
 
 fetch "$dist/channel-rust-stable.toml"
 stable_minor=$(manifest_minor "$tmp")
+# Anchor on the 1.N.0 release: the stable channel's date moves with patch
+# releases (1.N.1, ...) while the branch point does not.
+fetch "$dist/channel-rust-1.$stable_minor.0.toml"
 stable_date=$(sed -nE 's/^date = "([0-9-]+)"$/\1/p' "$tmp" | head -n1)
 
 # The stable branched to beta about six weeks before its release. Walk back
