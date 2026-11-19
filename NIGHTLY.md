@@ -114,11 +114,26 @@ through one bump-preparation branch.
 
 ## 4. Bump procedure
 
-Bump cadence: **quarterly by default**, or sooner when driven by a needed
-feature fix, a stabilization we want to adopt, or a security advisory.
+Bump cadence: **every second Rust stable release** (about every 12 weeks), or
+sooner when driven by a needed feature fix, a stabilization we want to adopt,
+or a security advisory.
 
-1. **Pick a date-pinned nightly** (`nightly-YYYY-MM-DD`), ideally one the canary
-   has already exercised green.
+- Rust ships a stable release every six weeks, on a fixed schedule. Bumping
+  every release would force an image release and an app-wide pin change each
+  time; every second release keeps the pin at most ~3 months behind.
+- [`.github/workflows/nightly_bump_reminder.yml`](./.github/workflows/nightly_bump_reminder.yml)
+  checks weekly (in the `-dev` repo) and opens a `Nightly bump due:` issue as
+  soon as the pin is two or more stable releases behind. It keeps flagging a
+  skipped bump, so the pin cannot silently age.
+
+1. **Pick a date-pinned nightly** (`nightly-YYYY-MM-DD`): by default, the
+   nightly the **current stable release branched from**, i.e. the last
+   nightly whose `rustc` still reports the stable's version
+   (`1.N.0-nightly`). Its code became the current stable and has had six
+   weeks of beta testing, so its regressions are known: check the beta
+   backports of that release, and if one affects us, pick a later nightly
+   that has the fix. The reminder issue names this nightly
+   (`.github/workflows/check_nightly_bump.sh` computes it).
 2. Update `rust-toolchain.toml` (channel + components).
 3. Run the **full CI matrix locally or on the branch**: `clippy -D warnings`,
    `fmt --check`, `build`, and `test` for **all five targets × all crates**
@@ -127,7 +142,10 @@ feature fix, a stabilization we want to adopt, or a security advisory.
 4. Review the §2 watch list: remove any now-stabilized `#![feature]` gates;
    adapt to any renamed/removed unstable items.
 5. **Confirm the `ledger-app-dev-tools:latest` Docker image** ships (or can
-   install) the chosen nightly + `rust-src`. The pin and the image must agree.
+   install) the chosen nightly + `rust-src`. The pin and the image must agree:
+   bump `RUSTUP_TOOLCHAIN` in the `ledger-app-builder` image in the same
+   cycle, and tell app maintainers the new pin ahead of time (apps pinning a
+   different nightly are rejected by the app workflows).
 6. Update version references in [`README.md`](./README.md) and the relevant
    crate `CHANGELOG.md` files.
 7. Land via a dedicated PR titled `chore: bump nightly to YYYY-MM-DD`, ideally

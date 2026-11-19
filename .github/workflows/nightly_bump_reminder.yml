@@ -1,0 +1,80 @@
+name: Nightly bump reminder
+
+# Opens a tracking issue when the pinned nightly is due for a bump: every
+# second Rust stable release, to the nightly that release branched from
+# (NIGHTLY.md §4). The check is weekly, so a skipped bump stays flagged.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Every Monday at 4 AM UTC, after the nightly canary
+    - cron: '0 4 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check whether a nightly bump is due
+    # Workflows are shared with the public mirror; the scheduled check only
+    # runs in the private -dev repo (the only one with APP_REPO_SUFFIX set).
+    if: github.event_name != 'schedule' || vars.APP_REPO_SUFFIX != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Clone
+        uses: actions/checkout@v6
+
+      - name: Compare the pin with the current stable release
+        id: check
+        shell: bash
+        run: |
+          .github/workflows/check_nightly_bump.sh rust-toolchain.toml | tee -a "$GITHUB_OUTPUT"
+
+      - name: Record the result in the job summary
+        shell: bash
+        env:
+          PIN: ${{ steps.check.outputs.pin }}
+          PIN_MINOR: ${{ steps.check.outputs.pin_minor }}
+          STABLE_MINOR: ${{ steps.check.outputs.stable_minor }}
+          RECOMMENDED: ${{ steps.check.outputs.recommended }}
+          DUE: ${{ steps.check.outputs.due }}
+        run: |
+          {
+            echo "### Nightly bump check"
+            echo ""
+            echo "- Pinned: \`$PIN\` (1.$PIN_MINOR)"
+            echo "- Current stable: 1.$STABLE_MINOR, branched from \`$RECOMMENDED\`"
+            echo "- Bump due: **$DUE**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open the bump tracking issue
+        if: steps.check.outputs.due == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PIN: ${{ steps.check.outputs.pin }}
+          PIN_MINOR: ${{ steps.check.outputs.pin_minor }}
+          STABLE_MINOR: ${{ steps.check.outputs.stable_minor }}
+          RECOMMENDED: ${{ steps.check.outputs.recommended }}
+        run: |
+          prefix="Nightly bump due:"
+          existing=$(gh issue list --state open --search "in:title \"$prefix\"" --json number,title \
+            --jq "map(select(.title | startswith(\"$prefix\"))) | .[0].number // empty")
+          if [ -n "$existing" ]; then
+            echo "Bump already tracked in #$existing"
+            exit 0
+          fi
+          body="The pinned toolchain \`$PIN\` (Rust 1.$PIN_MINOR) is $((STABLE_MINOR - PIN_MINOR)) stable releases behind Rust 1.$STABLE_MINOR.
+
+          Suggested target: \`$RECOMMENDED\`, the nightly Rust 1.$STABLE_MINOR branched from (NIGHTLY.md §4).
+
+          - [ ] Check the 1.$STABLE_MINOR beta backports for regressions that affect us; if one does, pick a later nightly that has the fix
+          - [ ] Run the bump procedure (NIGHTLY.md §4) on a prep branch; set \`NIGHTLY_PREP_REF\` while fixes are staged
+          - [ ] Bump \`RUSTUP_TOOLCHAIN\` in the ledger-app-builder image in the same cycle
+          - [ ] Tell app maintainers the new pin, so they update their \`rust-toolchain.toml\`"
+          gh issue create --title "$prefix $PIN → $RECOMMENDED (Rust 1.$STABLE_MINOR)" --body "$body"
