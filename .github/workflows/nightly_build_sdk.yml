@@ -8,6 +8,11 @@ on:
         required: false
         default: ''
         type: string
+      toolchain:
+        description: 'Rust toolchain to build with, e.g. nightly-2026-09-26 to try a bump target. Defaults to the latest nightly.'
+        required: false
+        default: ''
+        type: string
   schedule:
     # Every Monday at 3 AM UTC
     - cron: '0 3 * * 1'
@@ -33,6 +38,11 @@ jobs:
       fail-fast: false
       matrix:
         target: ["nanox", "nanosplus", "stax", "flex", "apex_p"]
+    env:
+      # The image sets RUSTUP_TOOLCHAIN to the pinned nightly, and it beats
+      # rust-toolchain.toml: override it here so that every cargo/rustc call
+      # below uses the toolchain under test.
+      RUSTUP_TOOLCHAIN: ${{ inputs.toolchain || 'nightly' }}
     steps:
       - name: Clone
         uses: actions/checkout@v6
@@ -42,12 +52,12 @@ jobs:
           # §3). When unset, this falls back to the default branch.
           ref: ${{ github.event.inputs.rust_sdk_ref || vars.NIGHTLY_PREP_REF || github.ref }}
 
-      - name: Install latest Rust nightly
+      - name: Install the Rust toolchain under test
         run: |
-          rustup toolchain install nightly --component rust-src
+          rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal --component rust-src
           echo "Rust version:"
-          rustc +nightly --version
-          echo "RUSTC_NIGHTLY_VERSION=$(rustc +nightly --version)" >> "$GITHUB_ENV"
+          rustc --version
+          echo "RUSTC_VERSION=$(rustc --version)" >> "$GITHUB_ENV"
 
       - name: Install custom targets from the checked-out ref
         # Not `cargo ledger setup`: it downloads the target specs and link
@@ -55,7 +65,7 @@ jobs:
         # ref under test (e.g. a NIGHTLY_PREP_REF branch) would not be exercised.
         shell: bash
         run: |
-          sysroot=$(rustc +nightly --print sysroot)
+          sysroot=$(rustc --print sysroot)
           for t in nanox nanosplus stax flex apex_p; do
             install -D -m644 "ledger_secure_sdk_sys/devices/$t/$t.json" \
               "$sysroot/lib/rustlib/$t/target.json"
@@ -69,19 +79,13 @@ jobs:
           install -m755 ledger_secure_sdk_sys/link_wrap.sh "$(dirname "$rust_lld")/link_wrap.sh"
           echo "Installed custom targets into $sysroot/lib/rustlib and link_wrap.sh next to $rust_lld"
 
-      - name: Override rust-toolchain.toml to use latest nightly
-        run: |
-          printf '[toolchain]\nchannel = "nightly"\n' > rust-toolchain.toml
-          echo 'Overridden rust-toolchain.toml:'
-          cat rust-toolchain.toml
-
       - name: Build SDK
         working-directory: ledger_device_sdk
         shell: bash
         env:
           RUSTFLAGS: "-Zunstable-options"
         run: |
-          echo "Building SDK for ${{matrix.target}}"
+          echo "Building SDK for ${{matrix.target}} with $(rustc --version)"
           cargo build --target ${{ matrix.target }}
           if [[ "${{ matrix.target }}" == "nanosplus" || "${{ matrix.target }}" == "nanox" ]]; then
             echo "Building SDK with nano_nbgl feature for ${{matrix.target}}"
@@ -109,7 +113,7 @@ jobs:
           {
             echo "### ${{ matrix.target }}: ${{ job.status }}"
             echo ""
-            echo "- Toolchain: \`${RUSTC_NIGHTLY_VERSION:-not installed}\`"
+            echo "- Toolchain: \`${RUSTC_VERSION:-not installed}\`"
             echo "- SDK ref: \`$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo detached)\` @ \`$(git rev-parse --short HEAD)\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
