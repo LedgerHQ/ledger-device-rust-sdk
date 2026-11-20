@@ -1,19 +1,30 @@
 //! Random number generation functions
 
-use core::ops::Range;
+use core::{ffi::c_void, ops::Range};
 
 use num_traits::{Bounded, PrimInt, Unsigned};
 use rand_core::{CryptoRng, RngCore};
+use zeroize::Zeroize;
+
+use ledger_secure_sdk_sys::CX_OK;
 
 /// Fills a byte array with random bytes.
 ///
 /// # Arguments
 ///
 /// * `out` - Destination array.
+///
+/// # Panics
+///
+/// Panics if the random number generation fails.
 #[inline]
 pub fn rand_bytes(out: &mut [u8]) {
-    unsafe {
-        ledger_secure_sdk_sys::cx_rng_no_throw(out.as_mut_ptr(), out.len());
+    let res = unsafe {
+        ledger_secure_sdk_sys::cx_get_random_bytes(out.as_mut_ptr() as *mut c_void, out.len())
+    };
+    if res != CX_OK {
+        out.zeroize();
+        panic!("Failed to generate random bytes");
     }
 }
 
