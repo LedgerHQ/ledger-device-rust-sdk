@@ -3,7 +3,7 @@ use crate::check_cx_ok;
 use crate::ecc::math::{CurveDomainParam, EcPoint};
 use crate::ecc::{
     ChainCode, CurvesId, CxError, ECPrivateKey, ECPublicKey, HDKeyDeriveMode, Secret, SeedDerive,
-    bip32_derive,
+    SignatureSize, bip32_derive,
 };
 use crate::hash::{
     HashInit,
@@ -363,10 +363,14 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
     /// Size of an Edwards curve signature relative to the private key size
     pub const EP: usize = 2 * N;
 
-    pub fn sign(&self, hash: &[u8]) -> Result<([u8; Self::EP], u32), CxError> {
+    pub fn sign(&self, hash: &[u8]) -> Result<(<Self as SignatureSize>::Signature, u32), CxError>
+    where
+        Self: SignatureSize,
+    {
         self.check_layout()?;
-        let mut sig = [0u8; Self::EP];
-        let sig_len = Self::EP;
+        let mut sig = Self::empty_signature();
+        let buf = sig.as_mut();
+        let sig_len = buf.len();
         let hash_id = match self.keylength {
             x if x <= 32 => CX_SHA512,
             _ => CX_BLAKE2B,
@@ -377,7 +381,7 @@ impl<const N: usize> ECPrivateKey<N, 'E'> {
                 hash_id,
                 hash.as_ptr(),
                 hash.len(),
-                sig.as_mut_ptr(),
+                buf.as_mut_ptr(),
                 sig_len,
             )
         };

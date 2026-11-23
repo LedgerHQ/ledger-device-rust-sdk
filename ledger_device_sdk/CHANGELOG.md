@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- `ecc`: apps calling `ECPrivateKey::public_key`, `sign` or
+  `deterministic_sign` no longer need `#![feature(generic_const_exprs)]` on
+  newer nightlies, which otherwise fail with E0284 ("cannot infer the value of
+  the constant"). The sizes now come from the new `PublicKeySize` and
+  `SignatureSize` traits, implemented for every curve the SDK defines; the
+  returned types are unchanged (e.g. `ECPublicKey<65, 'W'>` and `[u8; 72]`
+  for secp256k1).
 - Build script: find the app's root directory with the build directory layout
   of newer nightly Cargo (`build/ledger_device_sdk/<hash>/out`). The root was
   found by counting levels up from `OUT_DIR`, so with that layout it resolved
