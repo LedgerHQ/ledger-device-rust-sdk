@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.45.0] - 2026-11-24
+
+### Added
+- `ecc`: `PublicKeySize` and `SignatureSize` traits, giving the public key type
+  and the maximum signature size of each curve (sealed, implemented for every
+  curve the SDK defines).
+
+### Fixed
+- Nano X: apps link again on newer nightlies (LLVM 23). At `opt-level = "z"`,
+  the compiler turns unaligned 4- and 8-byte accesses into calls to
+  `__aeabi_uread4`/`__aeabi_uwrite4`/`__aeabi_uread8`/`__aeabi_uwrite8`,
+  which `compiler_builtins` does not provide for the `nanox` target. The SDK
+  now defines them (weak, Thumb-1 assembly).
+- `ecc`: apps calling `ECPrivateKey::public_key`, `sign` or
+  `deterministic_sign` no longer need `#![feature(generic_const_exprs)]` on
+  newer nightlies, which otherwise fail with E0284 ("cannot infer the value of
+  the constant"). The sizes now come from the new `PublicKeySize` and
+  `SignatureSize` traits, implemented for every curve the SDK defines; the
+  returned types are unchanged (e.g. `ECPublicKey<65, 'W'>` and `[u8; 72]`
+  for secp256k1).
+- Build script: find the app's root directory with the build directory layout
+  of newer nightly Cargo (`build/ledger_device_sdk/<hash>/out`). The root was
+  found by counting levels up from `OUT_DIR`, so with that layout it resolved
+  to `target/` and the app icon lookup failed.
+
 ## [1.44.2] - 2026-11-16
 
 ### Fixed

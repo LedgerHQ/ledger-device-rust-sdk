@@ -259,28 +259,24 @@ impl<const N: usize, const TY: char> ECPrivateKey<N, TY> {
     /// Retrieve the public key corresponding to the private key (`self`)
     /// The size of the structure holding fits exactly that public key.
     ///
-    /// # Const annotation
+    /// # Return type
     ///
-    /// The result of this function is an `ECPublicKey<{Self::P}, TY>`
-    /// where `Self::P` is a constant computed at compile time which is
-    /// (for Weierstrass curves at least) 2*N+1. The `TY` parameter
-    /// is the curve type, which is the same as the private key.
-    ///
-    /// The `where [(); Self::P]:` clause can be surprising: it is some
-    /// sort of an 'existential'  clause that is here to make sure that
-    /// `Self::P` can actually be computed. An explanation can be found
-    /// [here](https://blog.rust-lang.org/inside-rust/2021/09/06/Splitting-const-generics.html#featuregeneric_const_exprs)
-    pub fn public_key(&self) -> Result<ECPublicKey<{ Self::P }, TY>, CxError>
+    /// The result is an `ECPublicKey<{ Self::P }, TY>`, where `Self::P` is
+    /// `2 * N + 1` and `TY` is the curve type of the private key. For
+    /// example, `Secp256k1::new().public_key()` returns an
+    /// `ECPublicKey<65, 'W'>`. The type is given by [`PublicKeySize`], which
+    /// is implemented for the key types of every curve the SDK defines.
+    pub fn public_key(&self) -> Result<<Self as PublicKeySize>::PublicKey, CxError>
     where
-        [(); Self::P]: Sized,
+        Self: PublicKeySize,
     {
         self.check_layout()?;
-        let mut pubkey = ECPublicKey::<{ Self::P }, TY>::new(self.curve);
+        let mut pubkey = Self::empty_public_key(self.curve);
         let err = unsafe {
             cx_ecfp_generate_pair_no_throw(
                 self.curve as u8,
                 // Safety: cast awfully dodgy but that's how it's done in the C SDK
-                (&mut pubkey as *mut ECPublicKey<{ Self::P }, TY>).cast(), // as *mut cx_ecfp_256_public_key_s,
+                (&mut pubkey as *mut <Self as PublicKeySize>::PublicKey).cast(), // as *mut cx_ecfp_256_public_key_s,
                 self as *const ECPrivateKey<N, TY> as *mut cx_ecfp_256_private_key_s,
                 true,
             )
@@ -301,6 +297,69 @@ impl<const N: usize, const TY: char> ECPrivateKey<N, TY> {
         fits.then_some(()).ok_or(CxError::InvalidParameterSize)
     }
 }
+
+mod sealed {
+    pub trait Sealed {}
+}
+
+/// Public key type of an [`ECPrivateKey`]: `ECPublicKey<{ 2 * N + 1 }, TY>`,
+/// which holds an uncompressed point.
+///
+/// The sizes are spelled out per key type instead of being computed from `N`
+/// in the signatures (`generic_const_exprs`), so that crates calling
+/// [`ECPrivateKey::public_key`] do not need that unstable feature.
+/// Implemented for the key types of every curve the SDK defines.
+pub trait PublicKeySize: sealed::Sealed {
+    /// `ECPublicKey<{ 2 * N + 1 }, TY>`
+    type PublicKey;
+
+    #[doc(hidden)]
+    fn empty_public_key(curve: CurvesId) -> Self::PublicKey;
+}
+
+/// Signature buffer type of an [`ECPrivateKey`]: `[u8; 2 * N + 8]` for
+/// Weierstrass curves (DER-encoded ECDSA signature, see
+/// [`ECPrivateKey::S`]) and `[u8; 2 * N]` for Edwards curves (EdDSA).
+///
+/// See [`PublicKeySize`] for why this is a trait. Implemented for the key
+/// types of every Weierstrass and Edwards curve the SDK defines.
+pub trait SignatureSize: sealed::Sealed {
+    /// `[u8; 2 * N + 8]` (Weierstrass) or `[u8; 2 * N]` (Edwards)
+    type Signature: AsMut<[u8]>;
+
+    #[doc(hidden)]
+    fn empty_signature() -> Self::Signature;
+}
+
+// One entry per (N, TY) used by the curves defined with `impl_curve!`.
+macro_rules! impl_public_key_size {
+    ($ty:literal: $($n:literal),+) => {$(
+        impl sealed::Sealed for ECPrivateKey<$n, $ty> {}
+        impl PublicKeySize for ECPrivateKey<$n, $ty> {
+            type PublicKey = ECPublicKey<{ ECPrivateKey::<$n, $ty>::P }, $ty>;
+            fn empty_public_key(curve: CurvesId) -> Self::PublicKey {
+                ECPublicKey::new(curve)
+            }
+        }
+    )+};
+}
+
+macro_rules! impl_signature_size {
+    ($ty:literal, $size:ident: $($n:literal),+) => {$(
+        impl SignatureSize for ECPrivateKey<$n, $ty> {
+            type Signature = [u8; ECPrivateKey::<$n, $ty>::$size];
+            fn empty_signature() -> Self::Signature {
+                [0u8; ECPrivateKey::<$n, $ty>::$size]
+            }
+        }
+    )+};
+}
+
+impl_public_key_size!('W': 32, 40, 48, 64);
+impl_public_key_size!('E': 32);
+impl_public_key_size!('M': 32, 56);
+impl_signature_size!('W', S: 32, 40, 48, 64);
+impl_signature_size!('E', EP: 32);
 
 #[macro_export]
 macro_rules! check_cx_ok {
@@ -660,6 +719,31 @@ mod tests {
         assert_eq!(CurvesId::Curve25519.size(), Some(32));
         assert_eq!(CurvesId::Invalid.family(), None);
         assert_eq!(CurvesId::Invalid.size(), None);
+    }
+
+    // Compile-time check: every curve defined with `impl_curve!` has a public
+    // key type, and every signing curve a signature type.
+    #[allow(dead_code)]
+    fn every_curve_has_key_sizes() {
+        fn pk<T: PublicKeySize>(_: T) {}
+        fn sig<T: SignatureSize>(_: T) {}
+        sig(Secp256k1::new());
+        sig(Secp256r1::new());
+        sig(Secp384r1::new());
+        sig(BrainpoolP256R1::new());
+        sig(BrainpoolP256T1::new());
+        sig(BrainpoolP320R1::new());
+        sig(BrainpoolP320T1::new());
+        sig(BrainpoolP384R1::new());
+        sig(BrainpoolP384T1::new());
+        sig(BrainpoolP512R1::new());
+        sig(BrainpoolP512T1::new());
+        sig(Pallas::new());
+        sig(Stark256::new());
+        sig(Ed25519::new());
+        sig(JubJub::new());
+        pk(Curve25519::new());
+        pk(Curve448::new());
     }
 
     #[test]

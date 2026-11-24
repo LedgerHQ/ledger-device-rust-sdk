@@ -1,6 +1,6 @@
 use crate::ecc::{
     ChainCode, CurvesId, CxError, ECPrivateKey, ECPublicKey, HDKeyDeriveMode, Secret, SeedDerive,
-    bip32_derive,
+    SignatureSize, bip32_derive,
 };
 use crate::impl_curve;
 use ledger_secure_sdk_sys::*;
@@ -32,10 +32,14 @@ impl<const N: usize> ECPrivateKey<N, 'W'> {
         hash: &[u8],
         hash_id: u8,
         mode: u32,
-    ) -> Result<([u8; Self::S], u32, u32), CxError> {
+    ) -> Result<(<Self as SignatureSize>::Signature, u32, u32), CxError>
+    where
+        Self: SignatureSize,
+    {
         self.check_layout()?;
-        let mut sig = [0u8; Self::S];
-        let mut sig_len = Self::S;
+        let mut sig = Self::empty_signature();
+        let buf = sig.as_mut();
+        let mut sig_len = buf.len();
         let mut info = 0;
         let len = unsafe {
             cx_ecdsa_sign_no_throw(
@@ -45,7 +49,7 @@ impl<const N: usize> ECPrivateKey<N, 'W'> {
                 hash_id,
                 hash.as_ptr(),
                 hash.len(),
-                sig.as_mut_ptr(),
+                buf.as_mut_ptr(),
                 &mut sig_len,
                 &mut info,
             )
@@ -60,7 +64,13 @@ impl<const N: usize> ECPrivateKey<N, 'W'> {
     /// Sign a message/hash using ECDSA with RFC6979, which provides a deterministic nonce rather than
     /// a random one. This nonce is computed using a hash function, hence this function uses an
     /// additional parameter `hash_id` that specifies which one it should use.
-    pub fn deterministic_sign(&self, hash: &[u8]) -> Result<([u8; Self::S], u32, u32), CxError> {
+    pub fn deterministic_sign(
+        &self,
+        hash: &[u8],
+    ) -> Result<(<Self as SignatureSize>::Signature, u32, u32), CxError>
+    where
+        Self: SignatureSize,
+    {
         let hash_id = match self.keylength {
             x if x <= 32 => CX_SHA256,
             x if x <= 48 => CX_SHA384,
@@ -71,7 +81,13 @@ impl<const N: usize> ECPrivateKey<N, 'W'> {
     }
 
     /// Sign a message/hash using ECDSA in its original form
-    pub fn sign(&self, hash: &[u8]) -> Result<([u8; Self::S], u32, u32), CxError> {
+    pub fn sign(
+        &self,
+        hash: &[u8],
+    ) -> Result<(<Self as SignatureSize>::Signature, u32, u32), CxError>
+    where
+        Self: SignatureSize,
+    {
         self.ecdsa_sign(hash, 0, CX_RND_TRNG | CX_LAST)
     }
 

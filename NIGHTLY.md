@@ -80,8 +80,15 @@ Policy:
 - A canary failure is **triaged within one week** — it is not release-blocking,
   but it predicts pain at the next bump and may reveal a feature that changed
   upstream.
-- The canary never modifies the committed pin; it overrides
-  `rust-toolchain.toml` only inside the CI job.
+- The canary never modifies the committed pin. It selects its toolchain by
+  setting `RUSTUP_TOOLCHAIN` for the job: the CI images set that variable to
+  the pinned nightly, and it takes precedence over `rust-toolchain.toml`, so
+  overriding the file would have no effect.
+- Both canaries take an optional `toolchain` input on `workflow_dispatch`
+  (default: latest `nightly`). Dispatch them with a date-pinned nightly to
+  build the SDK and every app against a bump target before it ships. This is
+  the only check of a new nightly before the image is bumped: PR CI runs in
+  the image, so it always builds with the image's nightly.
 
 ### Tracking a bump-preparation branch
 
