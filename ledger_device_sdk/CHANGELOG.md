@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- Nano X: apps link again on newer nightlies (LLVM 23). At `opt-level = "z"`,
+  the compiler turns unaligned 4- and 8-byte accesses into calls to
+  `__aeabi_uread4`/`__aeabi_uwrite4`/`__aeabi_uread8`/`__aeabi_uwrite8`,
+  which `compiler_builtins` does not provide for the `nanox` target. The SDK
+  now defines them (weak, Thumb-1 assembly).
 - `ecc`: apps calling `ECPrivateKey::public_key`, `sign` or
   `deterministic_sign` no longer need `#![feature(generic_const_exprs)]` on
   newer nightlies, which otherwise fail with E0284 ("cannot infer the value of

@@ -9,6 +9,8 @@
 #![feature(const_option_ops)]
 #![feature(const_trait_impl)]
 
+#[cfg(target_os = "nanox")]
+mod aeabi_unaligned;
 mod app_info;
 #[cfg(feature = "app_storage")]
 pub mod app_storage;
