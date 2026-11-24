@@ -3,21 +3,23 @@ use std::path::PathBuf;
 use std::process::Command;
 
 fn generate_install_parameters() {
-    // Find the root package directory by looking at OUT_DIR
-    // OUT_DIR is something like: /path/to/app/target/nanosplus/debug/build/ledger_device_sdk-xxx/out
-    // We need to extract /path/to/app from this
+    // Find the app's root directory from OUT_DIR, which lives in the app's
+    // target directory: /path/to/app/target/nanosplus/release/build/…/out.
+    // The depth below target/ depends on the Cargo version (older Cargo uses
+    // build/ledger_device_sdk-<hash>/out, newer build/ledger_device_sdk/<hash>/out),
+    // so take the closest ancestor that holds a Cargo.toml rather than
+    // counting levels.
     let out_dir = std::env::var("OUT_DIR").expect("OUT_DIR not set");
     let out_path = std::path::PathBuf::from(&out_dir);
-
-    // Navigate up from OUT_DIR to find the root: out -> build-hash -> build -> debug/release -> target-name -> target -> ROOT
     let root_dir = out_path
-        .parent() // Remove /out
-        .and_then(|p| p.parent()) // Remove /ledger_device_sdk-xxx
-        .and_then(|p| p.parent()) // Remove /build
-        .and_then(|p| p.parent()) // Remove /debug or /release
-        .and_then(|p| p.parent()) // Remove /nanosplus (target name)
-        .and_then(|p| p.parent()) // Remove /target
-        .expect("Could not find root directory from OUT_DIR");
+        .ancestors()
+        .find(|dir| dir.join("Cargo.toml").is_file())
+        .unwrap_or_else(|| {
+            panic!(
+                "Could not find the app root directory: no Cargo.toml above OUT_DIR {}",
+                out_path.display()
+            )
+        });
 
     println!("cargo:warning=Root directory: {:?}", root_dir);
 

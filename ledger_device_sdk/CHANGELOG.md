@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- Build script: find the app's root directory with the build directory layout
+  of newer nightly Cargo (`build/ledger_device_sdk/<hash>/out`). The root was
+  found by counting levels up from `OUT_DIR`, so with that layout it resolved
+  to `target/` and the app icon lookup failed.
+
 ## [1.44.2] - 2026-11-16
 
 ### Fixed
