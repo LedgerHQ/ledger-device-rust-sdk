@@ -26,8 +26,9 @@ On Ubuntu, `gcc-multilib` might also be required.
 
 Using rustc nightly builds is mandatory as some unstable features are required.
 
-- `rustup default nightly-2025-12-05` (or use the version specified in `rust-toolchain.toml`)
+- `rustup default nightly-2026-09-15` (or use the version specified in `rust-toolchain.toml`)
 - `rustup component add rust-src`
+- outside the Docker images, set `RUSTFLAGS=-Zunstable-options`: from nightly-2026-09-15, `rustc` loads the custom target specs only with it (the images add it for you). `RUSTFLAGS` replaces the `rustflags` of your Cargo config, so copy them into it if your app has any.
 - install [Clang](http://releases.llvm.org/download.html).
 - install an [ARM gcc toolchain](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads)
 
