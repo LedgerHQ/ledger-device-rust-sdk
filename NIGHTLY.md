@@ -51,7 +51,17 @@ adapted.
   (`.cargo/config.toml`)
 - Custom JSON target specs (`devices/*/*.json`)
 - `relocation-model: "ropi-rwpi"`
-- `RUSTFLAGS = -Zunstable-options` (used by the canary build)
+- `-Zunstable-options`: since nightly-2026-09, `rustc` refuses custom JSON
+  target specs without it. The `ledger-app-builder` images pass it through a
+  `rustc` wrapper (`ledger-rustc-wrapper`, only for the Ledger targets), the
+  canaries set `RUSTFLAGS=-Zunstable-options`, and builds outside the images
+  need it too. Note that `RUSTFLAGS` replaces the `rustflags` of the Cargo
+  config, including the apps' own.
+- `compiler_builtins` target detection: some of its code paths are chosen
+  from the target **name** (e.g. Thumb-1 code for names starting with
+  `thumbv6m`). Our custom names do not match, so `nanox` (ARMv6-M) can get
+  code it cannot run or assemble (rust-lang/compiler-builtins#1374, from
+  nightly-2026-09-16).
 - `rust-src` component (prerequisite for `build-std`)
 
 **Language feature gates** (`ledger_device_sdk/src/lib.rs`)
@@ -134,6 +144,13 @@ or a security advisory.
    backports of that release, and if one affects us, pick a later nightly
    that has the fix. The reminder issue names this nightly
    (`.github/workflows/check_nightly_bump.sh` computes it).
+
+   The recommendation only looks at release dates, not at whether the SDK
+   builds. Before taking it, check the open canary issues and the §2 watch
+   list for known blockers: for example, no nightly from 2026-09-16 on builds
+   `nanox` until rust-lang/compiler-builtins#1374 is fixed. If the
+   recommended nightly is affected, pick the latest nightly before the
+   blocker, and re-check at the next reminder.
 2. Update `rust-toolchain.toml` (channel + components).
 3. Run the **full CI matrix locally or on the branch**: `clippy -D warnings`,
    `fmt --check`, `build`, and `test` for **all five targets × all crates**
