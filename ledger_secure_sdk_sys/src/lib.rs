@@ -85,6 +85,11 @@ extern "C" fn heap_init() {}
 #[allow(clippy::missing_safety_doc)]
 #[allow(clippy::ptr_offset_with_cast)]
 #[allow(clippy::too_many_arguments)]
+// The C SDK declares `memcpy`, `memset`, `strlen`... with `unsigned int`
+// sizes, which is `usize` on our 32-bit targets. `unknown_lints` keeps older
+// nightlies, which lack this lint, quiet.
+#[allow(unknown_lints)]
+#[allow(suspicious_runtime_symbol_definitions)]
 mod bindings {
     include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 }

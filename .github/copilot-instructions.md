@@ -163,7 +163,7 @@ Enable `debug` feature for ARM semihosting output via `debug_print()` in [testin
 
 3. **ARM toolchain required**: `arm-none-eabi-gcc` must be installed even for Rust code (C SDK compilation).
 
-4. **Rust nightly version pinned**: Use exact version in [rust-toolchain.toml](rust-toolchain.toml), currently `nightly-2025-12-05`.
+4. **Rust nightly version pinned**: Use exact version in [rust-toolchain.toml](rust-toolchain.toml), currently `nightly-2026-09-15`.
 
 5. **Examples are documentation**: The [examples/](ledger_device_sdk/examples/) directory contains the most up-to-date usage patterns for NBGL widgets, APDU handling, and device-specific conditional compilation.
 

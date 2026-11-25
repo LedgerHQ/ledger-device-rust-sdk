@@ -22,7 +22,7 @@ Re-export logic in `ledger_device_sdk/src/lib.rs` shows the exact `#[cfg]` matri
 
 ## Build, Test, Lint
 
-The pinned toolchain is `nightly-2025-12-05` (see `rust-toolchain.toml`). Requires `arm-none-eabi-gcc` and `clang` on the host even for pure-Rust changes (the C SDK is compiled by `ledger_secure_sdk_sys/build.rs`).
+The pinned toolchain is `nightly-2026-09-15` (see `rust-toolchain.toml`). Requires `arm-none-eabi-gcc` and `clang` on the host even for pure-Rust changes (the C SDK is compiled by `ledger_secure_sdk_sys/build.rs`).
 
 ```bash
 # Build for a specific device (plain cargo)

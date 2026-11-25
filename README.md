@@ -25,7 +25,7 @@ Docker images are available and shall be used to build and test Rust application
  
 ||`full` | `dev-tools` |
 | ---- | ----- | ----------- |
-| Rust nightly-2025-12-05 toolchain | :white_check_mark: | :white_check_mark: |
+| Rust nightly-2026-09-15 toolchain | :white_check_mark: | :white_check_mark: |
 | cargo-ledger | :white_check_mark: | :white_check_mark: |
 | Rust Ledger devices custom targets | :white_check_mark: | :white_check_mark: |
 | ARM & LLVM toolchains | :white_check_mark: | :white_check_mark: |
