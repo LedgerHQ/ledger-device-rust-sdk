@@ -24,7 +24,7 @@ The toolchain is pinned in [`rust-toolchain.toml`](./rust-toolchain.toml):
 
 ```toml
 [toolchain]
-channel = "nightly-2025-12-05"
+channel = "nightly-2026-09-15"
 components = ["rust-src", "clippy", "rustfmt"]
 profile = "minimal"
 ```
