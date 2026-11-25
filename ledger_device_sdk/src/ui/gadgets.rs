@@ -393,10 +393,8 @@ impl<'a> Menu<'a> {
                         ButtonEvent::LeftButtonRelease => {
                             index = index.saturating_sub(1);
                         }
-                        ButtonEvent::RightButtonRelease => {
-                            if index < self.panels.len() - 1 {
-                                index += 1;
-                            }
+                        ButtonEvent::RightButtonRelease if index < self.panels.len() - 1 => {
+                            index += 1;
                         }
                         _ => (),
                     }

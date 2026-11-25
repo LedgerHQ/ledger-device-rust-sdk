@@ -164,25 +164,40 @@ fn decode_png(path: &str) -> GrayImage {
     use png::{BitDepth::*, ColorType::*};
     let pixels: Vec<Luma> = match (info.color_type, info.bit_depth) {
         (Grayscale, Eight) => data.iter().map(|&v| Luma([v])).collect(),
-        (GrayscaleAlpha, Eight) => data.chunks_exact(2).map(|p| Luma([p[0]])).collect(),
+        (GrayscaleAlpha, Eight) => data
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|p| Luma([p[0]]))
+            .collect(),
         (Rgb, Eight) => data
-            .chunks_exact(3)
+            .as_chunks::<3>()
+            .0
+            .iter()
             .map(|p| Luma([luma8_from_rgb8(p[0], p[1], p[2])]))
             .collect(),
         (Rgba, Eight) => data
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .map(|p| Luma([luma8_from_rgb8(p[0], p[1], p[2])]))
             .collect(),
         (Grayscale, Sixteen) => data
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|p| Luma([u16_to_u8(be16(p))]))
             .collect(),
         (GrayscaleAlpha, Sixteen) => data
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .map(|p| Luma([u16_to_u8(be16(&p[0..2]))]))
             .collect(),
         (Rgb, Sixteen) => data
-            .chunks_exact(6)
+            .as_chunks::<6>()
+            .0
+            .iter()
             .map(|p| {
                 Luma([u16_to_u8(luma16_from_rgb16(
                     be16(&p[0..2]),
@@ -192,7 +207,9 @@ fn decode_png(path: &str) -> GrayImage {
             })
             .collect(),
         (Rgba, Sixteen) => data
-            .chunks_exact(8)
+            .as_chunks::<8>()
+            .0
+            .iter()
             .map(|p| {
                 Luma([u16_to_u8(luma16_from_rgb16(
                     be16(&p[0..2]),

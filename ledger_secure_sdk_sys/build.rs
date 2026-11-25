@@ -399,7 +399,7 @@ impl SDKBuilder<'_> {
         }
 
         command
-            .files(&AUX_C_FILES)
+            .files(AUX_C_FILES)
             .files(str2path(&self.device.c_sdk, &SDK_C_FILES));
 
         // Generate glyphs
