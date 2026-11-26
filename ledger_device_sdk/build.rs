@@ -90,8 +90,8 @@ fn generate_install_parameters() {
         };
 
         // Get device name
-        let device = env::var_os("CARGO_CFG_TARGET_OS").unwrap();
-        let device_name = device.to_str().unwrap();
+        let device = ledger_device();
+        let device_name = device.as_str();
         println!("cargo:warning=Device is {}", device_name);
 
         // Fill APP_NAME environment variable (stored in ledger.app_name section in the ELF (see app_info.rs))
@@ -451,8 +451,30 @@ fn resolve_variant() -> Option<String> {
     selected.map(|i| i.to_string())
 }
 
+/// Device being built for: the `ledger_device` cfg passed with a built-in
+/// triple, or the `target_os` of the custom target spec.
+fn ledger_device() -> String {
+    if let Ok(device) = env::var("CARGO_CFG_LEDGER_DEVICE") {
+        return device;
+    }
+    let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+    assert!(
+        target_os != "none",
+        "building for a built-in triple without the `ledger_device` cfg \
+         (cargo ledger passes it in build.rustflags, which RUSTFLAGS or a \
+         [target.<triple>] or [target.'cfg(..)'] rustflags section replaces: \
+         unset RUSTFLAGS, and move such sections to \
+         [package.metadata.ledger.<device>] rustflags)"
+    );
+    target_os
+}
+
 fn main() {
     println!("cargo:rerun-if-changed=Cargo.toml");
+    // The `ledger_device` cfg: derived from target_os with a custom target
+    // spec. Emitted even when rustflags already set it, as rustdoc gets
+    // rustdocflags instead and would otherwise build without it.
+    println!("cargo:rustc-cfg=ledger_device=\"{}\"", ledger_device());
     // App selection and C SDK location (see `select_app_package` and
     // `resolve_c_sdk_path`). Variant features need no directive: Cargo reruns
     // the build script when the crate's features change.

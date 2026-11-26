@@ -89,6 +89,32 @@ cargo build --release --target=flex        # Flex
 cargo build --release --target=apex_p      # Apex P
 ```
 
+### Device-specific code
+
+The SDK selects its device code with the `ledger_device` cfg (`nanox`,
+`nanosplus`, `stax`, `flex`, `apex_p`). With the custom target specs, its build
+scripts derive it from `target_os`, for the SDK crates only: your app can keep
+`#[cfg(target_os = "...")]`.
+
+Apps can instead build with the built-in Rust triples (`thumbv6m-none-eabi` for
+Nano X, `thumbv8m.main-none-eabi` for the others), where `target_os` is `none`,
+through a `cargo ledger` that supports it:
+
+- set `builtin_target = true` in `[package.metadata.ledger]`;
+- use `#[cfg(ledger_device = "...")]` in the app, and declare it in
+  `[lints.rust] unexpected_cfgs`
+  (`check-cfg = ['cfg(ledger_device, values("apex_p", "stax", "flex", "nanox", "nanosplus"))']`);
+- move per-device rustflags from `[target.<device>]` sections to
+  `[package.metadata.ledger.<device>] rustflags`;
+- for the commands that still use the custom specs without `cargo ledger`
+  (e.g. `cargo clippy --target <device>`), pass the cfg in `.cargo/config.toml`:
+
+```toml
+[target.nanox]
+rustflags = ['--cfg=ledger_device="nanox"']
+# ... one section per device
+```
+
 ### App metadata and build variants
 
 `cargo-ledger` and the SDK build script read your app's install parameters

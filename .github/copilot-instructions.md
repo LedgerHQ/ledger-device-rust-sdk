@@ -17,7 +17,7 @@ The SDK targets **5 custom Rust targets** (not standard Rust platforms):
 - `nanosplus` / `nanox`: Older Nano devices (buttons + small screen, use `ui` module)
 - `stax` / `flex` / `apex_p`: Newer touchscreen devices (use `nbgl` module)
 
-**Critical**: Use conditional compilation with `#[cfg(target_os = "...")]` throughout. Device names are:
+**Critical**: Use conditional compilation with `#[cfg(ledger_device = "...")]` throughout (not `target_os`, which is `none` with the built-in triples). Device names are:
 - `nanosplus` (NOT `nanosp`)
 - `nanox`  
 - `stax`
@@ -66,10 +66,10 @@ cargo ledger build nanosplus
 
 Example from [lib.rs](ledger_device_sdk/src/lib.rs):
 ```rust
-#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+#[cfg(any(ledger_device = "stax", ledger_device = "flex", ledger_device = "apex_p"))]
 pub mod nbgl;
 
-#[cfg(all(any(target_os = "nanosplus", target_os = "nanox"), not(feature = "nano_nbgl")))]
+#[cfg(all(any(ledger_device = "nanosplus", ledger_device = "nanox"), not(feature = "nano_nbgl")))]
 pub mod ui;
 ```
 
@@ -157,7 +157,7 @@ Enable `debug` feature for ARM semihosting output via `debug_print()` in [testin
 
 ## Common Gotchas
 
-1. **Wrong target_os checks**: Always verify `#[cfg(target_os = "...")]` matches device. `nanosplus` ≠ `nanosp`.
+1. **Wrong device checks**: Always verify `#[cfg(ledger_device = "...")]` matches device. `nanosplus` ≠ `nanosp`.
 
 2. **Custom panic handler required**: Every app must define panic with `set_panic!` macro or implement `#[panic_handler]`.
 

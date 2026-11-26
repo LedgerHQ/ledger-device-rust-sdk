@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.47.0] - 2026-11-26
+
+### Added
+- Builds with the built-in Rust triples (`thumbv6m-none-eabi` for Nano X,
+  `thumbv8m.main-none-eabi` for the other devices), whose settings and
+  `ledger_device` cfg come from rustflags (`cargo ledger` passes them for apps
+  setting `builtin_target = true`). The build script fails with an
+  explanation when the `ledger_device` cfg is missing. See "Device-specific
+  code" in the README.
+
+### Changed
+- The SDK selects its device code with a `ledger_device` cfg (`nanox`,
+  `nanosplus`, `stax`, `flex`, `apex_p`) instead of `target_os`, which is
+  `none` on the built-in triples. With the custom target specs, the build
+  script derives it from `target_os`: apps keep their own `target_os` cfgs.
+- Uses `ledger_secure_sdk_sys` 1.19.0.
+
 ## [1.46.0] - 2026-11-26
 
 ### Changed

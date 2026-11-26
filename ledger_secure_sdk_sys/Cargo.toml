@@ -1,6 +1,6 @@
 [package]
 name = "ledger_secure_sdk_sys"
-version = "1.18.3"
+version = "1.19.0"
 authors = ["Ledger"]
 edition = "2024"
 license.workspace = true
@@ -39,4 +39,4 @@ app_io_stack = []
 
 [lints.rust.unexpected_cfgs]
 level = "warn"
-check-cfg = ['cfg(target_os, values("apex_p", "stax", "flex", "nanox", "nanosplus"))']
+check-cfg = ['cfg(ledger_device, values("apex_p", "stax", "flex", "nanox", "nanosplus"))']
