@@ -195,16 +195,54 @@ impl<const N: usize> BigUint<N> {
     }
 }
 
-impl<const N: usize> BigUint<N>
-where
-    BigUint<{ 2 * N }>: Sized,
-{
-    pub fn to_double(&self) -> BigUint<{ 2 * N }> {
-        let mut res = BigUint::<{ 2 * N }>::default();
-        res.data[N..2 * N].copy_from_slice(&self.data);
-        res
+/// `a` widened to `M` bytes (`M` is `2 * N` for the callers).
+fn widen<const N: usize, const M: usize>(a: &BigUint<N>) -> BigUint<M> {
+    let mut res = BigUint::<M>::default();
+    res.data[M - N..].copy_from_slice(&a.data);
+    res
+}
+
+/// `a * b` on `M` bytes (`M` is `2 * N` for the callers).
+fn mul_wide<const N: usize, const M: usize>(a: &BigUint<N>, b: &BigUint<N>) -> BigUint<M> {
+    let mut res = BigUint::<M>::default();
+    unsafe {
+        let err = cx_math_mult_no_throw(res.data.as_mut_ptr(), a.data.as_ptr(), b.data.as_ptr(), N);
+        match err {
+            CX_OK => res,
+            _ => panic!("Error multiplying BigUint with error code: {}", err),
+        }
     }
 }
+
+// `to_double` and `Mul` return a `BigUint` twice as large. Without the
+// unstable `generic_const_exprs` feature, that size cannot be computed from
+// `N` in a signature, so they are implemented for a list of sizes: every size
+// up to 64 bytes (512 bits), then up to 512 bytes (4096 bits).
+macro_rules! double_size {
+    ($($n:literal)*) => {
+        $(
+            impl BigUint<$n> {
+                pub fn to_double(&self) -> BigUint<{ 2 * $n }> {
+                    widen(self)
+                }
+            }
+
+            impl Mul for BigUint<$n> {
+                type Output = BigUint<{ 2 * $n }>;
+
+                fn mul(self, other: BigUint<$n>) -> Self::Output {
+                    mul_wide(&self, &other)
+                }
+            }
+        )*
+    };
+}
+
+double_size!(
+    1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32
+    33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62
+    63 64 96 128 192 256 384 512
+);
 
 impl<const N: usize> Default for BigUint<N> {
     fn default() -> Self {
@@ -279,31 +317,6 @@ impl<const N: usize> SubAssign for BigUint<N> {
             match err {
                 CX_OK => {}
                 _ => panic!("Error subtracting BigUint with error code: {}", err),
-            }
-        }
-    }
-}
-
-// impl<const N: usize, const M: usize> Mul<BigUint<M>> for BigUint<N>
-//     where BigUint<{N + M}>: Sized
-impl<const N: usize> Mul for BigUint<N>
-where
-    BigUint<{ N + N }>: Sized,
-{
-    type Output = BigUint<{ N + N }>;
-
-    fn mul(self, other: BigUint<N>) -> Self::Output {
-        let mut res = BigUint::<{ N + N }>::default();
-        unsafe {
-            let err = cx_math_mult_no_throw(
-                res.data.as_mut_ptr(),
-                self.data.as_ptr(),
-                other.data.as_ptr(),
-                N,
-            );
-            match err {
-                CX_OK => res,
-                _ => panic!("Error multiplying BigUint with error code: {}", err),
             }
         }
     }
@@ -506,6 +519,13 @@ mod tests {
         let c = a * b;
         let expected = BigUint::<8>::from_slice(&[0, 0, 0, 0, 8, 6, 4, 2]).unwrap();
         assert_eq!(&c, &expected);
+    }
+
+    #[test]
+    fn test_BigUint_to_double() {
+        let a = BigUint::<4>::from_slice(&[4, 3, 2, 1]).unwrap();
+        let expected = BigUint::<8>::from_slice(&[0, 0, 0, 0, 4, 3, 2, 1]).unwrap();
+        assert_eq!(&a.to_double(), &expected);
     }
 
     #[test]

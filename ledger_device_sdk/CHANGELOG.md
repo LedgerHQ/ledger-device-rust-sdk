@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.46.0] - 2026-11-26
+
+### Changed
+- The SDK no longer uses the unstable `generic_const_exprs` feature, which
+  newer nightlies report as unsupported with the next-generation trait solver.
+- `math`: `BigUint::to_double` and `Mul for BigUint`, which return a `BigUint`
+  twice as large, are implemented for the sizes 1 to 64 bytes, 96, 128, 192,
+  256, 384 and 512 bytes instead of every size. Calls with these sizes are
+  unchanged.
+- Uses `ledger_secure_sdk_sys` 1.18.3.
+
 ## [1.45.1] - 2026-11-25
 
 ### Changed

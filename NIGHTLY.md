@@ -51,7 +51,17 @@ adapted.
   (`.cargo/config.toml`)
 - Custom JSON target specs (`devices/*/*.json`)
 - `relocation-model: "ropi-rwpi"`
-- `RUSTFLAGS = -Zunstable-options` (used by the canary build)
+- `-Zunstable-options`: since nightly-2026-09, `rustc` refuses custom JSON
+  target specs without it. The `ledger-app-builder` images pass it through a
+  `rustc` wrapper (`ledger-rustc-wrapper`, only for the Ledger targets), the
+  canaries set `RUSTFLAGS=-Zunstable-options`, and builds outside the images
+  need it too. Note that `RUSTFLAGS` replaces the `rustflags` of the Cargo
+  config, including the apps' own.
+- `compiler_builtins` target detection: some of its code paths are chosen
+  from the target **name** (e.g. Thumb-1 code for names starting with
+  `thumbv6m`). Our custom names do not match, so `nanox` (ARMv6-M) can get
+  code it cannot run or assemble (rust-lang/compiler-builtins#1374, from
+  nightly-2026-09-16).
 - `rust-src` component (prerequisite for `build-std`)
 
 **Language feature gates** (`ledger_device_sdk/src/lib.rs`)
@@ -121,11 +131,33 @@ through one bump-preparation branch.
 
 ## 4. Bump procedure
 
-Bump cadence: **quarterly by default**, or sooner when driven by a needed
-feature fix, a stabilization we want to adopt, or a security advisory.
+Bump cadence: **every second Rust stable release** (about every 12 weeks), or
+sooner when driven by a needed feature fix, a stabilization we want to adopt,
+or a security advisory.
 
-1. **Pick a date-pinned nightly** (`nightly-YYYY-MM-DD`), ideally one the canary
-   has already exercised green.
+- Rust ships a stable release every six weeks, on a fixed schedule. Bumping
+  every release would force an image release and an app-wide pin change each
+  time; every second release keeps the pin at most ~3 months behind.
+- [`.github/workflows/nightly_bump_reminder.yml`](./.github/workflows/nightly_bump_reminder.yml)
+  checks weekly (in the `-dev` repo) and opens a `Nightly bump due:` issue as
+  soon as the pin is two or more stable releases behind. It keeps flagging a
+  skipped bump, so the pin cannot silently age.
+
+1. **Pick a date-pinned nightly** (`nightly-YYYY-MM-DD`): by default, the
+   nightly the **current stable release branched from**, i.e. the last
+   nightly whose `rustc` still reports the stable's version
+   (`1.N.0-nightly`). Its code became the current stable and has had six
+   weeks of beta testing, so its regressions are known: check the beta
+   backports of that release, and if one affects us, pick a later nightly
+   that has the fix. The reminder issue names this nightly
+   (`.github/workflows/check_nightly_bump.sh` computes it).
+
+   The recommendation only looks at release dates, not at whether the SDK
+   builds. Before taking it, check the open canary issues and the §2 watch
+   list for known blockers: for example, no nightly from 2026-09-16 on builds
+   `nanox` until rust-lang/compiler-builtins#1374 is fixed. If the
+   recommended nightly is affected, pick the latest nightly before the
+   blocker, and re-check at the next reminder.
 2. Update `rust-toolchain.toml` (channel + components).
 3. Run the **full CI matrix locally or on the branch**: `clippy -D warnings`,
    `fmt --check`, `build`, and `test` for **all five targets × all crates**
@@ -134,7 +166,10 @@ feature fix, a stabilization we want to adopt, or a security advisory.
 4. Review the §2 watch list: remove any now-stabilized `#![feature]` gates;
    adapt to any renamed/removed unstable items.
 5. **Confirm the `ledger-app-dev-tools:latest` Docker image** ships (or can
-   install) the chosen nightly + `rust-src`. The pin and the image must agree.
+   install) the chosen nightly + `rust-src`. The pin and the image must agree:
+   bump `RUSTUP_TOOLCHAIN` in the `ledger-app-builder` image in the same
+   cycle, and tell app maintainers the new pin ahead of time (apps pinning a
+   different nightly are rejected by the app workflows).
 6. Update version references in [`README.md`](./README.md) and the relevant
    crate `CHANGELOG.md` files.
 7. Land via a dedicated PR titled `chore: bump nightly to YYYY-MM-DD`, ideally
