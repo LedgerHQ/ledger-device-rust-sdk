@@ -751,23 +751,47 @@ fn ledger_device() -> String {
 /// silently replaces: fail the build rather than produce an app that crashes
 /// at runtime.
 fn check_builtin_target_flags() {
+    let device = ledger_device();
+    // Emitted even when rustflags already set it, as rustdoc gets
+    // rustdocflags instead and would otherwise build without it.
+    println!("cargo:rustc-cfg=ledger_device=\"{device}\"");
     if env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("none") {
         // Custom target spec: it sets everything itself.
-        println!("cargo:rustc-cfg=ledger_device=\"{}\"", ledger_device());
         return;
     }
     let flags = env::var("CARGO_ENCODED_RUSTFLAGS").unwrap_or_default();
     let flags: Vec<&str> = flags.split('\x1f').collect();
-    let has = |needle: &str| flags.iter().any(|f| f.contains(needle));
-    for needle in ["relocation-model=ropi-rwpi", "link_wrap.sh", "-Tlink.ld"] {
-        assert!(
-            has(needle),
-            "building for a built-in triple without `{needle}` in rustflags \
-             (cargo ledger passes it in build.rustflags, which RUSTFLAGS or a \
-             [target.<triple>] or [target.'cfg(..)'] rustflags section replaces: \
-             unset RUSTFLAGS, and move such sections to \
+    let fail = |what: &str| -> ! {
+        panic!(
+            "building for a built-in triple with {what} \
+             (cargo ledger passes the right flags in build.rustflags, which \
+             RUSTFLAGS or a [target.<triple>] or [target.'cfg(..)'] rustflags \
+             section replaces: unset RUSTFLAGS, and move such sections to \
              [package.metadata.ledger.<device>] rustflags)"
-        );
+        )
+    };
+
+    // rustc uses the last relocation model given.
+    let relocation_model = flags
+        .iter()
+        .rev()
+        .find_map(|f| f.split_once("relocation-model=").map(|(_, model)| model));
+    if relocation_model != Some("ropi-rwpi") {
+        fail(&format!(
+            "relocation model `{}` instead of `ropi-rwpi`",
+            relocation_model.unwrap_or("none")
+        ));
+    }
+    for needle in ["link_wrap.sh", "-Tlink.ld"] {
+        if !flags.iter().any(|f| f.contains(needle)) {
+            fail(&format!("no `{needle}` in rustflags"));
+        }
+    }
+    // The layout script gives the device's memory map, which link.ld uses.
+    let layout = format!("{device}_layout.ld");
+    let layouts: Vec<&&str> = flags.iter().filter(|f| f.contains("_layout.ld")).collect();
+    if layouts.is_empty() || layouts.iter().any(|f| !f.ends_with(&layout)) {
+        fail(&format!("layout scripts {layouts:?} instead of `{layout}`"));
     }
 }
 

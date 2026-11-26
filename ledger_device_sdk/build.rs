@@ -471,10 +471,10 @@ fn ledger_device() -> String {
 
 fn main() {
     println!("cargo:rerun-if-changed=Cargo.toml");
-    // With a custom target spec, derive the `ledger_device` cfg from target_os.
-    if env::var_os("CARGO_CFG_LEDGER_DEVICE").is_none() {
-        println!("cargo:rustc-cfg=ledger_device=\"{}\"", ledger_device());
-    }
+    // The `ledger_device` cfg: derived from target_os with a custom target
+    // spec. Emitted even when rustflags already set it, as rustdoc gets
+    // rustdocflags instead and would otherwise build without it.
+    println!("cargo:rustc-cfg=ledger_device=\"{}\"", ledger_device());
     // App selection and C SDK location (see `select_app_package` and
     // `resolve_c_sdk_path`). Variant features need no directive: Cargo reruns
     // the build script when the crate's features change.

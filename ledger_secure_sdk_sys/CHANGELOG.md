@@ -11,8 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Builds with the built-in Rust triples (`thumbv6m-none-eabi` for Nano X,
   `thumbv8m.main-none-eabi` for the other devices). The device comes from the
   `ledger_device` cfg passed in rustflags; the build script fails with an
-  explanation when it, the `ropi-rwpi` relocation model or the link scripts
-  are missing from rustflags.
+  explanation when it is missing, when the relocation model rustc will use is
+  not `ropi-rwpi`, or when `link_wrap.sh`, `link.ld` or the device's own
+  `<device>_layout.ld` are not all in rustflags.
 
 ### Changed
 - With the custom target specs, the build script derives the `ledger_device`
