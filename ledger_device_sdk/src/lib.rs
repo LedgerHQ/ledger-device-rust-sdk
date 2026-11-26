@@ -4,8 +4,6 @@
 #![feature(custom_test_frameworks)]
 #![reexport_test_harness_main = "test_main"]
 #![test_runner(testing::sdk_test_runner)]
-#![allow(incomplete_features)]
-#![feature(generic_const_exprs)]
 #![feature(const_option_ops)]
 #![feature(const_trait_impl)]
 
