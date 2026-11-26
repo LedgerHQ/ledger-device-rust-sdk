@@ -14,7 +14,11 @@ use ledger_device_sdk::nbgl::{
     StatusType, TransactionType, WarningBar, WarningDetails, WarningType, init_comm,
 };
 // QR code pages need NBGL_QRCODE, which only the touchscreen devices define.
-#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+#[cfg(any(
+    ledger_device = "stax",
+    ledger_device = "flex",
+    ledger_device = "apex_p"
+))]
 use ledger_device_sdk::nbgl::QrCode;
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
@@ -24,13 +28,13 @@ ledger_device_sdk::define_comm!(COMM);
 extern "C" fn sample_main() {
     let comm = init_comm(&COMM);
 
-    #[cfg(target_os = "apex_p")]
+    #[cfg(ledger_device = "apex_p")]
     const FERRIS: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_48x48.png", NBGL));
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    #[cfg(any(ledger_device = "stax", ledger_device = "flex"))]
     const FERRIS: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
-    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    #[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
     const FERRIS: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_14x14.png", NBGL));
 
@@ -73,7 +77,11 @@ extern "C" fn sample_main() {
             .description("This contract is not in Ledger's registry.")
             .sub_text("Proceed only if you trust the source."),
     };
-    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    #[cfg(any(
+        ledger_device = "stax",
+        ledger_device = "flex",
+        ledger_device = "apex_p"
+    ))]
     let report_details = WarningDetails::QrCode {
         title: "Full report",
         qr: QrCode::new("https://report.example/tx/0x1234")
@@ -81,7 +89,7 @@ extern "C" fn sample_main() {
             .text2("report.example"),
     };
     // Nano has no QR code support, so the same bar leads to plain text there.
-    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    #[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
     let report_details = WarningDetails::CenteredInfo {
         title: "Full report",
         info: CenterInfo::new().description("report.example/tx/0x1234"),

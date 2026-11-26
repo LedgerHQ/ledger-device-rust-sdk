@@ -245,7 +245,7 @@ impl SDKBuilder<'_> {
     }
 
     pub fn device(&mut self) {
-        let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
+        let target_os = ledger_device();
         let spec = SPECS
             .iter()
             .find(|s| s.target_os == target_os)
@@ -633,7 +633,7 @@ impl SDKBuilder<'_> {
     }
 
     fn generate_heap_size(&self) {
-        let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+        let target_os = ledger_device();
 
         // HEAP_SIZE can be either:
         //  1. A single integer (e.g. "8192")
@@ -728,7 +728,75 @@ impl SDKBuilder<'_> {
     }
 }
 
+/// Device being built for: the `ledger_device` cfg passed with a built-in
+/// triple, or the `target_os` of the custom target spec.
+fn ledger_device() -> String {
+    if let Ok(device) = env::var("CARGO_CFG_LEDGER_DEVICE") {
+        return device;
+    }
+    let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+    assert!(
+        target_os != "none",
+        "building for a built-in triple without the `ledger_device` cfg \
+         (cargo ledger passes it in build.rustflags, which RUSTFLAGS or a \
+         [target.<triple>] or [target.'cfg(..)'] rustflags section replaces: \
+         unset RUSTFLAGS, and move such sections to \
+         [package.metadata.ledger.<device>] rustflags)"
+    );
+    target_os
+}
+
+/// With a built-in triple, the codegen settings of the custom specs come from
+/// rustflags, which `RUSTFLAGS` or a `[target.<triple>]` rustflags section
+/// silently replaces: fail the build rather than produce an app that crashes
+/// at runtime.
+fn check_builtin_target_flags() {
+    let device = ledger_device();
+    // Emitted even when rustflags already set it, as rustdoc gets
+    // rustdocflags instead and would otherwise build without it.
+    println!("cargo:rustc-cfg=ledger_device=\"{device}\"");
+    if env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("none") {
+        // Custom target spec: it sets everything itself.
+        return;
+    }
+    let flags = env::var("CARGO_ENCODED_RUSTFLAGS").unwrap_or_default();
+    let flags: Vec<&str> = flags.split('\x1f').collect();
+    let fail = |what: &str| -> ! {
+        panic!(
+            "building for a built-in triple with {what} \
+             (cargo ledger passes the right flags in build.rustflags, which \
+             RUSTFLAGS or a [target.<triple>] or [target.'cfg(..)'] rustflags \
+             section replaces: unset RUSTFLAGS, and move such sections to \
+             [package.metadata.ledger.<device>] rustflags)"
+        )
+    };
+
+    // rustc uses the last relocation model given.
+    let relocation_model = flags
+        .iter()
+        .rev()
+        .find_map(|f| f.split_once("relocation-model=").map(|(_, model)| model));
+    if relocation_model != Some("ropi-rwpi") {
+        fail(&format!(
+            "relocation model `{}` instead of `ropi-rwpi`",
+            relocation_model.unwrap_or("none")
+        ));
+    }
+    for needle in ["link_wrap.sh", "-Tlink.ld"] {
+        if !flags.iter().any(|f| f.contains(needle)) {
+            fail(&format!("no `{needle}` in rustflags"));
+        }
+    }
+    // The layout script gives the device's memory map, which link.ld uses.
+    let layout = format!("{device}_layout.ld");
+    let layouts: Vec<&&str> = flags.iter().filter(|f| f.contains("_layout.ld")).collect();
+    if layouts.is_empty() || layouts.iter().any(|f| !f.ends_with(&layout)) {
+        fail(&format!("layout scripts {layouts:?} instead of `{layout}`"));
+    }
+}
+
 fn main() {
+    check_builtin_target_flags();
     // Inputs that can invalidate the build. Emitted up-front so they fire
     // even if a later phase panics. `cc::Build::files(...)` already emits
     // rerun-if-changed for the SDK C files it pulls from <c_sdk>/…; we

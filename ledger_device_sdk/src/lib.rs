@@ -7,7 +7,7 @@
 #![feature(const_option_ops)]
 #![feature(const_trait_impl)]
 
-#[cfg(target_os = "nanox")]
+#[cfg(ledger_device = "nanox")]
 mod aeabi_unaligned;
 mod app_info;
 #[cfg(feature = "app_storage")]
@@ -45,14 +45,14 @@ pub mod testing;
 pub mod tlv;
 
 #[cfg(any(
-    target_os = "stax",
-    target_os = "flex",
-    target_os = "apex_p",
+    ledger_device = "stax",
+    ledger_device = "flex",
+    ledger_device = "apex_p",
     feature = "nano_nbgl"
 ))]
 pub mod nbgl;
 #[cfg(all(
-    any(target_os = "nanosplus", target_os = "nanox"),
+    any(ledger_device = "nanosplus", ledger_device = "nanox"),
     not(feature = "nano_nbgl")
 ))]
 pub mod ui;
@@ -180,9 +180,9 @@ fn nvm_data_len() -> usize {
 /// the address the app runs it from: where [`NVMData::get_ref`] and
 /// [`NVMData::get_mut`] point.
 #[cfg(any(
-    target_os = "stax",
-    target_os = "flex",
-    target_os = "apex_p",
+    ledger_device = "stax",
+    ledger_device = "flex",
+    ledger_device = "apex_p",
     feature = "nano_nbgl",
     test
 ))]

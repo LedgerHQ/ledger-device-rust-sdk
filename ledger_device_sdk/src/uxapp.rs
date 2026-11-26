@@ -81,9 +81,9 @@ impl UxEvent {
             G_ux_params.ux_id = Self::DelayLock as u8;
             G_ux_params.len = 0;
             #[cfg(any(
-                target_os = "apex_p",
-                target_os = "stax",
-                target_os = "flex",
+                ledger_device = "apex_p",
+                ledger_device = "stax",
+                ledger_device = "flex",
                 feature = "nano_nbgl"
             ))]
             {
@@ -92,9 +92,9 @@ impl UxEvent {
                 G_ux_params.len = core::mem::size_of::<u32>() as _;
             }
             #[cfg(not(any(
-                target_os = "apex_p",
-                target_os = "stax",
-                target_os = "flex",
+                ledger_device = "apex_p",
+                ledger_device = "stax",
+                ledger_device = "flex",
                 feature = "nano_nbgl"
             )))]
             let _ = delay_ms;

@@ -42,11 +42,20 @@ struct PageEntry {
     // The three below are read only on touchscreen devices: Nano's
     // nbgl_pageContent_t has no title or top-right button. The API stays the
     // same on every target, the fields simply go unused there.
-    #[cfg_attr(any(target_os = "nanosplus", target_os = "nanox"), allow(dead_code))]
+    #[cfg_attr(
+        any(ledger_device = "nanosplus", ledger_device = "nanox"),
+        allow(dead_code)
+    )]
     title: Option<CString>,
-    #[cfg_attr(any(target_os = "nanosplus", target_os = "nanox"), allow(dead_code))]
+    #[cfg_attr(
+        any(ledger_device = "nanosplus", ledger_device = "nanox"),
+        allow(dead_code)
+    )]
     touchable_title: bool,
-    #[cfg_attr(any(target_os = "nanosplus", target_os = "nanox"), allow(dead_code))]
+    #[cfg_attr(
+        any(ledger_device = "nanosplus", ledger_device = "nanox"),
+        allow(dead_code)
+    )]
     top_right_icon: Option<nbgl_icon_details_t>,
 }
 
@@ -58,7 +67,11 @@ struct PageEntry {
 fn fill_page_content(entry: &PageEntry, page: &mut nbgl_pageContent_t) {
     // Nano's nbgl_pageContent_t carries only the type and the union: the
     // per-page title and top-right button are touchscreen-only.
-    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    #[cfg(any(
+        ledger_device = "stax",
+        ledger_device = "flex",
+        ledger_device = "apex_p"
+    ))]
     {
         page.title = match &entry.title {
             Some(title) => title.as_ptr(),
@@ -77,12 +90,20 @@ fn fill_page_content(entry: &PageEntry, page: &mut nbgl_pageContent_t) {
             page.type_ = CENTERED_INFO;
             page.__bindgen_anon_1.centeredInfo = data.into();
         }
-        #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+        #[cfg(any(
+            ledger_device = "stax",
+            ledger_device = "flex",
+            ledger_device = "apex_p"
+        ))]
         NbglPageContent::ExtendedCenter(data) => {
             page.type_ = EXTENDED_CENTER;
             page.__bindgen_anon_1.extendedCenter = data.into();
         }
-        #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+        #[cfg(any(
+            ledger_device = "stax",
+            ledger_device = "flex",
+            ledger_device = "apex_p"
+        ))]
         NbglPageContent::InfoLongPress(data) => {
             page.type_ = INFO_LONG_PRESS;
             page.__bindgen_anon_1.infoLongPress = data.into();
@@ -116,7 +137,7 @@ fn fill_page_content(entry: &PageEntry, page: &mut nbgl_pageContent_t) {
             page.__bindgen_anon_1.barsList = data.into();
         }
         // Rejected by `show` on this target, so unreachable here.
-        #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+        #[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
         _ => {}
     }
 }
@@ -126,7 +147,7 @@ fn fill_page_content(entry: &PageEntry, page: &mut nbgl_pageContent_t) {
 /// Nano's union has eight members where the touchscreen devices have eleven,
 /// so two of the content types cannot appear in a navigable flow there.
 fn is_supported(content: &NbglPageContent) -> bool {
-    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    #[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
     if matches!(
         content,
         NbglPageContent::ExtendedCenter(_) | NbglPageContent::InfoLongPress(_)
@@ -138,7 +159,10 @@ fn is_supported(content: &NbglPageContent) -> bool {
 }
 
 /// Token reported when a touchable page title is pressed.
-#[cfg_attr(any(target_os = "nanosplus", target_os = "nanox"), allow(dead_code))]
+#[cfg_attr(
+    any(ledger_device = "nanosplus", ledger_device = "nanox"),
+    allow(dead_code)
+)]
 const BACK_TOKEN: u8 = 0;
 
 /// Callback through which NBGL asks for the content of each page.

@@ -2,9 +2,9 @@
 #![no_main]
 
 use include_gif::include_gif;
-#[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+#[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
 use ledger_device_sdk::nbgl::NbglChoice;
-#[cfg(not(any(target_os = "nanosplus", target_os = "nanox")))]
+#[cfg(not(any(ledger_device = "nanosplus", ledger_device = "nanox")))]
 use ledger_device_sdk::nbgl::NbglConfirm;
 use ledger_device_sdk::nbgl::{HomeAction, NbglGlyph, NbglHomeAndSettings, NbglStatus, init_comm};
 // use ledger_device_sdk::nvm::*;
@@ -110,7 +110,7 @@ static PENDING: AtomicBool = AtomicBool::new(false);
 /// something underneath, which is why it is raised from here rather than from
 /// the top of `sample_main`: dismissing it through the footer simply reveals the
 /// home screen again, and reports nothing back.
-#[cfg(not(any(target_os = "nanosplus", target_os = "nanox")))]
+#[cfg(not(any(ledger_device = "nanosplus", ledger_device = "nanox")))]
 fn on_action() {
     NbglConfirm::new()
         .message("Delete this account?")
@@ -124,13 +124,13 @@ fn on_action() {
 /// There is no counterpart for the footer: `nbgl_useCaseConfirm` reports only
 /// confirmation, and dismissal needs no handling here because the home screen is
 /// already drawn behind the modal.
-#[cfg(not(any(target_os = "nanosplus", target_os = "nanox")))]
+#[cfg(not(any(ledger_device = "nanosplus", ledger_device = "nanox")))]
 fn on_confirm() {
     PENDING.store(true, Ordering::Relaxed);
 }
 
 /// Shows that the account was deleted, then the home screen again.
-#[cfg(not(any(target_os = "nanosplus", target_os = "nanox")))]
+#[cfg(not(any(ledger_device = "nanosplus", ledger_device = "nanox")))]
 fn run_pending(comm: &mut Comm<DEFAULT_BUF_SIZE>, home: &mut NbglHomeAndSettings) {
     NbglStatus::new().text("Account deleted").show(comm, true);
 
@@ -140,7 +140,7 @@ fn run_pending(comm: &mut Comm<DEFAULT_BUF_SIZE>, home: &mut NbglHomeAndSettings
 }
 
 /// Runs when the home screen's action is selected.
-#[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+#[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
 fn on_action() {
     PENDING.store(true, Ordering::Relaxed);
 }
@@ -150,7 +150,7 @@ fn on_action() {
 /// Nano has no modal: a confirmation replaces the home screen and its state,
 /// and reports nothing when dismissed. A choice is used instead, which reports
 /// both outcomes, and the home screen is drawn again whatever the answer.
-#[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+#[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
 fn run_pending(comm: &mut Comm<DEFAULT_BUF_SIZE>, home: &mut NbglHomeAndSettings) {
     if NbglChoice::new().show(
         comm,
@@ -168,13 +168,13 @@ fn run_pending(comm: &mut Comm<DEFAULT_BUF_SIZE>, home: &mut NbglHomeAndSettings
 extern "C" fn sample_main() {
     let comm = init_comm(&COMM);
 
-    #[cfg(target_os = "apex_p")]
+    #[cfg(ledger_device = "apex_p")]
     const FERRIS: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_48x48.png", NBGL));
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    #[cfg(any(ledger_device = "stax", ledger_device = "flex"))]
     const FERRIS: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
-    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    #[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
     const FERRIS: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_14x14.png", NBGL));
 

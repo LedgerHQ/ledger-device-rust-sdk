@@ -13,7 +13,7 @@ Cargo workspace (resolver 2) with four member crates:
 
 ## Targets and Conditional Compilation
 
-The SDK targets **5 custom Rust targets** (not stock Rust platforms). Always gate device-specific code with `#[cfg(target_os = "...")]`:
+The SDK targets **5 devices**, built either with their custom Rust target specs or with the built-in `thumbv6m-none-eabi` (Nano X) / `thumbv8m.main-none-eabi` triples (apps opting in with `builtin_target = true` under `cargo ledger`). Always gate device-specific code with `#[cfg(ledger_device = "...")]`, never `target_os` (it is `none` on the built-in triples). The build scripts derive `ledger_device` from the custom spec's `target_os`; with a built-in triple, `cargo ledger` passes it:
 
 - `nanox`, `nanosplus` — Button devices (NOT `nanosp`). Default UI is the `ui` module (BAGL); opt into NBGL with the `nano_nbgl` feature.
 - `stax`, `flex`, `apex_p` — Touchscreen devices. The `nbgl` module is mandatory.
@@ -59,6 +59,6 @@ Set `LEDGER_SDK_PATH` to point `build.rs` at a local C SDK checkout instead of h
 
 ## Common Gotchas
 
-1. Device name is `nanosplus`, not `nanosp` (the Speculos `--model` flag uses `nanosp`, but `target_os` and the custom target name are `nanosplus`).
+1. Device name is `nanosplus`, not `nanosp` (the Speculos `--model` flag uses `nanosp`, but `ledger_device` and the custom target name are `nanosplus`).
 2. The `sys` feature on `ledger_device_sdk` re-exports `ledger_secure_sdk_sys` under `ledger_device_sdk::sys` — only enable it when you genuinely need raw FFI; prefer the safe wrappers.
 3. The `speculos` feature is a backward-compat alias for `unit_test` (kept for the Sui app).

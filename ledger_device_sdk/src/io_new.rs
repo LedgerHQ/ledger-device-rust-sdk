@@ -120,7 +120,7 @@ macro_rules! define_comm {
     };
 }
 
-#[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+#[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
 use ledger_secure_sdk_sys::buttons::{ButtonEvent, ButtonsState};
 
 /// An event returned by [`Comm::next_event`].
@@ -128,9 +128,13 @@ pub enum Event<'a, const N: usize = DEFAULT_BUF_SIZE> {
     /// An APDU command for the application, to be answered before the next
     /// one can be received.
     Command(Command<'a, N>),
-    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    #[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
     Button(ButtonEvent),
-    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    #[cfg(any(
+        ledger_device = "stax",
+        ledger_device = "flex",
+        ledger_device = "apex_p"
+    ))]
     Touch,
     Ticker,
     /// An event the SDK handled entirely, such as a USB or BLE event, or an
@@ -151,7 +155,7 @@ pub struct Comm<const N: usize = DEFAULT_BUF_SIZE> {
     expected_cla: Option<u8>,
 
     apdu_type: u8,
-    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    #[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
     buttons: ButtonsState,
     // Pending APDU state (set by next_event_ahead callback path). When set, the buffer
     // currently holds an APDU event that must be consumed before any further io_rx call.
@@ -185,7 +189,7 @@ impl<const N: usize> Comm<N> {
             buf: [0; N],
             expected_cla: None,
             apdu_type: PacketTypes::PacketTypeNone as u8,
-            #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+            #[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
             buttons: ButtonsState::default(),
             pending_apdu: false,
             pending_header: ApduHeader {
@@ -230,9 +234,9 @@ impl<const N: usize> Comm<N> {
     /// `Comm`, and in particular that nobody still reads the data of the
     /// command in flight, while the callbacks receive events into its buffer.
     #[cfg(any(
-        target_os = "stax",
-        target_os = "flex",
-        target_os = "apex_p",
+        ledger_device = "stax",
+        ledger_device = "flex",
+        ledger_device = "apex_p",
         feature = "nano_nbgl"
     ))]
     pub(crate) fn lend_to_nbgl<R>(&mut self, f: impl FnOnce() -> R) -> R {
@@ -377,9 +381,13 @@ impl<const N: usize> Comm<N> {
                 offset,
                 length,
             } => Event::Command(self.hand_over(header, offset, length)),
-            #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+            #[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
             RawEvent::Button(button) => Event::Button(button),
-            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+            #[cfg(any(
+                ledger_device = "stax",
+                ledger_device = "flex",
+                ledger_device = "apex_p"
+            ))]
             RawEvent::Touch => Event::Touch,
             RawEvent::Ticker => Event::Ticker,
             RawEvent::ApduError { .. } | RawEvent::Ignored => Event::Internal,

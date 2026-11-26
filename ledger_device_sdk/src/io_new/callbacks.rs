@@ -47,9 +47,9 @@ pub(super) fn is_comm_null() -> bool {
 /// Lends `comm` to the NBGL callbacks, returning the previous loan to be given
 /// back to [`end_loan`].
 #[cfg(any(
-    target_os = "stax",
-    target_os = "flex",
-    target_os = "apex_p",
+    ledger_device = "stax",
+    ledger_device = "flex",
+    ledger_device = "apex_p",
     feature = "nano_nbgl"
 ))]
 pub(super) fn lend<const N: usize>(comm: &mut Comm<N>) -> *mut core::ffi::c_void {
@@ -61,9 +61,9 @@ pub(super) fn lend<const N: usize>(comm: &mut Comm<N>) -> *mut core::ffi::c_void
 }
 
 #[cfg(any(
-    target_os = "stax",
-    target_os = "flex",
-    target_os = "apex_p",
+    ledger_device = "stax",
+    ledger_device = "flex",
+    ledger_device = "apex_p",
     feature = "nano_nbgl"
 ))]
 pub(super) fn end_loan(prev: *mut core::ffi::c_void) {

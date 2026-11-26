@@ -20,17 +20,21 @@ fn on_action(_token: u8, _index: u8) {}
 extern "C" fn sample_main() {
     let comm = init_comm(&COMM);
 
-    #[cfg(target_os = "apex_p")]
+    #[cfg(ledger_device = "apex_p")]
     const FERRIS: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_48x48.png", NBGL));
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    #[cfg(any(ledger_device = "stax", ledger_device = "flex"))]
     const FERRIS: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
-    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    #[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
     const FERRIS: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_14x14.png", NBGL));
 
-    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    #[cfg(any(
+        ledger_device = "stax",
+        ledger_device = "flex",
+        ledger_device = "apex_p"
+    ))]
     let centered_info = CenteredInfo::new(
         "Sample centered info",
         "Generic text",
@@ -41,7 +45,7 @@ extern "C" fn sample_main() {
         0,
     );
 
-    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    #[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
     let centered_info = CenteredInfo::new(
         "Centered info",
         "Generic text",
@@ -57,7 +61,11 @@ extern "C" fn sample_main() {
         TuneIndex::Success,
     );
 
-    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    #[cfg(any(
+        ledger_device = "stax",
+        ledger_device = "flex",
+        ledger_device = "apex_p"
+    ))]
     let info_long_press = InfoLongPress::new(
         "Validate to send token",
         Some(&FERRIS),
@@ -92,7 +100,11 @@ extern "C" fn sample_main() {
         .add_content(NbglPageContent::CenteredInfo(centered_info))
         .add_content(NbglPageContent::InfoButton(info_button));
 
-    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    #[cfg(any(
+        ledger_device = "stax",
+        ledger_device = "flex",
+        ledger_device = "apex_p"
+    ))]
     {
         review = review.add_content(NbglPageContent::InfoLongPress(info_long_press));
     }
@@ -121,13 +133,13 @@ extern "C" fn sample_main() {
         .add_content(NbglPageContent::ExtendedCenter(extended_center))
         .add_content(NbglPageContent::TagValueConfirm(tag_value_confirm));
 
-    #[cfg(target_os = "apex_p")]
+    #[cfg(ledger_device = "apex_p")]
     const IMPORTANT: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_48x48.png", NBGL));
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    #[cfg(any(ledger_device = "stax", ledger_device = "flex"))]
     const IMPORTANT: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
-    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    #[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
     const IMPORTANT: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_14x14.png", NBGL));
 

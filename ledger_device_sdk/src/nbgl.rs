@@ -26,7 +26,11 @@ pub mod nbgl_home_and_settings;
 pub mod nbgl_keypad;
 pub mod nbgl_navigable_content;
 pub mod nbgl_review;
-#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+#[cfg(any(
+    ledger_device = "stax",
+    ledger_device = "flex",
+    ledger_device = "apex_p"
+))]
 pub mod nbgl_review_extended;
 pub mod nbgl_review_status;
 pub mod nbgl_spinner;
@@ -61,7 +65,11 @@ pub use nbgl_navigable_content::*;
 #[doc(inline)]
 pub use nbgl_review::*;
 #[doc(inline)]
-#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+#[cfg(any(
+    ledger_device = "stax",
+    ledger_device = "flex",
+    ledger_device = "apex_p"
+))]
 pub use nbgl_review_extended::*;
 #[doc(inline)]
 pub use nbgl_review_status::*;
