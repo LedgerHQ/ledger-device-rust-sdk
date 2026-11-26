@@ -142,7 +142,11 @@ impl<'a> CenterInfo<'a> {
 /// Only available on touchscreen devices: `NBGL_QRCODE` is defined for Stax,
 /// Flex and Apex, so the Nano bindings have neither the struct nor the union
 /// member.
-#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+#[cfg(any(
+    ledger_device = "stax",
+    ledger_device = "flex",
+    ledger_device = "apex_p"
+))]
 pub struct QrCode<'a> {
     url: &'a str,
     text1: Option<&'a str>,
@@ -152,7 +156,11 @@ pub struct QrCode<'a> {
     large_text1: bool,
 }
 
-#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+#[cfg(any(
+    ledger_device = "stax",
+    ledger_device = "flex",
+    ledger_device = "apex_p"
+))]
 impl<'a> QrCode<'a> {
     /// Creates a QR code encoding `url`, centered by default.
     pub fn new(url: &'a str) -> QrCode<'a> {
@@ -224,7 +232,11 @@ pub enum WarningDetails<'a> {
         info: CenterInfo<'a>,
     },
     /// A QR code page. Touchscreen devices only.
-    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    #[cfg(any(
+        ledger_device = "stax",
+        ledger_device = "flex",
+        ledger_device = "apex_p"
+    ))]
     QrCode {
         /// Page title, also used to navigate back.
         title: &'a str,
@@ -564,7 +576,11 @@ impl CCenterInfo {
 }
 
 /// Owns the strings behind one `nbgl_layoutQRCode_t`.
-#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+#[cfg(any(
+    ledger_device = "stax",
+    ledger_device = "flex",
+    ledger_device = "apex_p"
+))]
 struct CQrCode {
     url: CString,
     text1: Option<CString>,
@@ -574,7 +590,11 @@ struct CQrCode {
     large_text1: bool,
 }
 
-#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+#[cfg(any(
+    ledger_device = "stax",
+    ledger_device = "flex",
+    ledger_device = "apex_p"
+))]
 impl CQrCode {
     fn new(qr: &QrCode) -> CQrCode {
         CQrCode {
@@ -676,7 +696,11 @@ impl CBarList {
 pub(crate) struct CDetails {
     title: CString,
     center: Option<Box<CCenterInfo>>,
-    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    #[cfg(any(
+        ledger_device = "stax",
+        ledger_device = "flex",
+        ledger_device = "apex_p"
+    ))]
     qr: Option<Box<CQrCode>>,
     bars: Option<Box<CBarList>>,
     type_: nbgl_genericDetailsType_t,
@@ -688,12 +712,20 @@ impl CDetails {
             WarningDetails::CenteredInfo { title, info } => Box::new(CDetails {
                 title: CString::new(*title).unwrap(),
                 center: Some(Box::new(CCenterInfo::new(info))),
-                #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+                #[cfg(any(
+                    ledger_device = "stax",
+                    ledger_device = "flex",
+                    ledger_device = "apex_p"
+                ))]
                 qr: None,
                 bars: None,
                 type_: CENTERED_INFO_WARNING,
             }),
-            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+            #[cfg(any(
+                ledger_device = "stax",
+                ledger_device = "flex",
+                ledger_device = "apex_p"
+            ))]
             WarningDetails::QrCode { title, qr } => Box::new(CDetails {
                 title: CString::new(*title).unwrap(),
                 center: None,
@@ -704,7 +736,11 @@ impl CDetails {
             WarningDetails::BarList { title, bars } => Box::new(CDetails {
                 title: CString::new(*title).unwrap(),
                 center: None,
-                #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+                #[cfg(any(
+                    ledger_device = "stax",
+                    ledger_device = "flex",
+                    ledger_device = "apex_p"
+                ))]
                 qr: None,
                 bars: Some(CBarList::new(bars)),
                 type_: BAR_LIST_WARNING,
@@ -728,7 +764,11 @@ impl CDetails {
                 barList: bars.as_c_type(),
             };
         }
-        #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+        #[cfg(any(
+            ledger_device = "stax",
+            ledger_device = "flex",
+            ledger_device = "apex_p"
+        ))]
         if let Some(qr) = &self.qr {
             anon = nbgl_genericDetails_s__bindgen_ty_1 {
                 qrCode: qr.as_c_type(),

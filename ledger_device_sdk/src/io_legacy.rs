@@ -2,7 +2,7 @@
 // with io_new. This can be removed once the migration to io_new is completed.
 #![cfg_attr(feature = "io_new", allow(dead_code))]
 
-#[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+#[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
 use ledger_secure_sdk_sys::buttons::{ButtonEvent, ButtonsState, get_button_event};
 use ledger_secure_sdk_sys::seph as sys_seph;
 use ledger_secure_sdk_sys::*;
@@ -11,10 +11,10 @@ use crate::io_callbacks::nbgl_register_callbacks;
 use crate::seph;
 
 #[cfg(any(
-    target_os = "nanox",
-    target_os = "stax",
-    target_os = "flex",
-    target_os = "apex_p"
+    ledger_device = "nanox",
+    ledger_device = "stax",
+    ledger_device = "flex",
+    ledger_device = "apex_p"
 ))]
 use crate::seph::ItcUxEvent;
 
@@ -22,10 +22,10 @@ use core::convert::{Infallible, TryFrom};
 use core::ops::{Index, IndexMut};
 
 #[cfg(any(
-    target_os = "nanox",
-    target_os = "stax",
-    target_os = "flex",
-    target_os = "apex_p"
+    ledger_device = "nanox",
+    ledger_device = "stax",
+    ledger_device = "flex",
+    ledger_device = "apex_p"
 ))]
 unsafe extern "C" {
     pub unsafe static mut G_ux_params: bolos_ux_params_t;
@@ -164,9 +164,13 @@ pub enum Event<T> {
     /// APDU event
     Command(T),
     /// Button press or release event
-    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    #[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
     Button(ButtonEvent),
-    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    #[cfg(any(
+        ledger_device = "stax",
+        ledger_device = "flex",
+        ledger_device = "apex_p"
+    ))]
     TouchEvent,
     /// Ticker
     Ticker,
@@ -250,7 +254,7 @@ pub struct Comm {
     pub rx: usize,
     pub tx: usize,
     pub event_pending: bool,
-    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    #[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
     buttons: ButtonsState,
     /// Expected value for the APDU CLA byte.
     /// If defined, [`Comm`] will automatically reply with [`StatusWords::BadCla`] when an APDU
@@ -314,7 +318,7 @@ impl Comm {
             rx: 0,
             tx: 0,
             event_pending: false,
-            #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+            #[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
             buttons: ButtonsState::new(),
             expected_cla: None,
             apdu_type: seph::PacketTypes::PacketTypeNone as u8,
@@ -385,9 +389,9 @@ impl Comm {
     // transmit the response.
     fn apdu_send(&mut self) {
         #[cfg(any(
-            target_os = "stax",
-            target_os = "flex",
-            target_os = "apex_p",
+            ledger_device = "stax",
+            ledger_device = "flex",
+            ledger_device = "apex_p",
             feature = "nano_nbgl"
         ))]
         if !self.skip_rx_on_send {
@@ -681,7 +685,7 @@ impl Comm {
 
         match seph::Events::from(tag) {
             // BUTTON PUSH EVENT
-            #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+            #[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
             seph::Events::ButtonPushEvent => {
                 #[cfg(feature = "nano_nbgl")]
                 unsafe {
@@ -694,7 +698,11 @@ impl Comm {
             }
 
             // SCREEN TOUCH EVENT
-            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+            #[cfg(any(
+                ledger_device = "stax",
+                ledger_device = "flex",
+                ledger_device = "apex_p"
+            ))]
             seph::Events::ScreenTouchEvent => unsafe {
                 ux_process_finger_event(seph_buffer.as_mut_ptr());
                 return Some(Event::TouchEvent);
@@ -703,9 +711,9 @@ impl Comm {
             // TICKER EVENT
             seph::Events::TickerEvent => {
                 #[cfg(any(
-                    target_os = "stax",
-                    target_os = "flex",
-                    target_os = "apex_p",
+                    ledger_device = "stax",
+                    ledger_device = "flex",
+                    ledger_device = "apex_p",
                     feature = "nano_nbgl"
                 ))]
                 unsafe {
@@ -717,10 +725,10 @@ impl Comm {
             // ITC EVENT
             seph::Events::ItcEvent => {
                 #[cfg(any(
-                    target_os = "nanox",
-                    target_os = "stax",
-                    target_os = "flex",
-                    target_os = "apex_p"
+                    ledger_device = "nanox",
+                    ledger_device = "stax",
+                    ledger_device = "flex",
+                    ledger_device = "apex_p"
                 ))]
                 match ItcUxEvent::from(seph_buffer[3]) {
                     seph::ItcUxEvent::AskBlePairing => unsafe {
@@ -746,9 +754,9 @@ impl Comm {
 
                     seph::ItcUxEvent::Redisplay => {
                         #[cfg(any(
-                            target_os = "stax",
-                            target_os = "flex",
-                            target_os = "apex_p",
+                            ledger_device = "stax",
+                            ledger_device = "flex",
+                            ledger_device = "apex_p",
                             feature = "nano_nbgl"
                         ))]
                         unsafe {
@@ -766,15 +774,15 @@ impl Comm {
             // DEFAULT EVENT
             _ => {
                 #[cfg(any(
-                    target_os = "stax",
-                    target_os = "flex",
-                    target_os = "apex_p",
+                    ledger_device = "stax",
+                    ledger_device = "flex",
+                    ledger_device = "apex_p",
                     feature = "nano_nbgl"
                 ))]
                 unsafe {
                     ux_process_default_event();
                 }
-                #[cfg(any(target_os = "nanox", target_os = "nanosplus"))]
+                #[cfg(any(ledger_device = "nanox", ledger_device = "nanosplus"))]
                 if !cfg!(feature = "nano_nbgl") {
                     crate::uxapp::UxEvent::Event.request();
                 }

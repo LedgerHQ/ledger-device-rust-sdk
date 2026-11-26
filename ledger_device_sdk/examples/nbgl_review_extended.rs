@@ -9,31 +9,43 @@
 //! On Nano this example therefore builds as an empty app, so that
 //! `cargo build --examples` succeeds on every target.
 
-#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+#[cfg(any(
+    ledger_device = "stax",
+    ledger_device = "flex",
+    ledger_device = "apex_p"
+))]
 use include_gif::include_gif;
 use ledger_device_sdk::nbgl::init_comm;
-#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+#[cfg(any(
+    ledger_device = "stax",
+    ledger_device = "flex",
+    ledger_device = "apex_p"
+))]
 use ledger_device_sdk::nbgl::{Field, NbglGlyph, NbglReviewExtended, NbglReviewStatus};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 ledger_device_sdk::define_comm!(COMM);
 
-#[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+#[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
 #[unsafe(no_mangle)]
 extern "C" fn sample_main() {
     let _comm = init_comm(&COMM);
     ledger_device_sdk::exit_app(0);
 }
 
-#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+#[cfg(any(
+    ledger_device = "stax",
+    ledger_device = "flex",
+    ledger_device = "apex_p"
+))]
 #[unsafe(no_mangle)]
 extern "C" fn sample_main() {
     let comm = init_comm(&COMM);
 
-    #[cfg(target_os = "apex_p")]
+    #[cfg(ledger_device = "apex_p")]
     const FERRIS: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_48x48.png", NBGL));
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    #[cfg(any(ledger_device = "stax", ledger_device = "flex"))]
     const FERRIS: NbglGlyph =
         NbglGlyph::from_include(include_gif!("examples/crab_64x64.gif", NBGL));
 

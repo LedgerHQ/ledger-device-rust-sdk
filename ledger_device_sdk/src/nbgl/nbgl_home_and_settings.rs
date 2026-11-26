@@ -624,7 +624,11 @@ impl Displayed {
                         subText: setting[1].as_ptr(),
                         initState: state,
                         token: (FIRST_USER_TOKEN + i as u32) as u8,
-                        #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+                        #[cfg(any(
+                            ledger_device = "stax",
+                            ledger_device = "flex",
+                            ledger_device = "apex_p"
+                        ))]
                         tuneId: TuneIndex::TapCasual as u8,
                         ..Default::default()
                     }

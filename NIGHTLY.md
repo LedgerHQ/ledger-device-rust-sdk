@@ -6,11 +6,14 @@ foreseeable future. The dependence on nightly is structural, not incidental:
 - **Custom JSON target specs** (`ledger_secure_sdk_sys/devices/*/*.json`) have no
   precompiled `core`/`alloc`, so they require `-Z build-std` — nightly only.
 - **`relocation-model: "ropi-rwpi"`** (mandatory for runtime-relocated BOLOS apps)
-  is only reachable through a custom target spec.
-- **Custom `target_os` / `target-family = ["bolos"]`** drive the entire
-  `#[cfg(target_os = "…")]` device matrix; stock targets report `target_os = "none"`.
-- Several **`#![feature(...)]`** gates, including `generic_const_exprs`
-  (permanently "incomplete"), have no stabilization path.
+  comes from the custom target specs, or from `-Crelocation-model=ropi-rwpi`
+  with a built-in triple; either way `core`/`alloc` must be rebuilt with it,
+  which also requires `-Z build-std`.
+- The device matrix is selected with the **`ledger_device` cfg**. The build
+  scripts derive it from the custom specs' `target_os`; with a built-in triple
+  (`target_os = "none"`), `cargo ledger` passes it.
+- Several **`#![feature(...)]`** gates (`custom_test_frameworks`,
+  `const_option_ops`, `const_trait_impl`) are not stable.
 
 Because stable is off the table, the goal of this policy is **predictable,
 low-risk use of nightly**: a single pinned version, an early-warning canary, a

@@ -17,38 +17,58 @@ use super::*;
 #[derive(Copy, Clone)]
 pub enum CenteredInfoStyle {
     /// Large-case text style (Stax / Flex / Apex P only).
-    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    #[cfg(any(
+        ledger_device = "stax",
+        ledger_device = "flex",
+        ledger_device = "apex_p"
+    ))]
     LargeCaseInfo = 0,
     /// Large-case bold text style (Stax / Flex / Apex P only).
-    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    #[cfg(any(
+        ledger_device = "stax",
+        ledger_device = "flex",
+        ledger_device = "apex_p"
+    ))]
     LargeCaseBoldInfo,
     /// Normal text style (Stax / Flex / Apex P only).
-    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    #[cfg(any(
+        ledger_device = "stax",
+        ledger_device = "flex",
+        ledger_device = "apex_p"
+    ))]
     NormalInfo,
     /// Plugin-oriented layout style (Stax / Flex / Apex P only).
-    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    #[cfg(any(
+        ledger_device = "stax",
+        ledger_device = "flex",
+        ledger_device = "apex_p"
+    ))]
     PluginInfo,
     /// Regular text style (Nano S+ / Nano X only).
-    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    #[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
     RegularInfo = 0,
     /// Bold primary text style (Nano S+ / Nano X only).
-    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    #[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
     BoldText1Info,
     /// Button-style text (Nano S+ / Nano X only).
-    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+    #[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
     ButtonInfo,
 }
 
 impl From<CenteredInfoStyle> for nbgl_contentCenteredInfoStyle_t {
     fn from(style: CenteredInfoStyle) -> nbgl_contentCenteredInfoStyle_t {
-        #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+        #[cfg(any(
+            ledger_device = "stax",
+            ledger_device = "flex",
+            ledger_device = "apex_p"
+        ))]
         match style {
             CenteredInfoStyle::LargeCaseInfo => LARGE_CASE_INFO,
             CenteredInfoStyle::LargeCaseBoldInfo => LARGE_CASE_BOLD_INFO,
             CenteredInfoStyle::NormalInfo => NORMAL_INFO,
             CenteredInfoStyle::PluginInfo => PLUGIN_INFO,
         }
-        #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+        #[cfg(any(ledger_device = "nanosplus", ledger_device = "nanox"))]
         match style {
             CenteredInfoStyle::RegularInfo => REGULAR_INFO,
             CenteredInfoStyle::BoldText1Info => BOLD_TEXT1_INFO,
@@ -69,12 +89,20 @@ impl From<CenteredInfoStyle> for nbgl_contentCenteredInfoStyle_t {
 pub struct CenteredInfo {
     text1: CString,
     text2: CString,
-    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    #[cfg(any(
+        ledger_device = "stax",
+        ledger_device = "flex",
+        ledger_device = "apex_p"
+    ))]
     text3: CString,
     icon: Option<nbgl_icon_details_t>,
     on_top: bool,
     style: CenteredInfoStyle,
-    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+    #[cfg(any(
+        ledger_device = "stax",
+        ledger_device = "flex",
+        ledger_device = "apex_p"
+    ))]
     offset_y: i16,
 }
 
@@ -95,21 +123,39 @@ impl CenteredInfo {
     pub fn new(
         text1: &str,
         text2: &str,
-        #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))] text3: &str,
+        #[cfg(any(
+            ledger_device = "stax",
+            ledger_device = "flex",
+            ledger_device = "apex_p"
+        ))]
+        text3: &str,
         icon: Option<&NbglGlyph<'static>>,
         on_top: bool,
         style: CenteredInfoStyle,
-        #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))] offset_y: i16,
+        #[cfg(any(
+            ledger_device = "stax",
+            ledger_device = "flex",
+            ledger_device = "apex_p"
+        ))]
+        offset_y: i16,
     ) -> CenteredInfo {
         CenteredInfo {
             text1: CString::new(text1).unwrap(),
             text2: CString::new(text2).unwrap(),
-            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+            #[cfg(any(
+                ledger_device = "stax",
+                ledger_device = "flex",
+                ledger_device = "apex_p"
+            ))]
             text3: CString::new(text3).unwrap(),
             icon: icon.map(|g| g.into()),
             on_top,
             style,
-            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+            #[cfg(any(
+                ledger_device = "stax",
+                ledger_device = "flex",
+                ledger_device = "apex_p"
+            ))]
             offset_y,
         }
     }
@@ -121,7 +167,11 @@ impl From<&CenteredInfo> for nbgl_contentCenteredInfo_t {
         nbgl_contentCenteredInfo_t {
             text1: info.text1.as_ptr() as *const c_char,
             text2: info.text2.as_ptr() as *const c_char,
-            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+            #[cfg(any(
+                ledger_device = "stax",
+                ledger_device = "flex",
+                ledger_device = "apex_p"
+            ))]
             text3: info.text3.as_ptr() as *const c_char,
             icon: info
                 .icon
@@ -129,7 +179,11 @@ impl From<&CenteredInfo> for nbgl_contentCenteredInfo_t {
                 .map_or(core::ptr::null(), |icon| icon as *const nbgl_icon_details_t),
             onTop: info.on_top,
             style: info.style.into(),
-            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+            #[cfg(any(
+                ledger_device = "stax",
+                ledger_device = "flex",
+                ledger_device = "apex_p"
+            ))]
             offsetY: info.offset_y,
             ..Default::default()
         }

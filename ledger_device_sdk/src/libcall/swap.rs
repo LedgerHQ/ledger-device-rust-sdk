@@ -26,9 +26,9 @@
 //! to determine the action and call the appropriate helper from this module.
 
 #[cfg(any(
-    target_os = "stax",
-    target_os = "flex",
-    target_os = "apex_p",
+    ledger_device = "stax",
+    ledger_device = "flex",
+    ledger_device = "apex_p",
     feature = "nano_nbgl"
 ))]
 use crate::nbgl::NbglSpinner;
@@ -714,9 +714,9 @@ pub fn sign_tx_params<
     }
 
     #[cfg(any(
-        target_os = "stax",
-        target_os = "flex",
-        target_os = "apex_p",
+        ledger_device = "stax",
+        ledger_device = "flex",
+        ledger_device = "apex_p",
         feature = "nano_nbgl"
     ))]
     NbglSpinner::new().show("Signing");

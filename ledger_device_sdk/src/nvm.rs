@@ -196,13 +196,13 @@ macro_rules! page_aligned {
     };
 }
 
-#[cfg(target_os = "nanox")]
+#[cfg(ledger_device = "nanox")]
 page_aligned!(256);
 #[cfg(any(
-    target_os = "nanosplus",
-    target_os = "stax",
-    target_os = "flex",
-    target_os = "apex_p"
+    ledger_device = "nanosplus",
+    ledger_device = "stax",
+    ledger_device = "flex",
+    ledger_device = "apex_p"
 ))]
 page_aligned!(512);
 

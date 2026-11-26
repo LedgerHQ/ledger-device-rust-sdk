@@ -2,7 +2,7 @@
 
 use ledger_secure_sdk_sys::*;
 
-//#[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
+//#[cfg(any(ledger_device = "nanox", ledger_device = "stax", ledger_device = "flex"))]
 //use crate::ble;
 
 #[repr(u8)]
@@ -93,9 +93,9 @@ pub fn handle_event(_apdu_buffer: &mut [u8], spi_buffer: &[u8]) {
     let _len = u16::from_be_bytes([spi_buffer[1], spi_buffer[2]]);
     if let Events::TickerEvent = Events::from(spi_buffer[0]) {
         #[cfg(any(
-            target_os = "apex_p",
-            target_os = "stax",
-            target_os = "flex",
+            ledger_device = "apex_p",
+            ledger_device = "stax",
+            ledger_device = "flex",
             feature = "nano_nbgl"
         ))]
         unsafe {
