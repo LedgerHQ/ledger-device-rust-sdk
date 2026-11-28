@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+    - NBGL: choose the bpp and grey levels like the C SDK's icon2glyph.py: 1 bpp for up to 2
+      colors, else 4 bpp with 16 levels. Images with 1, 5 to 8 or 256 colors made the macro
+      panic, and 3 or 4 color images used only levels 0 to 3 (white was stored as 3, not 15).
+
 ## [1.3.3] - 2026-11-25
 
 ### Changed

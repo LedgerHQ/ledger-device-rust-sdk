@@ -377,17 +377,10 @@ fn image_to_packed_buffer(frame: &mut GrayImage, invert: bool) -> (Vec<u8>, u8) 
     for pixel in frame.pixels() {
         color_count.insert(pixel.0[0]);
     }
-    let mut colors = std::cmp::min(16u8, color_count.len() as u8);
-
-    // Round number of colors to a power of 2
-    colors = colors.next_power_of_two();
-
-    // Compute number of bits per pixel from number of colors (1, 2 or 4)
-    let mut bits_per_pixel = std::cmp::min(4, (colors as f64).log(2.0).ceil() as u8);
-    // 2 is not supported
-    if bits_per_pixel == 2 {
-        bits_per_pixel = 4;
-    }
+    // Same rule as the C SDK's icon2glyph.py: 1 bpp for up to 2 colors, else 4 bpp
+    // (2 and 3 bpp are not supported), quantized to 2^bpp levels.
+    let bits_per_pixel: u8 = if color_count.len() <= 2 { 1 } else { 4 };
+    let colors: u8 = 1 << bits_per_pixel;
 
     // Invert if bpp is 1
     if bits_per_pixel == 1 && invert {
@@ -568,5 +561,26 @@ mod tests {
         let (buf, bpp, is_file) = nbgl("badge_check.gif");
         assert_eq!((bpp, is_file), (1, false));
         assert_eq!(buf, include!("../testdata/golden/badge_check.gif.nbgl"));
+    }
+
+    #[test]
+    fn nbgl_bpp_and_levels_match_icon2glyph() {
+        // Expected values come from the C SDK's lib_nbgl/tools/icon2glyph.py.
+        let pack = |levels: Vec<u8>| {
+            let mut img = GrayImage {
+                width: 1,
+                height: levels.len() as u32,
+                pixels: levels.into_iter().map(|v| Luma([v])).collect(),
+            };
+            image_to_packed_buffer(&mut img, true)
+        };
+        assert_eq!(pack(vec![255]), (vec![0x00], 1));
+        assert_eq!(pack(vec![0, 85, 170, 255]), (vec![0x05, 0xbf], 4));
+        assert_eq!(
+            pack(vec![0, 51, 102, 153, 204, 255]),
+            (vec![0x03, 0x6a, 0xdf], 4)
+        );
+        let (packed, bpp) = pack((0..=255).collect());
+        assert_eq!((packed.len(), bpp), (128, 4));
     }
 }
